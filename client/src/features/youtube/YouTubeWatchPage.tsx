@@ -88,6 +88,12 @@ export default function YouTubeWatchPage() {
   const playerDivRef = useRef<HTMLDivElement | null>(null);
   const ytPlayerRef = useRef<YT.Player | null>(null);
   const [playerMountKey, setPlayerMountKey] = useState(0);
+  // True for the brief window between "user picked a new video" and the new player's first
+  // onReady/onError — playerState is forced to 'idle' during this window (old player destroyed,
+  // new one not mounted yet), which would otherwise look identical to "user left/paused" and
+  // wrongly trigger the "você pausou / saiu da página" banner (useResumableCountdown's
+  // `wasPaused` latch) on every single video switch, not just on real blur/leave.
+  const switchingVideoRef = useRef(false);
 
   const [isPaused, setIsPaused] = useState(() => readPausedFlag(YT_PAUSED_KEY));
   const activelyWatchingRef = useRef(false);
@@ -140,7 +146,11 @@ export default function YouTubeWatchPage() {
     storageKey: 'yt_claim_cycle_timer',
     totalSeconds: CLAIM_INTERVAL_SEC,
     running: claimCycleRunning,
-    paused: !presenceActive,
+    // While switching videos, claimCycleRunning is already false (via resetClaimCycle), so the
+    // ticking interval is already stopped either way — this only controls whether the brief
+    // presence loss during the switch wrongly latches the "wasPaused" banner (see
+    // switchingVideoRef's comment above).
+    paused: !presenceActive && !switchingVideoRef.current,
   });
 
   const resetClaimCycle = useCallback(() => {
@@ -194,6 +204,7 @@ export default function YouTubeWatchPage() {
     (e: MouseEvent<HTMLButtonElement>) => {
       e.preventDefault();
       if (urlComposingRef.current) return;
+      switchingVideoRef.current = false;
       setUrl('');
       setPlayerState('idle');
       resetClaimCycle();
@@ -221,6 +232,7 @@ export default function YouTubeWatchPage() {
         toast.error(t('youtube.invalid_url'));
         return;
       }
+      switchingVideoRef.current = true;
       setPlayerState('idle');
       resetClaimCycle();
       setPlayerReady(false);
@@ -263,6 +275,7 @@ export default function YouTubeWatchPage() {
         events: {
           onReady: () => {
             if (cancelled) return;
+            switchingVideoRef.current = false;
             setPlayerReady(true);
             setPlayerState((prev) => {
               if (prev === 'idle') {
@@ -273,6 +286,8 @@ export default function YouTubeWatchPage() {
             });
           },
           onError: (event: { data: number }) => {
+            if (cancelled) return;
+            switchingVideoRef.current = false;
             if (event.data === 101 || event.data === 150) {
               toast.error(t('youtube.video_error_embed'), { duration: 8000 });
             } else {
@@ -283,6 +298,12 @@ export default function YouTubeWatchPage() {
             resetClaimCycle();
           },
           onStateChange: (event: { data: number }) => {
+            // A player destroyed mid-switch (see handleLoadVideo) can still fire one last
+            // late state-change event asynchronously — without this guard it would apply to
+            // whatever video is now loading, e.g. flipping playerState to 'paused' right as
+            // the new video starts, right back into the same false "paused" banner this fix
+            // is for.
+            if (cancelled) return;
             const YTState = window.YT.PlayerState;
             if (event.data === YTState.PLAYING) setPlayerState('playing');
             else if (event.data === YTState.BUFFERING) setPlayerState('buffering');
@@ -294,6 +315,7 @@ export default function YouTubeWatchPage() {
         },
       });
     } catch {
+      switchingVideoRef.current = false;
       toast.error(t('youtube.invalid_url'));
       setVideoId(null);
       setPlayerState('idle');
