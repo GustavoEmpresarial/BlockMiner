@@ -6199,5 +6199,19 @@
     "accept": "Aceptar todo",
     "decline": "Solo esenciales",
     "policyLink": "Política de Cookies"
+  },
+  "adminAiHealth": {
+    "title": "IA de Salud del Juego",
+    "subtitle": "Diagnóstico generado por IA a partir de datos reales de producción: economía de POL, canales gratuitos de hashrate e indicadores de plataforma/usuario.",
+    "analyze_now": "ejecutar ahora",
+    "analyzing": "analizando…",
+    "running": "ejecutando...",
+    "next_run": "próximo análisis automático en {{time}}",
+    "empty": "esperando la primera ejecución...",
+    "error": "error al generar el diagnóstico."
+  },
+  "adminTransparencyInvestments": {
+    "title": "Inversiones en otros sitios",
+    "subtitle": "Gestiona las inversiones externas mostradas en la pestaña \"Otras Inversiones\" del Portal de Transparencia."
   }
 }
