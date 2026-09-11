@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { ChevronDown } from 'lucide-react';
-import MinimalFooter from '../../../shared/components/MinimalFooter';
+import SiteFooter from '../../../shared/components/SiteFooter';
 
 type SectionBodyProps = {
   paragraphs: string[];
@@ -232,7 +232,7 @@ export function LegalDocumentPage({
         </article>
       </main>
       <div className="print:hidden">
-        <MinimalFooter />
+        <SiteFooter />
       </div>
     </div>
   );

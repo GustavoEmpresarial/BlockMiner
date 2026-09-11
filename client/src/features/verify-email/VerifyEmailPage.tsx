@@ -5,7 +5,7 @@ import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import BrandLogo from '../../shared/components/BrandLogo';
 import { api, useAuthStore } from '../../shared/auth/auth.store';
 import { resolveApiErrorMessage } from '../../shared/utils/apiErrorI18n';
-import MinimalFooter from '../../shared/components/MinimalFooter';
+import SiteFooter from '../../shared/components/SiteFooter';
 
 /**
  * item 95 Parte B (pentest blockminer.space) — consome `?token=` do link enviado por email
@@ -103,7 +103,7 @@ export default function VerifyEmailPage() {
       </div>
       </div>
       <div className="relative z-10">
-        <MinimalFooter />
+        <SiteFooter />
       </div>
     </div>
   );

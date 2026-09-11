@@ -8,7 +8,7 @@ import BroadcastPopup from './broadcast/BroadcastPopup';
 import PtcSessionManager from '../ptc/components/PtcSessionManager';
 import ShortlinkBackgroundRunner from '../shortlinks/components/ShortlinkBackgroundRunner';
 import AutoMiningBackgroundRunner from '../auto-mining/components/AutoMiningBackgroundRunner';
-import MinimalFooter from '../../shared/components/MinimalFooter';
+import SiteFooter from '../../shared/components/SiteFooter';
 
 export default function ProtectedLayout() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -54,7 +54,7 @@ export default function ProtectedLayout() {
             </Suspense>
           </div>
         </main>
-        <MinimalFooter />
+        <SiteFooter />
       </div>
       <BroadcastPopup />
       <PtcSessionManager />

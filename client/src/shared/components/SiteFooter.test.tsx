@@ -1,10 +1,11 @@
 import '@testing-library/jest-dom/vitest';
-import { describe, expect, it, afterEach, beforeAll } from 'vitest';
+import { describe, expect, it, afterEach, beforeAll, beforeEach, vi } from 'vitest';
 import { render, screen, cleanup, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { I18nextProvider } from 'react-i18next';
 import i18next from 'i18next';
-import ptBR from '../../../i18n/locales/pt-BR.json';
-import { LandingFooter } from './landing.parts';
+import ptBR from '../../i18n/locales/pt-BR.json';
+import SiteFooter from './SiteFooter';
 
 // Real i18next instance loaded with the actual pt-BR bundle (not a stub t()) — this is what
 // caught the 2026-09-11 bug where landing.footer.link_terms/link_privacy held wrong copy
@@ -15,28 +16,35 @@ beforeAll(async () => {
   await i18n.init({ lng: 'pt-BR', resources: { 'pt-BR': { translation: ptBR } }, interpolation: { escapeValue: false } });
 });
 
-afterEach(() => {
-  cleanup();
+beforeEach(() => {
+  vi.stubEnv('VITE_DISCORD_URL', 'https://discord.gg/blockminer');
+  vi.stubEnv('VITE_TELEGRAM_URL', 'https://t.me/blockminer');
+  vi.stubEnv('VITE_TWITTER_URL', 'https://x.com/blockminer');
+  vi.stubEnv('VITE_YOUTUBE_URL', 'https://youtube.com/@blockminer');
 });
 
-function renderFooter(overrides: Partial<{ twitterUrl: string | null; youtubeUrl: string | null }> = {}) {
-  const twitterUrl = 'twitterUrl' in overrides ? overrides.twitterUrl! : 'https://x.com/blockminer';
-  const youtubeUrl = 'youtubeUrl' in overrides ? overrides.youtubeUrl! : 'https://youtube.com/@blockminer';
+afterEach(() => {
+  cleanup();
+  vi.unstubAllEnvs();
+});
+
+function renderFooter() {
   return render(
-    <MemoryRouter>
-      <LandingFooter
-        t={i18n.t}
-        discordUrl="https://discord.gg/blockminer"
-        telegramUrl="https://t.me/blockminer"
-        twitterUrl={twitterUrl}
-        youtubeUrl={youtubeUrl}
-      />
-    </MemoryRouter>,
+    <I18nextProvider i18n={i18n}>
+      <MemoryRouter>
+        <SiteFooter />
+      </MemoryRouter>
+    </I18nextProvider>,
   );
 }
 
-describe('LandingFooter', () => {
-  it('renders exactly one footer landmark (regression: used to stack a second <SiteFooter compact/> under this one)', () => {
+describe('SiteFooter', () => {
+  // THE footer — every page (landing, login/register, dashboard, legal pages, verify-email)
+  // renders this exact same component now. Previously there were three different footer
+  // implementations across the app that all looked/behaved differently; this suite exists to
+  // keep that from silently drifting apart again.
+
+  it('renders exactly one footer landmark', () => {
     renderFooter();
     expect(screen.getAllByRole('contentinfo')).toHaveLength(1);
   });
@@ -46,6 +54,7 @@ describe('LandingFooter', () => {
     const footer = screen.getByRole('contentinfo');
     expect(within(footer).getByRole('link', { name: 'Termos de Uso' })).toHaveAttribute('href', '/terms-of-use');
     expect(within(footer).getByRole('link', { name: 'Política de Privacidade' })).toHaveAttribute('href', '/privacy-policy');
+    expect(within(footer).getByRole('link', { name: 'Política de Cookies' })).toHaveAttribute('href', '/cookie-policy');
     // The old, wrong copy must never come back.
     expect(within(footer).queryByText('Termos e políticas (manual)')).not.toBeInTheDocument();
     expect(within(footer).queryByText('Transparência e custos')).not.toBeInTheDocument();
@@ -64,11 +73,13 @@ describe('LandingFooter', () => {
   });
 
   it('omits the X/YouTube buttons entirely when their URLs are not configured (no dead/empty links)', () => {
-    renderFooter({ twitterUrl: null, youtubeUrl: null });
+    vi.stubEnv('VITE_TWITTER_URL', '');
+    vi.stubEnv('VITE_YOUTUBE_URL', '');
+    renderFooter();
     const footer = screen.getByRole('contentinfo');
     expect(within(footer).queryByRole('link', { name: 'X' })).not.toBeInTheDocument();
     expect(within(footer).queryByRole('link', { name: 'YouTube' })).not.toBeInTheDocument();
-    // Discord/Telegram (always configured) still render.
+    // Discord/Telegram have hardcoded fallbacks and always render regardless of env.
     expect(within(footer).getByRole('link', { name: 'Discord' })).toBeInTheDocument();
   });
 
@@ -93,5 +104,11 @@ describe('LandingFooter', () => {
     renderFooter();
     const footer = screen.getByRole('contentinfo');
     expect(within(footer).getByText(new RegExp(String(new Date().getFullYear())))).toBeInTheDocument();
+  });
+
+  it('body text uses a real (non-dim) color — regression for the low-contrast complaint', () => {
+    renderFooter();
+    const footer = screen.getByRole('contentinfo');
+    expect(footer.className).not.toMatch(/text-slate-[3-6]00/);
   });
 });

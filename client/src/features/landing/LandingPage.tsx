@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../shared/auth/auth.store';
-import { normalizeExternalUrl } from '../../shared/components/CommunityShortcuts';
+import SiteFooter from '../../shared/components/SiteFooter';
 import { formatHashrate } from '../../shared/utils/machine';
 import { persistUtmParams, trackLandingEvent, initMetaPixel } from '../../shared/utils/landingAnalytics';
 import { hasNonEssentialCookieConsent, onCookieConsentChange } from '../../shared/utils/cookieConsent';
@@ -26,7 +26,6 @@ import {
   LandingFeatures,
   LandingFeed,
   LandingFinalCta,
-  LandingFooter,
   LandingGames,
   LandingHeader,
   LandingHero,
@@ -135,10 +134,6 @@ export default function Landing() {
   const minersShown = useCountUp(minersEnd, statsVisible && minersEnd > 0, 0);
   const withdrawnShown = useCountUp(withdrawnEnd, statsVisible && withdrawnEnd > 0, 2);
 
-  const discordUrl = normalizeExternalUrl(import.meta.env.VITE_DISCORD_URL) || 'https://discord.gg/7Ge9vd8E';
-  const telegramUrl = normalizeExternalUrl(import.meta.env.VITE_TELEGRAM_URL) || 'https://t.me/+KPgyUFtKCZ00Y2Vh';
-  const twitterUrl = normalizeExternalUrl(import.meta.env.VITE_TWITTER_URL);
-  const youtubeUrl = normalizeExternalUrl(import.meta.env.VITE_YOUTUBE_URL);
 
   if (isAuthenticated) {
     return <Navigate to="/dashboard" replace />;
@@ -195,13 +190,7 @@ export default function Landing() {
       </main>
 
       <LandingAdsBanner layered />
-      <LandingFooter
-        t={t}
-        discordUrl={discordUrl}
-        telegramUrl={telegramUrl}
-        twitterUrl={twitterUrl}
-        youtubeUrl={youtubeUrl}
-      />
+      <SiteFooter />
     </div>
   );
 }

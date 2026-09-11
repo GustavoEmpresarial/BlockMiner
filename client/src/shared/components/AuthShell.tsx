@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ArrowRight, Menu, X } from 'lucide-react';
 import BrandLogo from './BrandLogo';
-import MinimalFooter from './MinimalFooter';
+import SiteFooter from './SiteFooter';
 
 type AuthShellProps = {
   children: ReactNode;
@@ -89,7 +89,7 @@ export default function AuthShell({ children, hideAuthCta }: AuthShellProps) {
         <div className="w-full flex justify-center">{children}</div>
       </main>
 
-      <MinimalFooter />
+      <SiteFooter />
     </div>
   );
 }
