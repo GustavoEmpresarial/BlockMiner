@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Loader2, RefreshCw } from 'lucide-react';
+import { Coins, Copy, ExternalLink, Loader2, RefreshCw, ShieldAlert, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   approveWithdrawal,
@@ -23,6 +23,15 @@ type WithdrawalRow = {
 
 const QUEUE_STATUSES = new Set(['pending', 'approved', 'processing']);
 const HISTORY_STATUSES = new Set(['completed', 'failed', 'rejected']);
+
+const STATUS_LABEL: Record<string, string> = {
+  pending: 'Pendente',
+  approved: 'Aprovado',
+  processing: 'Processando',
+  completed: 'Concluído',
+  failed: 'Falhou',
+  rejected: 'Rejeitado',
+};
 
 function currencyLabel(type?: string): string {
   return type === 'shib_withdrawal' ? 'SHIB' : 'POL';
@@ -54,6 +63,56 @@ function formatAmount(amount: number | string | undefined): string {
 
 function userLabel(w: WithdrawalRow): string {
   return w.user?.email || w.user?.username || w.user?.name || `user ${w.userId ?? '?'}`;
+}
+
+function shortHex(value: string, head = 6, tail = 4): string {
+  if (value.length <= head + tail + 3) return value;
+  return `${value.slice(0, head)}…${value.slice(-tail)}`;
+}
+
+function copy(value: string, label: string) {
+  void navigator.clipboard.writeText(value);
+  toast.success(`${label} copiado`);
+}
+
+function CopyChip({ value, label }: { value: string; label: string }) {
+  return (
+    <button
+      type="button"
+      onClick={() => copy(value, label)}
+      title={`Copiar ${label.toLowerCase()}`}
+      className="group inline-flex min-w-0 items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-950/60 px-2 py-1 font-mono text-[11px] text-slate-400 transition-colors hover:border-slate-700 hover:text-slate-200"
+    >
+      <span className="truncate">{shortHex(value)}</span>
+      <Copy className="h-3 w-3 shrink-0 opacity-50 group-hover:opacity-100" />
+    </button>
+  );
+}
+
+function Kpi({
+  icon: Icon,
+  label,
+  value,
+  sub,
+  tone = 'amber',
+}: {
+  icon: typeof Coins;
+  label: string;
+  value: string;
+  sub?: string;
+  tone?: 'amber' | 'emerald' | 'slate';
+}) {
+  const toneClass = tone === 'amber' ? 'text-amber-400' : tone === 'emerald' ? 'text-emerald-400' : 'text-slate-400';
+  return (
+    <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
+      <div className="mb-3 flex items-center gap-2 text-slate-500">
+        <Icon className={`h-4 w-4 ${toneClass}`} />
+        <span className="text-[10px] font-black uppercase tracking-widest">{label}</span>
+      </div>
+      <p className="text-2xl font-black text-white">{value}</p>
+      {sub ? <p className="mt-1 text-xs font-medium text-slate-500">{sub}</p> : null}
+    </div>
+  );
 }
 
 export default function AdminFinancePage() {
@@ -88,6 +147,12 @@ export default function AdminFinancePage() {
     [rows],
   );
 
+  const queuePolTotal = useMemo(
+    () => queue.filter((w) => w.type !== 'shib_withdrawal').reduce((sum, w) => sum + (Number(w.amount) || 0), 0),
+    [queue],
+  );
+  const failedCount = useMemo(() => history.filter((w) => String(w.status).toLowerCase() !== 'completed').length, [history]);
+
   const act = async (id: string | number, fn: () => Promise<unknown>, okMsg: string) => {
     const key = String(id);
     if (busyId) return;
@@ -110,12 +175,12 @@ export default function AdminFinancePage() {
 
     if (status === 'pending') {
       return (
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2">
           <button
             type="button"
             disabled={busy}
             onClick={() => void act(w.id, () => approveWithdrawal(w.id), 'Aprovado')}
-            className="rounded-lg bg-emerald-500/20 px-3 py-1 text-xs font-bold text-emerald-300 disabled:opacity-40"
+            className="rounded-lg bg-emerald-500/15 px-3 py-1.5 text-xs font-bold text-emerald-300 transition-colors hover:bg-emerald-500/25 disabled:opacity-40"
           >
             Aprovar
           </button>
@@ -123,7 +188,7 @@ export default function AdminFinancePage() {
             type="button"
             disabled={busy}
             onClick={() => void act(w.id, () => rejectWithdrawal(w.id), 'Rejeitado (saldo devolvido)')}
-            className="rounded-lg bg-red-500/20 px-3 py-1 text-xs font-bold text-red-300 disabled:opacity-40"
+            className="rounded-lg bg-red-500/15 px-3 py-1.5 text-xs font-bold text-red-300 transition-colors hover:bg-red-500/25 disabled:opacity-40"
           >
             Rejeitar
           </button>
@@ -133,13 +198,13 @@ export default function AdminFinancePage() {
 
     if (status === 'approved' || status === 'processing') {
       return (
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <input
             value={txHash[id] ?? ''}
             onChange={(e) => setTxHash((m) => ({ ...m, [id]: e.target.value }))}
             placeholder="tx hash (0x…)"
             disabled={busy}
-            className="min-w-[12rem] flex-1 rounded-lg border border-white/10 bg-slate-950 px-2 py-1 text-xs text-white disabled:opacity-40"
+            className="min-w-[12rem] flex-1 rounded-lg border border-slate-800 bg-slate-950 px-3 py-1.5 font-mono text-xs text-white placeholder:text-slate-600 focus:border-sky-500/50 focus:outline-none disabled:opacity-40"
           />
           <button
             type="button"
@@ -152,7 +217,7 @@ export default function AdminFinancePage() {
               }
               void act(w.id, () => completeWithdrawal(w.id, hash), 'Marcado como enviado');
             }}
-            className="rounded-lg bg-sky-500/20 px-3 py-1 text-xs font-bold text-sky-300 disabled:opacity-40"
+            className="rounded-lg bg-sky-500/15 px-3 py-1.5 text-xs font-bold text-sky-300 transition-colors hover:bg-sky-500/25 disabled:opacity-40"
           >
             Concluir
           </button>
@@ -161,7 +226,7 @@ export default function AdminFinancePage() {
               type="button"
               disabled={busy}
               onClick={() => void act(w.id, () => rejectWithdrawal(w.id), 'Rejeitado (saldo devolvido)')}
-              className="rounded-lg bg-red-500/20 px-3 py-1 text-xs font-bold text-red-300 disabled:opacity-40"
+              className="rounded-lg bg-red-500/15 px-3 py-1.5 text-xs font-bold text-red-300 transition-colors hover:bg-red-500/25 disabled:opacity-40"
             >
               Rejeitar
             </button>
@@ -170,67 +235,130 @@ export default function AdminFinancePage() {
       );
     }
 
-    return w.txHash ? (
-      <p className="mt-2 break-all font-mono text-[11px] text-slate-500">tx: {w.txHash}</p>
-    ) : null;
+    return null;
   };
 
-  const renderRow = (w: WithdrawalRow) => (
-    <li key={String(w.id)} className="rounded-2xl border border-white/10 bg-slate-900/50 p-4">
-      <div className="flex flex-wrap items-center gap-2 text-sm">
-        <span className="font-mono text-amber-300">#{w.id}</span>
+  const renderQueueRow = (w: WithdrawalRow) => (
+    <li key={String(w.id)} className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 transition-colors hover:border-slate-700">
+      <div className="flex flex-wrap items-center gap-2.5">
+        <span className="font-mono text-sm font-bold text-amber-300">#{w.id}</span>
         <span className={`rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-wider ${statusClass(w.status)}`}>
-          {w.status || '?'}
+          {STATUS_LABEL[String(w.status).toLowerCase()] ?? w.status ?? '?'}
         </span>
-        <span className="font-bold text-white">
-          {formatAmount(w.amount)} {currencyLabel(w.type)}
+        <span className="text-sm font-black text-white">
+          {formatAmount(w.amount)} <span className="text-slate-500">{currencyLabel(w.type)}</span>
         </span>
-        <span className="text-slate-400">{userLabel(w)}</span>
+        <span className="truncate text-xs font-medium text-slate-400">{userLabel(w)}</span>
       </div>
-      <p className="mt-1 break-all font-mono text-xs text-slate-500">{w.address || '—'}</p>
-      {renderActions(w)}
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        {w.address ? <CopyChip value={w.address} label="Endereço" /> : null}
+      </div>
+      <div className="mt-3">{renderActions(w)}</div>
     </li>
   );
 
   return (
-    <div className="space-y-8">
-      <header className="flex items-center justify-between gap-4">
+    <div className="animate-in fade-in space-y-8 duration-700">
+      <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-white">Financeiro</h1>
-          <p className="text-sm text-slate-500">
-            Fila de saques · {queue.length} ativo{queue.length === 1 ? '' : 's'}
-            {history.length > 0 ? ` · ${history.length} no histórico recente` : ''}
-          </p>
+          <p className="text-sm font-medium text-slate-500">Fila de saques e histórico de movimentações.</p>
         </div>
         <button
           type="button"
           onClick={() => void load()}
-          className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-slate-800 px-4 py-2 text-xs font-bold text-slate-200"
+          className="inline-flex items-center gap-2 rounded-xl border border-slate-700/50 bg-slate-800 px-4 py-2 text-xs font-bold text-slate-300 transition-all hover:bg-slate-700"
         >
           <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           Atualizar
         </button>
       </header>
 
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+        <Kpi icon={ShieldAlert} label="Fila ativa" value={String(queue.length)} sub="pendente / aprovado / processando" />
+        <Kpi icon={Wallet} label="POL na fila" value={formatAmount(queuePolTotal)} sub="soma dos saques ativos" tone="emerald" />
+        <Kpi
+          icon={Coins}
+          label="Histórico recente"
+          value={String(history.length)}
+          sub={failedCount > 0 ? `${failedCount} falhado(s) / rejeitado(s)` : 'todos concluídos'}
+          tone="slate"
+        />
+      </div>
+
       {loading ? (
-        <Loader2 className="mx-auto h-8 w-8 animate-spin text-slate-500" />
+        <div className="flex justify-center py-16">
+          <Loader2 className="h-8 w-8 animate-spin text-slate-500" />
+        </div>
       ) : (
         <>
           <section className="space-y-3">
             <h2 className="text-xs font-black uppercase tracking-widest text-amber-400/90">Fila (ação necessária)</h2>
             {queue.length === 0 ? (
-              <p className="text-slate-500">Nenhum saque pendente / aprovado / em processamento.</p>
+              <p className="rounded-2xl border border-slate-800 bg-slate-900/40 py-8 text-center text-sm text-slate-500">
+                Nenhum saque pendente / aprovado / em processamento.
+              </p>
             ) : (
-              <ul className="space-y-3">{queue.map(renderRow)}</ul>
+              <ul className="space-y-3">{queue.map(renderQueueRow)}</ul>
             )}
           </section>
 
           <section className="space-y-3">
             <h2 className="text-xs font-black uppercase tracking-widest text-slate-500">Histórico recente (somente leitura)</h2>
             {history.length === 0 ? (
-              <p className="text-slate-600 text-sm">Sem histórico recente.</p>
+              <p className="rounded-2xl border border-slate-800 bg-slate-900/40 py-8 text-center text-sm text-slate-500">
+                Sem histórico recente.
+              </p>
             ) : (
-              <ul className="space-y-3 opacity-90">{history.map(renderRow)}</ul>
+              <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900/40">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-800 text-[10px] font-black uppercase tracking-widest text-slate-500">
+                      <th className="px-4 py-3 text-left">ID</th>
+                      <th className="px-4 py-3 text-left">Status</th>
+                      <th className="px-4 py-3 text-left">Valor</th>
+                      <th className="px-4 py-3 text-left">Usuário</th>
+                      <th className="px-4 py-3 text-left">Endereço</th>
+                      <th className="px-4 py-3 text-left">Tx</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {history.map((w) => (
+                      <tr key={String(w.id)} className="border-b border-slate-800/60 transition-colors last:border-0 hover:bg-slate-800/30">
+                        <td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-amber-300">#{w.id}</td>
+                        <td className="px-4 py-3">
+                          <span className={`rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-wider ${statusClass(w.status)}`}>
+                            {STATUS_LABEL[String(w.status).toLowerCase()] ?? w.status ?? '?'}
+                          </span>
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-xs font-bold text-white">
+                          {formatAmount(w.amount)} <span className="text-slate-500">{currencyLabel(w.type)}</span>
+                        </td>
+                        <td className="max-w-[14rem] truncate px-4 py-3 text-xs text-slate-400">{userLabel(w)}</td>
+                        <td className="px-4 py-3">{w.address ? <CopyChip value={w.address} label="Endereço" /> : '—'}</td>
+                        <td className="px-4 py-3">
+                          {w.txHash ? (
+                            <div className="flex items-center gap-1.5">
+                              <CopyChip value={w.txHash} label="Tx hash" />
+                              <a
+                                href={`https://polygonscan.com/tx/${w.txHash}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                title="Ver no explorer"
+                                className="text-slate-500 transition-colors hover:text-slate-300"
+                              >
+                                <ExternalLink className="h-3.5 w-3.5" />
+                              </a>
+                            </div>
+                          ) : (
+                            <span className="text-slate-600">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </section>
         </>
