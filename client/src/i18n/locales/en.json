@@ -779,7 +779,6 @@
       "login_now": "Sign In",
       "referral_msg": "You are being referred by code: {{code}}",
       "terms_msg": "By registering, you agree to our terms of service and privacy policy.",
-      "privacyDisclosure": "Registration requires acceptance of the Terms of Use. Privacy details are available publicly at any time.",
       "termsConsent": {
         "prefix": "I have read and agree to the",
         "linkLabel": "Terms of Use",

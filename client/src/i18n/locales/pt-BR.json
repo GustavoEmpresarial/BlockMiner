@@ -795,7 +795,6 @@
         "email_invalid": "Informe um endereço de e-mail válido.",
         "email_provider_not_allowed": "Use um e-mail de um provedor permitido: Gmail, Outlook, Hotmail, Yahoo, iCloud, Proton Mail ou Tuta."
       },
-      "privacyDisclosure": "O cadastro exige aceitação dos Termos de Uso. As informações de privacidade ficam disponíveis publicamente a qualquer momento.",
       "termsConsent": {
         "prefix": "Li e concordo com os",
         "linkLabel": "Termos de Uso",

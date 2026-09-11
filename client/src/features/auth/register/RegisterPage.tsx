@@ -282,12 +282,6 @@ export default function RegisterPage() {
             </p>
           </div>
         </div>
-
-        <div className="mt-8 text-center">
-          <p className="text-[10px] text-gray-600 font-bold uppercase tracking-[0.1em] max-w-[300px] mx-auto leading-relaxed">
-            {t('auth.register.privacyDisclosure')}
-          </p>
-        </div>
       </div>
     </AuthShell>
   );
