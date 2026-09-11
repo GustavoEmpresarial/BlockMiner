@@ -20,7 +20,6 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import BrandLogo from '../../../shared/components/BrandLogo';
-import SiteFooter from '../../../shared/components/SiteFooter';
 import { formatHashrate } from '../../../shared/utils/machine';
 import type { LandingFaqItemDef } from '../../../shared/hooks/useLandingSeo';
 import type { PublicStatsPayload } from '../../../shared/hooks/usePublicStatsPoll';
@@ -622,6 +621,11 @@ export function LandingFooter({
 }) {
   return (
     <>
+      {/* This is the full landing footer (brand + social + product/company/legal columns) —
+          it already covers what shared/components/SiteFooter renders, so no second
+          <SiteFooter/> below it. A duplicate <SiteFooter compact/> call here (fixed
+          2026-09-11) was rendering a second, smaller footer stacked right under this one on
+          every page load. */}
       <footer className="relative z-10 border-t border-white/[0.07] py-14 px-5 sm:px-8 bg-[#02070f] text-slate-500">
         <div className="mx-auto grid max-w-6xl gap-10 md:grid-cols-2 lg:grid-cols-4">
           <div>
@@ -677,7 +681,6 @@ export function LandingFooter({
           <p className="text-sm">{t('landing.footer.copyright', { year: new Date().getFullYear() })}</p>
         </div>
       </footer>
-      <SiteFooter compact />
     </>
   );
 }
