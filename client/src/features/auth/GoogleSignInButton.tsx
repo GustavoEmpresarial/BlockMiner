@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Loader2 } from 'lucide-react';
-import { getAuthGoogleConfig } from './lib/login.api';
+import { getAuthGoogleConfig } from './login/lib/login.api';
 import {
   createGoogleOAuthState,
   createGooglePkcePair,
   googlePkceSessionKey,
-} from './lib/googlePkce';
+} from './login/lib/googlePkce';
 
 type Props = {
   onError?: (message: string) => void;

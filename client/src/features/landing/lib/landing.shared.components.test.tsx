@@ -101,9 +101,7 @@ describe('useInViewOnce (hook)', () => {
       observe() {}
       disconnect = disconnect;
     }
-    // @ts-expect-error test-only global stub
     const original = global.IntersectionObserver;
-    // @ts-expect-error test-only global stub
     global.IntersectionObserver = FakeIntersectionObserver;
     try {
       const { result } = renderHook(() => useInViewOnce());
@@ -111,11 +109,9 @@ describe('useInViewOnce (hook)', () => {
       expect(visible).toBe(false);
       // Attach a fake DOM node so the effect's `if (!el ...)` guard doesn't bail.
       act(() => {
-        // @ts-expect-error assigning to a ref for test purposes
         ref.current = document.createElement('div');
       });
     } finally {
-      // @ts-expect-error restore
       global.IntersectionObserver = original;
     }
   });

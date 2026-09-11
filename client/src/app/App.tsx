@@ -3,8 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-
 import { useAuthStore } from '../shared/auth/auth.store';
 import { startSiteIntegrityMonitoring } from '../features/antibot';
 import { LandingPage } from '../features/landing/index';
-import { LoginPage } from '../features/login';
-import { RegisterPage } from '../features/register';
+import { LoginPage, RegisterPage } from '../features/auth';
 import { ForgotPasswordPage } from '../features/forgot-password';
 import { VerifyEmailPage } from '../features/verify-email';
 import { TermsOfUsePage, PrivacyPolicyPage } from '../features/legal';

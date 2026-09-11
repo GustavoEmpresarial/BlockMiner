@@ -1,13 +1,13 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Mail, Lock, AlertCircle, Loader2, ChevronRight, Eye, EyeOff } from 'lucide-react';
-import AuthShell from '../../shared/components/AuthShell';
+import AuthShell from '../../../shared/components/AuthShell';
 import { useLoginForm } from './lib/useLoginForm';
-import { safeInlineMessage, LOGIN_PASSWORD_MAX_LEN } from '../../shared/utils/authInputGuards';
-import TurnstileField from '../../shared/components/auth/TurnstileField';
-import { resolveTurnstileSiteKeyLogin } from '../../shared/constants/turnstilePublic';
-import { SatspaySignInButton } from './SatspaySignInButton';
-import { GoogleSignInButton } from './GoogleSignInButton';
+import { safeInlineMessage, LOGIN_PASSWORD_MAX_LEN } from '../../../shared/utils/authInputGuards';
+import TurnstileField from '../../../shared/components/auth/TurnstileField';
+import { resolveTurnstileSiteKeyLogin } from '../../../shared/constants/turnstilePublic';
+import { SatspaySignInButton } from '../SatspaySignInButton';
+import { GoogleSignInButton } from '../GoogleSignInButton';
 
 const fieldClass =
   'w-full bg-slate-950/60 border border-white/10 rounded-xl sm:rounded-2xl py-3 sm:py-3.5 pl-11 sm:pl-12 pr-4 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:border-sky-500/30';

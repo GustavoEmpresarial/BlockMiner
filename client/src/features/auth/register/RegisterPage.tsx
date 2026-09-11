@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Mail, User, AlertCircle, Loader2, ChevronRight, Eye, EyeOff, Gift } from 'lucide-react';
-import AuthShell from '../../shared/components/AuthShell';
+import AuthShell from '../../../shared/components/AuthShell';
 import { useRegisterForm } from './lib/useRegisterForm';
 import {
   REGISTER_USERNAME_MIN,
@@ -11,12 +11,12 @@ import {
   REGISTER_PASSWORD_MIN_LEN,
   REGISTER_PASSWORD_MAX_LEN,
   REGISTER_REF_CODE_MAX_LEN,
-} from '../../shared/utils/registerFieldLimits';
-import { safeInlineMessage } from '../../shared/utils/registerInputGuards';
-import TurnstileField from '../../shared/components/auth/TurnstileField';
-import { resolveTurnstileSiteKeyRegister } from '../../shared/constants/turnstilePublic';
-import { GoogleSignInButton } from '../login/GoogleSignInButton';
-import { SatspaySignInButton } from '../login/SatspaySignInButton';
+} from '../../../shared/utils/registerFieldLimits';
+import { safeInlineMessage } from '../../../shared/utils/registerInputGuards';
+import TurnstileField from '../../../shared/components/auth/TurnstileField';
+import { resolveTurnstileSiteKeyRegister } from '../../../shared/constants/turnstilePublic';
+import { GoogleSignInButton } from '../GoogleSignInButton';
+import { SatspaySignInButton } from '../SatspaySignInButton';
 
 // See useRegisterForm.ts for deviations from legacy/client RegisterPage.tsx
 // (no SocialLoginButtons, no UTM capture). O widget do Turnstile foi portado no item 89

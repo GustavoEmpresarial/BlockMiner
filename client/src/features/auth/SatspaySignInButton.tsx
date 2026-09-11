@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Loader2 } from 'lucide-react';
 import { useAuthStore } from '../../shared/auth/auth.store';
-import { getAuthSatspayConfig, postAuthSatspayExchange } from './lib/login.api';
+import { getAuthSatspayConfig, postAuthSatspayExchange } from './login/lib/login.api';
 
 declare global {
   interface Window {

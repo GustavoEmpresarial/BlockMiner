@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, type ChangeEvent, type FormEvent } from 'r
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useAuthStore } from '../../../shared/auth/auth.store';
+import { useAuthStore } from '../../../../shared/auth/auth.store';
 import {
   REGISTER_USERNAME_MIN,
   REGISTER_USERNAME_MAX,
@@ -10,8 +10,8 @@ import {
   REGISTER_PASSWORD_MIN_LEN,
   REGISTER_PASSWORD_MAX_LEN,
   REGISTER_REF_CODE_MAX_LEN,
-} from '../../../shared/utils/registerFieldLimits';
-import { isRegisterAllowedEmailDomain } from '../../../shared/utils/registerAllowedEmailDomains';
+} from '../../../../shared/utils/registerFieldLimits';
+import { isRegisterAllowedEmailDomain } from '../../../../shared/utils/registerAllowedEmailDomains';
 import {
   clipRefCodeFromQuery,
   sanitizeRegisterUsername,
@@ -21,8 +21,8 @@ import {
   validateUsernameShape,
   validateEmailShape,
   safeInlineMessage,
-} from '../../../shared/utils/registerInputGuards';
-import type { TurnstileFieldHandle } from '../../../shared/components/auth/TurnstileField';
+} from '../../../../shared/utils/registerInputGuards';
+import type { TurnstileFieldHandle } from '../../../../shared/components/auth/TurnstileField';
 
 const FIELD_MAX_LEN: Record<string, number> = {
   username: REGISTER_USERNAME_MAX,

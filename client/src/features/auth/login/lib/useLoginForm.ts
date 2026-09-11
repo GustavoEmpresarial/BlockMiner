@@ -2,13 +2,13 @@ import { useState, useEffect, useRef, type FormEvent } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { useAuthStore, api } from '../../../shared/auth/auth.store';
-import { requestPartnerStorageAccess } from '../../../shared/auth/csrfMemory';
+import { useAuthStore, api } from '../../../../shared/auth/auth.store';
+import { requestPartnerStorageAccess } from '../../../../shared/auth/csrfMemory';
 import { postAuthLogin } from './login.api';
 import { responseRequiresTwoFactorStep } from './login.twoFactorUi';
-import { isAxiosTimeoutError } from '../../../shared/utils/apiTimeout';
-import { readAuthErrorMessage } from '../../../shared/auth/auth.errors';
-import { resolveApiErrorMessage } from '../../../shared/utils/apiErrorI18n';
+import { isAxiosTimeoutError } from '../../../../shared/utils/apiTimeout';
+import { readAuthErrorMessage } from '../../../../shared/auth/auth.errors';
+import { resolveApiErrorMessage } from '../../../../shared/utils/apiErrorI18n';
 import {
   clampLoginIdentifier,
   clampLoginPassword,
@@ -19,9 +19,9 @@ import {
   validateLegacyNewPassword,
   safeInlineMessage,
   LOGIN_PASSWORD_MAX_LEN,
-} from '../../../shared/utils/authInputGuards';
-import type { TurnstileFieldHandle } from '../../../shared/components/auth/TurnstileField';
-import { userscriptManagerKickEnabled } from '../../antibot/integrity/integrity.policy';
+} from '../../../../shared/utils/authInputGuards';
+import type { TurnstileFieldHandle } from '../../../../shared/components/auth/TurnstileField';
+import { userscriptManagerKickEnabled } from '../../../antibot/integrity/integrity.policy';
 
 function isAxiosLikeError(err: unknown): err is { response?: { data?: Record<string, unknown> } } {
   return typeof err === 'object' && err !== null && 'response' in err;

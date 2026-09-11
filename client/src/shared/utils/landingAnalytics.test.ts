@@ -3,13 +3,9 @@ import { persistUtmParams, readStoredUtm, trackLandingEvent, initMetaPixel } fro
 
 beforeEach(() => {
   sessionStorage.clear();
-  // @ts-expect-error test-only globals
   delete window.gtag;
-  // @ts-expect-error test-only globals
   delete window.fbq;
-  // @ts-expect-error test-only globals
   delete window._fbq;
-  // @ts-expect-error test-only globals
   delete window.__blockminerMetaPixelLoaded;
 });
 
@@ -46,7 +42,6 @@ describe('trackLandingEvent', () => {
 
   it('calls window.fbq("trackCustom", ...) with the event name and merged params when fbq exists', () => {
     const fbq = vi.fn();
-    // @ts-expect-error test-only global
     window.fbq = fbq;
     persistUtmParams('?utm_source=google');
     trackLandingEvent('landing_cta_click', { cta_id: 'hero' });
@@ -54,7 +49,6 @@ describe('trackLandingEvent', () => {
   });
 
   it('swallows a throwing fbq instead of crashing the page', () => {
-    // @ts-expect-error test-only global
     window.fbq = () => {
       throw new Error('blocked by extension');
     };
@@ -64,7 +58,6 @@ describe('trackLandingEvent', () => {
   it('calls window.gtag when VITE_GA_ID is configured and gtag exists', () => {
     vi.stubEnv('VITE_GA_ID', 'G-TEST123');
     const gtag = vi.fn();
-    // @ts-expect-error test-only global
     window.gtag = gtag;
     trackLandingEvent('landing_cta_click', { cta_id: 'hero' });
     expect(gtag).toHaveBeenCalledWith('event', 'landing_cta_click', { cta_id: 'hero' });
@@ -94,7 +87,6 @@ describe('initMetaPixel', () => {
   it('is a no-op with no VITE_META_PIXEL_ID configured', () => {
     vi.stubEnv('VITE_META_PIXEL_ID', '');
     initMetaPixel();
-    // @ts-expect-error test-only global
     expect(window.fbq).toBeUndefined();
     vi.unstubAllEnvs();
   });
@@ -106,9 +98,7 @@ describe('initMetaPixel', () => {
 
     initMetaPixel();
 
-    // @ts-expect-error test-only global
     expect(typeof window.fbq).toBe('function');
-    // @ts-expect-error test-only global
     expect(window.__blockminerMetaPixelLoaded).toBe(true);
     const injected = document.querySelector('script[src="https://connect.facebook.net/en_US/fbevents.js"]') as HTMLScriptElement | null;
     expect(injected).not.toBeNull();
@@ -126,7 +116,6 @@ describe('initMetaPixel', () => {
   it('when window.fbq already exists (loaded by something else), just calls init+PageView without re-injecting the script', () => {
     vi.stubEnv('VITE_META_PIXEL_ID', 'PIXEL456');
     const fbq = vi.fn();
-    // @ts-expect-error test-only global
     window.fbq = fbq;
 
     initMetaPixel();
@@ -144,9 +133,7 @@ describe('initMetaPixel', () => {
     document.head.appendChild(script);
 
     initMetaPixel();
-    // @ts-expect-error test-only global — a 3rd call after init+PageView already queued 2 calls
     window.fbq('track', 'CustomEvent');
-    // @ts-expect-error test-only global
     expect(window.fbq.queue.length).toBeGreaterThanOrEqual(1);
 
     document.head.removeChild(script);

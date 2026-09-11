@@ -1,5 +1,5 @@
-import { api } from '../../../shared/auth/auth.store';
-import { API_TIMEOUT_MS_AUTH } from '../../../shared/utils/apiTimeout';
+import { api } from '../../../../shared/auth/auth.store';
+import { API_TIMEOUT_MS_AUTH } from '../../../../shared/utils/apiTimeout';
 import type { AuthLoginRequestBody } from './auth.types';
 
 export async function postAuthLogin(body: AuthLoginRequestBody) {
