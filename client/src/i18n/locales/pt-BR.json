@@ -182,15 +182,16 @@
       "link_roadmap": "Roadmap",
       "link_manual": "Manual / ajuda",
       "col_legal": "Legal e segurança",
-      "link_terms": "Termos e políticas (manual)",
-      "link_privacy": "Transparência e custos",
+      "link_terms": "Termos de Uso",
+      "link_privacy": "Política de Privacidade",
       "social_discord": "Discord",
       "social_telegram": "Telegram",
       "social_twitter": "X",
       "social_youtube": "YouTube",
       "theme_aria": "Tema de cores",
       "theme_light": "Claro",
-      "theme_dark": "Escuro"
+      "theme_dark": "Escuro",
+      "back_to_top": "Voltar ao topo"
     },
     "widget": {
       "blocks": "Blocos",
