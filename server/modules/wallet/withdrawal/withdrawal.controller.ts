@@ -117,7 +117,8 @@ export async function adminListPendingWithdrawals(_req: Request, res: Response):
   try {
     const withdrawals = await withdrawalRepo.getWithdrawalsForAdmin();
     res.json({ ok: true, withdrawals: withdrawals.map((w) => ({ ...w, amount: Number(w.amount) })) });
-  } catch {
+  } catch (err: unknown) {
+    log.error("adminListPendingWithdrawals failed", { error: String(err) });
     res.status(500).json({ ok: false, message: "Load failed" });
   }
 }
@@ -138,9 +139,17 @@ export async function adminApproveWithdrawal(req: Request, res: Response): Promi
       res.status(400).json({ ok: false, message: "Only pending withdrawals can be approved" });
       return;
     }
-    await withdrawalRepo.markWithdrawalApproved(id);
+    // Atomic guard — see withdrawal.repository.ts header comment. `false` means someone
+    // else (another admin, or the auto-send tick) already moved this row off "pending"
+    // between our read above and this write.
+    const applied = await withdrawalRepo.markWithdrawalApproved(id);
+    if (!applied) {
+      res.status(409).json({ ok: false, message: "Withdrawal was already processed by another action" });
+      return;
+    }
     res.json({ ok: true, message: "Withdrawal approved" });
-  } catch {
+  } catch (err: unknown) {
+    log.error("adminApproveWithdrawal failed", { error: String(err) });
     res.status(500).json({ ok: false, message: "Approval failed" });
   }
 }
@@ -161,9 +170,14 @@ export async function adminRejectWithdrawal(req: Request, res: Response): Promis
       res.status(400).json({ ok: false, message: "Cannot reject this withdrawal" });
       return;
     }
-    await withdrawalRepo.markWithdrawalRejected(id);
+    const applied = await withdrawalRepo.markWithdrawalRejected(id);
+    if (!applied) {
+      res.status(409).json({ ok: false, message: "Withdrawal was already processed by another action" });
+      return;
+    }
     res.json({ ok: true, message: "Withdrawal rejected" });
-  } catch {
+  } catch (err: unknown) {
+    log.error("adminRejectWithdrawal failed", { error: String(err) });
     res.status(500).json({ ok: false, message: "Rejection failed" });
   }
 }
@@ -195,6 +209,10 @@ export async function adminCompleteWithdrawal(req: Request, res: Response): Prom
     }
     const txHash = String(rawHash).trim();
     const completed = await withdrawalRepo.markWithdrawalCompleted(id, txHash);
+    if (!completed) {
+      res.status(409).json({ ok: false, message: "Withdrawal was already processed by another action" });
+      return;
+    }
     // Public Telegram proof — same real gap fixed in withdrawal.auto-send.ts (PROGRESSO.txt
     // item 73): a manually-completed withdrawal must post the public proof too, not just the
     // auto-send path.
@@ -208,7 +226,8 @@ export async function adminCompleteWithdrawal(req: Request, res: Response): Prom
       createdAt: completed.createdAt,
     }).catch((err: unknown) => log.warn(`notifyWithdrawalCompleted failed for tx ${id}`, { error: String(err) }));
     res.json({ ok: true, message: "Withdrawal marked as completed" });
-  } catch {
+  } catch (err: unknown) {
+    log.error("adminCompleteWithdrawal failed", { error: String(err) });
     res.status(500).json({ ok: false, message: "Marking as completed failed" });
   }
 }

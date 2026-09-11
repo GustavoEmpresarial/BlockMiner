@@ -125,8 +125,8 @@ export default function AdminFinancePage() {
     setLoading(true);
     try {
       const res = await listPendingWithdrawals();
-      const data = res.data as { ok?: boolean; withdrawals?: WithdrawalRow[]; items?: WithdrawalRow[] };
-      setRows(data.withdrawals ?? data.items ?? []);
+      const data = res.data as { ok?: boolean; withdrawals?: WithdrawalRow[] };
+      setRows(data.withdrawals ?? []);
     } catch (err) {
       toast.error(readAxiosResponseMessage(err) ?? 'Erro ao carregar saques');
     } finally {
@@ -163,6 +163,9 @@ export default function AdminFinancePage() {
       void load();
     } catch (err) {
       toast.error(readAxiosResponseMessage(err) ?? 'Erro');
+      // A 409 here means another action already changed this row — refresh so the
+      // admin sees its current state instead of a stale queue.
+      void load();
     } finally {
       setBusyId(null);
     }

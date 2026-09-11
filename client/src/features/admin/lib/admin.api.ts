@@ -151,18 +151,22 @@ export function getAdminUser(id: number | string) {
   return api.get(`/admin/users/${id}`);
 }
 
+/** GET /admin/wallet/withdrawals/pending — server: wallet.admin.routes.ts -> withdrawal.controller.ts adminListPendingWithdrawals. Returns { ok, withdrawals }. */
 export function listPendingWithdrawals() {
   return api.get('/admin/wallet/withdrawals/pending');
 }
 
+/** POST /admin/wallet/withdrawals/:id/approve — server: withdrawal.controller.ts adminApproveWithdrawal. 409 if the row already left "pending" (raced by another admin action). */
 export function approveWithdrawal(id: number | string) {
   return api.post(`/admin/wallet/withdrawals/${id}/approve`);
 }
 
+/** POST /admin/wallet/withdrawals/:id/reject — server: withdrawal.controller.ts adminRejectWithdrawal. Refunds the reserved balance; writes status "rejected". 409 on a lost race. */
 export function rejectWithdrawal(id: number | string) {
   return api.post(`/admin/wallet/withdrawals/${id}/reject`);
 }
 
+/** POST /admin/wallet/withdrawals/:id/complete — server: withdrawal.controller.ts adminCompleteWithdrawal. Requires a valid 0x+64hex txHash. 409 on a lost race. */
 export function completeWithdrawal(id: number | string, txHash: string) {
   return api.post(`/admin/wallet/withdrawals/${id}/complete`, { txHash });
 }

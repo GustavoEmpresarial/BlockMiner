@@ -158,15 +158,42 @@ export async function findWithdrawalById(id: number) {
   return prisma.transaction.findUnique({ where: { id } });
 }
 
-export async function markWithdrawalApproved(id: number) {
-  return prisma.transaction.update({ where: { id }, data: { status: "approved", updatedAt: new Date() } });
+/**
+ * Atomic admin transitions — same `updateMany` + status-guard pattern as
+ * `claimWithdrawalForSend`/`releaseWithdrawalClaim` below, applied to the admin
+ * approve/reject/complete actions. Previously these did a plain `update` after a
+ * separate read-and-check in the controller, which is a classic read-then-write
+ * race: two concurrent admin clicks (e.g. approve + reject fired near-simultaneously)
+ * could both pass their precondition check before either write landed. Returning
+ * `false` on a lost race lets the controller answer 409 instead of silently
+ * reporting success for an action that didn't actually apply.
+ */
+export async function markWithdrawalApproved(id: number): Promise<boolean> {
+  const result = await prisma.transaction.updateMany({
+    where: { id, status: "pending" },
+    data: { status: "approved", updatedAt: new Date() },
+  });
+  return result.count === 1;
 }
 
-/** Rejecting refunds the reserved balance — legacy invariant, done atomically. */
-export async function markWithdrawalRejected(id: number) {
+/**
+ * Admin-initiated rejection. Distinct from `markAutoSendFailed` below: a human
+ * rejected the request (status "rejected"), vs. the auto-send engine failing to
+ * broadcast it (status "failed") — the admin UI shows these as different outcomes.
+ * Rejecting refunds the reserved balance — legacy invariant, done atomically. The
+ * status transition itself is guarded the same way as `markWithdrawalApproved`;
+ * only the winner of that guard ever reads/refunds `fundsReserved`, so a second,
+ * losing caller can't double-refund.
+ */
+export async function markWithdrawalRejected(id: number): Promise<boolean> {
   return prisma.$transaction(async (tx) => {
-    const row = await tx.transaction.findUnique({ where: { id } });
-    if (!row) throw new Error("Withdrawal not found");
+    const claimed = await tx.transaction.updateMany({
+      where: { id, status: { in: ["pending", "approved"] } },
+      data: { status: "rejected", updatedAt: new Date() },
+    });
+    if (claimed.count !== 1) return false;
+
+    const row = await tx.transaction.findUniqueOrThrow({ where: { id } });
     if (row.fundsReserved) {
       const refund = reservedRefundTotal(row);
       if (row.type === "shib_withdrawal") {
@@ -174,13 +201,21 @@ export async function markWithdrawalRejected(id: number) {
       } else {
         await tx.user.update({ where: { id: row.userId }, data: { polBalance: { increment: refund } } });
       }
+      await tx.transaction.update({ where: { id }, data: { fundsReserved: false } });
     }
-    return tx.transaction.update({ where: { id }, data: { status: "failed", fundsReserved: false, updatedAt: new Date() } });
+    return true;
   });
 }
 
+/** Returns the updated row on success, or `null` if the atomic guard lost the race
+ *  (someone else already transitioned this withdrawal away from pending/approved). */
 export async function markWithdrawalCompleted(id: number, txHash: string) {
-  return prisma.transaction.update({ where: { id }, data: { status: "completed", txHash, completedAt: new Date() } });
+  const result = await prisma.transaction.updateMany({
+    where: { id, status: { in: ["pending", "approved"] } },
+    data: { status: "completed", txHash, completedAt: new Date() },
+  });
+  if (result.count !== 1) return null;
+  return prisma.transaction.findUniqueOrThrow({ where: { id } });
 }
 
 // --- Auto-send engine (ported from legacy withdrawalsCron.ts / walletModel.ts) ---
