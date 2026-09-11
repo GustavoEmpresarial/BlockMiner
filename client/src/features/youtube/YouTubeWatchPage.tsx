@@ -323,8 +323,23 @@ export default function YouTubeWatchPage() {
             // is for.
             if (cancelled) return;
             const YTState = window.YT.PlayerState;
-            if (event.data === YTState.PLAYING) setPlayerState('playing');
-            else if (event.data === YTState.BUFFERING) setPlayerState('buffering');
+            if (event.data === YTState.PLAYING) {
+              setPlayerState('playing');
+              // The player itself is ground truth: if it's genuinely playing, the app-level
+              // `isPaused` flag must not stay stuck true. Without this, a real pause (tab
+              // hidden, blur-away) followed by the user pressing play INSIDE the iframe
+              // itself (not the app's "Entendi"/resume button) left `isPaused` latched true
+              // forever — isActivelyWatching/presenceActive never recovered, silently
+              // freezing the heartbeat (so "Tempo verificado (servidor)" stopped counting)
+              // and blocking every future claim, even though the video kept playing fine.
+              // 2026-09-11.
+              setIsPaused(false);
+              try {
+                sessionStorage.removeItem(YT_PAUSED_KEY);
+              } catch {
+                /* ignore */
+              }
+            } else if (event.data === YTState.BUFFERING) setPlayerState('buffering');
             else if (event.data === YTState.PAUSED) setPlayerState('paused');
             else if (event.data === YTState.ENDED) setPlayerState('ended');
             else if (event.data === YTState.CUED) setPlayerState('cued');
