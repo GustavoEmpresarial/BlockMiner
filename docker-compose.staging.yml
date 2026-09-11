@@ -1,0 +1,194 @@
+# Staging/test stack — a SECOND, fully isolated instance of the same app on the same VM,
+# living next to docker-compose.yml (production). Mirrors it service-for-service; the only
+# differences are the `blockminer-staging` naming/volume prefix (so `docker compose ps`/`docker
+# volume ls` never collide with prod) and the default host ports (see below) so both stacks can
+# run at the same time without a port clash.
+#
+# Deliberate decisions (2026-09-11, confirmed with the project owner):
+#  - Own Postgres/Redis/Kafka — staging NEVER touches prod's database directly. Two app
+#    processes with independent in-process crons (mining engine, withdrawal auto-send, reward
+#    distribution) writing to the SAME live database would double-process everything. Staging's
+#    DB starts from a trimmed copy of production (see storage/scripts/deploy — same pg_dump
+#    approach already used earlier this session for local verification).
+#  - `phd` (the ONLY service holding POLYGON_HD_MNEMONIC, i.e. real-fund custody) IS included
+#    here and uses the SAME mnemonic as production, by explicit choice of the project owner —
+#    NOT this file's default recommendation. Because of that, staging's own .env.production
+#    MUST set WITHDRAWAL_AUTO_SEND=false and POLYGON_HD_AUTO_SWEEP=0 (staging's DB is a stale
+#    snapshot; letting its auto-send/auto-sweep crons run against real mainnet funds with a
+#    real signing key over stale/test data is a real-money risk). Enforce this in staging's
+#    .env.production, not here — see storage/scripts/deploy/README (staging setup notes).
+#
+# Usage: docker compose -f docker-compose.staging.yml up -d
+name: blockminer-staging
+
+x-default-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "20m"
+    max-file: "5"
+
+services:
+  db:
+    container_name: blockminer-staging-db
+    image: postgres:15-alpine
+    logging: *default-logging
+    environment:
+      POSTGRES_USER: blockminer
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+      POSTGRES_DB: blockminer
+    ports:
+      - "${DB_PUBLISH_PORT:-127.0.0.1:5433}:5432"
+    volumes:
+      - blockminer_staging_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U blockminer -d blockminer"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    container_name: blockminer-staging-redis
+    image: redis:7-alpine
+    logging: *default-logging
+    ports:
+      - "${REDIS_PUBLISH_PORT:-127.0.0.1:6380}:6379"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  kafka:
+    container_name: blockminer-staging-kafka
+    image: bitnamilegacy/kafka:3.9.0-debian-12-r13
+    logging: *default-logging
+    ports:
+      - "${KAFKA_PUBLISH_PORT:-127.0.0.1:9093}:9092"
+    environment:
+      KAFKA_CFG_NODE_ID: "1"
+      KAFKA_CFG_PROCESS_ROLES: "broker,controller"
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: "1@kafka:9093"
+      KAFKA_CFG_LISTENERS: "PLAINTEXT://:9092,CONTROLLER://:9093"
+      KAFKA_CFG_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:9092"
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT"
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "true"
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+    volumes:
+      - blockminer_staging_kafka:/bitnami/kafka
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics.sh --bootstrap-server 127.0.0.1:9092 --list >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 40s
+
+  app:
+    container_name: blockminer-staging-app
+    logging: *default-logging
+    build:
+      context: .
+      args:
+        VITE_WALLETCONNECT_PROJECT_ID: ${VITE_WALLETCONNECT_PROJECT_ID:-}
+    ports:
+      - "${APP_PUBLISH_PORT:-127.0.0.1:3001}:3000"
+    stop_grace_period: 180s
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    env_file:
+      - .env.production
+      - path: .env
+        required: false
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: "postgresql://blockminer:${DB_PASSWORD:?set DB_PASSWORD in .env}@db:5432/blockminer?schema=public"
+      REDIS_URL: "redis://redis:6379"
+      KAFKA_BROKERS: "kafka:9092"
+      TRUST_PROXY: "true"
+    volumes:
+      - ./storage:/app/storage
+      - ./client/dist:/app/client/dist
+      - ./dist:/app/dist
+      - ./prisma:/app/prisma
+    restart: unless-stopped
+
+  stats-materializer:
+    container_name: blockminer-staging-stats-materializer
+    logging: *default-logging
+    image: blockminer-staging-app:latest
+    command: ["node", "dist/server/bootstrap/statsMaterializer.js"]
+    depends_on:
+      db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    env_file:
+      - .env.production
+      - path: .env
+        required: false
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: "postgresql://blockminer:${DB_PASSWORD:?set DB_PASSWORD in .env}@db:5432/blockminer?schema=public"
+      KAFKA_BROKERS: "kafka:9092"
+      ROLE: "stats-materializer"
+    restart: unless-stopped
+
+  # See the file-level comment: SAME mnemonic as production, by explicit owner decision.
+  # Staging's .env.production MUST set WITHDRAWAL_AUTO_SEND=false and POLYGON_HD_AUTO_SWEEP=0.
+  phd:
+    container_name: blockminer-staging-phd
+    logging: *default-logging
+    image: blockminer-staging-app:latest
+    command: ["node", "dist/server/phd-bootstrap/phdServer.js"]
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: "postgresql://blockminer:${DB_PASSWORD:?set DB_PASSWORD in .env}@db:5432/blockminer?schema=public"
+      PHD_PORT: "${PHD_PORT:-3847}"
+      PHD_INTERNAL_TOKEN: "${PHD_INTERNAL_TOKEN:?set PHD_INTERNAL_TOKEN in .env}"
+      POLYGON_HD_MNEMONIC: "${POLYGON_HD_MNEMONIC:?set POLYGON_HD_MNEMONIC in .env}"
+      POLYGON_RPC_URL: "${POLYGON_RPC_URL:-https://polygon-bor-rpc.publicnode.com}"
+      POLYGON_HD_SWEEP_TO_ADDRESS: "${POLYGON_HD_SWEEP_TO_ADDRESS:-}"
+      POLYGON_HD_AUTO_SWEEP: "${POLYGON_HD_AUTO_SWEEP:-}"
+      POLYGON_HD_SWEEP_CRON_MS: "${POLYGON_HD_SWEEP_CRON_MS:-}"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  nginx:
+    container_name: blockminer-staging-nginx
+    image: nginx:alpine
+    logging: *default-logging
+    # Reuses the exact same nginx.vm5000.conf as production — it resolves the app upstream
+    # by the compose SERVICE name ("app", via $bm_app map var), not a hardcoded container
+    # name, and each compose project gets its own isolated network, so "app" here resolves
+    # to blockminer-staging-app, never production's.
+    ports:
+      - "${NGINX_HTTP_PUBLISH:-5001:5100}"
+      - "${NGINX_HTTPS_PUBLISH:-127.0.0.1:5444:5443}"
+    volumes:
+      - ${NGINX_CONF_FILE:-./nginx/nginx.vm5000.conf}:/etc/nginx/nginx.conf:ro
+      - ./nginx/includes:/etc/nginx/includes:ro
+    depends_on:
+      - app
+    restart: unless-stopped
+
+volumes:
+  blockminer_staging_data:
+  blockminer_staging_kafka:

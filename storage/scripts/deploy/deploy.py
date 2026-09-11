@@ -96,7 +96,34 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     p.add_argument("--host", default="", help="Target VM IP. Overrides vm_config_secret.py AND VM_IP.")
     p.add_argument("--password", default="", help="Root password for --host (else VM_PASSWORD)")
     p.add_argument("--user", default="", help="SSH user for --host (default root)")
+    p.add_argument(
+        "--target",
+        choices=["prod", "staging"],
+        default=(os.environ.get("BLOCKMINER_DEPLOY_TARGET") or "prod").strip(),
+        help="Which stack to deploy: prod (docker-compose.yml, /root/blockminer-current) or "
+        "staging (docker-compose.staging.yml, /root/blockminer-staging, dev.blockminer.space). "
+        "Independent directory, containers, volumes and DB — see docker-compose.staging.yml.",
+    )
     return p.parse_args(argv)
+
+
+# Per-target defaults — app_root, compose filename, container name (for the runtime-artifact
+# preserve step's docker inspect/cp) and the host-side health-check port. staging's is the
+# APP_PUBLISH_PORT host side of docker-compose.staging.yml's default (127.0.0.1:3001).
+TARGET_DEFAULTS = {
+    "prod": {
+        "app_root": "/root/blockminer-current",
+        "compose_file": "docker-compose.yml",
+        "container_app": "blockminer-current-app",
+        "health_port": 3000,
+    },
+    "staging": {
+        "app_root": "/root/blockminer-staging",
+        "compose_file": "docker-compose.staging.yml",
+        "container_app": "blockminer-staging-app",
+        "health_port": 3001,
+    },
+}
 
 
 def _resolve_zip_path(raw: str) -> Path:
@@ -110,19 +137,19 @@ def _resolve_zip_path(raw: str) -> Path:
     return z
 
 
-def _docker_stack() -> str:
-    return r'''
+def _docker_stack(compose_file: str, health_port: int) -> str:
+    return f'''
 export APP_ROOT
-export BLOCKMINER_DOCKER_BUILD_NO_CACHE="${BLOCKMINER_DOCKER_BUILD_NO_CACHE:-0}"
+export BLOCKMINER_DOCKER_BUILD_NO_CACHE="${{BLOCKMINER_DOCKER_BUILD_NO_CACHE:-0}}"
 cd "$APP_ROOT"
-compose() {
-  local -a c=(docker compose -f "$APP_ROOT/docker-compose.yml")
+compose() {{
+  local -a c=(docker compose -f "$APP_ROOT/{compose_file}")
   if [[ -f "$APP_ROOT/.env.production" ]]; then
     c+=(--env-file "$APP_ROOT/.env.production")
   fi
-  "${c[@]}" "$@"
-}
-if [[ "${BLOCKMINER_DOCKER_BUILD_NO_CACHE:-0}" == "1" ]]; then
+  "${{c[@]}}" "$@"
+}}
+if [[ "${{BLOCKMINER_DOCKER_BUILD_NO_CACHE:-0}}" == "1" ]]; then
   compose build --no-cache app
 else
   compose build app
@@ -132,7 +159,7 @@ compose up -d --remove-orphans db redis kafka phd nginx stats-materializer
 # after git pull / SPA rebuild — otherwise Docker can keep an empty stale mount.
 compose up -d --force-recreate --no-deps app
 compose exec -T app npx prisma migrate deploy --schema=prisma/schema.prisma || true
-curl -sS -o /dev/null -w "health:%{http_code}\n" http://127.0.0.1:3000/health || true
+curl -sS -o /dev/null -w "health:%{{http_code}}\\n" http://127.0.0.1:{health_port}/health || true
 echo "[vm] docker steps finished"
 '''
 
@@ -151,9 +178,9 @@ rm -rf "$BM_ENV_BACKUP"
     return backup, restore
 
 
-def _preserve_runtime_artifacts() -> str:
+def _preserve_runtime_artifacts(container_app: str) -> str:
     """Keep untracked build/runtime dirs across git reset (dist is gitignored)."""
-    return r'''
+    return f'''
 BM_KEEP="$(mktemp -d /tmp/bm-keep-XXXXXX)"
 for path in dist client/dist storage/uploads storage/backups; do
   if [[ -e "$APP_ROOT/$path" ]]; then
@@ -162,9 +189,9 @@ for path in dist client/dist storage/uploads storage/backups; do
   fi
 done
 # Prefer live container SPA/server dist if present (freshest running build).
-if docker inspect blockminer-current-app >/dev/null 2>&1; then
-  docker cp blockminer-current-app:/app/dist "$BM_KEEP/dist-from-container" 2>/dev/null || true
-  docker cp blockminer-current-app:/app/client/dist "$BM_KEEP/client-dist-from-container" 2>/dev/null || true
+if docker inspect {container_app} >/dev/null 2>&1; then
+  docker cp {container_app}:/app/dist "$BM_KEEP/dist-from-container" 2>/dev/null || true
+  docker cp {container_app}:/app/client/dist "$BM_KEEP/client-dist-from-container" 2>/dev/null || true
 fi
 '''
 
@@ -227,13 +254,15 @@ fi
 '''
 
 
-def _remote_git_script(app_root: str, git_url: str, git_ref: str) -> str:
+def _remote_git_script(
+    app_root: str, git_url: str, git_ref: str, *, compose_file: str, container_app: str, health_port: int
+) -> str:
     no_cache = "export BLOCKMINER_DOCKER_BUILD_NO_CACHE=1\n" if _docker_no_cache_enabled() else ""
     env_backup, env_restore = _env_backup_restore()
     pull = f'''command -v git >/dev/null 2>&1 || {{ apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq git; }}
 mkdir -p "$(dirname "$APP_ROOT")"
 {env_backup}
-{_preserve_runtime_artifacts()}
+{_preserve_runtime_artifacts(container_app)}
 if [[ ! -d "$APP_ROOT/.git" ]]; then
   echo "[vm] cloning {git_url} -> $APP_ROOT"
   TMP_CLONE="$(mktemp -d /tmp/bm-clone-XXXXXX)"
@@ -279,11 +308,11 @@ echo "[vm] git sync OK @ $(cd "$APP_ROOT" && git rev-parse --short HEAD 2>/dev/n
 """
     return f"""set -euo pipefail
 {no_cache}APP_ROOT={shlex.quote(app_root)}
-{pull}{_docker_stack()}
+{pull}{_docker_stack(compose_file, health_port)}
 """
 
 
-def _remote_zip_script(app_root: str, *, archive_basename: str) -> str:
+def _remote_zip_script(app_root: str, *, archive_basename: str, compose_file: str, health_port: int) -> str:
     no_cache = "export BLOCKMINER_DOCKER_BUILD_NO_CACHE=1\n" if _docker_no_cache_enabled() else ""
     skip_reconcile = (
         "export BLOCKMINER_SKIP_RECONCILE=1\n"
@@ -327,7 +356,7 @@ rm -f "{remote_arc}"
 """
     return f"""set -euo pipefail
 {no_cache}{skip_reconcile}APP_ROOT={shlex.quote(app_root)}
-{extract}{_docker_stack()}
+{extract}{_docker_stack(compose_file, health_port)}
 """
 
 
@@ -354,8 +383,14 @@ def _run_remote(client: paramiko.SSHClient, script: str) -> int:
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv if argv is not None else sys.argv[1:])
     host, user, password = load_secret(args.host, args.password, args.user)
-    print(f"[deploy] target: {user}@{host}", flush=True)
-    app_root = (os.environ.get("VM_APP_ROOT") or "/root/blockminer-current").strip()
+    defaults = TARGET_DEFAULTS[args.target]
+    print(f"[deploy] target: {user}@{host} ({args.target})", flush=True)
+    # VM_APP_ROOT still overrides the app_root for whichever --target was picked, same as
+    # before this flag existed — it just no longer hardcodes "prod" as the only possibility.
+    app_root = (os.environ.get("VM_APP_ROOT") or defaults["app_root"]).strip()
+    compose_file = defaults["compose_file"]
+    container_app = defaults["container_app"]
+    health_port = defaults["health_port"]
 
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -394,10 +429,18 @@ def main(argv: list[str] | None = None) -> int:
             sftp.put(str(archive), remote_path, callback=progress)
             sftp.close()
             print(f"[sftp] upload done in {time.monotonic() - t0:.1f}s", flush=True)
-            code = _run_remote(client, _remote_zip_script(app_root, archive_basename=remote_name))
+            code = _run_remote(
+                client,
+                _remote_zip_script(app_root, archive_basename=remote_name, compose_file=compose_file, health_port=health_port),
+            )
         else:
             print(f"[deploy] git pull {args.git_url} @ {args.ref}", flush=True)
-            code = _run_remote(client, _remote_git_script(app_root, args.git_url, args.ref))
+            code = _run_remote(
+                client,
+                _remote_git_script(
+                    app_root, args.git_url, args.ref, compose_file=compose_file, container_app=container_app, health_port=health_port
+                ),
+            )
     finally:
         client.close()
     return code

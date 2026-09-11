@@ -7,6 +7,9 @@
 # Usage (from current/):
 #   ./deploy.sh
 #   ./deploy.sh --ref main
+#   ./deploy.sh --target staging      # deploys the SECOND stack (dev.blockminer.space) —
+#                                      # docker-compose.staging.yml, /root/blockminer-staging,
+#                                      # its own DB/Redis/Kafka. Never touches prod's containers.
 #   BLOCKMINER_DOCKER_BUILD_NO_CACHE=1 ./deploy.sh
 #   ./deploy.sh --zip                 # pack local tree + upload (legacy)
 #   ./deploy.sh --host 1.2.3.4 --password '...'
@@ -87,7 +90,7 @@ python3 "$ROOT/storage/scripts/verify-spa-dist.py"
 python3 "$ROOT/storage/scripts/purge-spa-orphans.py" --apply
 
 zip -q -r "$ZIP" \
-  Dockerfile docker-compose.yml docker-entrypoint.sh .dockerignore package.json package-lock.json \
+  Dockerfile docker-compose.yml docker-compose.staging.yml docker-entrypoint.sh .dockerignore package.json package-lock.json \
   tsconfig.json prisma.config.js prisma server client nginx tests storage deploy dist \
   -x '*/node_modules/*' \
      'storage/uploads/*' 'storage/backups/*' \
