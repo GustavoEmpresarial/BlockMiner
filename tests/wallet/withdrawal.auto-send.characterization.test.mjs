@@ -77,6 +77,42 @@ test("processPendingWithdrawals: with WITHDRAWAL_AUTO_SEND unset (this environme
   }
 });
 
+test("acquireAutoSendLock/releaseAutoSendLock: mutual-excludes two ticks (via real Redis if REDIS_URL is reachable here, else the in-process fallback — both paths share this same contract)", async () => {
+  autoSend.resetAutoSendStateForTests();
+  const first = await autoSend.acquireAutoSendLock();
+  assert.ok(first.token, "first acquire must succeed");
+  const second = await autoSend.acquireAutoSendLock();
+  assert.equal(second.token, null, "a second concurrent acquire must be rejected while the first tick still holds the lock");
+
+  await autoSend.releaseAutoSendLock(first.token, first.viaRedis);
+  const third = await autoSend.acquireAutoSendLock();
+  assert.ok(third.token, "after release, a new tick must be able to acquire the lock again");
+  await autoSend.releaseAutoSendLock(third.token, third.viaRedis);
+});
+
+test("getHotWalletPaymentStatus: read-only status check never throws, and is internally consistent either way", async () => {
+  // This environment has a real WITHDRAWAL_PRIVATE_KEY configured, so `configured` is true
+  // here — but the RPC balance read may or may not be reachable from this sandbox. Either
+  // way this call must only ever READ (getBalance/getFeeData), never move funds, and must
+  // degrade honestly (null balance/canCoverPending) instead of throwing when the RPC call
+  // fails, per the module's own try/catch around that block.
+  const status = await autoSend.getHotWalletPaymentStatus();
+  assert.equal(typeof status.configured, "boolean");
+  assert.equal(typeof status.autoSendEnabled, "boolean");
+  assert.equal(typeof status.pendingApprovedCount, "number");
+  if (!status.configured) {
+    assert.equal(status.address, null);
+    assert.equal(status.balancePol, null);
+    assert.equal(status.canCoverPending, null);
+  } else if (status.balancePol == null) {
+    // RPC unreachable from here — must degrade to null, never a fabricated number.
+    assert.equal(status.canCoverPending, null);
+  } else {
+    assert.equal(typeof status.balancePol, "number");
+    assert.equal(typeof status.canCoverPending, "boolean");
+  }
+});
+
 test("processPendingWithdrawals: WITHDRAWAL_AUTO_SEND_GLOBAL_PAUSE short-circuits before any lock/DB work", async () => {
   const prevEnabled = process.env.WITHDRAWAL_AUTO_SEND;
   const prevPause = process.env.WITHDRAWAL_AUTO_SEND_GLOBAL_PAUSE;
