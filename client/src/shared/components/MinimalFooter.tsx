@@ -13,8 +13,8 @@ export default function MinimalFooter() {
   return (
     <footer className="border-t border-white/[0.06] bg-[#02070f]">
       <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-        <p className="text-xs text-slate-500">© {year} BlockMiner</p>
-        <nav className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
+        <p className="text-xs text-white">© {year} BlockMiner</p>
+        <nav className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-white">
           <Link to="/terms-of-use" className="hover:text-sky-400 transition-colors">
             {t('landing.footer.link_terms', { defaultValue: 'Termos' })}
           </Link>

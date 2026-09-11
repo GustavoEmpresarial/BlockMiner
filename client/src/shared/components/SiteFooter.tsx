@@ -14,7 +14,7 @@ export default function SiteFooter({ compact = false }: { compact?: boolean }) {
         <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
           <div className="max-w-md">
             <BrandLogo variant="header" />
-            <p className="mt-4 text-sm leading-6 text-slate-400">
+            <p className="mt-4 text-sm leading-6 text-white">
               {t('legal.footer.description')}
             </p>
           </div>
@@ -45,7 +45,7 @@ export default function SiteFooter({ compact = false }: { compact?: boolean }) {
           </nav>
         </div>
 
-        <div className="flex flex-col gap-2 border-t border-white/10 pt-5 text-xs text-slate-500 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col gap-2 border-t border-white/10 pt-5 text-xs text-white md:flex-row md:items-center md:justify-between">
           <p>{t('legal.footer.copyright', { year: new Date().getFullYear() })}</p>
           <p>{t('legal.footer.complianceNote')}</p>
         </div>

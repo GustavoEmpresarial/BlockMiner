@@ -69,16 +69,16 @@ export default function AuthShell({ children, hideAuthCta }: AuthShellProps) {
         </div>
         {menuOpen && (
           <div className="sm:hidden border-t border-white/[0.06] px-4 py-3 space-y-1 bg-[#02070f]">
-            <Link to="/" onClick={() => setMenuOpen(false)} className="block rounded-lg px-3 py-2.5 text-sm text-slate-300 hover:bg-white/5">
+            <Link to="/" onClick={() => setMenuOpen(false)} className="block rounded-lg px-3 py-2.5 text-sm text-white hover:bg-white/5">
               {t('common.back', { defaultValue: 'Voltar' })}
             </Link>
-            <Link to="/terms-of-use" onClick={() => setMenuOpen(false)} className="block rounded-lg px-3 py-2.5 text-sm text-slate-300 hover:bg-white/5">
+            <Link to="/terms-of-use" onClick={() => setMenuOpen(false)} className="block rounded-lg px-3 py-2.5 text-sm text-white hover:bg-white/5">
               {t('landing.footer.link_terms', { defaultValue: 'Termos' })}
             </Link>
-            <Link to="/privacy-policy" onClick={() => setMenuOpen(false)} className="block rounded-lg px-3 py-2.5 text-sm text-slate-300 hover:bg-white/5">
+            <Link to="/privacy-policy" onClick={() => setMenuOpen(false)} className="block rounded-lg px-3 py-2.5 text-sm text-white hover:bg-white/5">
               {t('landing.footer.link_privacy', { defaultValue: 'Privacidade' })}
             </Link>
-            <Link to="/cookie-policy" onClick={() => setMenuOpen(false)} className="block rounded-lg px-3 py-2.5 text-sm text-slate-300 hover:bg-white/5">
+            <Link to="/cookie-policy" onClick={() => setMenuOpen(false)} className="block rounded-lg px-3 py-2.5 text-sm text-white hover:bg-white/5">
               {t('legal.footer.cookiePolicy', { defaultValue: 'Cookies' })}
             </Link>
           </div>
@@ -91,8 +91,8 @@ export default function AuthShell({ children, hideAuthCta }: AuthShellProps) {
 
       <footer className="relative z-10 border-t border-white/[0.06] bg-[#02070f]">
         <div className="mx-auto flex max-w-lg sm:max-w-xl flex-col gap-3 px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <p className="text-xs text-slate-500">© {year} BlockMiner</p>
-          <nav className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
+          <p className="text-xs text-white">© {year} BlockMiner</p>
+          <nav className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-white">
             <Link to="/terms-of-use" className="hover:text-sky-400 transition-colors">
               {t('landing.footer.link_terms', { defaultValue: 'Termos' })}
             </Link>
