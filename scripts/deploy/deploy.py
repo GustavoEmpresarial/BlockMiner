@@ -127,7 +127,10 @@ if [[ "${BLOCKMINER_DOCKER_BUILD_NO_CACHE:-0}" == "1" ]]; then
 else
   compose build app
 fi
-compose up -d --remove-orphans db redis kafka app phd nginx stats-materializer
+compose up -d --remove-orphans db redis kafka phd nginx stats-materializer
+# Force-recreate app so bind mounts (client/dist, dist/) pick up fresh directory inodes
+# after git pull / SPA rebuild — otherwise Docker can keep an empty stale mount.
+compose up -d --force-recreate --no-deps app
 compose exec -T app npx prisma migrate deploy --schema=prisma/schema.prisma || true
 curl -sS -o /dev/null -w "health:%{http_code}\n" http://127.0.0.1:3000/health || true
 echo "[vm] docker steps finished"
