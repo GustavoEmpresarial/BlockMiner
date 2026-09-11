@@ -33,6 +33,7 @@ let server: {
 
 function resetServer() {
   server = { ytSecondsBalance: 0, claims24h: 0, hashGranted24h: 0 };
+  boostActive = false;
 }
 
 function statsPayload() {
@@ -48,11 +49,17 @@ function statsPayload() {
   };
 }
 
+let boostActive = false;
+
 function installApiMock() {
   api.get.mockImplementation(async (url: string) => {
     if (url.startsWith('/youtube/status')) return { data: { ok: true, activeHashRate: 0 } };
     if (url.startsWith('/youtube/stats')) return { data: statsPayload() };
-    if (url.startsWith('/boosts/status')) return { data: { ok: true, active: false } };
+    // usePowerBoostActive() calls /power-boost/status; PowerBoostBanner calls /boosts/status —
+    // same underlying route (server/bootstrap/server.ts mounts boostsRouter at both prefixes).
+    if (url.startsWith('/boosts/status') || url.startsWith('/power-boost/status')) {
+      return { data: { ok: true, active: boostActive } };
+    }
     return { data: { ok: true } };
   });
 
@@ -256,5 +263,57 @@ describe('YouTubeWatchPage smoke test (real component, fake player + backend, re
 
     const heartbeatsAfterResume = api.post.mock.calls.filter(([url]) => url === '/session/heartbeat').length;
     expect(heartbeatsAfterResume).toBeGreaterThan(0);
+  });
+
+  it('keeps presence/heartbeat/claims alive on a backgrounded tab when Power Boost is active, WITHOUT any resume signal from the player itself', { timeout: 20_000 }, async () => {
+    boostActive = true;
+    await mountPage();
+    await loadVideo();
+    const player = lastPlayer!;
+    act(() => player.triggerStateChange(YTState.PLAYING));
+
+    // usePowerBoostActive() caches its last fetch across mounts (module-level singleton,
+    // 30s TTL) — force a fresh fetch so this test actually observes boostActive=true instead
+    // of a stale cached value left over from an earlier test/mount.
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent('blockminer:power-boost-changed'));
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(10_000);
+      await Promise.resolve();
+    });
+    const heartbeatsBeforeBg = api.post.mock.calls.filter(([url]) => url === '/session/heartbeat').length;
+    expect(heartbeatsBeforeBg).toBeGreaterThan(0);
+
+    // Background the tab the way a REAL browser does when Chrome throttles/suspends a hidden
+    // YouTube iframe: the player itself reports PAUSED (this is exactly what the user described —
+    // "eu mudo de aba... esse fdp para" / switching tabs makes it just stop), plus the usual
+    // hidden/blur signals. Power Boost's own description promises the user can
+    // "usar o PC livremente sem pausar YouTube, Auto Mining e Shortlinks" — so presence/claims
+    // must keep going via the app's own Power-Boost fallback (`presenceActive` in
+    // YouTubeWatchPage.tsx) even though the player is no longer reporting "playing".
+    await act(async () => {
+      Object.defineProperty(document, 'hidden', { value: true, configurable: true });
+      document.dispatchEvent(new Event('visibilitychange'));
+      window.dispatchEvent(new Event('blur'));
+      player.triggerStateChange(YTState.PAUSED);
+      await Promise.resolve();
+    });
+
+    api.post.mockClear();
+    for (let i = 0; i < 90; i += 1) {
+      // eslint-disable-next-line no-await-in-loop
+      await act(async () => {
+        vi.advanceTimersByTime(1000);
+        await Promise.resolve();
+      });
+    }
+
+    const heartbeatsWhileBackgrounded = api.post.mock.calls.filter(([url]) => url === '/session/heartbeat').length;
+    const claimsWhileBackgrounded = api.post.mock.calls.filter(([url]) => url === '/youtube/claim').length;
+    expect(heartbeatsWhileBackgrounded).toBeGreaterThan(0);
+    expect(claimsWhileBackgrounded).toBeGreaterThan(0);
   });
 });
