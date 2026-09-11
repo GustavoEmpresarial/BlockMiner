@@ -56,6 +56,7 @@ import {
   AdminLayout,
   AdminOverviewPage,
   AdminAnalyticsPage,
+  AdminTrafficStatsPage,
   AdminMetricsPage,
   adminFeatureRoutes,
 } from '../features/admin/index';
@@ -95,6 +96,7 @@ export default function App() {
         <Route element={<AdminLayout />}>
           <Route path="/admin/dashboard" element={<AdminOverviewPage />} />
           <Route path="/admin/analytics" element={<AdminAnalyticsPage />} />
+          <Route path="/admin/traffic" element={<AdminTrafficStatsPage />} />
           <Route path="/admin/metrics" element={<AdminMetricsPage />} />
           {adminFeatureRoutes}
         </Route>

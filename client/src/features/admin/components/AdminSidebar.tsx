@@ -75,6 +75,7 @@ const ADMIN_MENU_SECTIONS: AdminMenuSection[] = [
     items: [
       { icon: LayoutDashboard, labelKey: 'adminSidebar.nav.overview', path: '/admin/dashboard' },
       { icon: TrendingUp, labelKey: 'adminSidebar.nav.analytics', path: '/admin/analytics' },
+      { icon: BarChart2, labelKey: 'adminSidebar.nav.traffic', path: '/admin/traffic' },
       { icon: Activity, labelKey: 'adminSidebar.nav.metrics', path: '/admin/metrics' },
     ],
   },

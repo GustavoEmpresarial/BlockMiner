@@ -30,7 +30,8 @@ export async function getTrafficSummary(days = 30): Promise<TrafficSummary> {
     periodHits,
     totalRegs,
     periodRegs,
-    conversionRate: periodHits > 0 ? (periodRegs / periodHits) * 100 : 0,
+    // Raw regs/hits ratio — NOT a funnel conversion (hits are landing-only).
+    conversionRate: periodHits > 0 ? (periodRegs / periodHits) * 100 : null,
     days,
   };
 }

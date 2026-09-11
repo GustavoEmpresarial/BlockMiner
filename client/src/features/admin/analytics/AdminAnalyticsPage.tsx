@@ -1,209 +1,308 @@
 import { useCallback, useEffect, useState } from 'react';
-import axios from 'axios';
+import { toast } from 'sonner';
+import { Activity, BarChart2, Flame, RefreshCw, Search, TrendingUp, Users, X } from 'lucide-react';
+import { api } from '../../../shared/auth/auth.store';
+import { ExecutiveSummaryPanel, type ExecutiveSummary } from './ExecutiveSummaryPanel';
+import {
+  FinancialFlowTab,
+  OverviewTab,
+  ProjectionsTab,
+  RewardSourcesTab,
+  TopUsersTab,
+} from './adminAnalytics.tabs';
+import {
+  PERIOD_LABELS,
+  type AnalyticsForecast,
+  type AnalyticsSummary,
+  type AnalyticsUserRef,
+  type ChartPoint,
+  type DistributionResponse,
+  type InflationResponse,
+  type PeriodKey,
+  type ProjectionsResponse,
+  type TopEarnerRow,
+  type UserRecentBlockRow,
+  type WalletActivityPayload,
+  type WithdrawalsResponse,
+} from './adminAnalytics.shared';
 
-const adminApi = axios.create({
-  baseURL: '/',
-  withCredentials: true,
-  xsrfCookieName: 'blockminer_csrf',
-  xsrfHeaderName: 'x-csrf-token',
-});
-
-type Summary = {
-  totalHits: number; periodHits: number;
-  totalRegs: number; periodRegs: number;
-  conversionRate: number; days: number;
+type AnalyticsPayload = {
+  ok?: boolean;
+  polPrice?: number;
+  summary?: AnalyticsSummary;
+  forecast?: AnalyticsForecast;
+  topEarners?: TopEarnerRow[];
+  chartData?: ChartPoint[];
+  userRecentBlocks?: UserRecentBlockRow[];
 };
-type DomainRow = { domain: string; hits: number; registrations: number; conversionRate: number };
-type UtmRow = { source: string; hits: number; registrations: number; conversionRate: number };
-type DailyRow = { date: string; hits: number; registrations: number };
 
-type Tab = 'overview' | 'domains' | 'utm';
+type TabKey = 'overview' | 'financial-flow' | 'projections' | 'reward-sources' | 'top-users' | 'executive';
 
-const DAYS_OPTIONS = [7, 14, 30, 60, 90];
+const TABS: Array<{ key: TabKey; label: string; icon: typeof Activity }> = [
+  { key: 'overview', label: 'Visão geral', icon: BarChart2 },
+  { key: 'financial-flow', label: 'Fluxo financeiro', icon: TrendingUp },
+  { key: 'projections', label: 'Projeções', icon: Activity },
+  { key: 'reward-sources', label: 'Fontes de recompensa', icon: Flame },
+  { key: 'top-users', label: 'Top usuários', icon: Users },
+  { key: 'executive', label: 'Executivo', icon: Search },
+];
 
-function pct(n: number) { return n.toFixed(2) + '%'; }
-function num(n: number) { return n.toLocaleString(); }
-
-function StatCard({ label, value, sub, color = 'text-white' }: { label: string; value: string | number; sub?: string; color?: string }) {
-  return (
-    <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-      <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">{label}</p>
-      <p className={`text-2xl font-black ${color}`}>{typeof value === 'number' ? num(value) : value}</p>
-      {sub && <p className="text-[10px] text-gray-600 mt-1">{sub}</p>}
-    </div>
-  );
-}
-
-function BarChart({ rows, days }: { rows: DailyRow[]; days: number }) {
-  const maxHits = Math.max(...rows.map(r => r.hits), 1);
-  const maxRegs = Math.max(...rows.map(r => r.registrations), 1);
-  const barMax = Math.max(maxHits, maxRegs);
-  const show = rows.slice(-days);
-  return (
-    <div className="overflow-x-auto">
-      <div className="min-w-[600px]">
-        <div className="flex items-end gap-0.5 h-40 mb-1">
-          {show.map(r => (
-            <div key={r.date} className="flex-1 flex gap-px items-end h-full" title={`${r.date}: ${r.hits} visitas, ${r.registrations} cadastros`}>
-              <div className="flex-1 bg-sky-500/40 rounded-t" style={{ height: `${(r.hits / barMax) * 100}%` }} />
-              <div className="flex-1 bg-emerald-500/60 rounded-t" style={{ height: `${(r.registrations / barMax) * 100}%` }} />
-            </div>
-          ))}
-        </div>
-        <div className="flex items-center gap-4 text-[10px] text-gray-500 mt-1">
-          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-sky-500/40 inline-block" />Visitas</span>
-          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-emerald-500/60 inline-block" />Cadastros</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function TableRows({ rows, keyCol, keyLabel }: { rows: Array<Record<string, unknown>>; keyCol: string; keyLabel: string }) {
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-xs">
-        <thead>
-          <tr className="border-b border-gray-800">
-            <th className="text-left py-2 px-3 text-[10px] font-black text-gray-500 uppercase tracking-widest">{keyLabel}</th>
-            <th className="text-right py-2 px-3 text-[10px] font-black text-gray-500 uppercase tracking-widest">Visitas</th>
-            <th className="text-right py-2 px-3 text-[10px] font-black text-gray-500 uppercase tracking-widest">Cadastros</th>
-            <th className="text-right py-2 px-3 text-[10px] font-black text-gray-500 uppercase tracking-widest">Conversão</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.length === 0 && (
-            <tr><td colSpan={4} className="text-center py-8 text-gray-600 text-[11px]">sem dados</td></tr>
-          )}
-          {rows.map((r, i) => (
-            <tr key={i} className="border-b border-gray-800/50 hover:bg-gray-900/40">
-              <td className="py-2 px-3 font-mono text-gray-300 max-w-[200px] truncate">{String(r[keyCol] ?? '—')}</td>
-              <td className="py-2 px-3 text-right text-sky-400 font-black">{num(r.hits as number)}</td>
-              <td className="py-2 px-3 text-right text-emerald-400 font-black">{num(r.registrations as number)}</td>
-              <td className="py-2 px-3 text-right text-amber-400 font-black">{pct(r.conversionRate as number)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-export default function AdminTrafficStats() {
-  const [days, setDays] = useState(30);
-  const [tab, setTab] = useState<Tab>('overview');
-  const [summary, setSummary] = useState<Summary | null>(null);
-  const [daily, setDaily] = useState<DailyRow[]>([]);
-  const [domains, setDomains] = useState<DomainRow[]>([]);
-  const [utmRows, setUtmRows] = useState<UtmRow[]>([]);
-  const [loading, setLoading] = useState(false);
+export default function AdminAnalyticsPage() {
+  const [period, setPeriod] = useState<PeriodKey>('month');
+  const [tab, setTab] = useState<TabKey>('overview');
+  const [payload, setPayload] = useState<AnalyticsPayload | null>(null);
+  const [inflation, setInflation] = useState<InflationResponse | null>(null);
+  const [projections, setProjections] = useState<ProjectionsResponse | null>(null);
+  const [withdrawals, setWithdrawals] = useState<WithdrawalsResponse | null>(null);
+  const [distribution, setDistribution] = useState<DistributionResponse | null>(null);
+  const [executive, setExecutive] = useState<ExecutiveSummary | null>(null);
+  const [depositData, setDepositData] = useState<WalletActivityPayload | null>(null);
+  const [depositLoading, setDepositLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [userSearch, setUserSearch] = useState('');
+  const [userQuery, setUserQuery] = useState('');
+  const [userResults, setUserResults] = useState<AnalyticsUserRef[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<AnalyticsUserRef | null>(null);
 
   const load = useCallback(async () => {
-    setLoading(true);
     try {
-      const [s, d, dom, utm] = await Promise.all([
-        adminApi.get<Summary & { ok: boolean }>(`/api/admin/traffic/summary?days=${days}`),
-        adminApi.get<{ ok: boolean; rows: DailyRow[] }>(`/api/admin/traffic/daily?days=${days}`),
-        adminApi.get<{ ok: boolean; rows: DomainRow[] }>(`/api/admin/traffic/by-domain?days=${days}`),
-        adminApi.get<{ ok: boolean; rows: UtmRow[] }>(`/api/admin/traffic/by-utm?days=${days}`),
+      setLoading(true);
+      const params = new URLSearchParams({ period });
+      if (selectedUser) params.set('userId', String(selectedUser.id));
+      const q = params.toString();
+      const [main, infl, proj, wd, dist, exec] = await Promise.all([
+        api.get<AnalyticsPayload>(`/admin/analytics?${q}`),
+        api.get<InflationResponse & { ok?: boolean }>(`/admin/analytics/inflation?${q}`),
+        api.get<ProjectionsResponse & { ok?: boolean }>(`/admin/analytics/projections?${q}`),
+        api.get<WithdrawalsResponse & { ok?: boolean }>(`/admin/analytics/withdrawals?${q}`),
+        api.get<DistributionResponse & { ok?: boolean }>(`/admin/analytics/distribution?${q}`),
+        api.get<{ ok?: boolean; executive?: ExecutiveSummary }>(`/admin/analytics/executive?period=${period}`),
       ]);
-      setSummary(s.data);
-      setDaily(d.data.rows ?? []);
-      setDomains(dom.data.rows ?? []);
-      setUtmRows(utm.data.rows ?? []);
-    } catch { /* ignore */ }
-    setLoading(false);
-  }, [days]);
+      if (main.data.ok !== false) setPayload(main.data);
+      if (infl.data.ok !== false) setInflation(infl.data);
+      if (proj.data.ok !== false) setProjections(proj.data);
+      if (wd.data.ok !== false) setWithdrawals(wd.data);
+      if (dist.data.ok !== false) setDistribution(dist.data);
+      if (exec.data.ok && exec.data.executive) setExecutive(exec.data.executive);
+    } catch {
+      toast.error('Erro ao carregar analytics.');
+    } finally {
+      setLoading(false);
+    }
+  }, [period, selectedUser]);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount/dep-change; setLoading(true) runs before the first await, which is intentional.
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
-  const tabs: { id: Tab; label: string }[] = [
-    { id: 'overview', label: 'Visão Geral' },
-    { id: 'domains', label: 'Por Domínio' },
-    { id: 'utm', label: 'Por UTM Source' },
-  ];
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      void (async () => {
+        if (!userQuery.trim()) {
+          setUserResults([]);
+          return;
+        }
+        setSearching(true);
+        try {
+          const res = await api.get<{ ok?: boolean; users?: AnalyticsUserRef[] }>(
+            `/admin/users?pageSize=8&q=${encodeURIComponent(userQuery.trim())}`,
+          );
+          if (res.data.ok) setUserResults(res.data.users ?? []);
+        } catch {
+          /* ignore */
+        } finally {
+          setSearching(false);
+        }
+      })();
+    }, 300);
+    return () => window.clearTimeout(t);
+  }, [userQuery]);
+
+  const loadDeposits = useCallback(async () => {
+    try {
+      setDepositLoading(true);
+      const res = await api.get<WalletActivityPayload & { ok?: boolean }>(
+        '/admin/transparency/tracked-wallets/activity',
+      );
+      if (res.data.ok !== false) setDepositData(res.data);
+    } catch {
+      toast.error('Erro ao carregar dados das carteiras de depósito.');
+    } finally {
+      setDepositLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (tab === 'financial-flow' && !depositData) void loadDeposits();
+  }, [tab, depositData, loadDeposits]);
+
+  const polPrice = payload?.polPrice ?? inflation?.polPrice ?? 0;
+  const periodLabel = PERIOD_LABELS[period];
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="animate-in fade-in space-y-6 duration-700">
+      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
         <div>
-          <h1 className="text-xl font-black text-white uppercase tracking-tight">Estatísticas de Tráfego</h1>
-          <p className="text-xs text-gray-500 mt-0.5">Visitas, cadastros e conversão por origem</p>
+          <h2 className="text-2xl font-black text-white">Analytics Financeiros</h2>
+          <p className="text-sm font-medium text-slate-500">
+            Distribuição de recompensas, saques e previsões.
+            {polPrice > 0 ? (
+              <span className="ml-2 font-black text-amber-400">1 POL = ${polPrice.toFixed(4)} USD</span>
+            ) : null}
+          </p>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] text-gray-500 uppercase tracking-widest">Período</span>
-          <div className="flex gap-1">
-            {DAYS_OPTIONS.map(d => (
-              <button
-                key={d}
-                onClick={() => setDays(d)}
-                className={`px-3 py-1.5 rounded-lg text-[11px] font-black uppercase transition-colors ${
-                  days === d ? 'bg-primary text-black' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-                }`}
-              >{d}d</button>
-            ))}
-          </div>
-          <button onClick={load} className="px-3 py-1.5 rounded-lg bg-gray-800 text-gray-400 hover:bg-gray-700 text-[11px] font-black uppercase">
-            {loading ? '...' : '↻'}
+        <div className="flex flex-wrap items-center gap-2">
+          {(['week', 'month', 'year'] as PeriodKey[]).map((p) => (
+            <button
+              key={p}
+              type="button"
+              onClick={() => setPeriod(p)}
+              className={`rounded-xl px-4 py-2 text-xs font-black uppercase tracking-widest transition-all ${
+                period === p ? 'bg-amber-500 text-black' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+              }`}
+            >
+              {p === 'week' ? '7D' : p === 'month' ? '30D' : '12M'}
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => void load()}
+            disabled={loading}
+            className="rounded-xl bg-slate-800 p-2 text-slate-400 transition-all hover:bg-slate-700 hover:text-white"
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
         </div>
       </div>
 
-      {/* Summary cards */}
-      {summary && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-          <StatCard label={`Visitas (${days}d)`} value={summary.periodHits} color="text-sky-400" />
-          <StatCard label={`Cadastros (${days}d)`} value={summary.periodRegs} color="text-emerald-400" />
-          <StatCard label="Taxa de Conversão" value={pct(summary.conversionRate)} color="text-amber-400" sub="cadastros/visitas" />
-          <StatCard label="Visitas Total" value={summary.totalHits} sub="todos os tempos" />
-          <StatCard label="Cadastros Total" value={summary.totalRegs} sub="todos os tempos" />
+      <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+        <p className="mb-3 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500">
+          <Search className="h-3 w-3" /> Filtrar por usuário (opcional)
+        </p>
+        <div className="flex gap-3">
+          <div className="relative flex-1">
+            <input
+              type="text"
+              value={userSearch}
+              onChange={(e) => {
+                setUserSearch(e.target.value);
+                setUserQuery(e.target.value);
+              }}
+              placeholder="Buscar por nome, e-mail, ID ou carteira..."
+              className="w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-2.5 text-sm text-white transition-all focus:border-amber-500/50 focus:outline-none"
+            />
+            {searching ? (
+              <RefreshCw className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-slate-500" />
+            ) : null}
+            {userResults.length > 0 ? (
+              <div className="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-xl border border-slate-700 bg-slate-800 shadow-2xl">
+                {userResults.map((u) => (
+                  <button
+                    key={u.id}
+                    type="button"
+                    className="block w-full px-4 py-2 text-left text-sm text-white hover:bg-slate-700"
+                    onClick={() => {
+                      setSelectedUser(u);
+                      setUserSearch(u.username || u.email || '');
+                      setUserResults([]);
+                    }}
+                  >
+                    {u.username || u.email || `#${u.id}`}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+          {selectedUser ? (
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedUser(null);
+                setUserSearch('');
+                setUserQuery('');
+              }}
+              className="rounded-xl border border-slate-700 bg-slate-800 px-3 text-slate-400 hover:text-white"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          ) : null}
         </div>
-      )}
-
-      {/* Tabs */}
-      <div className="flex gap-1 border-b border-gray-800">
-        {tabs.map(t => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className={`px-4 py-2.5 text-[11px] font-black uppercase tracking-wide transition-colors border-b-2 -mb-px ${
-              tab === t.id
-                ? 'border-primary text-primary'
-                : 'border-transparent text-gray-500 hover:text-gray-300'
-            }`}
-          >{t.label}</button>
-        ))}
       </div>
 
-      {tab === 'overview' && (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
-          <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-4">Visitas & Cadastros — últimos {days} dias</p>
-          {daily.length === 0 ? (
-            <p className="text-xs text-gray-600 py-8 text-center">sem dados</p>
-          ) : (
-            <BarChart rows={daily} days={days} />
-          )}
-        </div>
-      )}
+      <div className="flex flex-wrap gap-1 border-b border-slate-800">
+        {TABS.map((t) => {
+          const Icon = t.icon;
+          return (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => setTab(t.key)}
+              className={`-mb-px inline-flex items-center gap-2 border-b-2 px-4 py-2.5 text-[11px] font-black uppercase tracking-wide transition-colors ${
+                tab === t.key
+                  ? 'border-amber-500 text-amber-400'
+                  : 'border-transparent text-slate-500 hover:text-slate-300'
+              }`}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              {t.label}
+            </button>
+          );
+        })}
+      </div>
 
-      {tab === 'domains' && (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
-          <div className="px-5 py-3 border-b border-gray-800">
-            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Origem por domínio referenciador</p>
-          </div>
-          <TableRows rows={domains as unknown as Array<Record<string, unknown>>} keyCol="domain" keyLabel="Domínio" />
+      {tab === 'overview' ? (
+        <OverviewTab
+          isLoading={loading}
+          summary={payload?.summary}
+          forecast={payload?.forecast}
+          chartData={payload?.chartData}
+          userRecentBlocks={payload?.userRecentBlocks}
+          polPrice={polPrice}
+          period={period}
+          periodLabel={periodLabel}
+          selectedUser={selectedUser}
+        />
+      ) : null}
+      {tab === 'financial-flow' ? (
+        <FinancialFlowTab
+          depositData={depositData}
+          depositLoading={depositLoading}
+          onRefreshDeposits={() => void loadDeposits()}
+          withdrawals={withdrawals}
+          inflation={inflation}
+          polPrice={polPrice}
+          isLoading={loading}
+          periodLabel={periodLabel}
+        />
+      ) : null}
+      {tab === 'projections' ? (
+        <ProjectionsTab
+          data={projections}
+          polPrice={polPrice}
+          isLoading={loading}
+          selectedUser={selectedUser}
+        />
+      ) : null}
+      {tab === 'reward-sources' ? (
+        <RewardSourcesTab
+          data={distribution}
+          polPrice={polPrice}
+          isLoading={loading}
+          periodLabel={periodLabel}
+        />
+      ) : null}
+      {tab === 'top-users' ? (
+        <TopUsersTab topEarners={payload?.topEarners} polPrice={polPrice} isLoading={loading} />
+      ) : null}
+      {tab === 'executive' && executive ? (
+        <ExecutiveSummaryPanel data={executive} polPrice={polPrice} />
+      ) : null}
+      {tab === 'executive' && !executive && loading ? (
+        <div className="py-20 text-center text-sm font-bold uppercase tracking-widest text-slate-500 animate-pulse">
+          Carregando resumo executivo...
         </div>
-      )}
-
-      {tab === 'utm' && (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
-          <div className="px-5 py-3 border-b border-gray-800">
-            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Origem por utm_source</p>
-          </div>
-          <TableRows rows={utmRows as unknown as Array<Record<string, unknown>>} keyCol="source" keyLabel="UTM Source" />
-        </div>
-      )}
+      ) : null}
     </div>
   );
 }

@@ -9,7 +9,7 @@ export type TrafficSummary = {
   periodHits: number;
   totalRegs: number;
   periodRegs: number;
-  conversionRate: number;
+  conversionRate: number | null;
   days: number;
 };
 
@@ -17,14 +17,14 @@ export type TrafficByDomainRow = {
   domain: string;
   hits: number;
   registrations: number;
-  conversionRate: number;
+  conversionRate: number | null;
 };
 
 export type TrafficByUtmRow = {
   source: string;
   hits: number;
   registrations: number;
-  conversionRate: number;
+  conversionRate: number | null;
 };
 
 export type TrafficDailyRow = {
