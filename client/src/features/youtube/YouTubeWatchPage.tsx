@@ -102,6 +102,13 @@ export default function YouTubeWatchPage() {
   activelyWatchingRef.current = isActivelyWatching;
 
   const [claimCycleRunning, setClaimCycleRunning] = useState(false);
+  // Bumped by resetClaimCycle so useResumableCountdown's "reset to totalSeconds" effect
+  // (keyed on cycleId) actually re-fires. Without this, `running` toggling false→true after
+  // a claim did NOT reset `remaining` back to 60 — the countdown stayed frozen at 0 forever,
+  // and the 1s claim-poll interval (unblocked, since nothing sets claimBlockedUntilRef on a
+  // successful claim) fired runClaim() every single second from then on: one real claim, then
+  // an unthrottled reward-claim flood. 2026-09-11.
+  const [claimCycleId, setClaimCycleId] = useState(0);
 
   const pauseWatching = useCallback(() => {
     if (activelyWatchingRef.current) {
@@ -151,6 +158,7 @@ export default function YouTubeWatchPage() {
     // presence loss during the switch wrongly latches the "wasPaused" banner (see
     // switchingVideoRef's comment above).
     paused: !presenceActive && !switchingVideoRef.current,
+    cycleId: claimCycleId,
   });
 
   const resetClaimCycle = useCallback(() => {
@@ -162,6 +170,9 @@ export default function YouTubeWatchPage() {
       /* ignore */
     }
     setClaimCycleRunning(false);
+    // Forces useResumableCountdown's reset-to-totalSeconds effect to re-fire — see the
+    // claimCycleId declaration above for why this is required (not just clearing storage).
+    setClaimCycleId((id) => id + 1);
     // Depend on countdown.dismissPaused (now stable — see useResumableCountdown.ts), NOT the
     // whole `countdown` object: that object gets a new identity every second because
     // `remaining` ticks down every second. Depending on the whole object made resetClaimCycle

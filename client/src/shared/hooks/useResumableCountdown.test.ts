@@ -63,4 +63,54 @@ describe('useResumableCountdown', () => {
     });
     expect(result.current.wasPaused).toBe(false);
   });
+
+  // Regression (2026-09-11): after a claim/reward fires at remaining=0, YouTubeWatchPage
+  // clears sessionStorage and toggles `running` false→true to start a fresh cycle. That alone
+  // did NOT reset `remaining` back to totalSeconds — the "reset to totalSeconds" effect is
+  // keyed on [storageKey, totalSeconds, signature, cycleId], none of which `running` touches.
+  // Result: remaining stayed frozen at 0 forever, and the caller's poll loop (unblocked, since
+  // nothing throttles a *successful* claim) fired the reward claim every second — one real
+  // claim followed by an unthrottled flood of them.
+  it('merely toggling `running` off then on again does NOT reset `remaining` back to totalSeconds once it hit 0 (documents the bug this fix closes)', () => {
+    const { result, rerender } = renderHook(
+      ({ running }) => useResumableCountdown({ storageKey: 'test_timer_4', totalSeconds: 10, running, paused: false }),
+      { initialProps: { running: true } },
+    );
+    act(() => {
+      vi.advanceTimersByTime(10_000);
+    });
+    expect(result.current.remaining).toBe(0);
+
+    // Same sequence YouTubeWatchPage's resetClaimCycle used to do: clear storage, stop, restart —
+    // but WITHOUT bumping cycleId.
+    sessionStorage.removeItem('test_timer_4');
+    rerender({ running: false });
+    rerender({ running: true });
+
+    expect(result.current.remaining).toBe(0); // still frozen — this is the bug, not a fix.
+  });
+
+  it('bumping `cycleId` after clearing storage DOES reset remaining back to totalSeconds (the actual fix)', () => {
+    const { result, rerender } = renderHook(
+      ({ running, cycleId }) =>
+        useResumableCountdown({ storageKey: 'test_timer_5', totalSeconds: 10, running, paused: false, cycleId }),
+      { initialProps: { running: true, cycleId: 0 } },
+    );
+    act(() => {
+      vi.advanceTimersByTime(10_000);
+    });
+    expect(result.current.remaining).toBe(0);
+
+    sessionStorage.removeItem('test_timer_5');
+    rerender({ running: false, cycleId: 1 });
+    rerender({ running: true, cycleId: 1 });
+
+    expect(result.current.remaining).toBe(10); // fresh cycle, as intended.
+
+    // And it keeps ticking normally from the fresh start.
+    act(() => {
+      vi.advanceTimersByTime(3000);
+    });
+    expect(result.current.remaining).toBe(7);
+  });
 });
