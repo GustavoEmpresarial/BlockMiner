@@ -192,3 +192,18 @@ services:
 volumes:
   blockminer_staging_data:
   blockminer_staging_kafka:
+
+networks:
+  default:
+    # Pinned explicitly (2026-09-11): this VM hosts ~15 other unrelated Docker Compose
+    # projects, and Docker's automatic subnet pool had previously handed out 172.24.0.0/16
+    # to a since-removed network. That network's nftables isolation rules were never cleaned
+    # up (a known Docker/nftables-backend gap) and kept silently DROPping traffic to any new
+    # network that got auto-assigned the same recycled subnet — this bit the very first
+    # deploy of this stack (db/redis unreachable from app despite everything being healthy).
+    # Pinning a subnet nothing else on this host has ever used sidesteps the whole class of
+    # bug without touching the shared Docker daemon (a `systemctl restart docker` would also
+    # fix it, but that risks a brief network blip for every other tenant on this VM).
+    ipam:
+      config:
+        - subnet: 172.31.0.0/16
