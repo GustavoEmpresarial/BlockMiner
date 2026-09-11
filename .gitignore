@@ -13,6 +13,8 @@ dist/
 storage/scripts/deploy/vm_config_secret.py
 __pycache__/
 *.pyc
+client/coverage/
+coverage/
 
 .client-dist-prod/
 .cursor/
