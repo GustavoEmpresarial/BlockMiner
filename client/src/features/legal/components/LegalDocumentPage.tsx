@@ -30,8 +30,14 @@ function SectionBody({ paragraphs, bullets }: SectionBodyProps) {
   );
 }
 
+const OTHER_LEGAL_PAGES: { path: '/terms-of-use' | '/privacy-policy' | '/cookie-policy'; labelKey: string }[] = [
+  { path: '/terms-of-use', labelKey: 'legal.common.readTermsOfUse' },
+  { path: '/privacy-policy', labelKey: 'legal.common.readPrivacyPolicy' },
+  { path: '/cookie-policy', labelKey: 'legal.common.readCookiePolicy' },
+];
+
 export type LegalDocumentPageProps = {
-  canonicalPath: '/terms-of-use' | '/privacy-policy';
+  canonicalPath: '/terms-of-use' | '/privacy-policy' | '/cookie-policy';
   metaTitleKey: string;
   metaDescriptionKey: string;
   eyebrowKey: string;
@@ -172,14 +178,15 @@ export function LegalDocumentPage({
             >
               {t('legal.common.backToRegistration')}
             </Link>
-            <Link
-              className="rounded-full border border-white/15 px-6 py-3 text-sm font-bold text-slate-300 hover:text-white"
-              to={canonicalPath === '/privacy-policy' ? '/terms-of-use' : '/privacy-policy'}
-            >
-              {canonicalPath === '/privacy-policy'
-                ? t('legal.common.readTermsOfUse')
-                : t('legal.common.readPrivacyPolicy')}
-            </Link>
+            {OTHER_LEGAL_PAGES.filter((p) => p.path !== canonicalPath).map((p) => (
+              <Link
+                key={p.path}
+                className="rounded-full border border-white/15 px-6 py-3 text-sm font-bold text-slate-300 hover:text-white"
+                to={p.path}
+              >
+                {t(p.labelKey)}
+              </Link>
+            ))}
             <Link
               className="rounded-full border border-white/15 px-6 py-3 text-sm font-bold text-slate-300 hover:text-white"
               to="/"

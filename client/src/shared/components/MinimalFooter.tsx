@@ -21,6 +21,9 @@ export default function MinimalFooter() {
           <Link to="/privacy-policy" className="hover:text-sky-400 transition-colors">
             {t('landing.footer.link_privacy', { defaultValue: 'Privacidade' })}
           </Link>
+          <Link to="/cookie-policy" className="hover:text-sky-400 transition-colors">
+            {t('legal.footer.cookiePolicy', { defaultValue: 'Cookies' })}
+          </Link>
           <Link to="/support" className="hover:text-sky-400 transition-colors">
             {t('landing.nav.support', { defaultValue: 'Suporte' })}
           </Link>

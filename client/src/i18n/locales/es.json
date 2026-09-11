@@ -220,7 +220,8 @@
       "readPrivacyPolicy": "Read Privacy Policy",
       "skipToContent": "Skip to legal content",
       "backToHome": "Home",
-      "scrollToTop": "Back to top"
+      "scrollToTop": "Back to top",
+      "readCookiePolicy": "Leer Política de Cookies"
     },
     "footer": {
       "description": "Public legal information for BlockMiner users and visitors.",
@@ -229,7 +230,8 @@
       "privacyPolicy": "Privacy Policy",
       "termsOfUse": "Terms of Use",
       "copyright": "© {{year}} BlockMiner. All rights reserved.",
-      "complianceNote": ""
+      "complianceNote": "",
+      "cookiePolicy": "Política de Cookies"
     },
     "privacyPolicy": {
       "meta": {
@@ -560,6 +562,93 @@
             "You represent that you are not identified on any government restricted-party list and that you will not use the Services to violate trade sanctions, export controls, or anti-boycott rules applicable to you or to BlockMiner.",
             "We may screen activity, block access, freeze features, or terminate accounts where required by law or where we reasonably believe a transaction or user presents sanctions, fraud, or illicit finance risk.",
             "Nothing in these Terms obliges us to process a withdrawal, payment, or transfer that we reasonably believe would violate applicable law."
+          ]
+        }
+      }
+    },
+    "cookiePolicy": {
+      "meta": {
+        "title": "Política de Cookies | BlockMiner",
+        "description": "Qué cookies y tecnologías de almacenamiento usa BlockMiner, para qué, y cómo controlar tus preferencias."
+      },
+      "eyebrow": "Legal",
+      "title": "Política de Cookies",
+      "intro": "Esta Política de Cookies explica cómo BlockMiner (“nosotros”) usa cookies y tecnologías similares (localStorage, sessionStorage) en blockminer.space, y cómo puedes controlar estas preferencias.",
+      "sections": {
+        "whatAreCookies": {
+          "title": "1. Qué son las cookies",
+          "paragraphs": [
+            "Las cookies son pequeños archivos de texto que un sitio guarda en tu navegador. Permiten que el sitio recuerde información entre visitas o durante tu sesión — como mantenerte conectado, recordar tus preferencias o entender cómo se usa el sitio.",
+            "Además de cookies, también usamos localStorage y sessionStorage (almacenamiento local del navegador) con fines similares; tratamos ambos con el mismo cuidado descrito aquí."
+          ]
+        },
+        "howWeUseThem": {
+          "title": "2. Cómo usamos las cookies",
+          "paragraphs": [
+            "Usamos cookies y almacenamiento local para tres fines: (1) mantener tu sesión autenticada y proteger la plataforma contra ataques (esenciales); (2) recordar preferencias como el idioma (funcionales); y (3) medir el rendimiento de campañas de marketing, cuando das tu consentimiento (analítica/publicidad)."
+          ]
+        },
+        "essentialCookies": {
+          "title": "3. Cookies estrictamente necesarias",
+          "paragraphs": [
+            "Estas cookies son indispensables para el funcionamiento seguro de la plataforma y no se pueden desactivar en nuestra configuración — desactivarlas en el navegador impide iniciar sesión o compromete la seguridad de la cuenta."
+          ],
+          "bullets": [
+            "blockminer_access — token de sesión (JWT), te mantiene autenticado.",
+            "blockminer_refresh — token de renovación de sesión, usado para emitir un nuevo acceso sin pedirte iniciar sesión de nuevo.",
+            "blockminer_csrf — token anti-CSRF, protege contra acciones falsificadas en tu nombre por otro sitio.",
+            "blockminer_admin_session — sesión separada usada solo en el panel de administración."
+          ]
+        },
+        "functionalCookies": {
+          "title": "4. Cookies y almacenamiento funcionales",
+          "paragraphs": [
+            "Mejoran la experiencia pero no son estrictamente indispensables."
+          ],
+          "bullets": [
+            "i18nextLng (localStorage) — recuerda el idioma que elegiste.",
+            "blockminer_utm (sessionStorage) — guarda los parámetros UTM de tu visita durante la sesión, para saber de qué campaña viniste.",
+            "Preferencia de tema claro/oscuro, cuando corresponda."
+          ]
+        },
+        "analyticsAdvertisingCookies": {
+          "title": "5. Cookies de analítica y publicidad (con consentimiento)",
+          "paragraphs": [
+            "Solo cargamos estas cookies/scripts después de que aceptas en el banner de cookies. Si rechazas, nunca se cargan ni se guardan."
+          ],
+          "bullets": [
+            "Meta Pixel (_fbp, _fbc) — mide la eficacia de campañas en Facebook/Instagram y permite anuncios más relevantes, cuando está configurado.",
+            "Google Analytics (_ga y similares) — métricas de uso agregadas, cuando está configurado."
+          ]
+        },
+        "thirdPartyCookies": {
+          "title": "6. Cookies de terceros",
+          "paragraphs": [
+            "Algunas funciones incorporan servicios de terceros que pueden establecer sus propias cookies cuando se usan: Cloudflare Turnstile (verificación anti-bot en inicio de sesión/registro), WalletConnect/Reown (conexión de billetera Web3) y reproductores de video incorporados (YouTube) en la sección de tareas. Estos servicios tienen sus propias políticas de cookies, que no controlamos."
+          ]
+        },
+        "yourChoices": {
+          "title": "7. Tus opciones",
+          "paragraphs": [
+            "Al visitar el sitio por primera vez, un banner te permite Aceptar o Rechazar cookies no esenciales. Las cookies estrictamente necesarias (sesión, seguridad) siempre se usan, ya que sin ellas el sitio no funciona. Puedes cambiar tu elección en cualquier momento borrando los datos del sitio en tu navegador, lo que hace que el banner vuelva a aparecer."
+          ]
+        },
+        "browserControls": {
+          "title": "8. Controles del navegador",
+          "paragraphs": [
+            "La mayoría de los navegadores permiten bloquear o eliminar cookies en su configuración de privacidad. Desactivar cookies esenciales impide iniciar sesión y las funciones de seguridad; desactivar cookies funcionales/analíticas no afecta el uso básico de la plataforma."
+          ]
+        },
+        "retention": {
+          "title": "9. Cuánto tiempo las conservamos",
+          "paragraphs": [
+            "Las cookies de sesión (access) expiran pocas horas después de emitidas. La cookie de renovación (refresh) dura hasta 30 días de inactividad. Las cookies funcionales/analíticas siguen el período predeterminado establecido por su respectivo proveedor (típicamente hasta 2 años, salvo revocación del consentimiento)."
+          ]
+        },
+        "updatesContact": {
+          "title": "10. Actualizaciones y contacto",
+          "paragraphs": [
+            "Podemos actualizar esta política a medida que añadimos o quitamos tecnologías. Para dudas sobre cookies o para ejercer tus derechos de privacidad, consulta los canales de contacto en nuestra Política de Privacidad."
           ]
         }
       }
@@ -6104,5 +6193,11 @@
     "active": "Active",
     "actions": "Actions",
     "toggle": "On/Off"
+  },
+  "cookieConsent": {
+    "message": "Usamos cookies esenciales para mantener tu sesión segura, y cookies opcionales de analítica/publicidad solo con tu permiso.",
+    "accept": "Aceptar todo",
+    "decline": "Solo esenciales",
+    "policyLink": "Política de Cookies"
   }
 }

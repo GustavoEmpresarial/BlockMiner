@@ -40,3 +40,17 @@ export const PRIVACY_POLICY_SECTION_IDS = [
   'marketingOptOut',
   'updatesComplaints',
 ] as const;
+
+/** Must match `legal.cookiePolicy.sections.*` keys in locale JSON files. */
+export const COOKIE_POLICY_SECTION_IDS = [
+  'whatAreCookies',
+  'howWeUseThem',
+  'essentialCookies',
+  'functionalCookies',
+  'analyticsAdvertisingCookies',
+  'thirdPartyCookies',
+  'yourChoices',
+  'browserControls',
+  'retention',
+  'updatesContact',
+] as const;

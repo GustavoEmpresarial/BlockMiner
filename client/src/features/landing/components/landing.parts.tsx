@@ -701,6 +701,7 @@ export function LandingFooter({
           <ul className="mt-4 space-y-2.5 text-sm">
             <li><Link to="/terms-of-use" className="transition-colors hover:text-sky-400">{t('legal.footer.termsOfUse')}</Link></li>
             <li><Link to="/privacy-policy" className="transition-colors hover:text-sky-400">{t('legal.footer.privacyPolicy')}</Link></li>
+            <li><Link to="/cookie-policy" className="transition-colors hover:text-sky-400">{t('legal.footer.cookiePolicy')}</Link></li>
           </ul>
         </div>
       </div>

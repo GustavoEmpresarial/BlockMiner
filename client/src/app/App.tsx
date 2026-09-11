@@ -2,11 +2,12 @@ import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { useAuthStore } from '../shared/auth/auth.store';
 import { startSiteIntegrityMonitoring } from '../features/antibot';
+import CookieConsentBanner from '../shared/components/CookieConsentBanner';
 import { LandingPage } from '../features/landing/index';
 import { LoginPage, RegisterPage } from '../features/auth';
 import { ForgotPasswordPage } from '../features/forgot-password';
 import { VerifyEmailPage } from '../features/verify-email';
-import { TermsOfUsePage, PrivacyPolicyPage } from '../features/legal';
+import { TermsOfUsePage, PrivacyPolicyPage, CookiePolicyPage } from '../features/legal';
 import { RankingPage } from '../features/ranking/index';
 import { PublicRoomPage } from '../features/public-room/index';
 import { SocialPage } from '../features/social/index';
@@ -89,6 +90,7 @@ export default function App() {
         <Route path="/verify-email" element={<VerifyEmailPage />} />
         <Route path="/terms-of-use" element={<TermsOfUsePage />} />
         <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+        <Route path="/cookie-policy" element={<CookiePolicyPage />} />
 
         {/* Admin — separate session (admin_session cookie), not the regular ProtectedLayout. */}
         <Route path="/admin/login" element={<AdminLoginPage />} />
@@ -172,6 +174,7 @@ export default function App() {
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      <CookieConsentBanner />
     </BrowserRouter>
   );
 }

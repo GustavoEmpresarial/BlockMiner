@@ -5,6 +5,7 @@ import { useAuthStore } from '../../shared/auth/auth.store';
 import { normalizeExternalUrl } from '../../shared/components/CommunityShortcuts';
 import { formatHashrate } from '../../shared/utils/machine';
 import { persistUtmParams, trackLandingEvent, initMetaPixel } from '../../shared/utils/landingAnalytics';
+import { hasNonEssentialCookieConsent, onCookieConsentChange } from '../../shared/utils/cookieConsent';
 import { useLandingScrollDepth } from '../../shared/hooks/useLandingScrollDepth';
 import { usePublicStatsPoll } from '../../shared/hooks/usePublicStatsPoll';
 import { useLandingSeo, type LandingFaqItemDef } from '../../shared/hooks/useLandingSeo';
@@ -84,15 +85,31 @@ export default function Landing() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Meta Pixel is a non-essential/advertising cookie under our Cookie Policy — only ever
+  // loaded once the visitor has explicitly accepted (never on first paint by default). If
+  // they accept the banner while already on this page, initMetaPixel() fires immediately via
+  // the consent-change listener below, no reload needed.
   useEffect(() => {
-    const run = () => initMetaPixel();
     const w = window;
-    if (typeof w.requestIdleCallback === 'function') {
-      const id = w.requestIdleCallback(run, { timeout: 2500 });
-      return () => w.cancelIdleCallback(id);
-    }
-    const id = w.setTimeout(run, 1);
-    return () => w.clearTimeout(id);
+    let idleId: number | null = null;
+    let timeoutId: number | null = null;
+    const run = () => initMetaPixel();
+    const schedule = () => {
+      if (typeof w.requestIdleCallback === 'function') {
+        idleId = w.requestIdleCallback(run, { timeout: 2500 });
+      } else {
+        timeoutId = w.setTimeout(run, 1);
+      }
+    };
+    if (hasNonEssentialCookieConsent()) schedule();
+    const unsubscribe = onCookieConsentChange((choice) => {
+      if (choice === 'accepted') schedule();
+    });
+    return () => {
+      unsubscribe();
+      if (idleId !== null && typeof w.cancelIdleCallback === 'function') w.cancelIdleCallback(idleId);
+      if (timeoutId !== null) w.clearTimeout(timeoutId);
+    };
   }, []);
 
   const networkHs = useMemo(() => estimateNetworkHashRate(publicStats), [publicStats]);

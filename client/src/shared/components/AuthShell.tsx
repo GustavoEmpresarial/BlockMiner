@@ -78,6 +78,9 @@ export default function AuthShell({ children, hideAuthCta }: AuthShellProps) {
             <Link to="/privacy-policy" onClick={() => setMenuOpen(false)} className="block rounded-lg px-3 py-2.5 text-sm text-slate-300 hover:bg-white/5">
               {t('landing.footer.link_privacy', { defaultValue: 'Privacidade' })}
             </Link>
+            <Link to="/cookie-policy" onClick={() => setMenuOpen(false)} className="block rounded-lg px-3 py-2.5 text-sm text-slate-300 hover:bg-white/5">
+              {t('legal.footer.cookiePolicy', { defaultValue: 'Cookies' })}
+            </Link>
           </div>
         )}
       </header>
@@ -95,6 +98,9 @@ export default function AuthShell({ children, hideAuthCta }: AuthShellProps) {
             </Link>
             <Link to="/privacy-policy" className="hover:text-sky-400 transition-colors">
               {t('landing.footer.link_privacy', { defaultValue: 'Privacidade' })}
+            </Link>
+            <Link to="/cookie-policy" className="hover:text-sky-400 transition-colors">
+              {t('legal.footer.cookiePolicy', { defaultValue: 'Cookies' })}
             </Link>
             <Link to="/" className="hover:text-sky-400 transition-colors">
               {t('common.back', { defaultValue: 'Voltar' })}

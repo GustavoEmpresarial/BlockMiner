@@ -36,6 +36,11 @@ export default function SiteFooter({ compact = false }: { compact?: boolean }) {
                   {t('legal.footer.termsOfUse')}
                 </Link>
               </li>
+              <li>
+                <Link className="transition-colors hover:text-sky-400" to="/cookie-policy">
+                  {t('legal.footer.cookiePolicy')}
+                </Link>
+              </li>
             </ul>
           </nav>
         </div>
