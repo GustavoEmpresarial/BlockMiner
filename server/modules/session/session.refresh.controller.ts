@@ -6,7 +6,8 @@ import { getRefreshTokenFromRequest, getTokenFromRequest } from "../../shared/se
 import { createRefreshToken, parseRefreshToken, signAccessToken, verifyAccessToken } from "../../shared/security/authTokens.js";
 import { appendSetCookie, buildAccessCookie, buildRefreshCookie, clearAuthCookies } from "../../shared/security/cookies.js";
 import { unknownErrorMessage, respondAuthPrismaError } from "../../shared/errors/prismaHttpErrors.js";
-import { createRefreshTokenRecord, getRefreshTokenById, revokeRefreshToken } from "./session.tokens.js";
+import { createRefreshTokenRecord, getRefreshTokenById, revokeRefreshToken, revokeRefreshTokensForUser } from "./session.tokens.js";
+import { reportError } from "../../core/errors/index.js";
 import { AUTH_LOGIN_MESSAGES } from "../auth/auth.errors.js";
 import { evictIfAnonymousNetwork, loginClientIp } from "../auth/login/login.anonymous-ip.js";
 
@@ -34,7 +35,31 @@ export async function refreshPost(req: Request, res: Response): Promise<void> {
     }
 
     const row = await getRefreshTokenById(parsed.tokenId);
-    if (!row || row.revokedAt) {
+    if (row?.revokedAt) {
+      // Refresh-token reuse detection (OWASP-recommended for rotating refresh tokens): this
+      // exact token was already consumed once and rotated into a successor. A second use can
+      // only mean the token leaked (stolen cookie, XSS, log/backup exposure, MITM) and is now
+      // racing the legitimate holder's already-rotated one — the attacker's copy is now
+      // indistinguishable from a real replay attempt. Assume compromise: revoke every refresh
+      // token this user holds, not just this one, forcing a full re-login everywhere. Without
+      // this, the previous behavior only rejected the *reused* token while the successor
+      // (and the thief, if they instead captured the successor) kept working normally.
+      await revokeRefreshTokensForUser(row.userId).catch((err: unknown) => {
+        reportError({
+          code: "REFRESH_REUSE_REVOKE_ALL_FAILED",
+          category: "AUTH",
+          severity: "CRITICAL",
+          module: "session.refresh",
+          error: err,
+          req,
+          context: { userId: row.userId },
+        });
+      });
+      log.security("AUTH_REFRESH_TOKEN_REUSE_DETECTED", { userId: row.userId, tokenId: parsed.tokenId }, req);
+      sendUnauthenticated(res, "REFRESH_REVOKED");
+      return;
+    }
+    if (!row) {
       sendUnauthenticated(res, "REFRESH_REVOKED");
       return;
     }
