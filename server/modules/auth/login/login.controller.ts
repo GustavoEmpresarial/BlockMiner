@@ -7,29 +7,19 @@
  * Anonymous networks (VPN / proxy / Tor / relay / Cloudflare WARP) are
  * rejected after a valid password and before 2FA / session issuance.
  */
-import crypto from "node:crypto";
 import type { Request, Response } from "express";
 import prisma from "../../../core/database/prisma.js";
 import { logger } from "../../../core/logger/index.js";
-import { buildCsrfCookie } from "../../../core/http/middleware/csrf.js";
-import { checkBanOrExpire, bannedResponseBody, invalidateAuthUserCache } from "../../../shared/security/authUser.js";
+import { checkBanOrExpire, bannedResponseBody } from "../../../shared/security/authUser.js";
 import { isSmtpConfigured } from "../../../shared/security/mailer.js";
 import { unknownErrorMessage, respondAuthPrismaError } from "../../../shared/errors/prismaHttpErrors.js";
-import { toAuthPublicUserDto } from "../auth.dto.js";
 import { AUTH_LOGIN_MESSAGES, buildAuthFailureJson } from "../auth.errors.js";
 import { findUserByIdentifier } from "../auth.repository.js";
-import {
-  buildAccessCookie,
-  buildRefreshCookie,
-  comparePassword,
-  compareDummyPassword,
-  createRefreshToken,
-  signAccessToken,
-} from "../auth.service.js";
+import { comparePassword, compareDummyPassword } from "../auth.service.js";
+import { issueAuthSessionForUser } from "../auth.sessionIssue.js";
 import { getAuthTwoFactorEnvConfig, shouldRequireEmailTwoFactorForLogin } from "./login.twoFactor.js";
 import { issueEmailTwoFactorChallenge, verifyEmailTwoFactorChallenge } from "./login.twoFactorChallenge.js";
-import { createRefreshTokenRecord, revokeRefreshTokensForUser } from "../../session/index.js";
-import { getAuthLockStatus, recordAuthLoginFailure, recordAuthLoginSuccess } from "./login.lockout.js";
+import { getAuthLockStatus, recordAuthLoginFailure } from "./login.lockout.js";
 import { authLoginTrace, buildAuthRequestContext } from "../../../shared/security/authDebug.js";
 import { inspectAnonymousLoginIp, loginClientIp } from "./login.anonymous-ip.js";
 
@@ -152,29 +142,14 @@ export async function loginPost(req: Request, res: Response): Promise<void> {
         return;
       }
     }
-    const updatedUser = await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        ip: clientIp,
-        lastLoginAt: new Date(),
-        userAgent: req.headers["user-agent"],
-        sessionVersion: { increment: 1 },
-      },
-    });
-    await revokeRefreshTokensForUser(user.id);
-    invalidateAuthUserCache(user.id);
-    const accessToken = signAccessToken({ ...user, sessionVersion: updatedUser.sessionVersion });
-    const refreshToken = createRefreshToken();
-    await createRefreshTokenRecord({ userId: user.id, ...refreshToken, createdAt: Date.now() });
-    await recordAuthLoginSuccess({ ip: clientIp, userId: user.id });
+    // Consolidated (2026-09-11) onto the same session-issuance path already used, unmodified,
+    // by the Google/SatsPay OAuth controllers — was hand-rolled here identically (user update
+    // + revoke + cache invalidate + sign + cookies + recordAuthLoginSuccess), see
+    // auth.sessionIssue.ts. Behavior-preserving: verified by
+    // tests/auth/session-issuance.characterization.test.mjs before/after this change.
+    const session = await issueAuthSessionForUser({ req, res, user });
     loginSecurity("AUTH_LOGIN_SUCCESS", req, { userId: user.id, httpStatus: 200 }, identifier);
-    const activeCsrf = String(res.locals.csrfToken || crypto.randomBytes(24).toString("base64url"));
-    res.setHeader("Set-Cookie", [
-      buildAccessCookie(accessToken),
-      buildRefreshCookie(refreshToken.token, refreshToken.expiresAt),
-      buildCsrfCookie(activeCsrf),
-    ]);
-    res.json({ ok: true, user: toAuthPublicUserDto(user) });
+    res.json({ ok: true, user: session.user });
   } catch (error) {
     if (respondAuthPrismaError(res, error, AUTH_LOGIN_MESSAGES.SERVICE_UNAVAILABLE)) return;
     log.error("auth.login.unexpected", { message: unknownErrorMessage(error) });

@@ -16,13 +16,10 @@
  *    this one. IP intelligence (provider type / ASN) is read via the
  *    `ip-intelligence` module boundary's `getCachedIpIntelligence`.
  */
-import crypto from "node:crypto";
 import type { Request, Response } from "express";
 import prisma from "../../../core/database/prisma.js";
 import { logger } from "../../../core/logger/index.js";
-import { buildCsrfCookie } from "../../../core/http/middleware/csrf.js";
 import { unknownErrorMessage, respondAuthPrismaError } from "../../../shared/errors/prismaHttpErrors.js";
-import { toAuthPublicUserDto } from "../auth.dto.js";
 import { AUTH_LOGIN_MESSAGES, buildAuthFailureJson } from "../auth.errors.js";
 import {
   normalizeIdentifier,
@@ -32,8 +29,8 @@ import {
   ensureWelcomeMiner,
   WELCOME_MINER_QUANTITY,
 } from "../auth.repository.js";
-import { buildAccessCookie, buildRefreshCookie, createRefreshToken, hashPassword, signAccessToken, prismaClientErrorFields } from "../auth.service.js";
-import { createRefreshTokenRecord } from "../../session/index.js";
+import { hashPassword, prismaClientErrorFields } from "../auth.service.js";
+import { issueAuthSessionForUser } from "../auth.sessionIssue.js";
 import { grantPurchasedInventoryItems } from "../../inventory/index.js";
 import { provisionFirstRoomTx } from "../../rooms/index.js";
 import { authBlockVpnProxy, evaluateAnonymousIp, getCachedIpIntelligence } from "../../ip-intelligence/index.js";
@@ -213,17 +210,16 @@ export async function registerPost(req: Request, res: Response): Promise<void> {
       return user;
     });
 
-    const accessToken = signAccessToken(result);
-    const refreshToken = createRefreshToken();
-    await createRefreshTokenRecord({ userId: result.id, ...refreshToken, createdAt: Date.now() });
-
-    const regCsrf = crypto.randomBytes(24).toString("base64url");
-    res.locals.csrfToken = regCsrf;
-    res.setHeader("Set-Cookie", [
-      buildAccessCookie(accessToken),
-      buildRefreshCookie(refreshToken.token, refreshToken.expiresAt),
-      buildCsrfCookie(regCsrf),
-    ]);
+    // Consolidated (2026-09-11) onto the same session-issuance path already used, unmodified,
+    // by the Google/SatsPay OAuth controllers (see auth.sessionIssue.ts) — was hand-rolled
+    // here separately, and unlike login/OAuth did NOT call revokeRefreshTokensForUser /
+    // invalidateAuthUserCache / recordAuthLoginSuccess for a fresh account. Those are all
+    // harmless no-ops on a brand-new user (no prior tokens/cache/lockout state to touch)
+    // except recordAuthLoginSuccess, which now also clears any failed-login counter already
+    // built up against this IP — the same thing a Google sign-up from that IP already does.
+    // User-approved behavior change (2026-09-11): verified before/after by
+    // tests/auth/session-issuance.characterization.test.mjs.
+    const session = await issueAuthSessionForUser({ req, res, user: result });
     log.security("AUTH_REGISTER_SUCCESS", { userId: result.id }, req);
 
     // item 95 Parte B: continua autenticando na hora (não muda a UX de login imediato —
@@ -236,7 +232,7 @@ export async function registerPost(req: Request, res: Response): Promise<void> {
       log.error("Email verification send failed at register", { userId: result.id, error: unknownErrorMessage(sendErr) });
     });
 
-    res.status(201).json({ ok: true, user: toAuthPublicUserDto(result, { usernameOverride: normalizedUsername }) });
+    res.status(201).json({ ok: true, user: { ...session.user, username: normalizedUsername } });
   } catch (error: unknown) {
     const errMsg = unknownErrorMessage(error);
     const { code: prismaCode, meta } = prismaClientErrorFields(error);
