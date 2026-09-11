@@ -13,6 +13,7 @@ import "dotenv/config";
 import http from "node:http";
 import express from "express";
 import { setupHttpStack } from "../core/http/setupHttpStack.js";
+import { reportError } from "../core/errors/index.js";
 import { attachSocketIO } from "../core/socket/index.js";
 import { mediaAdminRouter, mediaRootDir, MEDIA_PUBLIC_PREFIX, seedBundledMedia, projectRoot, createMediaStaticHeadersMiddleware } from "../modules/media/index.js";
 import { resolveClientDistPaths, attachClientDistStatic, attachSpaFallback, renderSpaIndex, } from "../shared/http/spaStatic.js";
@@ -256,8 +257,16 @@ export function createApp() {
         res.status(404).json({ ok: false, code: "NOT_FOUND", message: "Route not found." });
     });
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    app.use((err, _req, res, _next) => {
-        log.error("Unhandled error", { error: err instanceof Error ? err.message : String(err) });
+    app.use((err, req, res, _next) => {
+        reportError({
+            code: "UNHANDLED_HTTP_ERROR",
+            category: "UNKNOWN",
+            severity: "CRITICAL",
+            module: "bootstrap.server",
+            error: err,
+            req,
+            context: { path: req?.originalUrl, method: req?.method },
+        });
         res.status(500).json({ ok: false, code: "INTERNAL_ERROR", message: "Internal server error." });
     });
     return app;

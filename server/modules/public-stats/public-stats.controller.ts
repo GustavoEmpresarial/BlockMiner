@@ -4,8 +4,7 @@
 // Reconstructed verbatim from the last known-good compiled output on 2026-09-11.
 // TODO: remove @ts-nocheck once someone re-adds proper types for this file.
 import prisma from "../../core/database/prisma.js";
-import { logger } from "../../core/logger/index.js";
-const log = logger.child("public-stats.controller");
+import { reportError } from "../../core/errors/index.js";
 export function maskUsername(name) {
     const s = name ?? "user";
     if (s.length <= 2)
@@ -33,7 +32,7 @@ const LAUNCH_DATE = "2026-03-05T00:00:00.000Z";
 /**
  * GET /api/public-stats — landing trust strip; must stay best-effort (no 500 on partial DB issues).
  */
-export async function getPublicStats(_req, res) {
+export async function getPublicStats(req, res) {
     const settled = await Promise.allSettled([
         prisma.user.count(),
         prisma.transaction.aggregate({
@@ -68,7 +67,15 @@ export async function getPublicStats(_req, res) {
         failures.push({ metric: "activeMiners", reason: r instanceof Error ? r.message : String(r) });
     }
     if (failures.length > 0) {
-        log.warn("public-stats degraded", { failures });
+        reportError({
+            code: "PUBLIC_STATS_DEGRADED",
+            category: "DATABASE",
+            severity: "WARNING",
+            module: "public-stats.landing",
+            error: new Error(`degraded metrics: ${failures.map((f) => f.metric).join(", ")}`),
+            req,
+            context: { failures },
+        });
     }
     res.json({
         ok: true,
@@ -83,7 +90,7 @@ export async function getPublicStats(_req, res) {
  * GET /api/public-feed — last 10 payments + last 10 deposits for landing page trust feed.
  * Usernames are masked (first 2 chars + ***; short/missing names fall back to "user" + ***).
  */
-export async function getPublicFeed(_req, res) {
+export async function getPublicFeed(req, res) {
     try {
         const [withdrawals, deposits] = await Promise.all([
             prisma.transaction.findMany({
@@ -118,7 +125,14 @@ export async function getPublicFeed(_req, res) {
         res.json({ ok: true, withdrawals: withdrawals.map(mapRow), deposits: deposits.map(mapRow) });
     }
     catch (err) {
-        log.warn("public-feed failed", { err: err instanceof Error ? err.message : String(err) });
+        reportError({
+            code: "PUBLIC_FEED_FAILED",
+            category: "DATABASE",
+            severity: "WARNING",
+            module: "public-stats.landing",
+            error: err,
+            req,
+        });
         res.json({ ok: true, withdrawals: [], deposits: [] });
     }
 }

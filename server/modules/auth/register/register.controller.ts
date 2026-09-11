@@ -19,7 +19,8 @@
 import type { Request, Response } from "express";
 import prisma from "../../../core/database/prisma.js";
 import { logger } from "../../../core/logger/index.js";
-import { unknownErrorMessage, respondAuthPrismaError } from "../../../shared/errors/prismaHttpErrors.js";
+import { respondAuthPrismaError } from "../../../shared/errors/prismaHttpErrors.js";
+import { reportError } from "../../../core/errors/index.js";
 import { AUTH_LOGIN_MESSAGES, buildAuthFailureJson } from "../auth.errors.js";
 import {
   normalizeIdentifier,
@@ -229,14 +230,29 @@ export async function registerPost(req: Request, res: Response): Promise<void> {
     const verifyToken = signEmailVerificationToken(result.id);
     const verifyUrl = `${APP_URL.replace(/\/$/, "")}/verify-email?token=${encodeURIComponent(verifyToken)}`;
     sendEmailVerificationEmail({ to: result.email, name: result.name, verifyUrl }).catch((sendErr: unknown) => {
-      log.error("Email verification send failed at register", { userId: result.id, error: unknownErrorMessage(sendErr) });
+      reportError({
+        code: "REGISTER_VERIFICATION_EMAIL_FAILED",
+        category: "EXTERNAL_API",
+        severity: "WARNING",
+        module: "auth.register",
+        error: sendErr,
+        req,
+        context: { userId: result.id },
+      });
     });
 
     res.status(201).json({ ok: true, user: { ...session.user, username: normalizedUsername } });
   } catch (error: unknown) {
-    const errMsg = unknownErrorMessage(error);
     const { code: prismaCode, meta } = prismaClientErrorFields(error);
-    log.error("Register error", { message: errMsg, prismaCode, meta });
+    reportError({
+      code: prismaCode === "P2002" ? "REGISTER_DUPLICATE_USER" : "REGISTER_UNEXPECTED",
+      category: prismaCode ? "DATABASE" : "UNKNOWN",
+      severity: prismaCode === "P2002" ? "WARNING" : "ERROR",
+      module: "auth.register",
+      error,
+      req,
+      context: { prismaCode, meta },
+    });
 
     if (prismaCode === "P2002") {
       res.status(409).json({ ok: false, code: "USER_ALREADY_EXISTS", message: "User already exists." });

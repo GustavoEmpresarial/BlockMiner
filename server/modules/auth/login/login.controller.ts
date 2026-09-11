@@ -12,7 +12,8 @@ import prisma from "../../../core/database/prisma.js";
 import { logger } from "../../../core/logger/index.js";
 import { checkBanOrExpire, bannedResponseBody } from "../../../shared/security/authUser.js";
 import { isSmtpConfigured } from "../../../shared/security/mailer.js";
-import { unknownErrorMessage, respondAuthPrismaError } from "../../../shared/errors/prismaHttpErrors.js";
+import { respondAuthPrismaError } from "../../../shared/errors/prismaHttpErrors.js";
+import { reportError } from "../../../core/errors/index.js";
 import { AUTH_LOGIN_MESSAGES, buildAuthFailureJson } from "../auth.errors.js";
 import { findUserByIdentifier } from "../auth.repository.js";
 import { comparePassword, compareDummyPassword } from "../auth.service.js";
@@ -152,7 +153,15 @@ export async function loginPost(req: Request, res: Response): Promise<void> {
     res.json({ ok: true, user: session.user });
   } catch (error) {
     if (respondAuthPrismaError(res, error, AUTH_LOGIN_MESSAGES.SERVICE_UNAVAILABLE)) return;
-    log.error("auth.login.unexpected", { message: unknownErrorMessage(error) });
+    reportError({
+      code: "AUTH_LOGIN_UNEXPECTED",
+      category: "AUTH",
+      severity: "ERROR",
+      module: "auth.login",
+      error,
+      req,
+      context: { identifier: req.body?.identifier ? "[present]" : "[absent]" },
+    });
     res.status(500).json(buildAuthFailureJson("INTERNAL_ERROR", AUTH_LOGIN_MESSAGES.INTERNAL));
   }
 }

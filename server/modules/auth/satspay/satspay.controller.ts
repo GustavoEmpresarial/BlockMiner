@@ -3,7 +3,8 @@
  */
 import type { Request, Response } from "express";
 import { logger } from "../../../core/logger/index.js";
-import { unknownErrorMessage, respondAuthPrismaError } from "../../../shared/errors/prismaHttpErrors.js";
+import { respondAuthPrismaError } from "../../../shared/errors/prismaHttpErrors.js";
+import { reportError } from "../../../core/errors/index.js";
 import { checkBanOrExpire, bannedResponseBody } from "../../../shared/security/authUser.js";
 import { AUTH_LOGIN_MESSAGES, buildAuthFailureJson } from "../auth.errors.js";
 import { issueAuthSessionForUser } from "../auth.sessionIssue.js";
@@ -146,7 +147,14 @@ export async function satspayExchangePost(req: Request, res: Response): Promise<
   } catch (error) {
     if (respondAuthPrismaError(res, error, AUTH_LOGIN_MESSAGES.SERVICE_UNAVAILABLE)) return;
     const code = (error as { code?: string })?.code;
-    log.error("auth.satspay.unexpected", { message: unknownErrorMessage(error), code: code ?? null });
+    reportError({
+      code: code ?? "AUTH_SATSPAY_UNEXPECTED",
+      category: code ? "EXTERNAL_API" : "UNKNOWN",
+      severity: "ERROR",
+      module: "auth.satspay",
+      error,
+      req,
+    });
     if (code === "SATSPAY_TOKEN_EXCHANGE_FAILED" || code === "SATSPAY_USERINFO_FAILED") {
       res.status(401).json(buildAuthFailureJson(code, "Falha ao validar o login SatsPay. Tente novamente."));
       return;
