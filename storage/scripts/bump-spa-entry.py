@@ -7,8 +7,8 @@ while keeping the same URL. Cached old bodies still import dead entries
 (index-inv2plus53.js → 404 → "Failed to fetch dynamically imported module").
 
 Usage (from repo root):
-  python3 scripts/bump-spa-entry.py --from 112 --to 113
-  python3 scripts/bump-spa-entry.py --from 112 --to 113 --dry-run
+  python3 storage/scripts/bump-spa-entry.py --from 112 --to 113
+  python3 storage/scripts/bump-spa-entry.py --from 112 --to 113 --dry-run
 """
 from __future__ import annotations
 

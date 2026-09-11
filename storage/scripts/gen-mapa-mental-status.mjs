@@ -3,7 +3,7 @@
  * Gera current/docs/mapa-mental.status.json a partir do filesystem real de
  * current/server/ — nada de manter badge ✅/⚪ na mão em toda fase.
  *
- * Uso: node scripts/gen-mapa-mental-status.mjs   (rodar de dentro de current/)
+ * Uso: node storage/scripts/gen-mapa-mental-status.mjs   (rodar de dentro de current/)
  *
  * O mapa-mental.html tenta buscar esse JSON via fetch ao carregar (só funciona
  * servido por http, não em file://) e aplica os badges "IMPLEMENTADO" em cima
@@ -55,7 +55,7 @@ for (const mod of implementedModules) {
 
 const status = {
   generatedAt: new Date().toISOString(),
-  generatedBy: "scripts/gen-mapa-mental-status.mjs",
+  generatedBy: "storage/scripts/gen-mapa-mental-status.mjs",
   implementedModules: [...implementedModules, ...subModules].sort(),
   implementedCron,
   implementedWorkers,

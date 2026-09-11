@@ -10,7 +10,9 @@ dist/
 # (upload real de usuário, backup de banco) é ignorado, pasta por pasta.
 /storage/uploads/
 /storage/backups/
-scripts/deploy/vm_config_secret.py
+storage/scripts/deploy/vm_config_secret.py
+__pycache__/
+*.pyc
 
 .client-dist-prod/
 .cursor/

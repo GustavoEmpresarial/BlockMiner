@@ -6,11 +6,11 @@ Default: pull from GitHub on the VM, then rebuild/restart Docker.
 Optional: upload a local zip (`--zip` / `./deploy.sh --zip`) for emergency
 offline deploys.
 
-  python3 scripts/deploy/deploy.py
-  python3 scripts/deploy/deploy.py --ref main
-  python3 scripts/deploy/deploy.py --zip /tmp/blockminer-current-deploy-*.zip
+  python3 storage/scripts/deploy/deploy.py
+  python3 storage/scripts/deploy/deploy.py --ref main
+  python3 storage/scripts/deploy/deploy.py --zip /tmp/blockminer-current-deploy-*.zip
 
-Credentials: `scripts/deploy/vm_config_secret.py` or env VM_IP / VM_PASSWORD.
+Credentials: `storage/scripts/deploy/vm_config_secret.py` or env VM_IP / VM_PASSWORD.
 
 Never overwrites server `.env` / `.env.production`.
 """
@@ -69,7 +69,7 @@ def load_secret(host_override: str = "", password_override: str = "", user_overr
     pw = (os.environ.get("VM_PASSWORD") or "").strip()
     if not (ip and pw):
         raise SystemExit(
-            "Missing credentials: create scripts/deploy/vm_config_secret.py from vm_config_secret.example.py "
+            "Missing credentials: create storage/scripts/deploy/vm_config_secret.py from vm_config_secret.example.py "
             "or set VM_IP and VM_PASSWORD (and optionally VM_USER)."
         )
     return ip, login, pw

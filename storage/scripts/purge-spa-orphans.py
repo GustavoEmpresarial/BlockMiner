@@ -7,8 +7,8 @@ styles, recursive JS imports). Also scrubs stale copies under client/public/asse
 
 Dry-run by default:
 
-  python3 scripts/purge-spa-orphans.py
-  python3 scripts/purge-spa-orphans.py --apply
+  python3 storage/scripts/purge-spa-orphans.py
+  python3 storage/scripts/purge-spa-orphans.py --apply
 """
 from __future__ import annotations
 

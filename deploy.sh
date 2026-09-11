@@ -11,7 +11,7 @@
 #   ./deploy.sh --zip                 # pack local tree + upload (legacy)
 #   ./deploy.sh --host 1.2.3.4 --password '...'
 #
-# Credentials: scripts/deploy/vm_config_secret.py (gitignored) or VM_IP / VM_PASSWORD.
+# Credentials: storage/scripts/deploy/vm_config_secret.py (gitignored) or VM_IP / VM_PASSWORD.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
@@ -40,7 +40,7 @@ done
 if [[ "$USE_ZIP" != "1" ]]; then
   echo "[local] deploy via git pull on VM (GitHub origin)"
   echo "[local] tip: push first — git push origin HEAD"
-  exec python3 "$ROOT/scripts/deploy/deploy.py" "${FORWARD_ARGS[@]}"
+  exec python3 "$ROOT/storage/scripts/deploy/deploy.py" "${FORWARD_ARGS[@]}"
 fi
 
 if ! command -v zip >/dev/null 2>&1; then
@@ -83,15 +83,15 @@ if [[ -n "$SPA_COMPAT_KEEP" && -d "$COMPAT_DIR" ]]; then
   cp -a "$COMPAT_DIR"/. "$ROOT/client/dist/assets/"
 fi
 
-python3 "$ROOT/scripts/verify-spa-dist.py"
-python3 "$ROOT/scripts/purge-spa-orphans.py" --apply
+python3 "$ROOT/storage/scripts/verify-spa-dist.py"
+python3 "$ROOT/storage/scripts/purge-spa-orphans.py" --apply
 
 zip -q -r "$ZIP" \
   Dockerfile docker-compose.yml docker-entrypoint.sh .dockerignore package.json package-lock.json \
-  tsconfig.json prisma.config.js prisma server client nginx scripts tests storage deploy dist \
+  tsconfig.json prisma.config.js prisma server client nginx tests storage deploy dist \
   -x '*/node_modules/*' \
      'storage/uploads/*' 'storage/backups/*' \
-     'scripts/deploy/vm_config_secret.py' \
+     'storage/scripts/deploy/vm_config_secret.py' \
      '*.log' '.env' '.env.*' \
      '*/.venv*' '*/__pycache__/*' '*.pyc' 'dist/**/*.map' 'client/dist/**/*.map'
 
@@ -106,4 +106,4 @@ BYTES="$(wc -c < "$ZIP" | tr -d ' ')"
 echo "[local] zip ready: $ZIP ($BYTES bytes)"
 echo "$ZIP" > /tmp/bm_last_deploy_zip.txt
 
-exec python3 "$ROOT/scripts/deploy/deploy.py" --zip "$ZIP" "${FORWARD_ARGS[@]}"
+exec python3 "$ROOT/storage/scripts/deploy/deploy.py" --zip "$ZIP" "${FORWARD_ARGS[@]}"
