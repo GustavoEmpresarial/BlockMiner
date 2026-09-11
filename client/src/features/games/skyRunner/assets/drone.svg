@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
+  <defs>
+    <linearGradient id="srDroneHull" x1="18" y1="28" x2="112" y2="96" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FDE68A"/>
+      <stop offset="0.42" stop-color="#F59E0B"/>
+      <stop offset="1" stop-color="#92400E"/>
+    </linearGradient>
+    <linearGradient id="srDroneBelly" x1="28" y1="62" x2="104" y2="92" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1E293B"/>
+      <stop offset="1" stop-color="#020617"/>
+    </linearGradient>
+    <linearGradient id="srDroneWing" x1="24" y1="18" x2="70" y2="58" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7DD3FC"/>
+      <stop offset="1" stop-color="#0369A1"/>
+    </linearGradient>
+    <radialGradient id="srDroneCanopy" cx="0.38" cy="0.32" r="0.7">
+      <stop stop-color="#E0F2FE"/>
+      <stop offset="0.55" stop-color="#38BDF8"/>
+      <stop offset="1" stop-color="#0C4A6E"/>
+    </radialGradient>
+    <linearGradient id="srDroneFlame" x1="8" y1="64" x2="28" y2="64" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FDE047"/>
+      <stop offset="0.45" stop-color="#F97316"/>
+      <stop offset="1" stop-color="#7F1D1D" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="64" cy="104" rx="34" ry="7" fill="#020617" opacity="0.28"/>
+  <path d="M10 66 C8 58 16 54 28 56 L22 66 L28 74 C16 76 8 72 10 66Z" fill="url(#srDroneFlame)"/>
+  <path d="M36 58 L22 30 L40 40 L52 58Z" fill="url(#srDroneWing)" stroke="#0C4A6E" stroke-width="2.2" stroke-linejoin="round"/>
+  <path d="M36 70 L24 98 L42 88 L52 70Z" fill="#0284C7" stroke="#075985" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M20 64 C22 46 40 40 62 38 L90 36 C106 35 116 44 118 56 L118 70 C116 82 104 90 86 90 L58 88 C36 87 20 80 20 64Z" fill="url(#srDroneHull)" stroke="#78350F" stroke-width="2.4" stroke-linejoin="round"/>
+  <path d="M34 72 C38 80 54 84 74 84 L96 82 C104 81 110 76 110 70 L34 72Z" fill="url(#srDroneBelly)"/>
+  <rect x="40" y="58" width="46" height="8" rx="2" fill="#111827"/>
+  <rect x="44" y="60" width="6" height="4" rx="1" fill="#22D3EE"/>
+  <rect x="54" y="60" width="6" height="4" rx="1" fill="#FBBF24"/>
+  <rect x="64" y="60" width="6" height="4" rx="1" fill="#22D3EE"/>
+  <rect x="74" y="60" width="6" height="4" rx="1" fill="#F87171"/>
+  <ellipse cx="92" cy="58" rx="12" ry="9" fill="url(#srDroneCanopy)" stroke="#0C4A6E" stroke-width="2"/>
+  <path d="M84 54 Q92 50 100 56" stroke="#F8FAFC" stroke-width="1.4" stroke-linecap="round" opacity="0.7"/>
+  <circle cx="62" cy="50" r="9" fill="#0F172A" stroke="#FBBF24" stroke-width="2"/>
+  <path d="M58 50 H66 M62 46 V54" stroke="#FBBF24" stroke-width="2" stroke-linecap="round"/>
+  <rect x="108" y="52" width="8" height="20" rx="3" fill="#334155"/>
+  <rect x="110" y="54" width="4" height="16" rx="2" fill="#94A3B8"/>
+  <circle cx="112" cy="62" r="2.2" fill="#22D3EE"/>
+</svg>

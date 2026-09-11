@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: blockminer-config
+  namespace: blockminer
+data:
+  NODE_ENV: "production"
+  PORT: "3000"
+  KAFKA_BROKERS: "kafka:9092"
+  KAFKA_TOPIC_EARNINGS: "bm.earnings.v1"
+  KAFKA_TOPIC_POWER: "bm.power.v1"
+  KAFKA_STATS_CONSUMER_GROUP: "stats-earnings-v1"
+  KAFKA_ENABLED: "1"
+  REDIS_URL: "redis://redis:6379"
+  TRUST_PROXY: "true"
+  EVENT_OUTBOX_PUBLISH_CRON_MS: "2000"
+  STATS_MATERIALIZATION_MAX_LAG_MS: "120000"

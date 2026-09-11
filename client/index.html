@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="pt-BR" translate="no">
+  <head>
+    <!--admin-t-redirect-->
+    <script>
+    (function () {
+      function go() {
+        var p = location.pathname;
+        if (p === '/admin/tournaments' || p === '/admin/tournaments/') {
+          location.replace('/admin-t/');
+        }
+      }
+      go();
+      var _ps = history.pushState;
+      var _rs = history.replaceState;
+      history.pushState = function () {
+        var r = _ps.apply(this, arguments);
+        go();
+        return r;
+      };
+      history.replaceState = function () {
+        var r = _rs.apply(this, arguments);
+        go();
+        return r;
+      };
+      addEventListener('popstate', go);
+    })();
+    </script>
+
+    <meta charset="UTF-8" />
+    <meta name="google" content="notranslate" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>BlockMiner — Mine POL, Play Games, Earn Rewards</title>
+    <meta
+      name="description"
+      content="Web3 mining game on Polygon: build your farm, grow hashrate, play mini-games and earn real POL."
+    />
+    <link rel="canonical" href="https://blockminer.space/" />
+    <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
+    <meta name="robots" content="index,follow,max-image-preview:large" />
+    <script>
+    (function () {
+      try {
+        var raw = sessionStorage.getItem("__bmWalletBalCache");
+        if (raw) window.__bmWalletBalCache = JSON.parse(raw);
+      } catch (e) {}
+    })();
+    </script>
+    <script>
+    (function () {
+      try {
+        var k = '';
+        window.__BM_TURNSTILE_SITE_KEY__ = k;
+        window.__BLOCKMINER_ENV__ = Object.assign({}, window.__BLOCKMINER_ENV__ || {}, {
+          VITE_TURNSTILE_SITE_KEY: k,
+          VITE_TURNSTILE_SITE_KEY_LOGIN: k,
+          VITE_TURNSTILE_SITE_KEY_REGISTER: k
+        });
+      } catch (e) {}
+    })();
+    </script>
+  </head>
+  <body class="notranslate" style="margin: 0; background-color: #0b0f19; color: #e2e8f0">
+    <div id="root" class="notranslate"></div>
+    <script type="module" src="/src/app/main.tsx"></script>
+    <script type="module" src="/assets/transparency-enhance-inv2plus51.js"></script>
+    <script src="/assets/broadcast-popup-inv2plus64.js" defer></script>
+    <script>
+    (function () {
+      if (location.pathname.startsWith('/admin/transparency')) {
+        var s = document.createElement('script');
+        s.src = '/assets/admin-hardware-profit-inv2plus56.js';
+        document.head.appendChild(s);
+      }
+    })();
+    </script>
+    <script src="/assets/bm-captcha-gate-v6.js" defer></script>
+    <script src="/assets/game-turnstile-gate-v1.js" defer></script>
+    <script src="/assets/feature-turnstile-gate-v4.js" defer></script>
+    <script src="/assets/client-error-collector-v4.js" defer></script>
+    <!-- satspay-auth-gate + auth-ui-polish removed: React LoginPage/AuthShell own OAuth + chrome -->
+    <script src="/assets/site-integrity-v22.js" defer></script>
+    <script src="/assets/login-reason-banner-v15.js" defer></script>
+  </body>
+</html>

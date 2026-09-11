@@ -1,0 +1,109 @@
+# BlockMiner — https://blockminer.space
+# Public marketing + auth entry only. App shell routes require login.
+
+User-agent: *
+Allow: /$
+Allow: /login
+Allow: /register
+Allow: /forgot-password
+Allow: /terms-of-use
+Allow: /privacy-policy
+Allow: /llms.txt
+Allow: /sitemap.xml
+Allow: /robots.txt
+Allow: /favicon.ico
+Allow: /media/
+
+# Authenticated product surface
+Disallow: /dashboard
+Disallow: /inventory
+Disallow: /inventario
+Disallow: /power-stats
+Disallow: /shop
+Disallow: /offers
+Disallow: /wallet
+Disallow: /taxes
+Disallow: /support
+Disallow: /settings
+Disallow: /tournaments
+Disallow: /checkin
+Disallow: /tasks
+Disallow: /daily-tasks
+Disallow: /mini-pass
+Disallow: /games
+Disallow: /minigame
+Disallow: /faucet
+Disallow: /internal-offerwall
+Disallow: /offerwall
+Disallow: /offerwall-zerads
+Disallow: /offerwallme
+Disallow: /ptc
+Disallow: /shortlinks
+Disallow: /shortlink
+Disallow: /read-earn
+Disallow: /youtube
+Disallow: /auto-mining
+Disallow: /social
+Disallow: /creator
+Disallow: /referrals
+Disallow: /manual
+Disallow: /ranking
+Disallow: /roadmap
+Disallow: /transparency
+
+# Admin + API
+Disallow: /admin
+Disallow: /api/
+
+# AI crawlers — same public allowlist (index product story, not private wallets)
+User-agent: GPTBot
+Allow: /$
+Allow: /login
+Allow: /register
+Allow: /llms.txt
+Disallow: /dashboard
+Disallow: /wallet
+Disallow: /admin
+Disallow: /api/
+
+User-agent: ChatGPT-User
+Allow: /$
+Allow: /llms.txt
+Disallow: /dashboard
+Disallow: /wallet
+Disallow: /admin
+Disallow: /api/
+
+User-agent: ClaudeBot
+Allow: /$
+Allow: /llms.txt
+Disallow: /dashboard
+Disallow: /wallet
+Disallow: /admin
+Disallow: /api/
+
+User-agent: anthropic-ai
+Allow: /$
+Allow: /llms.txt
+Disallow: /dashboard
+Disallow: /wallet
+Disallow: /admin
+Disallow: /api/
+
+User-agent: PerplexityBot
+Allow: /$
+Allow: /llms.txt
+Disallow: /dashboard
+Disallow: /wallet
+Disallow: /admin
+Disallow: /api/
+
+User-agent: Google-Extended
+Allow: /$
+Allow: /llms.txt
+Disallow: /dashboard
+Disallow: /wallet
+Disallow: /admin
+Disallow: /api/
+
+Sitemap: https://blockminer.space/sitemap.xml

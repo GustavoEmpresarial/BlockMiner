@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: phd
+  namespace: blockminer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: phd
+  template:
+    metadata:
+      labels:
+        app: phd
+    spec:
+      containers:
+        - name: phd
+          image: blockminer-current-app:latest
+          imagePullPolicy: IfNotPresent
+          command: ["node", "dist/server/phd-bootstrap/phdServer.js"]
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: PHD_PORT
+              value: "3847"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: blockminer-secrets
+                  key: DATABASE_URL
+            - name: PHD_INTERNAL_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: blockminer-secrets
+                  key: PHD_INTERNAL_TOKEN
+            - name: POLYGON_HD_MNEMONIC
+              valueFrom:
+                secretKeyRef:
+                  name: blockminer-secrets
+                  key: POLYGON_HD_MNEMONIC
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: phd
+  namespace: blockminer
+spec:
+  ports:
+    - port: 3847
+      targetPort: 3847
+  selector:
+    app: phd

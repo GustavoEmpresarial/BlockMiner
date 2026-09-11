@@ -1,0 +1,366 @@
+/**
+ * Ported from legacy/server/modules/partnerGames/partner-games.service.ts.
+ *
+ * SCOPE FINDING (verified against legacy/server/modules/partnerGames/*, same rigor
+ * as the Fase 4 games/ investigation): this is ONE generic session/heartbeat/reward
+ * mechanism shared by every registered partner game (rows in the `PartnerGame`
+ * table) — there is no per-game bespoke server logic anywhere in the legacy
+ * directory. All 12 legacy files were read; the only game-specific behavior is
+ * the admin-configured `iframeUrl`/`launchMode`/embed-probe metadata per row,
+ * not custom reward/session code. Real backend-authoritative logic that IS here:
+ * session start/heartbeat/end with server-clock timing validation
+ * (PARTNER_HEARTBEAT_MIN_GAP_MS=20s / PARTNER_HEARTBEAT_MAX_DELTA_MS=35s window,
+ * PARTNER_SESSION_STALE_MS=90s dead-session cutoff, 60s reward cycles at
+ * PARTNER_REWARD_HASH_PER_MINUTE=5 H/s). Reward currency is UserPowerGame
+ * (same mechanism as games/game2048, NOT boosts/ or wallet/ — verified: legacy
+ * creates `tx.userPowerGame.create(...)` directly, exactly like game2048's
+ * claimGame2048Reward, so this module follows that same direct-Prisma pattern
+ * rather than routing through boosts/index.ts's public API, which grants a
+ * different reward type (mining-fee-bypass boosts, not H/s power-ups).
+ *
+ * Cross-module hook (documented deviation, same pattern as game2048/read-earn):
+ * legacy also calls `syncUserBaseHashRate()` after a reward grant to resync the
+ * in-memory mining engine. mining/ exists in current/ (mining.repository.ts
+ * exports `syncUserBaseHashRate`), so — unlike game2048's still-open TODO — this
+ * hook IS wired here.
+ *
+ * Tournament hook: legacy partnerGames has NO recordTournamentAction call (unlike
+ * moneyrain/zerads) — verified via grep, no tournament-hook precedent to port.
+ * No TODO needed at a call site because there is no legacy call site to mirror.
+ */
+import type { Prisma } from "@prisma/client";
+import prisma, { type TxClient } from "../../core/database/prisma.js";
+import { logger } from "../../core/logger/index.js";
+import { syncUserBaseHashRate } from "../mining/index.js";
+import {
+  PARTNER_HEARTBEAT_MAX_DELTA_MS,
+  PARTNER_HEARTBEAT_MIN_GAP_MS,
+  PARTNER_POWER_DURATION_MS,
+  PARTNER_REWARD_CYCLE_MS,
+  PARTNER_REWARD_HASH_PER_MINUTE,
+  PARTNER_SESSION_STALE_MS,
+} from "./partner-games.config.js";
+import { PARTNER_GAMES_ERROR } from "./partner-games.errors.js";
+
+type Tx = TxClient;
+
+const log = logger.child("partner-games.service");
+
+export function slugifyPartnerGameTitle(title: string): string {
+  const base = title
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+  return base || "partner-game";
+}
+
+function utcDayStart(d = new Date()): Date {
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+}
+
+async function logSessionEvent(
+  tx: Tx,
+  data: { sessionId: string; userId: number; partnerGameId: number; event: string; meta?: Record<string, unknown> },
+) {
+  await tx.partnerGameSessionEvent.create({
+    data: {
+      sessionId: data.sessionId,
+      userId: data.userId,
+      partnerGameId: data.partnerGameId,
+      event: data.event,
+      meta: (data.meta ?? undefined) as Prisma.InputJsonValue | undefined,
+    },
+  });
+}
+
+async function getOrCreatePartnerPlayGameId(tx: Tx, partnerSlug: string, partnerTitle: string): Promise<number> {
+  const slug = `partner-${partnerSlug}`;
+  const existing = await tx.game.findUnique({ where: { slug }, select: { id: true } });
+  if (existing) return existing.id;
+  const created = await tx.game.create({ data: { name: `Partner: ${partnerTitle}`, slug, isActive: true } });
+  return created.id;
+}
+
+async function sumHashEarnedTodayUtc(userId: number, partnerSlug: string): Promise<number> {
+  const gameSlug = `partner-${partnerSlug}`;
+  const game = await prisma.game.findUnique({ where: { slug: gameSlug }, select: { id: true } });
+  if (!game) return 0;
+  const rows = await prisma.userPowerGame.findMany({
+    where: { userId, gameId: game.id, playedAt: { gte: utcDayStart() } },
+    select: { hashRate: true },
+  });
+  return rows.reduce((sum, row) => sum + Number(row.hashRate || 0), 0);
+}
+
+async function grantPartnerMinuteReward(
+  tx: Tx,
+  session: { id: string; userId: number; partnerGameId: number },
+  partner: { slug: string; title: string },
+): Promise<number> {
+  const gameId = await getOrCreatePartnerPlayGameId(tx, partner.slug, partner.title);
+  const expiresAt = new Date(Date.now() + PARTNER_POWER_DURATION_MS);
+  const powerRow = await tx.userPowerGame.create({
+    data: { userId: session.userId, gameId, hashRate: PARTNER_REWARD_HASH_PER_MINUTE, playedAt: new Date(), expiresAt },
+  });
+
+  await logSessionEvent(tx, {
+    sessionId: session.id,
+    userId: session.userId,
+    partnerGameId: session.partnerGameId,
+    event: "reward_granted",
+    meta: { hashRate: PARTNER_REWARD_HASH_PER_MINUTE, userPowerGameId: powerRow.id },
+  });
+
+  return powerRow.id;
+}
+
+function applyRewardCycles(rewardCycleMs: number): { remainingMs: number; grants: number } {
+  const grants = Math.floor(rewardCycleMs / PARTNER_REWARD_CYCLE_MS);
+  const remainingMs = rewardCycleMs % PARTNER_REWARD_CYCLE_MS;
+  return { remainingMs, grants };
+}
+
+function sessionPayload(
+  session: {
+    id: string;
+    status: string;
+    accumulatedMs: number;
+    rewardCycleMs: number;
+    totalHashGranted: number;
+    grantsCount: number;
+    startedAt: Date;
+  },
+  hashEarnedToday: number,
+  rewardGranted: boolean,
+) {
+  const nextRewardInMs = Math.max(0, PARTNER_REWARD_CYCLE_MS - session.rewardCycleMs);
+  return {
+    sessionId: session.id,
+    status: session.status,
+    playingSeconds: Math.floor(session.accumulatedMs / 1000),
+    hashEarnedSession: session.totalHashGranted,
+    hashEarnedToday,
+    grantsCount: session.grantsCount,
+    nextRewardInMs,
+    rewardGranted: rewardGranted ? { hashRate: PARTNER_REWARD_HASH_PER_MINUTE } : null,
+  };
+}
+
+export async function getPartnerGameBySlug(slug: string) {
+  return prisma.partnerGame.findFirst({
+    where: { slug, isVisible: true },
+    select: {
+      id: true,
+      slug: true,
+      title: true,
+      description: true,
+      coverImageUrl: true,
+      iframeUrl: true,
+      fallbackUrl: true,
+      partnerUrl: true,
+      launchMode: true,
+      embedStatus: true,
+      embedBlockReason: true,
+      embedProbedAt: true,
+    },
+  });
+}
+
+export async function startPartnerGameSession(userId: number, slug: string) {
+  const game = await getPartnerGameBySlug(slug);
+  if (!game) throw new Error(PARTNER_GAMES_ERROR.PARTNER_GAME_NOT_FOUND);
+
+  const now = new Date();
+
+  const staleCutoff = new Date(now.getTime() - PARTNER_SESSION_STALE_MS);
+  await prisma.partnerGameSession.updateMany({
+    where: {
+      userId,
+      status: { in: ["active", "paused"] },
+      OR: [{ lastHeartbeatAt: { lt: staleCutoff } }, { lastHeartbeatAt: null, startedAt: { lt: staleCutoff } }],
+    },
+    data: { status: "ended", endedAt: now },
+  });
+
+  const existing = await prisma.partnerGameSession.findFirst({
+    where: { userId, partnerGameId: game.id, status: { in: ["active", "paused"] } },
+    include: { partnerGame: { select: { slug: true } } },
+  });
+
+  if (existing) {
+    const hashEarnedToday = await sumHashEarnedTodayUtc(userId, existing.partnerGame.slug);
+    return { game, ...sessionPayload(existing, hashEarnedToday, false) };
+  }
+
+  const session = await prisma.$transaction(async (tx) => {
+    await tx.partnerGameSession.updateMany({
+      where: { userId, status: { in: ["active", "paused"] } },
+      data: { status: "ended", endedAt: now },
+    });
+
+    const created = await tx.partnerGameSession.create({
+      data: { userId, partnerGameId: game.id, status: "active", lastHeartbeatAt: now },
+    });
+
+    await logSessionEvent(tx, { sessionId: created.id, userId, partnerGameId: game.id, event: "started" });
+
+    return created;
+  });
+
+  log.info("partner_game_session_started", { userId, partnerGameId: game.id, slug: game.slug, sessionId: session.id });
+
+  const hashEarnedToday = await sumHashEarnedTodayUtc(userId, game.slug);
+  return { game, ...sessionPayload(session, hashEarnedToday, false) };
+}
+
+export async function heartbeatPartnerGameSession(
+  userId: number,
+  sessionId: string,
+  input: { active: boolean; iframeLoaded?: boolean; playSurfaceReady?: boolean },
+) {
+  const session = await prisma.partnerGameSession.findUnique({
+    where: { id: sessionId },
+    include: { partnerGame: { select: { slug: true, title: true } } },
+  });
+
+  if (!session || session.userId !== userId) throw new Error(PARTNER_GAMES_ERROR.SESSION_NOT_FOUND);
+  if (session.status === "ended") throw new Error(PARTNER_GAMES_ERROR.SESSION_ENDED);
+
+  const surfaceReady = input.playSurfaceReady ?? input.iframeLoaded ?? false;
+  const now = new Date();
+  const hashEarnedToday = await sumHashEarnedTodayUtc(userId, session.partnerGame.slug);
+
+  if (!input.active || !surfaceReady) {
+    let rewardGranted = false;
+    const paused = await prisma.$transaction(async (tx) => {
+      const current = await tx.partnerGameSession.findUniqueOrThrow({
+        where: { id: sessionId },
+        include: { partnerGame: { select: { slug: true, title: true } } },
+      });
+
+      let accumulatedMs = current.accumulatedMs;
+      let rewardCycleMs = current.rewardCycleMs;
+      let totalHashGranted = current.totalHashGranted;
+      let grantsCount = current.grantsCount;
+
+      if (current.status === "active" && current.lastHeartbeatAt) {
+        const deltaMs = Math.min(now.getTime() - current.lastHeartbeatAt.getTime(), PARTNER_HEARTBEAT_MAX_DELTA_MS);
+        if (deltaMs >= PARTNER_HEARTBEAT_MIN_GAP_MS) {
+          accumulatedMs += deltaMs;
+          rewardCycleMs += deltaMs;
+        }
+      }
+
+      const cycles = applyRewardCycles(rewardCycleMs);
+      rewardCycleMs = cycles.remainingMs;
+      for (let i = 0; i < cycles.grants; i += 1) {
+        await grantPartnerMinuteReward(tx, current, current.partnerGame);
+        totalHashGranted += PARTNER_REWARD_HASH_PER_MINUTE;
+        grantsCount += 1;
+        rewardGranted = true;
+      }
+
+      const updated = await tx.partnerGameSession.update({
+        where: { id: sessionId },
+        data: { status: "paused", accumulatedMs, rewardCycleMs, totalHashGranted, grantsCount, lastHeartbeatAt: now },
+      });
+
+      if (current.status === "active") {
+        await logSessionEvent(tx, { sessionId, userId, partnerGameId: current.partnerGameId, event: "paused" });
+      }
+
+      return updated;
+    });
+
+    if (rewardGranted) await syncUserBaseHashRate(userId);
+    const todayHash = await sumHashEarnedTodayUtc(userId, session.partnerGame.slug);
+    return sessionPayload(paused, todayHash, rewardGranted);
+  }
+
+  // Anti-cheat: heartbeats faster than the minimum gap are ignored (no double-accrual);
+  // the max-delta clamp below rejects credit for gaps beyond the valid window (too slow).
+  if (session.lastHeartbeatAt && now.getTime() - session.lastHeartbeatAt.getTime() < PARTNER_HEARTBEAT_MIN_GAP_MS) {
+    return sessionPayload(session, hashEarnedToday, false);
+  }
+
+  let rewardGranted = false;
+  const result = await prisma.$transaction(async (tx) => {
+    const current = await tx.partnerGameSession.findUniqueOrThrow({
+      where: { id: sessionId },
+      include: { partnerGame: { select: { slug: true, title: true } } },
+    });
+
+    let accumulatedMs = current.accumulatedMs;
+    let rewardCycleMs = current.rewardCycleMs;
+    let totalHashGranted = current.totalHashGranted;
+    let grantsCount = current.grantsCount;
+
+    if (current.status === "active" && current.lastHeartbeatAt) {
+      const deltaMs = Math.min(now.getTime() - current.lastHeartbeatAt.getTime(), PARTNER_HEARTBEAT_MAX_DELTA_MS);
+      if (deltaMs >= PARTNER_HEARTBEAT_MIN_GAP_MS) {
+        accumulatedMs += deltaMs;
+        rewardCycleMs += deltaMs;
+      }
+    } else if (current.status === "paused") {
+      await logSessionEvent(tx, { sessionId, userId, partnerGameId: current.partnerGameId, event: "resumed" });
+    }
+
+    while (rewardCycleMs >= PARTNER_REWARD_CYCLE_MS) {
+      await grantPartnerMinuteReward(tx, current, current.partnerGame);
+      rewardCycleMs -= PARTNER_REWARD_CYCLE_MS;
+      totalHashGranted += PARTNER_REWARD_HASH_PER_MINUTE;
+      grantsCount += 1;
+      rewardGranted = true;
+    }
+
+    const updated = await tx.partnerGameSession.update({
+      where: { id: sessionId },
+      data: { status: "active", accumulatedMs, rewardCycleMs, totalHashGranted, grantsCount, lastHeartbeatAt: now },
+    });
+
+    return updated;
+  });
+
+  if (rewardGranted) {
+    await syncUserBaseHashRate(userId);
+    log.info("partner_game_reward_granted", { userId, sessionId, partnerGameId: session.partnerGameId, hashRate: PARTNER_REWARD_HASH_PER_MINUTE });
+  }
+
+  const todayHash = await sumHashEarnedTodayUtc(userId, session.partnerGame.slug);
+  return sessionPayload(result, todayHash, rewardGranted);
+}
+
+export async function endPartnerGameSession(userId: number, sessionId: string, reason = "user_left") {
+  const session = await prisma.partnerGameSession.findUnique({ where: { id: sessionId } });
+  if (!session || session.userId !== userId) return;
+  if (session.status === "ended") return;
+
+  const now = new Date();
+  await prisma.$transaction(async (tx) => {
+    await tx.partnerGameSession.update({ where: { id: sessionId }, data: { status: "ended", endedAt: now } });
+    await logSessionEvent(tx, {
+      sessionId,
+      userId,
+      partnerGameId: session.partnerGameId,
+      event: reason === "unmount" ? "ended" : "abandoned",
+      meta: { reason },
+    });
+  });
+}
+
+export async function getPartnerGameSessionStats(userId: number, slug: string) {
+  const game = await getPartnerGameBySlug(slug);
+  if (!game) throw new Error(PARTNER_GAMES_ERROR.PARTNER_GAME_NOT_FOUND);
+
+  const hashEarnedToday = await sumHashEarnedTodayUtc(userId, game.slug);
+  const active = await prisma.partnerGameSession.findFirst({
+    where: { userId, partnerGameId: game.id, status: { in: ["active", "paused"] } },
+  });
+
+  if (!active) return { game, hashEarnedToday, session: null };
+
+  return { game, hashEarnedToday, session: sessionPayload(active, hashEarnedToday, false) };
+}

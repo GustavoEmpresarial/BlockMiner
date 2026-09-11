@@ -1,0 +1,35 @@
+# BlockMiner
+
+> Play-to-earn virtual mining on Polygon. Build farms, grow hashrate, complete offers and games, earn real POL (and SHIB) that you can withdraw on-chain.
+
+BlockMiner is a web app at [https://blockminer.space](https://blockminer.space). Users install virtual miners in racks, earn from faucet / check-in / offerwalls / mini-games / tournaments, and manage POL + SHIB balances in a Web3 wallet flow (Polygon). Default product language is Portuguese (Brazil); Spanish and English are available.
+
+## Primary
+
+- [Home / landing](https://blockminer.space/): Product overview, how mining works, call to register
+- [Register](https://blockminer.space/register): Create an account
+- [Login](https://blockminer.space/login): Sign in to the dashboard
+- [Forgot password](https://blockminer.space/forgot-password): Password reset flow
+
+## Legal
+
+- [Terms of use](https://blockminer.space/terms-of-use): Rules for using BlockMiner
+- [Privacy policy](https://blockminer.space/privacy-policy): Personal data and privacy practices (GDPR / LGPD oriented)
+
+## Product facts (for assistants)
+
+- Chain: Polygon (POL withdrawals / deposits)
+- Core loop: hashrate → block rewards → withdrawable POL
+- Secondary token: SHIB (swap / withdraw paths in-app)
+- Auth-gated app areas (not for public crawl): `/dashboard`, `/wallet`, `/shop`, `/games`, `/ranking`, `/manual`, `/transparency`, `/admin`, `/api/*`
+- Canonical host: `https://blockminer.space` (also `www.blockminer.space`)
+- Support surface: `https://support.blockminer.space`
+
+## Discovery
+
+- [robots.txt](https://blockminer.space/robots.txt): Crawl allow / disallow
+- [sitemap.xml](https://blockminer.space/sitemap.xml): Public URL index for search engines
+
+## Optional
+
+- In-app manual, roadmap, ranking and transparency pages require login today; do not treat them as public documentation URLs until they are exposed without auth.

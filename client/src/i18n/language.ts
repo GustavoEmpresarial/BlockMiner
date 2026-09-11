@@ -1,0 +1,86 @@
+function firstNonEmpty(values: readonly unknown[] = []): string {
+  for (const value of values) {
+    const trimmed = String(value || '').trim();
+    if (trimmed) return trimmed;
+  }
+  return '';
+}
+
+export function normalizeExplicitLanguage(raw: unknown): 'pt-BR' | 'es' | 'en' | null {
+  const value = String(raw || '').trim().toLowerCase();
+  if (!value) return null;
+  if (value.startsWith('pt')) return 'pt-BR';
+  if (value.startsWith('es')) return 'es';
+  if (value.startsWith('en')) return 'en';
+  return null;
+}
+
+export function normalizeBrowserLanguage(raw: unknown): 'pt-BR' | 'es' | 'en' {
+  // Product default is Portuguese (Brazil). Spanish browsers get es;
+  // everything else (including en-*) falls back to pt-BR — English is opt-in via switcher.
+  const value = String(raw || '').trim().toLowerCase();
+  if (!value) return 'pt-BR';
+  if (value.startsWith('pt')) return 'pt-BR';
+  if (value.startsWith('es')) return 'es';
+  return 'pt-BR';
+}
+
+export function extractCookieLanguage(cookieString = ''): string | null {
+  const match = String(cookieString || '')
+    .split(';')
+    .map((part) => part.trim())
+    .find((part) => part.startsWith('i18next='));
+  if (!match) return null;
+  return decodeURIComponent(match.slice('i18next='.length));
+}
+
+export interface ResolveInitialLanguageOptions {
+  search?: string;
+  storedLanguage?: string;
+  storedLanguageUserSet?: boolean;
+  cookieString?: string;
+  htmlLang?: string;
+  navigatorLanguage?: string;
+  navigatorLanguages?: readonly string[];
+}
+
+export function resolveInitialLanguage(options: ResolveInitialLanguageOptions = {}): 'pt-BR' | 'es' | 'en' {
+  const {
+    search = '',
+    storedLanguage = '',
+    storedLanguageUserSet = false,
+    cookieString = '',
+    htmlLang = '',
+    navigatorLanguage = '',
+    navigatorLanguages = [],
+  } = options;
+
+  const queryLanguage = (() => {
+    const params = new URLSearchParams(String(search || '').replace(/^\?/, ''));
+    return params.get('lng');
+  })();
+
+  const explicit = firstNonEmpty([
+    queryLanguage,
+    storedLanguageUserSet ? storedLanguage : '',
+    extractCookieLanguage(cookieString),
+  ]);
+  const explicitLanguage = normalizeExplicitLanguage(explicit);
+  if (explicitLanguage) return explicitLanguage;
+
+  const browserRaw = firstNonEmpty([
+    ...(Array.isArray(navigatorLanguages) ? navigatorLanguages : []),
+    navigatorLanguage,
+    htmlLang,
+  ]);
+  return normalizeBrowserLanguage(browserRaw);
+}
+
+export function resolveFallbackLanguages(activeLanguage: unknown): string[] {
+  const normalized = normalizeExplicitLanguage(activeLanguage) || 'pt-BR';
+  // Active language first, then other locales for missing keys.
+  // English used to fall back to pt-BR first — that made incomplete EN look "stuck" in Portuguese.
+  if (normalized === 'pt-BR') return ['pt-BR', 'es', 'en'];
+  if (normalized === 'es') return ['es', 'pt-BR', 'en'];
+  return ['en', 'pt-BR', 'es'];
+}

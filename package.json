@@ -1,0 +1,52 @@
+{
+  "name": "blockminer-current",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "dev": "tsx watch server/bootstrap/server.ts",
+    "start": "node dist/server/bootstrap/server.js",
+    "test": "tsx --import ./tests/_env-test-overrides.mjs --test --test-force-exit tests/**/*.test.mjs",
+    "prisma:generate": "prisma generate --schema prisma/schema.prisma"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "7.9.0",
+    "@prisma/client": "7.9.0",
+    "@types/nodemailer": "^8.0.1",
+    "bcryptjs": "^3.0.3",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
+    "ethers": "^6.17.0",
+    "express": "^5.2.1",
+    "helmet": "^7.2.0",
+    "ioredis": "^6.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "kafkajs": "^2.2.4",
+    "multer": "^2.2.0",
+    "nodemailer": "^9.0.5",
+    "otplib": "^12.0.1",
+    "pg": "^8.19.0",
+    "qrcode": "^1.5.4",
+    "sharp": "^0.35.3",
+    "socket.io": "^4.8.3",
+    "zod": "^3.25.2"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cookie-parser": "^1.4.7",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.1",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/multer": "^2.2.0",
+    "@types/node": "^22.15.3",
+    "@types/pg": "^8.11.10",
+    "@types/qrcode": "^1.5.5",
+    "prisma": "7.9.0",
+    "socket.io-client": "^4.8.3",
+    "tsx": "^4.19.2",
+    "typescript": "^5.8.3"
+  }
+}

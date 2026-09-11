@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stats-materializer
+  namespace: blockminer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: stats-materializer
+  template:
+    metadata:
+      labels:
+        app: stats-materializer
+    spec:
+      containers:
+        - name: stats-materializer
+          image: blockminer-current-app:latest
+          imagePullPolicy: IfNotPresent
+          command: ["node", "dist/server/bootstrap/statsMaterializer.js"]
+          envFrom:
+            - configMapRef:
+                name: blockminer-config
+            - secretRef:
+                name: blockminer-secrets
+          env:
+            - name: ROLE
+              value: stats-materializer
+            - name: KAFKA_CLIENT_ID
+              value: blockminer-stats-materializer

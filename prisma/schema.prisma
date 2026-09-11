@@ -1,0 +1,3355 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id              Int       @id @default(autoincrement())
+  name            String
+  username        String?   @unique
+  email           String    @unique
+  passwordHash    String    @map("password_hash")
+  /**
+   * Bumped on every successful login. Embedded in access-token JWTs at issuance;
+   * requireAuth rejects a token whose embedded value doesn't match the current one —
+   * enforces a single active session per user (new login on device B invalidates
+   * device A within the auth-user cache TTL, ~10s). Old refresh tokens are also
+   * revoked on login (session.tokens.ts revokeRefreshTokensForUser).
+   */
+  sessionVersion  Int       @default(0) @map("session_version")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  /**
+   * item 95 Parte B: null = email não verificado. Migration faz backfill
+   * (email_verified_at = created_at) pra todo usuário existente na data do deploy —
+   * só contas criadas DEPOIS nascem com null e passam pelo fluxo de verificação.
+   */
+  emailVerifiedAt DateTime? @map("email_verified_at")
+  /**
+   * SatsPay OAuth subject (`sub` / userinfo id). Unique when linked.
+   * Password login still works; OAuth-only accounts get a random passwordHash.
+   */
+  satspaySubject  String?   @unique @map("satspay_subject")
+  /**
+   * Google OAuth subject (`sub` from OpenID userinfo). Unique when linked.
+   */
+  googleSubject   String?   @unique @map("google_subject")
+  lastLoginAt     DateTime? @map("last_login_at")
+  ip              String?   @map("last_ip")
+  registrationIp  String?   @map("registration_ip")
+  userAgent       String?   @map("user_agent")
+  isBanned        Boolean   @default(false) @map("is_banned")
+  banReason       String?   @map("ban_reason")
+  bannedAt        DateTime? @map("banned_at")
+  bannedUntil     DateTime? @map("banned_until")
+  bannedByAdminId Int?      @map("banned_by_admin_id")
+  refCode         String?   @unique @map("ref_code")
+  referredBy      Int?      @map("referred_by")
+  walletAddress   String?   @map("wallet_address")
+
+  // Balances
+  polBalance             Decimal @default(0) @map("pol_balance") @db.Decimal(20, 8)
+  btcBalance             Decimal @default(0) @map("btc_balance") @db.Decimal(20, 8)
+  ethBalance             Decimal @default(0) @map("eth_balance") @db.Decimal(20, 8)
+  usdtBalance            Decimal @default(0) @map("usdt_balance") @db.Decimal(20, 8)
+  usdcBalance            Decimal @default(0) @map("usdc_balance") @db.Decimal(20, 8)
+  zerBalance             Decimal @default(0) @map("zer_balance") @db.Decimal(20, 8)
+  blkBalance             Decimal @default(0) @map("blk_balance") @db.Decimal(20, 8)
+  blkLocked              Decimal @default(0) @map("blk_locked") @db.Decimal(20, 8)
+  /** Unmounted cooling-fan credits (shop/offer purchase → mount in inventory2). */
+  fanCredits             Int     @default(0) @map("fan_credits")
+  rackCredits            Int     @default(0) @map("rack_credits")
+  shibBalance            Decimal @default(0) @map("shib_balance") @db.Decimal(30, 8)
+  /**
+   * Incremental counter, updated alongside polBalance in persistBlockRewards's single UPDATE.
+   * Avoids SUM(reward_amount) over mining_rewards_log (21M+ rows in the restored prod dump,
+   * ~100-2500ms per lookup) on every wallet/balance read — see PROGRESSO.txt item 41.
+   */
+  lifetimeMinedPol       Decimal @default(0) @map("lifetime_mined_pol") @db.Decimal(20, 8)
+  /**
+   * 100% hashrate: pol = blocos POL simulados | blk = pool BLK por tempo (exclusivo)
+   */
+  miningPayoutMode       String  @default("pol") @map("mining_payout_mode")
+  /**
+   * Hashrate allocation between POL and SHIB mining pools in basis points (10000 = 100% POL → 0% SHIB; 0 = 0% POL → 100% SHIB).
+   */
+  miningAllocationPolBps Int     @default(10000) @map("mining_allocation_pol_bps")
+
+  // Session Tracking
+  ytSecondsBalance          Int       @default(0) @map("yt_seconds_balance")
+  autoMiningSecondsBalance  Int       @default(0) @map("auto_mining_seconds_balance")
+  /**
+   * @deprecated Shared across features — kept in sync for rollout safety. Read the per-feature columns below.
+   */
+  lastHeartbeatAt           DateTime? @map("last_heartbeat_at")
+  /**
+   * Per-feature presence. A single shared column let one feature's throttle starve the other
+   * and let a YouTube heartbeat satisfy auto-mining's presence check.
+   */
+  ytLastHeartbeatAt         DateTime? @map("yt_last_heartbeat_at")
+  autoMiningLastHeartbeatAt DateTime? @map("auto_mining_last_heartbeat_at")
+
+  // Relationships
+  miners                    UserMiner[]
+  inventory                 UserInventory[]
+  ownedMachines             UserOwnedMachine[]
+  vault                     UserVault[]
+  transactions              Transaction[]
+  payouts                   Payout[]
+  auditLogs                 AuditLog[]
+  ipLogs                    UserIpLog[]
+  sessions                  Session[]
+  refreshTokens             RefreshToken[]
+  checkins                  DailyCheckin[]
+  periodicCheckins          PeriodicCheckin[]
+  faucetClaims              FaucetClaim?
+  faucetVisits              FaucetPartnerVisit[]
+  dailyPowerBoosts          DailyPowerBoost[]
+  gamePowers                UserPowerGame[]
+  ytPowers                  YoutubeWatchPower[]
+  ytHistory                 YoutubeWatchHistory[]
+  shortlinkPowers           ShortlinkPower[]
+  shortlinkExternalSessions ShortlinkExternalSession[]
+  rackConfigs               RackConfig[]
+  ptpAds                    PtpAd[]
+  ptpEarnings               PtpEarning[]
+  ptpSessions               PtpSession[]
+  chatMessages              ChatMessage[]
+  sentPrivateMessages       PrivateMessage[]           @relation("SentPrivateMessages")
+  receivedPrivateMessages   PrivateMessage[]           @relation("ReceivedPrivateMessages")
+  gpuAccess                 AutoMiningGpu[]
+  gpuLogs                   AutoMiningGpuLog[]
+  referrals                 Referral[]                 @relation("UserToReferrer")
+  referred                  Referral[]                 @relation("UserToReferred")
+  earnings                  ReferralEarning[]          @relation("UserToReferrerEarnings")
+  referredEarnings          ReferralEarning[]          @relation("UserToReferredEarnings")
+  miningLogs                MiningRewardsLog[]
+  shortlinkComp             ShortlinkCompletion?
+  hasAdblock                Boolean                    @default(false) @map("has_adblock")
+  isCreator                 Boolean                    @default(false) @map("is_creator")
+  emailTwoFactorEnabled     Boolean                    @default(false) @map("email_two_factor_enabled")
+  youtubeUrl                String?                    @map("youtube_url")
+
+  // Energy Tax Block
+  energyBlocked   Boolean   @default(false) @map("energy_blocked")
+  energyBlockedAt DateTime? @map("energy_blocked_at")
+
+  // Migration Meta & Historical Data
+  oldId            Int?     @unique @map("old_id")
+  oldLifetimeMined Decimal? @default(0) @map("old_lifetime_mined") @db.Decimal(20, 8)
+  totalWithdrawn   Decimal? @default(0) @map("total_withdrawn") @db.Decimal(20, 8)
+  rigsCount        Int?     @default(0) @map("rigs_count")
+  oldBaseHashRate  Float?   @default(0) @map("old_base_hash_rate")
+
+  blockMinerRewards             BlockMinerReward[]
+  energyTaxCharges              EnergyTaxCharge[]
+  notifications                 Notification[]
+  eventPurchases                EventPurchase[]
+  supportMessages               SupportMessage[]
+  supportReplies                SupportReply[]
+  userRooms                     UserRoom[]
+  userRacks                     UserRack[]
+  visualRackPlacements          UserVisualRackPlacement[]
+  visualFanPlacements           UserVisualFanPlacement[]
+  broadcastViews                BroadcastMessageView[]
+  blkRewardLogs                 BlkRewardLog[]
+  checkinStreakRewards          UserCheckinStreakReward[]
+  readEarnRedemptions           ReadEarnRedemption[]
+  autoMiningV2Sessions          AutoMiningV2Session[]
+  autoMiningV2Grants            AutoMiningV2PowerGrant[]
+  autoMiningV2BannerImpressions AutoMiningV2BannerImpression[]
+  ccpaymentDepositEvents        CcpaymentDepositEvent[]
+  miniPassEnrollments           UserMiniPassEnrollment[]
+  miniPassXpLedger              UserMiniPassXpLedger[]
+  miniPassMissionProgress       UserMiniPassMissionProgress[]
+  miniPassRewardClaims          UserMiniPassRewardClaim[]
+  miniPassPurchases             UserMiniPassPurchase[]
+  dailyTaskProgress             UserDailyTaskProgress[]
+  internalOfferwallAttempts     InternalOfferwallAttempt[]
+  game2048Sessions              Game2048Session[]
+  polygonHdAddress              PolygonHdAddress?
+  rewardInbox                   UserRewardInbox[]
+  tournamentEntries             TournamentEntry[]
+  tournamentScoreContributions  TournamentScoreContribution[]
+  tournamentActions             TournamentAction[]
+  burnClaims                    BurnClaim[]
+  checkinStreakRecoveries       CheckinStreakRecovery[]
+  zeradsCallbacks               ZeradsCallback[]
+  offerwallMeCallbacks          OfferwallMeCallback[]
+  moneyRainCallbacks            MoneyRainCallback[]
+  multiwallCallbacks            MultiwallCallback[]
+  offerwallGgCallbacks          OfferwallGgCallback[]
+  youtuberProfile               YoutuberProfile?
+  videoSubmissions              YoutubeVideoSubmission[]
+  videoVotes                    YoutubeVideoVote[]
+  partnerGameVotes              PartnerGameVote[]
+  partnerGameSessions           PartnerGameSession[]
+  gameCooldownStates            GameCooldownState[]
+  gameSessionLogs               GameSessionLog[]
+
+  // AntiBot Engine V1
+  antibotProfile   AntibotProfile?
+  antibotEvidences AntibotEvidence[]
+  antibotSessions  AntibotSession[]
+  antibotAlerts    AntibotAlert[]
+
+  // Traffic attribution (captured at registration)
+  utmSource      String? @map("utm_source")
+  utmMedium      String? @map("utm_medium")
+  utmCampaign    String? @map("utm_campaign")
+  referrerDomain String? @map("referrer_domain")
+
+  @@index([registrationIp])
+  @@index([ip])
+  @@index([walletAddress])
+  @@index([createdAt])
+  @@index([lastLoginAt])
+  @@index([lastHeartbeatAt])
+  @@index([isBanned])
+  @@map("users")
+}
+
+/// Lightweight page-view hit for traffic analytics (landing page + key entry points).
+model PageView {
+  id             Int      @id @default(autoincrement())
+  path           String   @default("/")
+  referrerDomain String?  @map("referrer_domain")
+  utmSource      String?  @map("utm_source")
+  utmMedium      String?  @map("utm_medium")
+  utmCampaign    String?  @map("utm_campaign")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@index([referrerDomain])
+  @@index([utmSource])
+  @@map("page_views")
+}
+
+model IpIntelligenceCache {
+  id                         Int       @id @default(autoincrement())
+  ip                         String    @unique
+  ipVersion                  Int       @map("ip_version")
+  reverseDns                 String?   @map("reverse_dns")
+  reverseDnsForwardConfirmed Boolean?  @map("reverse_dns_forward_confirmed")
+  asn                        Int?
+  asnOrg                     String?   @map("asn_org")
+  networkCidr                String?   @map("network_cidr")
+  providerLabel              String?   @map("provider_label")
+  providerType               String    @default("unknown") @map("provider_type")
+  confidence                 String    @default("low")
+  source                     String?
+  error                      String?
+  proxyDetected              Boolean?  @map("proxy_detected")
+  proxyType                  String?   @map("proxy_type")
+  proxyRiskScore             Int?      @map("proxy_risk_score")
+  proxyProvider              String?   @map("proxy_provider")
+  proxyLastSeenAt            DateTime? @map("proxy_last_seen_at")
+  proxyCheckedAt             DateTime? @map("proxy_checked_at")
+  proxyExpiresAt             DateTime? @map("proxy_expires_at")
+  proxySource                String?   @map("proxy_source")
+  proxyError                 String?   @map("proxy_error")
+  checkedAt                  DateTime  @map("checked_at")
+  expiresAt                  DateTime  @map("expires_at")
+  createdAt                  DateTime  @default(now()) @map("created_at")
+  updatedAt                  DateTime  @updatedAt @map("updated_at")
+
+  @@index([ip])
+  @@index([asn])
+  @@index([providerType])
+  @@index([proxyDetected])
+  @@index([proxyCheckedAt])
+  @@index([expiresAt])
+  @@map("ip_intelligence_cache")
+}
+
+/// Configurable daily objectives (Brazil calendar day; see daily task period helper).
+model DailyTaskDefinition {
+  id                       Int       @id @default(autoincrement())
+  slug                     String    @unique
+  taskType                 String    @map("task_type")
+  resetCadence             String    @default("DAILY") @map("reset_cadence")
+  targetValue              Decimal   @map("target_value") @db.Decimal(24, 8)
+  translationKey           String    @map("translation_key")
+  rewardKind               String    @map("reward_kind")
+  rewardMinerId            Int?      @map("reward_miner_id")
+  rewardEventMinerId       Int?      @map("reward_event_miner_id")
+  rewardHashRate           Float?    @map("reward_hash_rate")
+  rewardHashRateDays       Int?      @map("reward_hash_rate_days")
+  rewardBlkAmount          Decimal?  @map("reward_blk_amount") @db.Decimal(20, 8)
+  rewardPolAmount          Decimal?  @map("reward_pol_amount") @db.Decimal(20, 8)
+  gameSlug                 String?   @map("game_slug")
+  internalOfferwallOfferId Int?      @map("internal_offerwall_offer_id")
+  sortOrder                Int       @default(0) @map("sort_order")
+  isActive                 Boolean   @default(true) @map("is_active")
+  validFrom                DateTime? @map("valid_from")
+  validUntil               DateTime? @map("valid_until")
+  createdAt                DateTime  @default(now()) @map("created_at")
+  updatedAt                DateTime  @updatedAt @map("updated_at")
+
+  progress               UserDailyTaskProgress[]
+  dedupeTicks            UserDailyTaskDedupeTick[]
+  internalOfferwallOffer InternalOfferwallOffer?   @relation(fields: [internalOfferwallOfferId], references: [id], onDelete: SetNull)
+
+  rewardMiner      Miner?      @relation(fields: [rewardMinerId], references: [id], onDelete: SetNull)
+  rewardEventMiner EventMiner? @relation(fields: [rewardEventMinerId], references: [id], onDelete: SetNull)
+
+  @@map("daily_task_definitions")
+}
+
+/// Admin-defined internal monetization offers (PTC iframe or general tasks).
+model InternalOfferwallOffer {
+  id                 Int      @id @default(autoincrement())
+  kind               String   @map("kind")
+  title              String
+  description        String?  @db.Text
+  iframeUrl          String?  @map("iframe_url") @db.Text
+  minViewSeconds     Int      @default(10) @map("min_view_seconds")
+  rewardKind         String   @map("reward_kind")
+  rewardBlkAmount    Decimal? @map("reward_blk_amount") @db.Decimal(20, 8)
+  rewardPolAmount    Decimal? @map("reward_pol_amount") @db.Decimal(20, 8)
+  rewardHashRate     Float?   @map("reward_hash_rate")
+  rewardHashRateDays Int?     @map("reward_hash_rate_days")
+  dailyLimitPerUser  Int      @default(3) @map("daily_limit_per_user")
+  sortOrder          Int      @default(0) @map("sort_order")
+  isActive           Boolean  @default(true) @map("is_active")
+  completionMode     String   @map("completion_mode")
+  taskMetadata       Json?    @map("task_metadata")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  attempts             InternalOfferwallAttempt[]
+  dailyTaskDefinitions DailyTaskDefinition[]
+
+  @@map("internal_offerwall_offers")
+}
+
+/// Hostnames allowed to load in iframes / CSP frame-src (admin + auto-registered from offer URLs).
+model InternalOfferwallFrameHost {
+  id        Int      @id @default(autoincrement())
+  hostname  String   @unique @map("hostname") @db.VarChar(253)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("internal_offerwall_frame_hosts")
+}
+
+model InternalOfferwallAttempt {
+  id              Int       @id @default(autoincrement())
+  userId          Int       @map("user_id")
+  offerId         Int       @map("offer_id")
+  periodKey       String    @map("period_key")
+  status          String    @map("status")
+  startedAt       DateTime  @map("started_at")
+  partnerOpenedAt DateTime? @map("partner_opened_at")
+  submittedAt     DateTime? @map("submitted_at")
+  completedAt     DateTime? @map("completed_at")
+  rewardGrantedAt DateTime? @map("reward_granted_at")
+  auditSnapshot   String?   @map("audit_snapshot") @db.Text
+  adminNote       String?   @map("admin_note") @db.Text
+
+  user  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  offer InternalOfferwallOffer @relation(fields: [offerId], references: [id], onDelete: Cascade)
+
+  @@index([userId, offerId, periodKey])
+  @@index([offerId, status])
+  @@map("internal_offerwall_attempts")
+}
+
+model UserDailyTaskProgress {
+  id               Int       @id @default(autoincrement())
+  userId           Int       @map("user_id")
+  taskDefinitionId Int       @map("task_definition_id")
+  periodKey        String    @map("period_key")
+  currentValue     Decimal   @default(0) @map("current_value") @db.Decimal(24, 8)
+  completedAt      DateTime? @map("completed_at")
+  rewardClaimedAt  DateTime? @map("reward_claimed_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  user User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task DailyTaskDefinition @relation(fields: [taskDefinitionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, taskDefinitionId, periodKey])
+  @@index([userId, periodKey])
+  @@index([completedAt])
+  @@map("user_daily_task_progress")
+}
+
+model UserDailyTaskDedupeTick {
+  id               Int      @id @default(autoincrement())
+  taskDefinitionId Int      @map("task_definition_id")
+  dedupeKey        String   @map("dedupe_key")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  task DailyTaskDefinition @relation(fields: [taskDefinitionId], references: [id], onDelete: Cascade)
+
+  @@unique([taskDefinitionId, dedupeKey])
+  @@map("user_daily_task_dedupe_ticks")
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  title     String
+  message   String
+  type      String   @default("info") // info, success, warning, reward
+  isRead    Boolean  @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+  /**
+   * Retention sweep filters on this; without it the cutoff DELETE seq-scans the whole table.
+   */
+  @@index([createdAt])
+  /**
+   * Bell query is WHERE userId ORDER BY createdAt DESC LIMIT 20; without this it falls back to
+   * scanning notifications_created_at_idx backward and filtering, skipping thousands of other
+   * users' rows per call — timed out in prod at 6.4M rows. Created manually with CONCURRENTLY
+   * on the live table; see docs memory project_manual_perf_indexes.
+   */
+  @@index([userId, createdAt])
+  @@map("notifications")
+}
+
+model BroadcastMessage {
+  id                  Int      @id @default(autoincrement())
+  title               String
+  content             String?
+  imageUrl            String?  @map("image_url")
+  isActive            Boolean  @default(false) @map("is_active")
+  dismissDelaySeconds Int      @default(10) @map("dismiss_delay_seconds")
+  /// Optional CTA: when set, the popup renders a primary action button.
+  /// linkUrl can be internal ("/shop") or external ("https://…").
+  linkUrl             String?  @map("link_url")
+  linkLabel           String?  @map("link_label")
+  linkNewTab          Boolean  @default(false) @map("link_new_tab")
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  views BroadcastMessageView[]
+
+  @@map("broadcast_messages")
+}
+
+model BroadcastMessageView {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  messageId Int      @map("message_id")
+  viewedAt  DateTime @default(now()) @map("viewed_at")
+
+  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message BroadcastMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, messageId])
+  @@map("broadcast_message_views")
+}
+
+model Session {
+  token     String   @id
+  userId    Int      @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  expiresAt DateTime @map("expires_at")
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model RefreshToken {
+  id         Int       @id @default(autoincrement())
+  userId     Int       @map("user_id")
+  tokenId    String    @unique @map("token_id")
+  tokenHash  String    @map("token_hash")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  expiresAt  DateTime  @map("expires_at")
+  revokedAt  DateTime? @map("revoked_at")
+  replacedBy String?   @map("replaced_by")
+  user       User      @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+model Miner {
+  id              Int       @id @default(autoincrement())
+  name            String
+  slug            String    @unique
+  description     String?   @db.Text
+  longDescription String?   @map("long_description") @db.Text
+  baseHashRate    Float     @default(0) @map("base_hash_rate")
+  price           Decimal   @default(0.5) @db.Decimal(20, 8) // shop catalog amount in BLK (SHOP_CURRENCY)
+  slotSize        Int       @default(1) @map("slot_size")
+  imageUrl        String?   @map("image_url")
+  tier            String    @default("common")
+  sourceType      String    @default("store") @map("source_type")
+  isActive        Boolean   @default(true) @map("is_active")
+  showInShop      Boolean   @default(true) @map("show_in_shop")
+  isArchived      Boolean   @default(false) @map("is_archived")
+  sortOrder       Int       @default(0) @map("sort_order")
+  maxPerUser      Int?      @map("max_per_user")
+  stockTotal      Int?      @map("stock_total")
+  stockSold       Int       @default(0) @map("stock_sold")
+  availableFrom   DateTime? @map("available_from")
+  availableUntil  DateTime? @map("available_until")
+  metadata        Json?
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  userMiners              UserMiner[]
+  userInventory           UserInventory[]
+  userOwnedMachines       UserOwnedMachine[]
+  userVault               UserVault[]
+  readEarnCampaigns       ReadEarnCampaign[]
+  faucetReward            FaucetReward?
+  shortlinkRew            ShortlinkReward?
+  miniPassLevelRewards    MiniPassLevelReward[]
+  dailyTaskRewardDefs     DailyTaskDefinition[]
+  checkinStreakMilestones CheckinStreakMilestone[]
+  videoSubmissionRewards  YoutubeVideoSubmission[]
+  youtuberRewardSettings  YoutuberRewardSettings[]
+  tournamentPrizes        TournamentPrize[]
+  burnEvents              BurnEvent[]
+
+  @@index([isActive, showInShop])
+  @@index([isArchived])
+  @@index([tier])
+  @@index([sourceType])
+  @@index([price])
+  @@index([baseHashRate])
+  @@index([createdAt])
+  @@map("miners")
+}
+
+model UserIpLog {
+  id                Int      @id @default(autoincrement())
+  userId            Int      @map("user_id")
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ip                String
+  deviceFingerprint String   @default("unknown") @map("device_fingerprint")
+  networkCidr       String?  @map("network_cidr")
+  asn               Int?
+  providerType      String   @default("unknown") @map("provider_type")
+  firstSeen         DateTime @default(now()) @map("first_seen")
+  lastSeen          DateTime @default(now()) @map("last_seen")
+  loginCount        Int      @default(0) @map("login_count")
+  registerCount     Int      @default(0) @map("register_count")
+  lastUserAgent     String?  @map("last_user_agent")
+
+  @@unique([userId, ip, deviceFingerprint])
+  @@index([ip])
+  @@index([networkCidr])
+  @@index([asn])
+  @@index([providerType])
+  @@index([deviceFingerprint])
+  @@index([lastSeen])
+  @@map("ip_logs")
+}
+
+model UserMiner {
+  id             Int      @id @default(autoincrement())
+  userId         Int      @map("user_id")
+  minerId        Int?     @map("miner_id")
+  slotIndex      Int      @map("slot_index")
+  level          Int      @default(1)
+  hashRate       Float    @default(0) @map("hash_rate")
+  slotSize       Int      @default(1) @map("slot_size")
+  imageUrl       String?  @map("image_url")
+  isActive       Boolean  @default(true) @map("is_active")
+  purchasedAt    DateTime @default(now()) @map("purchased_at")
+  ownedMachineId Int?     @unique @map("owned_machine_id")
+
+  user         User              @relation(fields: [userId], references: [id])
+  miner        Miner?            @relation(fields: [minerId], references: [id])
+  ownedMachine UserOwnedMachine? @relation(fields: [ownedMachineId], references: [id], onDelete: Restrict)
+  userRack     UserRack?
+
+  @@unique([userId, slotIndex])
+  @@index([userId])
+  @@map("user_miners")
+}
+
+model UserInventory {
+  id             Int       @id @default(autoincrement())
+  userId         Int       @map("user_id")
+  minerId        Int?      @map("miner_id")
+  minerName      String    @map("miner_name")
+  level          Int       @default(1)
+  hashRate       Float     @default(0) @map("hash_rate")
+  slotSize       Int       @default(1) @map("slot_size")
+  imageUrl       String?   @map("image_url")
+  acquiredAt     DateTime  @default(now()) @map("acquired_at")
+  expiresAt      DateTime? @map("expires_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  ownedMachineId Int?      @unique @map("owned_machine_id")
+
+  user         User              @relation(fields: [userId], references: [id])
+  miner        Miner?            @relation(fields: [minerId], references: [id])
+  ownedMachine UserOwnedMachine? @relation(fields: [ownedMachineId], references: [id], onDelete: Restrict)
+
+  @@index([userId])
+  @@map("user_inventory")
+}
+
+model UserVault {
+  id             Int      @id @default(autoincrement())
+  userId         Int      @map("user_id")
+  minerId        Int?     @map("miner_id")
+  minerName      String   @map("miner_name")
+  level          Int      @default(1)
+  hashRate       Float    @default(0) @map("hash_rate")
+  slotSize       Int      @default(1) @map("slot_size")
+  imageUrl       String?  @map("image_url")
+  storedAt       DateTime @default(now()) @map("stored_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  ownedMachineId Int?     @unique @map("owned_machine_id")
+
+  user         User              @relation(fields: [userId], references: [id])
+  miner        Miner?            @relation(fields: [minerId], references: [id])
+  ownedMachine UserOwnedMachine? @relation(fields: [ownedMachineId], references: [id], onDelete: Restrict)
+
+  @@index([userId])
+  @@map("user_vault")
+}
+
+/// Canonical owned machine instance: exactly one of inventory / rack miner / vault row points here.
+enum MachineInstanceLocation {
+  INVENTORY
+  RACK
+  WAREHOUSE
+}
+
+model UserOwnedMachine {
+  id                Int                     @id @default(autoincrement())
+  userId            Int                     @map("user_id")
+  location          MachineInstanceLocation
+  minerId           Int?                    @map("miner_id")
+  eventMinerId      Int?                    @map("event_miner_id")
+  minerName         String                  @map("miner_name")
+  snapshotSlug      String?                 @map("snapshot_slug")
+  level             Int                     @default(1)
+  hashRate          Float                   @map("hash_rate")
+  slotSize          Int                     @default(1) @map("slot_size")
+  imageUrl          String?                 @map("image_url")
+  snapshotPrice     Decimal?                @map("snapshot_price") @db.Decimal(20, 8)
+  acquisitionSource String?                 @map("acquisition_source")
+  createdAt         DateTime                @default(now()) @map("created_at")
+  updatedAt         DateTime                @updatedAt @map("updated_at")
+
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  miner        Miner?         @relation(fields: [minerId], references: [id], onDelete: SetNull)
+  eventMiner   EventMiner?    @relation(fields: [eventMinerId], references: [id], onDelete: Restrict)
+  inventoryRow UserInventory?
+  rackMiner    UserMiner?
+  vaultRow     UserVault?
+
+  @@index([userId, location])
+  @@index([minerId])
+  @@index([eventMinerId])
+  @@map("user_owned_machines")
+}
+
+model Transaction {
+  id                     Int       @id @default(autoincrement())
+  userId                 Int       @map("user_id")
+  type                   String // deposit, withdrawal, etc
+  amount                 Decimal   @db.Decimal(20, 8)
+  fee                    Decimal?  @db.Decimal(20, 8)
+  address                String?
+  txHash                 String?   @map("tx_hash")
+  rawTx                  String?   @map("raw_tx")
+  txNonce                Int?      @map("tx_nonce")
+  txGasPrice             String?   @map("tx_gas_price")
+  txGasLimit             Int?      @map("tx_gas_limit")
+  fromAddress            String?   @map("from_address")
+  status                 String    @default("pending")
+  fundsReserved          Boolean   @default(false) @map("funds_reserved")
+  verifyAttempts         Int       @default(0) @map("verify_attempts")
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime? @updatedAt @map("updated_at")
+  completedAt            DateTime? @map("completed_at")
+  confirmedEventAt       DateTime? @map("confirmed_event_at")
+  usdRateAtConfirmation  Decimal?  @map("usd_rate_at_confirmation") @db.Decimal(20, 8)
+  usdValueAtConfirmation Decimal?  @map("usd_value_at_confirmation") @db.Decimal(20, 8)
+  countsForTournament    Boolean?  @map("counts_for_tournament")
+  priceSnapshotId        Int?      @map("price_snapshot_id")
+
+  user            User                @relation(fields: [userId], references: [id])
+  energyTaxCharge EnergyTaxCharge?
+  priceSnapshot   AssetPriceSnapshot? @relation(fields: [priceSnapshotId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([status])
+  @@index([type])
+  @@index([txHash])
+  @@index([createdAt])
+  @@index([address])
+  @@index([fromAddress])
+  @@index([type, status, confirmedEventAt])
+  @@index([userId, confirmedEventAt])
+  // Partial unique (SQL migration): one deposit credit per on-chain tx_hash
+  // → CREATE UNIQUE INDEX transactions_deposit_tx_hash_key ON transactions (tx_hash)
+  //    WHERE type = 'deposit' AND tx_hash IS NOT NULL
+  @@map("transactions")
+}
+
+/// Immutable POL/USD (and future assets) price at a specific on-chain event time.
+model AssetPriceSnapshot {
+  id        Int      @id @default(autoincrement())
+  asset     String
+  eventAt   DateTime @map("event_at")
+  priceUsd  Decimal  @map("price_usd") @db.Decimal(20, 8)
+  source    String
+  sourceRef String?  @map("source_ref")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  transactions Transaction[]
+
+  @@unique([asset, eventAt])
+  @@index([asset, eventAt])
+  @@map("asset_price_snapshots")
+}
+
+/// Custodial Polygon deposit address derived from the platform HD tree (BIP-44 / coin type 60).
+model PolygonHdAddress {
+  id                    Int      @id @default(autoincrement())
+  userId                Int      @unique @map("user_id")
+  derivationIndex       Int      @map("derivation_index")
+  address               String   @unique
+  derivationPath        String   @map("derivation_path")
+  createdAt             DateTime @default(now()) @map("created_at")
+  lastIncomingScanBlock Int?     @map("last_incoming_scan_block")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("polygon_hd_addresses")
+}
+
+/**
+ * CCPayment API deposit webhook deliveries (idempotent by record_id).
+ */
+model CcpaymentDepositEvent {
+  id             Int      @id @default(autoincrement())
+  recordId       String   @unique @map("record_id")
+  orderId        String?  @map("order_id")
+  userId         Int?     @map("user_id")
+  amountPol      Decimal? @map("amount_pol") @db.Decimal(20, 8)
+  txHash         String?  @map("tx_hash")
+  payStatus      String   @map("pay_status")
+  credited       Boolean  @default(false) @map("credited")
+  rejectReason   String?  @map("reject_reason")
+  rawPayloadJson String?  @map("raw_payload_json") @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([credited])
+  @@map("ccpayment_deposit_events")
+}
+
+// Singleton (id=1): POL→BLK rate, fees, limits. Treat BLK as USD-pegged (1 BLK ≈ 1 USD).
+model BlkEconomyConfig {
+  id                   Int      @id @default(1)
+  polPerBlk            Decimal  @map("pol_per_blk") @db.Decimal(20, 8)
+  convertFeeBps        Int      @default(500) @map("convert_fee_bps")
+  minConvertPol        Decimal  @map("min_convert_pol") @db.Decimal(20, 8)
+  dailyConvertLimitBlk Decimal? @map("daily_convert_limit_blk") @db.Decimal(20, 8)
+  convertCooldownSec   Int      @default(300) @map("convert_cooldown_sec")
+  // Time-based BLK emission (shared pool, proportional to DB snapshot hashrate)
+  blkCycleReward       Decimal  @default(0.03) @map("blk_cycle_reward") @db.Decimal(20, 8)
+  blkCycleIntervalSec  Int      @default(600) @map("blk_cycle_interval_sec")
+  blkCycleActivitySec  Int      @default(900) @map("blk_cycle_activity_sec")
+  blkCycleMinHashrate  Decimal  @default(0.00000001) @map("blk_cycle_min_hashrate") @db.Decimal(24, 8)
+  blkCyclePaused       Boolean  @default(false) @map("blk_cycle_paused")
+  blkCycleBoost        Decimal  @default(1) @map("blk_cycle_boost") @db.Decimal(10, 4)
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  @@map("blk_economy_config")
+}
+
+model BlkRewardCycle {
+  id            Int      @id @default(autoincrement())
+  windowStart   DateTime @unique @map("window_start")
+  totalHashrate Decimal  @map("total_hashrate") @db.Decimal(24, 8)
+  totalReward   Decimal  @map("total_reward") @db.Decimal(20, 8)
+  distributed   Decimal  @map("distributed") @db.Decimal(20, 8)
+  minerCount    Int      @map("miner_count")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  logs BlkRewardLog[]
+
+  @@index([windowStart])
+  @@map("blk_reward_cycles")
+}
+
+model BlkRewardLog {
+  id        Int      @id @default(autoincrement())
+  cycleId   Int      @map("cycle_id")
+  userId    Int      @map("user_id")
+  hashrate  Decimal  @db.Decimal(24, 8)
+  shareBps  Int      @map("share_bps")
+  amount    Decimal  @db.Decimal(20, 8)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  cycle BlkRewardCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  user  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([cycleId])
+  @@map("blk_reward_logs")
+}
+
+model Payout {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  amountPol Float    @map("amount_pol")
+  source    String
+  txHash    String?  @map("tx_hash")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("payouts")
+}
+
+model AuditLog {
+  id                Int      @id @default(autoincrement())
+  userId            Int?     @map("user_id")
+  action            String
+  label             String?
+  description       String?  @db.Text
+  source            String   @default("user")
+  severity          String   @default("info")
+  ip                String?
+  userAgent         String?  @map("user_agent")
+  detailsJson       String?  @map("details_json")
+  metadata          Json?
+  relatedEntityType String?  @map("related_entity_type")
+  relatedEntityId   String?  @map("related_entity_id")
+  actorAdminId      Int?     @map("actor_admin_id")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([userId, createdAt])
+  @@index([action])
+  @@index([source])
+  @@index([severity])
+  @@index([ip])
+  @@index([relatedEntityType, relatedEntityId])
+  @@index([actorAdminId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model AuditEvent {
+  id            Int       @id @default(autoincrement())
+  correlationId String    @unique @map("correlation_id")
+  userId        Int?      @map("user_id")
+  anonymousId   String?   @map("anonymous_id")
+  eventType     String    @map("event_type")
+  status        String
+  severity      String?   @map("severity")
+  resultCode    String    @map("result_code")
+  payload       Json
+  timestamp     DateTime  @map("timestamp")
+  ipHash        String    @map("ip_hash")
+  userAgent     String?   @map("user_agent")
+  txHash        String?   @map("tx_hash")
+  errorContext  Json?     @map("error_context")
+  signature     String
+  schemaVersion String    @map("schema_version")
+  source        String
+  chainHash     String?   @map("chain_hash")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  validatedAt   DateTime? @map("validated_at")
+
+  @@index([userId])
+  @@index([eventType])
+  @@index([status])
+  @@index([severity])
+  @@index([txHash])
+  @@index([ipHash])
+  @@index([createdAt])
+  @@index([createdAt, eventType, userId])
+  @@map("audit_events")
+}
+
+model AuditEventOutbox {
+  id            Int       @id @default(autoincrement())
+  correlationId String    @map("correlation_id")
+  userId        Int?      @map("user_id")
+  anonymousId   String?   @map("anonymous_id")
+  eventType     String    @map("event_type")
+  status        String
+  severity      String?   @map("severity")
+  resultCode    String    @map("result_code")
+  payload       Json
+  timestamp     DateTime  @map("timestamp")
+  ipHash        String    @map("ip_hash")
+  userAgent     String?   @map("user_agent")
+  txHash        String?   @map("tx_hash")
+  errorContext  Json?     @map("error_context")
+  signature     String
+  schemaVersion String    @map("schema_version")
+  source        String
+  retryCount    Int       @default(0) @map("retry_count")
+  nextRetryAt   DateTime? @map("next_retry_at")
+  lastError     String?   @map("last_error")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([eventType])
+  @@index([createdAt])
+  @@index([severity])
+  @@map("audit_event_outbox")
+}
+
+model AuditEventChain {
+  id           Int      @id @default(autoincrement())
+  batchStartAt DateTime @map("batch_start_at")
+  batchEndAt   DateTime @map("batch_end_at")
+  chainHash    String   @map("chain_hash")
+  merkleRoot   String?  @map("merkle_root")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("audit_event_chains")
+}
+
+model RackConfig {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @map("user_id")
+  rackIndex  Int      @map("rack_index")
+  customName String   @map("custom_name")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, rackIndex])
+  @@map("rack_configs")
+}
+
+model FaucetReward {
+  id         Int      @id @default(autoincrement())
+  minerId    Int      @unique @map("miner_id")
+  cooldownMs Int      @default(3600000) @map("cooldown_ms")
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  miner Miner @relation(fields: [minerId], references: [id])
+
+  @@map("faucet_rewards")
+}
+
+model DailyPowerBoost {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  dayKey    String   @map("day_key")
+  paidAt    DateTime @default(now()) @map("paid_at")
+  amountPol Decimal  @map("amount_pol") @db.Decimal(20, 8)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, dayKey])
+  @@index([userId])
+  @@map("daily_power_boosts")
+}
+
+model FaucetClaim {
+  userId      Int      @id @map("user_id")
+  claimedAt   DateTime @map("claimed_at")
+  totalClaims Int      @default(0) @map("total_claims")
+  dayKey      String?  @map("day_key")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("faucet_claims")
+}
+
+model FaucetPartnerVisit {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @map("user_id")
+  dayKey     String   @map("day_key")
+  openedAt   DateTime @map("opened_at")
+  eligibleAt DateTime @map("eligible_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, dayKey])
+  @@index([eligibleAt])
+  @@map("faucet_partner_visits")
+}
+
+model DailyCheckin {
+  id            Int       @id @default(autoincrement())
+  userId        Int       @map("user_id")
+  checkinDate   String    @map("checkin_date")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  confirmedAt   DateTime? @map("confirmed_at")
+  txHash        String    @unique @map("tx_hash")
+  status        String    @default("pending")
+  amount        Float     @default(0.01)
+  chainId       Int       @map("chain_id")
+  paymentMethod String    @default("wallet") @map("payment_method")
+  streak        Int       @default(0) @map("streak")
+  usedGrace     Boolean   @default(false) @map("used_grace")
+  usedFreeze    Boolean   @default(false) @map("used_freeze")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, checkinDate])
+  @@map("daily_checkins")
+}
+
+/// On-chain check-ins with cadence weekly or monthly (daily uses DailyCheckin).
+model PeriodicCheckin {
+  id          Int       @id @default(autoincrement())
+  userId      Int       @map("user_id")
+  cadence     String    @map("cadence")
+  periodKey   String    @map("period_key")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  confirmedAt DateTime? @map("confirmed_at")
+  txHash      String    @unique @map("tx_hash")
+  status      String    @default("pending")
+  amount      Float     @default(0.01)
+  chainId     Int       @map("chain_id")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, cadence, periodKey])
+  @@index([status, createdAt])
+  @@map("periodic_checkins")
+}
+
+model CheckinStreakMilestone {
+  id           Int      @id @default(autoincrement())
+  dayThreshold Int      @map("day_threshold")
+  rewardType   String   @map("reward_type")
+  rewardValue  Decimal  @default(0) @map("reward_value") @db.Decimal(20, 8)
+  validityDays Int      @default(7) @map("validity_days")
+  displayTitle String?  @map("display_title")
+  description  String?  @db.Text
+  active       Boolean  @default(true)
+  sortOrder    Int      @default(0) @map("sort_order")
+  minerId      Int?     @map("miner_id")
+  itemCode     String?  @map("item_code")
+  metadataJson Json?    @map("metadata_json")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  miner  Miner?                    @relation(fields: [minerId], references: [id], onDelete: SetNull)
+  claims UserCheckinStreakReward[]
+
+  @@unique([dayThreshold])
+  @@map("checkin_streak_milestones")
+}
+
+model UserCheckinStreakReward {
+  id                Int      @id @default(autoincrement())
+  userId            Int      @map("user_id")
+  milestoneId       Int      @map("milestone_id")
+  streakWhenClaimed Int      @map("streak_when_claimed")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  user      User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  milestone CheckinStreakMilestone @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, milestoneId])
+  @@index([userId])
+  @@map("user_checkin_streak_rewards")
+}
+
+model PublicSupportTicket {
+  id         Int      @id @default(autoincrement())
+  guestName  String   @map("guest_name")
+  guestEmail String   @map("guest_email")
+  subject    String
+  status     String   @default("open")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  resolvedById Int? @map("resolved_by_id")
+
+  messages PublicSupportMessage[]
+
+  @@index([guestEmail])
+  @@index([status])
+  @@map("public_support_tickets")
+}
+
+model PublicSupportMessage {
+  id         Int      @id @default(autoincrement())
+  ticketId   Int      @map("ticket_id")
+  authorType String   @map("author_type")
+  content    String
+  imageUrl   String?  @map("image_url")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  ticket PublicSupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+  @@map("public_support_messages")
+}
+
+model CheckinStreakRecovery {
+  id              Int      @id @default(autoincrement())
+  userId          Int      @map("user_id")
+  recoveredStreak Int      @map("recovered_streak")
+  missedDays      Int      @map("missed_days")
+  feePolPaid      Float    @map("fee_pol_paid")
+  recoveredAt     DateTime @default(now()) @map("recovered_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("checkin_streak_recoveries")
+}
+
+model UserRewardInbox {
+  id            Int       @id @default(autoincrement())
+  userId        Int       @map("user_id")
+  status        String    @default("pending")
+  source        String
+  rewardType    String    @map("reward_type")
+  rewardValue   Decimal   @default(0) @map("reward_value") @db.Decimal(20, 8)
+  minerId       Int?      @map("miner_id")
+  minerName     String?   @map("miner_name")
+  minerImageUrl String?   @map("miner_image_url")
+  slotSize      Int       @default(1) @map("slot_size")
+  durationHours Int?      @map("duration_hours")
+  metaJson      Json?     @map("meta_json")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  collectedAt   DateTime? @map("collected_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, status])
+  @@index([collectedAt])
+  @@map("user_reward_inbox")
+}
+
+/// Partner "Read & Earn" campaigns: users redeem a secret code once per campaign.
+model ReadEarnCampaign {
+  id                   Int      @id @default(autoincrement())
+  title                String
+  partnerUrl           String   @map("partner_url")
+  codeHash             String   @map("code_hash")
+  rewardType           String   @map("reward_type")
+  rewardAmount         Decimal  @default(0) @map("reward_amount") @db.Decimal(20, 8)
+  rewardMinerId        Int?     @map("reward_miner_id")
+  hashrateValidityDays Int      @default(7) @map("hashrate_validity_days")
+  startsAt             DateTime @map("starts_at")
+  expiresAt            DateTime @map("expires_at")
+  isActive             Boolean  @default(true) @map("is_active")
+  maxRedemptions       Int?     @map("max_redemptions")
+  sortOrder            Int      @default(0) @map("sort_order")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  rewardMiner Miner?               @relation(fields: [rewardMinerId], references: [id], onDelete: SetNull)
+  redemptions ReadEarnRedemption[]
+
+  @@index([isActive, startsAt, expiresAt])
+  @@map("read_earn_campaigns")
+}
+
+model ReadEarnRedemption {
+  id             Int      @id @default(autoincrement())
+  campaignId     Int      @map("campaign_id")
+  userId         Int      @map("user_id")
+  rewardSnapshot Json?    @map("reward_snapshot")
+  ip             String?  @map("ip")
+  userAgent      String?  @map("user_agent")
+  redeemedAt     DateTime @default(now()) @map("redeemed_at")
+
+  campaign ReadEarnCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, campaignId])
+  @@index([campaignId])
+  @@index([userId])
+  @@map("read_earn_redemptions")
+}
+
+model UserPowerGame {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  gameId    Int      @map("game_id")
+  hashRate  Float    @map("hash_rate")
+  playedAt  DateTime @map("played_at")
+  expiresAt DateTime @map("expires_at")
+  checkinId Int?     @map("checkin_id")
+
+  user User @relation(fields: [userId], references: [id])
+  game Game @relation(fields: [gameId], references: [id])
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("users_powers_games")
+}
+
+model Game {
+  id        Int      @id @default(autoincrement())
+  name      String
+  slug      String   @unique
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  powers UserPowerGame[]
+
+  @@map("games")
+}
+
+/// Server-authoritative Chain 2048 sessions (board + moves validated server-side).
+model Game2048Session {
+  id              Int       @id @default(autoincrement())
+  userId          Int       @map("user_id")
+  status          String    @map("status")
+  board           Json      @map("board")
+  score           Int       @default(0) @map("score")
+  won             Boolean   @default(false) @map("won")
+  rewardGranted   Boolean   @default(false) @map("reward_granted")
+  endedAt         DateTime? @map("ended_at")
+  rewardClaimedAt DateTime? @map("reward_claimed_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([userId, rewardClaimedAt])
+  @@map("game2048_sessions")
+}
+
+/// Progressive cooldown state per user per game slug (DB-backed, survives restarts).
+model GameCooldownState {
+  id             Int       @id @default(autoincrement())
+  userId         Int       @map("user_id")
+  gameSlug       String    @map("game_slug")
+  sessions       Int       @default(0)
+  lastFinishedAt DateTime? @map("last_finished_at")
+  cooldownEndsAt DateTime? @map("cooldown_ends_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, gameSlug])
+  @@index([userId])
+  @@map("game_cooldown_states")
+}
+
+/// Full audit trail for every game session (win or loss).
+model GameSessionLog {
+  id            Int      @id @default(autoincrement())
+  userId        Int      @map("user_id")
+  gameSlug      String   @map("game_slug")
+  gameId        Int?     @map("game_id")
+  success       Boolean
+  score         Int      @default(0)
+  playTimeMs    Int      @default(0) @map("play_time_ms")
+  failReason    String?  @map("fail_reason")
+  trustScore    Int?     @map("trust_score")
+  rewardGranted Boolean  @default(false) @map("reward_granted")
+  ip            String?
+  userAgent     String?  @map("user_agent")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([gameSlug, createdAt])
+  @@index([success, rewardGranted, createdAt(sort: Desc)])
+  @@map("game_session_logs")
+}
+
+model YoutubeWatchPower {
+  id            Int      @id @default(autoincrement())
+  userId        Int      @map("user_id")
+  hashRate      Float    @map("hash_rate")
+  claimedAt     DateTime @map("claimed_at")
+  expiresAt     DateTime @map("expires_at")
+  sourceVideoId String?  @map("source_video_id")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("youtube_watch_user_powers")
+}
+
+model YoutubeWatchHistory {
+  id            Int      @id @default(autoincrement())
+  userId        Int      @map("user_id")
+  hashRate      Float    @map("hash_rate")
+  claimedAt     DateTime @map("claimed_at")
+  expiresAt     DateTime @map("expires_at")
+  sourceVideoId String?  @map("source_video_id")
+  status        String   @default("granted")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("youtube_watch_power_history")
+}
+
+model ShortlinkPower {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  hashRate  Float    @default(5.0) @map("hash_rate")
+  claimedAt DateTime @map("claimed_at")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("shortlink_powers")
+}
+
+/**
+ * Pending/completed external shortlink runs (PasteAd / ZerAds AN-Script).
+ */
+model ShortlinkExternalSession {
+  id          Int       @id @default(autoincrement())
+  userId      Int       @map("user_id")
+  provider    String    @default("pastead")
+  token       String    @unique
+  status      String    @default("pending")
+  hashRate    Float     @default(20) @map("hash_rate")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  /**
+   * Set when ZerAds redirects to our success URL — required before claim.
+   */
+  doneAt      DateTime? @map("done_at")
+  completedAt DateTime? @map("completed_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, provider, status])
+  @@index([userId, provider, completedAt])
+  @@map("shortlink_external_sessions")
+}
+
+// Admin-configurable PTC global settings (single row, id=1)
+model PtcSettings {
+  id                 Int     @id @default(1)
+  pricePerViewShib   Decimal @default(0) @map("price_per_view_shib") @db.Decimal(30, 8)
+  rewardPerViewShib  Decimal @default(0) @map("reward_per_view_shib") @db.Decimal(30, 8)
+  minDurationSeconds Int     @default(10) @map("min_duration_seconds")
+  maxDurationSeconds Int     @default(60) @map("max_duration_seconds")
+  minViews           Int     @default(100) @map("min_views")
+  maxViews           Int     @default(1000000) @map("max_views")
+  isEnabled          Boolean @default(true) @map("is_enabled")
+
+  @@map("ptc_settings")
+}
+
+model PtcAdTier {
+  id                Int     @id @default(autoincrement())
+  label             String
+  adType            String  @default("window") @map("ad_type")
+  durationSeconds   Int     @map("duration_seconds")
+  pricePerViewShib  Decimal @default(0) @map("price_per_view_shib") @db.Decimal(30, 8)
+  rewardPerViewShib Decimal @default(0) @map("reward_per_view_shib") @db.Decimal(30, 8)
+  isActive          Boolean @default(true) @map("is_active")
+  sortOrder         Int     @default(0) @map("sort_order")
+
+  campaigns PtpAd[]
+
+  @@map("ptc_ad_tiers")
+}
+
+model PtpAd {
+  id                Int      @id @default(autoincrement())
+  userId            Int      @map("user_id")
+  tierId            Int?     @map("tier_id")
+  title             String
+  description       String   @default("")
+  url               String
+  hash              String   @unique
+  adType            String   @default("window") @map("ad_type")
+  durationSeconds   Int      @default(10) @map("duration_seconds")
+  createdAt         DateTime @default(now()) @map("created_at")
+  // status: pending_approval | rejected | active | paused | completed
+  status            String   @default("pending_approval")
+  rejectionReason   String?  @map("rejection_reason")
+  views             Int      @default(0)
+  targetViews       Int      @default(0) @map("target_views")
+  costShib          Decimal  @default(0) @map("cost_shib") @db.Decimal(30, 8)
+  rewardPerViewShib Decimal  @default(0) @map("reward_per_view_shib") @db.Decimal(30, 8)
+  // legacy fields kept for backward compat
+  paidUsd           Float    @default(0) @map("paid_usd")
+  asset             String   @default("SHIB")
+  costUsd           Float    @default(0) @map("cost_usd")
+  costAsset         Float    @default(0) @map("cost_asset")
+
+  user        User         @relation(fields: [userId], references: [id])
+  tier        PtcAdTier?   @relation(fields: [tierId], references: [id])
+  ptpViews    PtpView[]
+  ptpSessions PtpSession[]
+
+  @@index([userId])
+  @@index([status])
+  @@map("ptp_ads")
+}
+
+model PtpView {
+  id                Int       @id @default(autoincrement())
+  adId              Int       @map("ad_id")
+  viewerHash        String    @map("viewer_hash")
+  viewedAt          DateTime  @default(now()) @map("viewed_at")
+  /// UTC calendar day (YYYY-MM-DD) when the viewer last completed this ad — resets at 00:00 UTC
+  lastViewedUtcDate DateTime? @map("last_viewed_utc_date") @db.Date
+  earnedShib        Decimal   @default(0) @map("earned_shib") @db.Decimal(30, 8)
+
+  ad PtpAd @relation(fields: [adId], references: [id])
+
+  @@unique([adId, viewerHash])
+  @@map("ptp_views")
+}
+
+model PtpEarning {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @map("user_id")
+  adId       Int      @map("ad_id")
+  amountUsd  Decimal  @default(0) @map("amount_usd") @db.Decimal(20, 2)
+  amountShib Decimal  @default(0) @map("amount_shib") @db.Decimal(30, 8)
+  paidAt     DateTime @default(now()) @map("paid_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("ptp_earnings")
+}
+
+model PtpSession {
+  id              String    @id @default(uuid())
+  userId          Int       @map("user_id")
+  adId            Int       @map("ad_id")
+  viewerHash      String    @map("viewer_hash")
+  // status: opening | viewing | paused | completed | cancelled | claimed
+  status          String    @default("opening")
+  requiredSeconds Int       @map("required_seconds")
+  accumulatedMs   Int       @default(0) @map("accumulated_ms")
+  lastHeartbeatAt DateTime? @map("last_heartbeat_at")
+  startedAt       DateTime  @default(now()) @map("started_at")
+  completedAt     DateTime? @map("completed_at")
+  claimedAt       DateTime? @map("claimed_at")
+  cancelReason    String?   @map("cancel_reason")
+
+  user User  @relation(fields: [userId], references: [id])
+  ad   PtpAd @relation(fields: [adId], references: [id])
+
+  @@index([userId, status])
+  @@index([lastHeartbeatAt])
+  @@map("ptp_sessions")
+}
+
+model ZeradsCallback {
+  id           Int      @id @default(autoincrement())
+  userId       Int      @map("user_id")
+  username     String
+  amountZer    Float    @map("amount_zer")
+  exchangeRate Float    @map("exchange_rate")
+  payoutAmount Float    @map("payout_amount")
+  clicks       Int      @default(0)
+  requestIp    String?  @map("request_ip")
+  callbackHash String   @unique @map("callback_hash")
+  callbackAt   DateTime @map("callback_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("zerads_ptc_callbacks")
+}
+
+model OfferwallMeCallback {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @map("user_id")
+  transId     String   @unique @map("trans_id")
+  offerName   String?  @map("offer_name") @db.Text
+  offerType   String?  @map("offer_type")
+  payoutUsd   Float    @map("payout_usd")
+  polCredited Float    @map("pol_credited")
+  polPrice    Float    @map("pol_price")
+  status      Int
+  requestIp   String?  @map("request_ip")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("offerwallme_callbacks")
+}
+
+model MoneyRainCallback {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @map("user_id")
+  viewId      String   @unique @map("view_id")
+  campaignId  Int?     @map("campaign_id")
+  adType      String?  @map("ad_type")
+  site        String?
+  rewardUsdt  Float    @map("reward_usdt")
+  polCredited Float    @map("pol_credited")
+  polPrice    Float    @map("pol_price")
+  nonce       String?
+  requestIp   String?  @map("request_ip")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("moneyrain_callbacks")
+}
+
+/** Offerwall PRO (Multiwall) S2S credits — same shape as OfferwallMeCallback. */
+model MultiwallCallback {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @map("user_id")
+  transId     String   @unique @map("trans_id")
+  offerName   String?  @map("offer_name") @db.Text
+  offerType   String?  @map("offer_type")
+  payoutUsd   Float    @map("payout_usd")
+  polCredited Float    @map("pol_credited")
+  polPrice    Float    @map("pol_price")
+  status      Int
+  requestIp   String?  @map("request_ip")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("multiwall_callbacks")
+}
+
+/** Offerwall.GG S2S credits — same ledger shape as MultiwallCallback. */
+model OfferwallGgCallback {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @map("user_id")
+  transId     String   @unique @map("trans_id")
+  offerName   String?  @map("offer_name") @db.Text
+  offerType   String?  @map("offer_type")
+  payoutUsd   Float    @map("payout_usd")
+  polCredited Float    @map("pol_credited")
+  polPrice    Float    @map("pol_price")
+  status      Int
+  requestIp   String?  @map("request_ip")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("offerwallgg_callbacks")
+}
+
+model AutoMiningReward {
+  id          Int      @id @default(autoincrement())
+  name        String
+  slug        String   @unique
+  gpuHashRate Float    @default(1) @map("gpu_hash_rate")
+  imageUrl    String?  @map("image_url")
+  description String?
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  gpus AutoMiningGpu[]
+  logs AutoMiningGpuLog[]
+
+  @@map("auto_mining_rewards")
+}
+
+model AutoMiningGpu {
+  id          Int       @id @default(autoincrement())
+  userId      Int       @map("user_id")
+  rewardId    Int       @map("reward_id")
+  gpuHashRate Float     @default(1) @map("gpu_hash_rate")
+  isAvailable Boolean   @default(true) @map("is_available")
+  isClaimed   Boolean   @default(false) @map("is_claimed")
+  releasedAt  DateTime  @map("released_at")
+  claimedAt   DateTime? @map("claimed_at")
+  expiresAt   DateTime? @map("expires_at")
+
+  user   User               @relation(fields: [userId], references: [id])
+  reward AutoMiningReward   @relation(fields: [rewardId], references: [id])
+  logs   AutoMiningGpuLog[]
+
+  @@index([userId])
+  @@index([isClaimed])
+  @@map("auto_mining_gpu")
+}
+
+model AutoMiningGpuLog {
+  id          Int       @id @default(autoincrement())
+  userId      Int       @map("user_id")
+  gpuId       Int       @map("gpu_id")
+  rewardId    Int?      @map("reward_id")
+  gpuHashRate Float     @map("gpu_hash_rate")
+  action      String
+  source      String
+  claimedAt   DateTime  @map("claimed_at")
+  expiresAt   DateTime? @map("expires_at")
+  notes       String?
+
+  user   User              @relation(fields: [userId], references: [id])
+  gpu    AutoMiningGpu     @relation(fields: [gpuId], references: [id])
+  reward AutoMiningReward? @relation(fields: [rewardId], references: [id])
+
+  @@index([userId])
+  @@map("auto_mining_gpu_logs")
+}
+
+model AutoMiningV2Session {
+  id                String    @id @default(uuid())
+  userId            Int       @map("user_id")
+  mode              String
+  nextClaimAt       DateTime  @map("next_claim_at")
+  isActive          Boolean   @default(true) @map("is_active")
+  /**
+   * Set while the user is away from the page/tab. Claims are refused and the timer is frozen.
+   */
+  pausedAt          DateTime? @map("paused_at")
+  /**
+   * Milliseconds left in the cycle at pause time, so resuming continues instead of restarting.
+   */
+  pausedRemainingMs Int?      @map("paused_remaining_ms")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  user        User                           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  grants      AutoMiningV2PowerGrant[]
+  impressions AutoMiningV2BannerImpression[]
+
+  @@index([userId, isActive])
+  /**
+   * Stale-session sweep filters on both — without this it scans every active row.
+   */
+  @@index([isActive, updatedAt])
+  @@map("auto_mining_v2_sessions")
+}
+
+model AutoMiningV2PowerGrant {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  sessionId String   @map("session_id")
+  hashRate  Float    @map("hash_rate")
+  mode      String
+  earnedAt  DateTime @map("earned_at")
+  expiresAt DateTime @map("expires_at")
+
+  user       User                          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session    AutoMiningV2Session           @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  impression AutoMiningV2BannerImpression?
+
+  @@index([userId, earnedAt])
+  @@index([userId, expiresAt])
+  @@map("auto_mining_v2_power_grants")
+}
+
+model AutoMiningV2BannerImpression {
+  id        String    @id @default(uuid())
+  userId    Int       @map("user_id")
+  sessionId String    @map("session_id")
+  bannerKey String    @map("banner_key")
+  targetUrl String    @map("target_url")
+  title     String    @default("")
+  imageUrl  String?   @map("image_url")
+  createdAt DateTime  @default(now()) @map("created_at")
+  clickedAt DateTime? @map("clicked_at")
+  grantId   Int?      @unique @map("grant_id")
+
+  user    User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session AutoMiningV2Session     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  grant   AutoMiningV2PowerGrant? @relation(fields: [grantId], references: [id], onDelete: SetNull)
+
+  @@index([userId, sessionId])
+  @@map("auto_mining_v2_banner_impressions")
+}
+
+model CallbackQueue {
+  id           Int       @id @default(autoincrement())
+  callbackType String    @map("callback_type")
+  userId       Int?      @map("user_id")
+  username     String?
+  amount       Float?
+  exchangeRate Float?    @map("exchange_rate")
+  payoutAmount Float?    @map("payout_amount")
+  data         Json?
+  status       String    @default("pending")
+  errorMessage String?   @map("error_message")
+  retryCount   Int       @default(0) @map("retry_count")
+  maxRetries   Int       @default(3) @map("max_retries")
+  requestIp    String?   @map("request_ip")
+  callbackHash String?   @map("callback_hash")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  processedAt  DateTime? @map("processed_at")
+  nextRetryAt  DateTime? @map("next_retry_at")
+
+  @@index([status])
+  @@map("callback_queue")
+}
+
+model MiningRewardsLog {
+  id                  Int      @id @default(autoincrement())
+  userId              Int      @map("user_id")
+  blockNumber         Int      @map("block_number")
+  workAccumulated     Float    @map("work_accumulated")
+  totalNetworkWork    Float    @map("total_network_work")
+  sharePercentage     Float    @map("share_percentage")
+  rewardAmount        Float    @map("reward_amount")
+  balanceAfterReward  Float    @map("balance_after_reward")
+  // SHIB pool fields (dual-pool mining). Zero when miner had 100% POL allocation.
+  rewardAmountShib    Decimal  @default(0) @map("reward_amount_shib") @db.Decimal(30, 8)
+  shareShibPercentage Float    @default(0) @map("share_shib_percentage")
+  workPol             Float    @default(0) @map("work_pol")
+  workShib            Float    @default(0) @map("work_shib")
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([userId, createdAt])
+  @@index([blockNumber])
+  @@map("mining_rewards_log")
+}
+
+model DashboardUpdate {
+  id          Int       @id @default(autoincrement())
+  version     String    @unique
+  title       String
+  description String
+  isActive    Boolean   @default(true) @map("is_active")
+  startsAt    DateTime? @map("starts_at")
+  endsAt      DateTime? @map("ends_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@index([isActive])
+  @@map("dashboard_updates")
+}
+
+model ShortlinkCompletion {
+  id            Int       @id @default(autoincrement())
+  userId        Int       @unique @map("user_id")
+  shortlinkType String    @default("internal") @map("shortlink_type")
+  currentStep   Int       @default(0) @map("current_step")
+  dailyRuns     Int       @default(0) @map("daily_runs")
+  sessionToken  String?   @map("session_token")
+  stepStartedAt DateTime? @map("step_started_at")
+  completedAt   DateTime? @map("completed_at")
+  resetAt       DateTime? @map("reset_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("shortlink_completions")
+}
+
+model ShortlinkReward {
+  id            Int      @id @default(autoincrement())
+  shortlinkType String   @unique @map("shortlink_type")
+  minerId       Int      @unique @map("miner_id")
+  rewardName    String   @map("reward_name")
+  hashRate      Float    @default(0) @map("hash_rate")
+  slotSize      Int      @default(1) @map("slot_size")
+  imageUrl      String?  @map("image_url")
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  miner Miner @relation(fields: [minerId], references: [id])
+
+  @@map("shortlink_rewards")
+}
+
+model ChatMessage {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  username  String
+  message   String
+  replyToId Int?     @map("reply_to_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user    User          @relation(fields: [userId], references: [id])
+  replyTo ChatMessage?  @relation("MessageReplies", fields: [replyToId], references: [id])
+  replies ChatMessage[] @relation("MessageReplies")
+
+  @@index([createdAt])
+  @@map("chat_messages")
+}
+
+model PrivateMessage {
+  id         Int      @id @default(autoincrement())
+  senderId   Int      @map("sender_id")
+  receiverId Int      @map("receiver_id")
+  message    String
+  isRead     Boolean  @default(false) @map("is_read")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  sender   User @relation("SentPrivateMessages", fields: [senderId], references: [id])
+  receiver User @relation("ReceivedPrivateMessages", fields: [receiverId], references: [id])
+
+  @@index([senderId, receiverId])
+  @@index([createdAt])
+  @@map("private_messages")
+}
+
+model Referral {
+  id         Int      @id @default(autoincrement())
+  referrerId Int      @map("referrer_id")
+  referredId Int      @unique @map("referred_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  referrer User @relation("UserToReferrer", fields: [referrerId], references: [id])
+  referred User @relation("UserToReferred", fields: [referredId], references: [id])
+
+  @@map("referrals")
+}
+
+model ReferralEarning {
+  id         Int      @id @default(autoincrement())
+  referrerId Int      @map("referrer_id")
+  referredId Int      @map("referred_id")
+  amount     Float
+  amountShib Decimal  @default(0) @map("amount_shib") @db.Decimal(30, 8)
+  source     String
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  referrer User @relation("UserToReferrerEarnings", fields: [referrerId], references: [id])
+  referred User @relation("UserToReferredEarnings", fields: [referredId], references: [id])
+
+  @@index([createdAt])
+  @@index([referrerId, createdAt])
+  @@map("referral_earnings")
+}
+
+model BlockDistribution {
+  id            Int      @id @default(autoincrement())
+  blockNumber   Int      @unique @map("block_number")
+  reward        Float
+  rewardShib    Decimal  @default(0) @map("reward_shib") @db.Decimal(30, 8)
+  totalWorkShib Float    @default(0) @map("total_work_shib")
+  minerCount    Int      @map("miner_count")
+  totalWork     Float    @map("total_work")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  minerRewards BlockMinerReward[]
+
+  @@index([createdAt])
+  @@map("block_distributions")
+}
+
+model BlockMinerReward {
+  id               Int      @id @default(autoincrement())
+  blockId          Int      @map("block_id")
+  userId           Int      @map("user_id")
+  work             Float
+  percentage       Float
+  rewardAmount     Float    @map("reward_amount")
+  rewardAmountShib Decimal  @default(0) @map("reward_amount_shib") @db.Decimal(30, 8)
+  workPol          Float    @default(0) @map("work_pol")
+  workShib         Float    @default(0) @map("work_shib")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  block BlockDistribution @relation(fields: [blockId], references: [id], onDelete: Cascade)
+  user  User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([blockId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("block_miner_rewards")
+}
+
+model OfferEvent {
+  id          Int       @id @default(autoincrement())
+  title       String
+  description String    @db.Text
+  imageUrl    String?   @map("image_url")
+  startsAt    DateTime  @map("starts_at")
+  endsAt      DateTime  @map("ends_at")
+  isActive    Boolean   @default(true) @map("is_active")
+  deletedAt   DateTime? @map("deleted_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  miners    EventMiner[]
+  purchases EventPurchase[]
+
+  @@index([startsAt, endsAt])
+  @@index([isActive, deletedAt])
+  @@map("offer_events")
+}
+
+model EventMiner {
+  id                Int      @id @default(autoincrement())
+  eventId           Int      @map("event_id")
+  name              String
+  description       String   @db.Text
+  imageUrl          String?  @map("image_url")
+  price             Decimal  @db.Decimal(20, 8)
+  hashRate          Float    @map("hash_rate")
+  currency          String   @default("BLK")
+  stockUnlimited    Boolean  @default(false) @map("stock_unlimited")
+  stockCount        Int?     @map("stock_count")
+  soldCount         Int      @default(0) @map("sold_count")
+  slotSize          Int      @default(1) @map("slot_size")
+  isActive          Boolean  @default(true) @map("is_active")
+  isFree            Boolean  @default(false) @map("is_free")
+  claimLimitPerUser Int      @default(1) @map("claim_limit_per_user")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  event                OfferEvent            @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  purchases            EventPurchase[]
+  miniPassLevelRewards MiniPassLevelReward[]
+  dailyTaskRewardDefs  DailyTaskDefinition[]
+  userOwnedMachines    UserOwnedMachine[]
+
+  @@index([eventId])
+  @@map("event_miners")
+}
+
+model EventPurchase {
+  id           Int      @id @default(autoincrement())
+  userId       Int      @map("user_id")
+  eventId      Int      @map("event_id")
+  eventMinerId Int      @map("event_miner_id")
+  pricePaid    Decimal  @map("price_paid") @db.Decimal(20, 8)
+  currency     String
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event      OfferEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventMiner EventMiner @relation(fields: [eventMinerId], references: [id], onDelete: Restrict)
+
+  @@index([userId])
+  @@index([eventId])
+  @@index([eventMinerId])
+  /**
+   * `/offer-events/active` groups this user's purchases by miner on every poll.
+   */
+  @@index([userId, eventMinerId])
+  @@map("event_purchases")
+}
+
+model SupportMessage {
+  id         Int       @id @default(autoincrement())
+  userId     Int?      @map("user_id")
+  name       String
+  email      String
+  subject    String
+  message    String    @db.Text
+  isRead     Boolean   @default(false) @map("is_read")
+  isReplied  Boolean   @default(false) @map("is_replied")
+  repliedAt  DateTime? @map("replied_at")
+  /**
+   * Admin-only housekeeping flag — hides a resolved ticket from the default list without
+   * deleting it. Added 11/08/2026, PROGRESSO.txt item 53.
+   */
+  archived   Boolean   @default(false) @map("archived")
+  archivedAt DateTime? @map("archived_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  user    User?          @relation(fields: [userId], references: [id])
+  replies SupportReply[]
+
+  @@index([userId])
+  @@index([archived])
+  @@map("support_messages")
+}
+
+model SupportReply {
+  id               Int      @id @default(autoincrement())
+  supportMessageId Int      @map("support_message_id")
+  senderId         Int?     @map("sender_id")
+  message          String   @db.Text
+  isAdmin          Boolean  @default(false) @map("is_admin")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  supportMessage SupportMessage @relation(fields: [supportMessageId], references: [id], onDelete: Cascade)
+  sender         User?          @relation(fields: [senderId], references: [id])
+
+  @@index([supportMessageId])
+  @@map("support_replies")
+}
+
+model UserRoom {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @map("user_id")
+  roomNumber Int      @map("room_number")
+  pricePaid  Decimal  @default(0) @map("price_paid") @db.Decimal(20, 8)
+  unlockedAt DateTime @default(now()) @map("unlocked_at")
+
+  user                User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  racks               UserRack[]
+  visualPlacements    UserVisualRackPlacement[]
+  visualFanPlacements UserVisualFanPlacement[]
+
+  @@unique([userId, roomNumber])
+  @@index([userId])
+  @@map("user_rooms")
+}
+
+model DashboardBanner {
+  id        Int       @id @default(autoincrement())
+  title     String
+  message   String    @default("")
+  imageUrl  String?   @map("image_url")
+  type      String    @default("info") // info | warning | success | promo
+  link      String?
+  linkLabel String?   @map("link_label")
+  isActive  Boolean   @default(true) @map("is_active")
+  startsAt  DateTime? @map("starts_at")
+  endsAt    DateTime? @map("ends_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  @@index([isActive])
+  @@map("dashboard_banners")
+}
+
+model UserRack {
+  id               Int       @id @default(autoincrement())
+  userId           Int       @map("user_id")
+  roomId           Int       @map("room_id")
+  position         Int
+  userMinerId      Int?      @unique @map("user_miner_id")
+  blockedByMinerId Int?      @map("blocked_by_miner_id")
+  installedAt      DateTime? @map("installed_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  room      UserRoom   @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  userMiner UserMiner? @relation(fields: [userMinerId], references: [id])
+
+  @@unique([roomId, position])
+  @@index([userId])
+  @@map("user_racks")
+}
+
+/// Inventory2 furniture: which visual 8-slot rack sits on which floor pad (null = stored).
+model UserVisualRackPlacement {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @map("user_id")
+  roomId      Int      @map("room_id")
+  visualIndex Int      @map("visual_index")
+  floorSlot   Int?     @map("floor_slot")
+  purchased   Boolean  @default(false)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  room UserRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, visualIndex])
+  @@index([userId, roomId])
+  @@map("user_visual_rack_placements")
+}
+
+/// Inventory2 furniture: cooling fan mounted under a visual rack.
+model UserVisualFanPlacement {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @map("user_id")
+  roomId      Int      @map("room_id")
+  visualIndex Int      @map("visual_index")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  room UserRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, visualIndex])
+  @@index([userId, roomId])
+  @@map("user_visual_fan_placements")
+}
+
+// ── Mini Pass (timed progression: missions → XP → tier rewards; separate from OfferEvent shop) ──
+
+model MiniPassSeason {
+  id                   Int       @id @default(autoincrement())
+  slug                 String    @unique
+  titleI18n            Json      @map("title_i18n")
+  subtitleI18n         Json?     @map("subtitle_i18n")
+  startsAt             DateTime  @map("starts_at")
+  endsAt               DateTime  @map("ends_at")
+  maxLevel             Int       @map("max_level")
+  xpPerLevel           Int       @map("xp_per_level")
+  buyLevelPricePol     Decimal   @default(0) @map("buy_level_price_pol") @db.Decimal(20, 8)
+  completePassPricePol Decimal   @default(0) @map("complete_pass_price_pol") @db.Decimal(20, 8)
+  bannerImageUrl       String?   @map("banner_image_url")
+  isActive             Boolean   @default(true) @map("is_active")
+  deletedAt            DateTime? @map("deleted_at")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  levelRewards MiniPassLevelReward[]
+  missions     MiniPassMission[]
+  enrollments  UserMiniPassEnrollment[]
+  xpLedger     UserMiniPassXpLedger[]
+  purchases    UserMiniPassPurchase[]
+
+  @@index([startsAt, endsAt])
+  @@index([isActive, deletedAt])
+  @@map("mini_pass_seasons")
+}
+
+model MiniPassLevelReward {
+  id           Int      @id @default(autoincrement())
+  seasonId     Int      @map("season_id")
+  level        Int
+  rewardKind   String   @map("reward_kind")
+  minerId      Int?     @map("miner_id")
+  eventMinerId Int?     @map("event_miner_id")
+  hashRate     Float?   @map("hash_rate")
+  hashRateDays Int?     @map("hash_rate_days")
+  blkAmount    Decimal? @map("blk_amount") @db.Decimal(20, 8)
+  polAmount    Decimal? @map("pol_amount") @db.Decimal(20, 8)
+  titleI18n    Json?    @map("title_i18n")
+  sortOrder    Int      @default(0) @map("sort_order")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  season     MiniPassSeason            @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  miner      Miner?                    @relation(fields: [minerId], references: [id], onDelete: SetNull)
+  eventMiner EventMiner?               @relation(fields: [eventMinerId], references: [id], onDelete: SetNull)
+  claims     UserMiniPassRewardClaim[]
+
+  @@unique([seasonId, level])
+  @@index([seasonId])
+  @@map("mini_pass_level_rewards")
+}
+
+model MiniPassMission {
+  id              Int      @id @default(autoincrement())
+  seasonId        Int      @map("season_id")
+  cadence         String
+  missionType     String   @map("mission_type")
+  targetValue     Decimal  @map("target_value") @db.Decimal(24, 8)
+  xpReward        Int      @map("xp_reward")
+  titleI18n       Json     @map("title_i18n")
+  descriptionI18n Json?    @map("description_i18n")
+  gameSlug        String?  @map("game_slug")
+  isActive        Boolean  @default(true) @map("is_active")
+  sortOrder       Int      @default(0) @map("sort_order")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  season      MiniPassSeason                  @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  progress    UserMiniPassMissionProgress[]
+  xpGrants    UserMiniPassXpLedger[]
+  dedupeTicks UserMiniPassMissionDedupeTick[]
+
+  @@index([seasonId])
+  @@map("mini_pass_missions")
+}
+
+model UserMiniPassEnrollment {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @map("user_id")
+  seasonId   Int      @map("season_id")
+  totalXp    Int      @default(0) @map("total_xp")
+  enrolledAt DateTime @default(now()) @map("enrolled_at")
+
+  user   User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  season MiniPassSeason @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, seasonId])
+  @@index([seasonId])
+  @@map("user_mini_pass_enrollments")
+}
+
+model UserMiniPassXpLedger {
+  id             Int      @id @default(autoincrement())
+  userId         Int      @map("user_id")
+  seasonId       Int      @map("season_id")
+  amount         Int
+  source         String
+  idempotencyKey String   @unique @map("idempotency_key")
+  missionId      Int?     @map("mission_id")
+  periodKey      String?  @map("period_key")
+  metadataJson   Json?    @map("metadata_json")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  season  MiniPassSeason   @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  mission MiniPassMission? @relation(fields: [missionId], references: [id], onDelete: SetNull)
+
+  @@index([userId, seasonId])
+  @@map("user_mini_pass_xp_ledger")
+}
+
+model UserMiniPassMissionProgress {
+  id           Int       @id @default(autoincrement())
+  userId       Int       @map("user_id")
+  missionId    Int       @map("mission_id")
+  periodKey    String    @map("period_key")
+  currentValue Decimal   @default(0) @map("current_value") @db.Decimal(24, 8)
+  completedAt  DateTime? @map("completed_at")
+
+  user    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mission MiniPassMission @relation(fields: [missionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, missionId, periodKey])
+  @@index([userId, missionId])
+  @@map("user_mini_pass_mission_progress")
+}
+
+/// Idempotent application of an external signal (e.g. one BLK reward log) to a mission.
+model UserMiniPassMissionDedupeTick {
+  id        Int      @id @default(autoincrement())
+  missionId Int      @map("mission_id")
+  dedupeKey String   @map("dedupe_key")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  mission MiniPassMission @relation(fields: [missionId], references: [id], onDelete: Cascade)
+
+  @@unique([missionId, dedupeKey])
+  @@index([missionId])
+  @@map("user_mini_pass_mission_dedupe_ticks")
+}
+
+model UserMiniPassRewardClaim {
+  id            Int      @id @default(autoincrement())
+  userId        Int      @map("user_id")
+  levelRewardId Int      @map("level_reward_id")
+  claimedAt     DateTime @default(now()) @map("claimed_at")
+
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  levelReward MiniPassLevelReward @relation(fields: [levelRewardId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, levelRewardId])
+  @@index([userId])
+  @@map("user_mini_pass_reward_claims")
+}
+
+model UserMiniPassPurchase {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @map("user_id")
+  seasonId    Int      @map("season_id")
+  kind        String
+  levelsAdded Int      @default(0) @map("levels_added")
+  xpAdded     Int      @default(0) @map("xp_added")
+  pricePaid   Decimal  @map("price_paid") @db.Decimal(20, 8)
+  currency    String   @default("POL")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user   User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  season MiniPassSeason @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+
+  @@index([userId, seasonId])
+  @@map("user_mini_pass_purchases")
+}
+
+model TransparencyEntry {
+  id             Int       @id @default(autoincrement())
+  // Tipo: expense | income
+  type           String    @default("expense")
+  // Categoria (gastos): infrastructure | tooling | marketing | payroll | legal | misc
+  category       String    @default("misc")
+  // Categoria (receitas): sponsorship | donation | revenue | investment_return | other
+  incomeCategory String?   @map("income_category")
+  name           String
+  description    String?   @db.Text
+  provider       String? // ex: Hetzner, Cloudflare, GitHub
+  providerUrl    String?   @map("provider_url")
+  imageUrl       String?   @map("image_url") // comprovante / logo do patrocinador
+  amountUsd      Decimal   @map("amount_usd") @db.Decimal(20, 2)
+  amountOriginal Decimal?  @map("amount_original") @db.Decimal(20, 8)
+  currencyCode   String    @default("USD") @map("currency_code")
+  fxRateUsd      Decimal?  @map("fx_rate_usd") @db.Decimal(20, 8)
+  // Período: monthly | annual | one_time | daily
+  period         String    @default("monthly")
+  entryDate      DateTime? @map("entry_date")
+  direction      String?   @map("direction")
+  blockchain     String?   @map("blockchain")
+  walletAddress  String?   @map("wallet_address")
+  txHash         String?   @map("tx_hash")
+  referenceUrl   String?   @map("reference_url")
+  isOnChain      Boolean   @default(false) @map("is_on_chain")
+  isPaid         Boolean   @default(true) @map("is_paid")
+  isActive       Boolean   @default(true) @map("is_active")
+  notes          String?   @db.Text
+  sortOrder      Int       @default(0) @map("sort_order")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  @@index([isActive])
+  @@index([category])
+  @@index([type])
+  @@map("transparency_entries")
+}
+
+/// Singleton (id = 1): Polygon wallet address for the public transparency portal + admin on-chain audit.
+model TransparencyWalletSettings {
+  id        Int      @id @default(1)
+  address   String?
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("transparency_wallet_settings")
+}
+
+model TransparencyTrackedWallet {
+  id                         Int       @id @default(autoincrement())
+  label                      String
+  address                    String
+  chain                      String    @default("polygon")
+  assetSymbol                String    @default("POL") @map("asset_symbol")
+  explorerBaseUrl            String?   @map("explorer_base_url")
+  isActive                   Boolean   @default(true) @map("is_active")
+  isPublic                   Boolean   @default(true) @map("is_public")
+  includeInTotals            Boolean   @default(true) @map("include_in_totals")
+  displayMode                String    @default("total_received") @map("display_mode")
+  sortOrder                  Int       @default(0) @map("sort_order")
+  liquidityPoolsBackfilledAt DateTime? @map("liquidity_pools_backfilled_at")
+  /// When set, frontend shows this fixed USD value instead of the on-chain snapshot
+  /// (DeBank/multi-chain detection is hidden). Used for off-chain investments
+  /// (e.g. ASIC hardware, USD on exchange) that can't be auto-detected.
+  manualUsdValue             Float?    @map("manual_usd_value")
+  manualValueNote            String?   @map("manual_value_note")
+  createdAt                  DateTime  @default(now()) @map("created_at")
+  updatedAt                  DateTime  @updatedAt @map("updated_at")
+
+  snapshot       TransparencyWalletSnapshot?
+  liquidityPools TransparencyLiquidityPoolPosition[]
+
+  @@unique([chain, address])
+  @@index([isActive, sortOrder])
+  @@map("transparency_tracked_wallets")
+}
+
+/// Multi-chain on-chain snapshot for a tracked wallet.
+/// Populated by walletSnapshotCron every 30 min; served instantly to users.
+model TransparencyWalletSnapshot {
+  id        Int      @id @default(autoincrement())
+  walletId  Int      @unique @map("wallet_id")
+  totalUsd  Float?   @map("total_usd")
+  valuePol  Float?   @map("value_pol")
+  chains    Json
+  tokens    Json
+  nfts      Json
+  fetchedAt DateTime @map("fetched_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  wallet TransparencyTrackedWallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  @@map("transparency_wallet_snapshots")
+}
+
+/// Historical liquidity pool positions discovered for a tracked wallet.
+/// Active positions remain visible in the wallet today; legacy positions were
+/// previously seen but no longer appear in the current on-chain snapshot.
+model TransparencyLiquidityPoolPosition {
+  id              Int       @id @default(autoincrement())
+  walletId        Int       @map("wallet_id")
+  chainId         Int       @map("chain_id")
+  chainName       String    @map("chain_name")
+  contractAddress String    @map("contract_address")
+  tokenId         String    @map("token_id")
+  poolLabel       String?   @map("pool_label")
+  name            String?
+  description     String?
+  imageUrl        String?   @map("image_url")
+  tokenUri        String?   @map("token_uri")
+  explorerUrl     String    @map("explorer_url")
+  openseaUrl      String    @map("opensea_url")
+  liquidityUsd    Float?    @map("liquidity_usd")
+  status          String    @default("active")
+  firstSeenAt     DateTime  @default(now()) @map("first_seen_at")
+  lastSeenAt      DateTime  @default(now()) @map("last_seen_at")
+  closedAt        DateTime? @map("closed_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  wallet TransparencyTrackedWallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  @@unique([walletId, chainId, contractAddress, tokenId])
+  @@index([walletId, status, chainId])
+  @@index([status, updatedAt])
+  @@map("transparency_liquidity_pool_positions")
+}
+
+/// Admin-managed cards for the public transparency portal's "Outros Investimentos" tab —
+/// investments the project makes INTO other sites/platforms (not BlockMiner's own infra,
+/// see TransparencyEntry for that). Manually reported by the team, not on-chain tracked.
+model TransparencyExternalInvestment {
+  id                 Int      @id @default(autoincrement())
+  name               String
+  description        String?  @db.Text
+  imageUrl           String?  @map("image_url")
+  linkUrl            String?  @map("link_url")
+  amountInvestedUsd  Decimal  @default(0) @map("amount_invested_usd") @db.Decimal(20, 2)
+  amountWithdrawnUsd Decimal  @default(0) @map("amount_withdrawn_usd") @db.Decimal(20, 2)
+  roiForecast        String?  @map("roi_forecast")
+  isActive           Boolean  @default(true) @map("is_active")
+  sortOrder          Int      @default(0) @map("sort_order")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  @@index([isActive, sortOrder])
+  @@map("transparency_external_investments")
+}
+
+/// Physical mining hardware owned by the project (ASIC rigs, etc.) — admin-managed portal cards.
+model TransparencyHardwareAsset {
+  id              Int      @id @default(autoincrement())
+  name            String
+  manufacturer    String?
+  description     String?  @db.Text
+  /// running | maintenance | retired
+  status          String   @default("running")
+  statusLabel     String?  @map("status_label")
+  purchaseCostUsd Decimal  @map("purchase_cost_usd") @db.Decimal(20, 2)
+  transitWeeks    Int?     @map("transit_weeks")
+  purchaseNote    String?  @map("purchase_note") @db.Text
+  /// Array of { label, value } spec rows for the public portal.
+  specs           Json     @default("[]")
+  model3dUrl      String?  @map("model_3d_url")
+  sortOrder       Int      @default(0) @map("sort_order")
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  profitLogs TransparencyHardwareProfitLog[]
+
+  @@index([isActive, sortOrder])
+  @@map("transparency_hardware_assets")
+}
+
+/// Lightning/BTC mining payout logged against a hardware asset (sats → USD at snapshot price).
+model TransparencyHardwareProfitLog {
+  id              Int      @id @default(autoincrement())
+  hardwareAssetId Int      @map("hardware_asset_id")
+  /// When the payout was received (admin-entered).
+  earnedAt        DateTime @map("earned_at")
+  /// Satoshis received on Lightning (integer).
+  satoshiAmount   BigInt   @map("satoshi_amount")
+  /// BTC/USD price snapshot used to convert sats → USD (USDC ≈ USD).
+  btcUsdPrice     Decimal  @map("btc_usd_price") @db.Decimal(20, 8)
+  /// Derived: (satoshiAmount / 1e8) × btcUsdPrice
+  earnedUsd       Decimal  @map("earned_usd") @db.Decimal(20, 2)
+  notes           String?  @db.Text
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  hardwareAsset TransparencyHardwareAsset @relation(fields: [hardwareAssetId], references: [id], onDelete: Cascade)
+
+  @@index([hardwareAssetId, earnedAt])
+  @@map("transparency_hardware_profit_logs")
+}
+
+/// Singleton (id = 1): user app sidebar visibility, order, and nesting under Rewards group.
+model SidebarNavConfig {
+  id        Int      @id @default(1)
+  entries   Json
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("sidebar_nav_config")
+}
+
+/// Singleton (id = 1): ordem em que os tipos de torneio aparecem no público/admin.
+/// `typeOrder` é uma lista tipo ["MONTHLY","WEEKLY","DAILY","CUSTOM"]; tipos não listados vão pro fim.
+model TournamentDisplayConfig {
+  id        Int      @id @default(1)
+  typeOrder Json     @map("type_order")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("tournament_display_config")
+}
+
+/// Singleton (id = 1): Telegram bots/chats/topics for withdrawal alerts and proof posts.
+model WithdrawalTelegramSettings {
+  id                    Int      @id @default(1)
+  enabled               Boolean  @default(false)
+  privateAlertsEnabled  Boolean  @default(false) @map("private_alerts_enabled")
+  privateBotToken       String?  @map("private_bot_token")
+  privateChatId         String?  @map("private_chat_id")
+  publicProofsEnabled   Boolean  @default(false) @map("public_proofs_enabled")
+  publicBotToken        String?  @map("public_bot_token")
+  publicChatId          String?  @map("public_chat_id")
+  publicTopicId         String?  @map("public_topic_id")
+  captureEnabled        Boolean  @default(true) @map("capture_enabled")
+  browserExecutablePath String?  @map("browser_executable_path")
+  polygonscanBaseUrl    String?  @map("polygonscan_base_url")
+  updatedAt             DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("withdrawal_telegram_settings")
+}
+
+model TelegramOutboxEvent {
+  id                Int       @id @default(autoincrement())
+  type              String
+  status            String    @default("pending")
+  transactionId     Int?      @map("transaction_id")
+  userId            Int?      @map("user_id")
+  txHash            String?   @map("tx_hash")
+  amount            Decimal?  @db.Decimal(20, 8)
+  currency          String    @default("POL")
+  destinationWallet String?   @map("destination_wallet")
+  usernameSnapshot  String?   @map("username_snapshot")
+  payload           Json      @default("{}")
+  attempts          Int       @default(0)
+  lastError         String?   @map("last_error")
+  nextRunAt         DateTime  @default(now()) @map("next_run_at")
+  sentAt            DateTime? @map("sent_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  @@unique([transactionId, type])
+  @@index([status, nextRunAt])
+  @@index([type])
+  @@index([transactionId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("telegram_outbox_events")
+}
+
+/// Admin-managed channel profile for a credentialed YouTuber.
+model YoutuberProfile {
+  id                      Int      @id @default(autoincrement())
+  userId                  Int      @unique @map("user_id")
+  channelName             String   @map("channel_name")
+  channelPhoto            String?  @map("channel_photo")
+  channelUrl              String?  @map("channel_url")
+  bio                     String?
+  isCredentialed          Boolean  @default(true) @map("is_credentialed")
+  credentialRequestStatus String?  @map("credential_request_status")
+  credentialRejectNote    String?  @map("credential_reject_note")
+  createdAt               DateTime @default(now()) @map("created_at")
+  updatedAt               DateTime @updatedAt @map("updated_at")
+
+  user        User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  submissions YoutubeVideoSubmission[]
+
+  @@map("youtuber_profiles")
+}
+
+/// YouTuber video submission pending admin review.
+model YoutubeVideoSubmission {
+  id            Int       @id @default(autoincrement())
+  userId        Int       @map("user_id")
+  profileId     Int       @map("profile_id")
+  videoUrl      String    @map("video_url")
+  videoId       String    @map("video_id")
+  title         String?
+  status        String    @default("pending")
+  reviewedBy    Int?      @map("reviewed_by")
+  reviewNote    String?   @map("review_note") @db.Text
+  rewardMinerId Int?      @map("reward_miner_id")
+  rewardGranted Boolean   @default(false) @map("reward_granted")
+  submittedAt   DateTime  @default(now()) @map("submitted_at")
+  reviewedAt    DateTime? @map("reviewed_at")
+
+  user    User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  profile YoutuberProfile    @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  miner   Miner?             @relation(fields: [rewardMinerId], references: [id], onDelete: SetNull)
+  votes   YoutubeVideoVote[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([submittedAt])
+  @@map("youtube_video_submissions")
+}
+
+/// Community vote on an approved YouTube video submission (like/dislike).
+/// `value`: 1 = like, -1 = dislike. One row per (userId, submissionId).
+model YoutubeVideoVote {
+  id           Int      @id @default(autoincrement())
+  userId       Int      @map("user_id")
+  submissionId Int      @map("submission_id")
+  value        Int
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  user       User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  submission YoutubeVideoSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, submissionId])
+  @@index([submissionId])
+  @@map("youtube_video_votes")
+}
+
+/// Singleton (id=1): which Miner to grant when a video submission is approved.
+model YoutuberRewardSettings {
+  id      Int  @id @default(1)
+  minerId Int? @map("miner_id")
+
+  miner Miner? @relation(fields: [minerId], references: [id], onDelete: SetNull)
+
+  @@map("youtuber_reward_settings")
+}
+
+// ─── PARTNER GAMES ──────────────────────────────────────────────────────────
+//
+// Curated external games we embed in /games via iframe. Admin manages the
+// catalog (title, description, cover, iframe URL, fallback URL, affiliate
+// link). The frame URL host must be on the CSP allowlist; we maintain that
+// dynamically through the existing internal-offerwall iframe-host service.
+//
+/// External (partner) game shown alongside our own minigames in /games.
+model PartnerGame {
+  id               Int       @id @default(autoincrement())
+  slug             String    @unique
+  title            String
+  description      String?
+  coverImageUrl    String?   @map("cover_image_url")
+  iframeUrl        String    @map("iframe_url")
+  fallbackUrl      String?   @map("fallback_url")
+  partnerUrl       String?   @map("partner_url") // affiliate / "Visit partner" link
+  /// iframe = embed on /games/partner/:slug; external = open partner site in new tab
+  launchMode       String    @default("iframe") @map("launch_mode")
+  embedStatus      String?   @map("embed_status")
+  embedBlockReason String?   @map("embed_block_reason")
+  embedProbe       Json?     @map("embed_probe")
+  embedProbedAt    DateTime? @map("embed_probed_at")
+  isVisible        Boolean   @default(true) @map("is_visible")
+  sortOrder        Int       @default(0) @map("sort_order")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  votes    PartnerGameVote[]
+  sessions PartnerGameSession[]
+
+  @@index([isVisible, sortOrder])
+  @@map("partner_games")
+}
+
+/// Community vote on a partner game (1 = like, -1 = dislike, one row per user/game).
+model PartnerGameVote {
+  id            Int      @id @default(autoincrement())
+  userId        Int      @map("user_id")
+  partnerGameId Int      @map("partner_game_id")
+  value         Int
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  partnerGame PartnerGame @relation(fields: [partnerGameId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, partnerGameId])
+  @@index([partnerGameId])
+  @@map("partner_game_votes")
+}
+
+/// Play session for partner-game rewards (+5 H/s per active minute).
+model PartnerGameSession {
+  id               String    @id @default(uuid())
+  userId           Int       @map("user_id")
+  partnerGameId    Int       @map("partner_game_id")
+  /// active | paused | ended
+  status           String    @default("active")
+  accumulatedMs    Int       @default(0) @map("accumulated_ms")
+  rewardCycleMs    Int       @default(0) @map("reward_cycle_ms")
+  totalHashGranted Float     @default(0) @map("total_hash_granted")
+  grantsCount      Int       @default(0) @map("grants_count")
+  lastHeartbeatAt  DateTime? @map("last_heartbeat_at")
+  startedAt        DateTime  @default(now()) @map("started_at")
+  endedAt          DateTime? @map("ended_at")
+
+  user        User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  partnerGame PartnerGame               @relation(fields: [partnerGameId], references: [id], onDelete: Cascade)
+  events      PartnerGameSessionEvent[]
+
+  @@index([userId, status])
+  @@index([partnerGameId])
+  @@index([lastHeartbeatAt])
+  @@map("partner_game_sessions")
+}
+
+/// Analytics events for partner play sessions.
+model PartnerGameSessionEvent {
+  id            Int      @id @default(autoincrement())
+  sessionId     String   @map("session_id")
+  userId        Int      @map("user_id")
+  partnerGameId Int      @map("partner_game_id")
+  event         String
+  meta          Json?
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  session PartnerGameSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([partnerGameId, createdAt])
+  @@index([userId, createdAt])
+  @@map("partner_game_session_events")
+}
+
+// ─── TOURNAMENTS ────────────────────────────────────────────────────────────
+
+enum TournamentType {
+  DAILY
+  WEEKLY
+  MONTHLY
+  CUSTOM
+}
+
+enum TournamentMetric {
+  HASHRATE
+  BLOCKS_MINED
+  CHECKINS
+  TASKS_COMPLETED
+  DEPOSITS_POL
+  DEPOSITS_USD
+  OFFERS_INTERNAL
+  OFFERS_EXTERNAL
+  OFFERS_ALL
+  MINIGAME_WINS
+  FAUCET
+  SHORTLINK
+  AUTO_MINING
+}
+
+enum TournamentStatus {
+  SCHEDULED
+  ACTIVE
+  ENDED
+  CANCELLED
+}
+
+enum TournamentPrizeType {
+  POL
+  BLK
+  MINING_BOOST
+  MACHINE
+}
+
+model Tournament {
+  id                     Int                               @id @default(autoincrement())
+  name                   String
+  description            String?
+  type                   TournamentType
+  metric                 TournamentMetric
+  metricConfig           Json?                             @map("metric_config")
+  startsAt               DateTime                          @map("starts_at")
+  endsAt                 DateTime                          @map("ends_at")
+  status                 TournamentStatus                  @default(SCHEDULED)
+  recurring              Boolean                           @default(false)
+  scoresReconciledAt     DateTime?                         @map("scores_reconciled_at")
+  version                Int                               @default(0)
+  prizes                 TournamentPrize[]
+  entries                TournamentEntry[]
+  scoreContributions     TournamentScoreContribution[]
+  scoreDrifts            TournamentScoreDrift[]
+  offerwallMigration     TournamentOfferwallMigration?
+  shadowValidationAlerts TournamentShadowValidationAlert[]
+  createdAt              DateTime                          @default(now()) @map("created_at")
+  updatedAt              DateTime                          @updatedAt @map("updated_at")
+
+  @@index([status, startsAt])
+  @@index([status, endsAt])
+  @@index([status, metric])
+  @@map("tournaments")
+}
+
+model TournamentPrize {
+  id            Int                 @id @default(autoincrement())
+  tournamentId  Int                 @map("tournament_id")
+  tournament    Tournament          @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  rankFrom      Int                 @map("rank_from")
+  rankTo        Int                 @map("rank_to")
+  prizeType     TournamentPrizeType @map("prize_type")
+  polAmount     Decimal?            @map("pol_amount") @db.Decimal(20, 8)
+  blkAmount     Decimal?            @map("blk_amount") @db.Decimal(20, 8)
+  boostHashRate Float?              @map("boost_hash_rate")
+  boostHours    Int?                @map("boost_hours")
+  minerId       Int?                @map("miner_id")
+  minerCount    Int                 @default(1) @map("miner_count")
+
+  miner Miner? @relation(fields: [minerId], references: [id], onDelete: SetNull)
+
+  @@index([tournamentId])
+  @@map("tournament_prizes")
+}
+
+model TournamentEntry {
+  id                  Int        @id @default(autoincrement())
+  tournamentId        Int        @map("tournament_id")
+  tournament          Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  userId              Int        @map("user_id")
+  user                User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  score               Float      @default(0)
+  rank                Int?
+  firstContributionAt DateTime?  @map("first_contribution_at")
+  rewardGranted       Boolean    @default(false) @map("reward_granted")
+  rewardGrantedAt     DateTime?  @map("reward_granted_at")
+  createdAt           DateTime   @default(now()) @map("created_at")
+  updatedAt           DateTime   @updatedAt @map("updated_at")
+
+  @@unique([tournamentId, userId])
+  @@index([tournamentId, score(sort: Desc)])
+  @@index([userId])
+  @@map("tournament_entries")
+}
+
+/// Normalized offerwall/PTC actions — single source for incremental tournament scoring.
+model TournamentAction {
+  id                 BigInt   @id @default(autoincrement())
+  userId             Int      @map("user_id")
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider           String
+  actionCount        Int      @map("action_count")
+  executedAtUTC      DateTime @map("executed_at_utc")
+  sourceId           String   @map("source_id")
+  tournamentEligible Boolean  @default(true) @map("tournament_eligible")
+  metadata           Json?
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  @@unique([provider, sourceId])
+  @@index([userId, executedAtUTC])
+  @@index([executedAtUTC])
+  @@map("tournament_actions")
+}
+
+/// Detect-only drift records (offerwall Engine V2). Never used for auto-correction.
+model TournamentScoreDrift {
+  id                        BigInt     @id @default(autoincrement())
+  tournamentId              Int        @map("tournament_id")
+  tournament                Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  userId                    Int?       @map("user_id")
+  actionTotal               Float?     @map("action_total")
+  contributionTotal         Float?     @map("contribution_total")
+  entryScore                Float?     @map("entry_score")
+  deltaActionsContributions Float?     @map("delta_actions_contributions")
+  deltaContributionsEntry   Float?     @map("delta_contributions_entry")
+  detectedAt                DateTime   @default(now()) @map("detected_at")
+
+  @@index([tournamentId, detectedAt])
+  @@map("tournament_score_drifts")
+}
+
+/// Global offerwall Engine V2 migration state (not tournament metric_config).
+model TournamentOfferwallMigrationGlobal {
+  id                    Int       @id @default(1)
+  globalBackfillAt      DateTime? @map("global_backfill_at")
+  globalBackfillActions Int       @default(0) @map("global_backfill_actions")
+  globalBackfillSkipped Int       @default(0) @map("global_backfill_skipped")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  @@map("tournament_offerwall_migration_global")
+}
+
+/// Per-tournament offerwall migration / seal / shadow validation control.
+model TournamentOfferwallMigration {
+  tournamentId           Int        @id @map("tournament_id")
+  tournament             Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  status                 String     @default("pending")
+  baselineChecksum       String?    @map("baseline_checksum")
+  verifiedParticipants   Int?       @map("verified_participants")
+  verifiedLeaderScore    Float?     @map("verified_leader_score")
+  sealedAt               DateTime?  @map("sealed_at")
+  shadowValidationEndsAt DateTime?  @map("shadow_validation_ends_at")
+  lastShadowCheckAt      DateTime?  @map("last_shadow_check_at")
+  createdAt              DateTime   @default(now()) @map("created_at")
+  updatedAt              DateTime   @updatedAt @map("updated_at")
+
+  @@map("tournament_offerwall_migrations")
+}
+
+/// Shadow validation: legacy batch vs ledger (detect-only, never mutates rankings).
+model TournamentShadowValidationAlert {
+  id           BigInt     @id @default(autoincrement())
+  tournamentId Int        @map("tournament_id")
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  userId       Int        @map("user_id")
+  legacyScore  Float      @map("legacy_score")
+  ledgerScore  Float      @map("ledger_score")
+  delta        Float
+  detectedAt   DateTime   @default(now()) @map("detected_at")
+
+  @@index([tournamentId, detectedAt])
+  @@map("tournament_shadow_validation_alerts")
+}
+
+/// Append-only ledger of score deltas per tournament (audit + idempotent projection).
+model TournamentScoreContribution {
+  id           BigInt     @id @default(autoincrement())
+  tournamentId Int        @map("tournament_id")
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  userId       Int        @map("user_id")
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sourceType   String     @map("source_type")
+  sourceId     String     @map("source_id")
+  metricValue  Decimal    @map("metric_value") @db.Decimal(20, 8)
+  eventAt      DateTime   @map("event_at")
+  metadata     Json?
+  createdAt    DateTime   @default(now()) @map("created_at")
+
+  @@unique([tournamentId, sourceType, sourceId])
+  @@index([tournamentId, userId])
+  @@index([tournamentId, eventAt])
+  @@map("tournament_score_contributions")
+}
+
+/// Transactional outbox for tournament domain events (deposit confirmed → score projection).
+model TournamentDomainOutbox {
+  id             Int      @id @default(autoincrement())
+  eventType      String   @map("event_type")
+  payload        Json
+  status         String   @default("pending")
+  retryCount     Int      @default(0) @map("retry_count")
+  nextRunAt      DateTime @default(now()) @map("next_run_at")
+  lastError      String?  @map("last_error")
+  idempotencyKey String   @unique @map("idempotency_key")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@index([status, nextRunAt])
+  @@index([eventType])
+  @@map("tournament_domain_outbox")
+}
+
+// ─── Burn events ─────────────────────────────────────────────────────────────
+
+model BurnEvent {
+  id                Int       @id @default(autoincrement())
+  title             String
+  description       String?
+  imageUrl          String?   @map("image_url")
+  requiredHashRate  Float     @map("required_hash_rate")
+  rewardMinerId     Int       @map("reward_miner_id")
+  claimLimitPerUser Int       @default(1) @map("claim_limit_per_user")
+  stockTotal        Int?      @map("stock_total")
+  stockClaimed      Int       @default(0) @map("stock_claimed")
+  startsAt          DateTime? @map("starts_at")
+  endsAt            DateTime? @map("ends_at")
+  isActive          Boolean   @default(true) @map("is_active")
+  deletedAt         DateTime? @map("deleted_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  rewardMiner Miner       @relation(fields: [rewardMinerId], references: [id], onDelete: Restrict)
+  claims      BurnClaim[]
+
+  @@index([isActive, deletedAt])
+  @@map("burn_events")
+}
+
+model BurnClaim {
+  id                 Int      @id @default(autoincrement())
+  eventId            Int      @map("event_id")
+  userId             Int      @map("user_id")
+  totalHashRate      Float    @map("total_hash_rate")
+  burnedMachinesJson Json     @map("burned_machines_json")
+  rewardMinerName    String   @map("reward_miner_name")
+  rewardInboxId      Int?     @map("reward_inbox_id")
+  claimedAt          DateTime @default(now()) @map("claimed_at")
+
+  event BurnEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([eventId, userId])
+  @@index([userId])
+  @@map("burn_claims")
+}
+
+model EnergyTaxCharge {
+  id                Int      @id @default(autoincrement())
+  userId            Int      @map("user_id")
+  /// 00:00 BRT (America/Sao_Paulo) do dia coberto por essa cobrança.
+  periodDayStartsAt DateTime @map("period_day_starts_at")
+  /// "daily" = pagamento manual (5%/7 = 0.7143%) | "auto" = cobrança do cron de segunda 21h BRT (15%/7 = 2.1429%)
+  mode              String
+  rewardsBase       Decimal  @map("rewards_base") @db.Decimal(20, 8)
+  ratePercent       Decimal  @map("rate_percent") @db.Decimal(6, 4)
+  amount            Decimal  @db.Decimal(20, 8)
+  /// paid (debitado integral) | partial (debitou o que tinha) | skipped (saldo zero)
+  status            String   @default("paid")
+  notes             String?
+  transactionId     Int?     @unique @map("transaction_id")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transaction Transaction? @relation(fields: [transactionId], references: [id])
+
+  @@unique([userId, periodDayStartsAt])
+  @@index([userId, createdAt])
+  @@map("energy_tax_charges")
+}
+
+model AdminUser {
+  id           Int       @id @default(autoincrement())
+  name         String
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  role         String    @default("admin")
+  permissions  Json?
+  isActive     Boolean   @default(true) @map("is_active")
+  lastLoginAt  DateTime? @map("last_login_at")
+  lastLoginIp  String?   @map("last_login_ip")
+  lastLoginUa  String?   @map("last_login_ua")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at")
+  createdById  Int?      @map("created_by_id")
+  updatedById  Int?      @map("updated_by_id")
+
+  sessions       AdminSession[]
+  auditLogs      AdminAuditLog[]
+  passwordResets AdminPasswordReset[]
+
+  @@map("admin_users")
+}
+
+model AdminSession {
+  id             String    @id
+  adminId        Int       @map("admin_id")
+  ipAddress      String?   @map("ip_address")
+  userAgent      String?   @map("user_agent")
+  country        String?
+  city           String?
+  expiresAt      DateTime  @map("expires_at")
+  lastActivityAt DateTime  @default(now()) @map("last_activity_at")
+  revokedAt      DateTime? @map("revoked_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  admin AdminUser @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@index([expiresAt])
+  @@map("admin_sessions")
+}
+
+model AdminAuditLog {
+  id         BigInt   @id @default(autoincrement())
+  adminId    Int?     @map("admin_id")
+  adminEmail String?  @map("admin_email")
+  sessionId  String?  @map("session_id")
+  action     String
+  module     String?
+  resource   String?
+  resourceId String?  @map("resource_id")
+  oldValue   Json?    @map("old_value")
+  newValue   Json?    @map("new_value")
+  ipAddress  String?  @map("ip_address")
+  userAgent  String?  @map("user_agent")
+  success    Boolean  @default(true)
+  errorMsg   String?  @map("error_msg")
+  durationMs Int?     @map("duration_ms")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  admin AdminUser? @relation(fields: [adminId], references: [id], onDelete: SetNull)
+
+  @@index([adminId])
+  @@index([createdAt])
+  @@index([action])
+  @@index([module])
+  @@map("admin_audit_logs")
+}
+
+model AdminPasswordReset {
+  id        Int       @id @default(autoincrement())
+  adminId   Int       @map("admin_id")
+  token     String    @unique
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  admin AdminUser @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@map("admin_password_resets")
+}
+
+// ============================================================================
+// AntiBot Engine V1 — parallel detection layer (never blocks; only scores)
+// ============================================================================
+
+/// Per-user rolling risk/trust profile, updated incrementally by the Risk Engine.
+model AntibotProfile {
+  userId         Int       @id @map("user_id")
+  riskScore      Int       @default(0) @map("risk_score")
+  trustScore     Int       @default(100) @map("trust_score")
+  peakRiskScore  Int       @default(0) @map("peak_risk_score")
+  evidenceCount  Int       @default(0) @map("evidence_count")
+  trusted        Boolean   @default(false) @map("trusted")
+  trustedReason  String?   @map("trusted_reason")
+  lastEventAt    DateTime? @map("last_event_at")
+  lastComputedAt DateTime  @default(now()) @map("last_computed_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("antibot_profiles")
+}
+
+/// Individual piece of evidence collected by a detector. Append-only history.
+model AntibotEvidence {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @map("user_id")
+  sessionId   String?  @map("session_id")
+  eventType   String   @default("telemetry") @map("event_type")
+  detector    String
+  code        String
+  reason      String
+  weight      Int      @default(0)
+  scoreBefore Int      @default(0) @map("score_before")
+  scoreAfter  Int      @default(0) @map("score_after")
+  severity    String   @default("info")
+  ip          String?
+  deviceId    String?  @map("device_id")
+  fingerprint String?
+  metadata    Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, createdAt])
+  @@index([detector])
+  @@index([code])
+  @@index([severity])
+  @@index([ip])
+  @@index([deviceId])
+  @@index([fingerprint])
+  @@index([createdAt])
+  @@index([eventType])
+  @@map("antibot_evidence")
+}
+
+/// Session fingerprint snapshot for timeline / geo analysis.
+model AntibotSession {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @map("user_id")
+  sessionId   String   @map("session_id")
+  ip          String?
+  country     String?
+  asn         String?
+  browser     String?
+  os          String?  @map("os")
+  platform    String?
+  deviceId    String?  @map("device_id")
+  fingerprint String?
+  userAgent   String?  @map("user_agent")
+  language    String?
+  timezone    String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  lastSeenAt  DateTime @default(now()) @map("last_seen_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, sessionId])
+  @@index([userId])
+  @@index([deviceId])
+  @@index([ip])
+  @@index([fingerprint])
+  @@index([createdAt])
+  @@map("antibot_sessions")
+}
+
+/// Stable device identity derived from canvas/webgl/hardware signals.
+/// `userCount`/`accountCount` are maintained by the DeviceDetector.
+model AntibotDevice {
+  deviceId      String   @id @map("device_id")
+  fingerprint   String?
+  canvasHash    String?  @map("canvas_hash")
+  webglVendor   String?  @map("webgl_vendor")
+  webglRenderer String?  @map("webgl_renderer")
+  platform      String?
+  language      String?
+  timezone      String?
+  screen        String?
+  userAgent     String?  @map("user_agent")
+  accountCount  Int      @default(1) @map("account_count")
+  firstSeenAt   DateTime @default(now()) @map("first_seen_at")
+  lastSeenAt    DateTime @default(now()) @map("last_seen_at")
+
+  @@index([fingerprint])
+  @@index([canvasHash])
+  @@index([accountCount])
+  @@index([lastSeenAt])
+  @@map("antibot_devices")
+}
+
+/// Internal admin-only alerts generated when thresholds are crossed.
+model AntibotAlert {
+  id             Int       @id @default(autoincrement())
+  type           String
+  severity       String    @default("medium")
+  status         String    @default("open")
+  userId         Int?      @map("user_id")
+  riskScore      Int       @default(0) @map("risk_score")
+  deviceId       String?   @map("device_id")
+  ip             String?
+  fingerprint    String?
+  details        Json?
+  message        String?
+  createdAt      DateTime  @default(now()) @map("created_at")
+  acknowledgedAt DateTime? @map("acknowledged_at")
+  resolvedAt     DateTime? @map("resolved_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([severity])
+  @@index([type])
+  @@index([deviceId])
+  @@index([ip])
+  @@index([fingerprint])
+  @@index([createdAt])
+  @@map("antibot_alerts")
+}
+
+// ── Sala (protótipo): grid 2D top-down estilo RollerCoin para posicionar racks ──
+// Admin sobe o catálogo de racks (imagem + stats); usuário posiciona livremente.
+
+// Rack catalog — admin uploads rack types (image + stats). Users drag these into slots.
+model SalaRack {
+  id         Int      @id @default(autoincrement())
+  name       String
+  imageUrl   String   @map("image_url")
+  hashRate   Float    @default(0) @map("hash_rate")
+  width      Int      @default(1)
+  height     Int      @default(1)
+  slotCount  Int      @default(8) @map("slot_count")
+  /**
+   * Miner bay positions inside the rack's own image, as fractions (0..1) of the rack's drawn box:
+   * [{x,y,w,h}, ...]. Length should track slotCount. Empty/null = fall back to an auto bottom row.
+   */
+  minerSlots Json?    @map("miner_slots")
+  sortOrder  Int      @default(0) @map("sort_order")
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  tiles SalaTile[]
+
+  @@map("sala_racks")
+}
+
+// Per-room canvas config (roomNumber 1..N) — layout dimensions/background set by admin.
+model SalaCanvas {
+  id         Int      @id @default(autoincrement())
+  roomNumber Int      @unique @map("room_number")
+  gridWidth  Int      @default(12) @map("grid_width")
+  gridHeight Int      @default(8) @map("grid_height")
+  bgImageUrl String?  @map("bg_image_url")
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("sala_canvas")
+}
+
+// Admin-authored rack spots on a room, positioned freely as fractions (0..1) of the room image.
+model SalaSlot {
+  id         Int      @id @default(autoincrement())
+  roomNumber Int      @default(1) @map("room_number")
+  xPct       Float    @default(0.4) @map("x_pct")
+  yPct       Float    @default(0.4) @map("y_pct")
+  wPct       Float    @default(0.08) @map("w_pct")
+  hPct       Float    @default(0.16) @map("h_pct")
+  sortOrder  Int      @default(0) @map("sort_order")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  tiles      SalaTile[]
+  tileMiners SalaTileMiner[]
+
+  @@index([roomNumber])
+  @@map("sala_slots")
+}
+
+// A user's personalization: which rack occupies a given admin slot. Position comes from the slot.
+model SalaTile {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @map("user_id")
+  slotId     Int      @map("slot_id")
+  salaRackId Int      @map("sala_rack_id")
+  placedAt   DateTime @default(now()) @map("placed_at")
+
+  slot     SalaSlot @relation(fields: [slotId], references: [id], onDelete: Cascade)
+  salaRack SalaRack @relation(fields: [salaRackId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, slotId])
+  @@index([userId])
+  @@index([slotId])
+  @@map("sala_tiles")
+}
+
+// A miner (the user's own owned machine) placed into a rack sub-slot at a given canvas slot.
+model SalaTileMiner {
+  id                 Int      @id @default(autoincrement())
+  userId             Int      @map("user_id")
+  slotId             Int      @map("slot_id")
+  minerIndex         Int      @map("miner_index")
+  userOwnedMachineId Int      @map("user_owned_machine_id")
+  placedAt           DateTime @default(now()) @map("placed_at")
+
+  slot SalaSlot @relation(fields: [slotId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, slotId, minerIndex])
+  @@unique([userId, userOwnedMachineId])
+  @@index([userId])
+  @@index([slotId])
+  @@map("sala_tile_miners")
+}
+
+/// Transactional outbox for Kafka domain events (publish cron drains unpublished rows).
+model EventOutbox {
+  id          BigInt    @id @default(autoincrement())
+  eventId     String    @unique @map("event_id") @db.VarChar(64)
+  topic       String    @db.VarChar(128)
+  payloadJson Json      @map("payload_json")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  publishedAt DateTime? @map("published_at")
+
+  @@index([publishedAt, id])
+  @@index([topic, createdAt])
+  @@map("event_outbox")
+}
+
+/// Idempotency for stats materializer (Kafka eventId).
+model StatsEventDedupe {
+  eventId     String   @id @map("event_id") @db.VarChar(64)
+  consumedAt  DateTime @default(now()) @map("consumed_at")
+
+  @@map("stats_event_dedupe")
+}
+
+/// Daily POL earnings by source (UTC calendar day) — fed by Kafka consumer.
+model UserStatsEarningsDaily {
+  id        BigInt   @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  dayUtc    DateTime @map("day_utc") @db.Date
+  source    String   @db.VarChar(64)
+  amountPol Decimal  @map("amount_pol") @db.Decimal(24, 12)
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId, dayUtc, source])
+  @@index([userId, dayUtc])
+  @@map("user_stats_earnings_daily")
+}
+
+/// All-time POL earnings rollup by source — fed by Kafka consumer.
+model UserStatsEarningsTotal {
+  id        BigInt   @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  source    String   @db.VarChar(64)
+  amountPol Decimal  @map("amount_pol") @db.Decimal(24, 12)
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId, source])
+  @@index([userId])
+  @@map("user_stats_earnings_total")
+}

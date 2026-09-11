@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 48" fill="none">
+  <defs>
+    <linearGradient id="srGateMetal" x1="0" y1="0" x2="96" y2="0" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#020617"/>
+      <stop offset="0.18" stop-color="#1E293B"/>
+      <stop offset="0.5" stop-color="#475569"/>
+      <stop offset="0.82" stop-color="#1E293B"/>
+      <stop offset="1" stop-color="#020617"/>
+    </linearGradient>
+    <linearGradient id="srGateAmber" x1="0" y1="0" x2="0" y2="48" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FBBF24"/>
+      <stop offset="1" stop-color="#B45309"/>
+    </linearGradient>
+  </defs>
+  <rect x="6" y="0" width="84" height="48" fill="url(#srGateMetal)"/>
+  <rect x="2" y="0" width="6" height="48" fill="url(#srGateAmber)"/>
+  <rect x="88" y="0" width="6" height="48" fill="url(#srGateAmber)" opacity="0.7"/>
+  <rect x="16" y="6" width="10" height="36" rx="1" fill="#0F172A"/>
+  <rect x="32" y="6" width="10" height="36" rx="1" fill="#0F172A"/>
+  <rect x="48" y="6" width="10" height="36" rx="1" fill="#0F172A"/>
+  <rect x="64" y="6" width="10" height="36" rx="1" fill="#0F172A"/>
+  <rect x="18" y="10" width="6" height="6" fill="#22D3EE" opacity="0.85"/>
+  <rect x="34" y="18" width="6" height="6" fill="#F59E0B" opacity="0.8"/>
+  <rect x="50" y="12" width="6" height="6" fill="#22D3EE" opacity="0.7"/>
+  <rect x="66" y="22" width="6" height="6" fill="#F59E0B" opacity="0.75"/>
+  <rect x="18" y="28" width="6" height="6" fill="#F59E0B" opacity="0.55"/>
+  <rect x="34" y="32" width="6" height="6" fill="#22D3EE" opacity="0.6"/>
+  <path d="M14 0 H82" stroke="#67E8F9" stroke-opacity="0.18" stroke-width="1"/>
+  <path d="M14 48 H82" stroke="#67E8F9" stroke-opacity="0.12" stroke-width="1"/>
+</svg>

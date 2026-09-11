@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>BlockMiner — Explorador de Arquitetura</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root{
+    --bg:#0b0f14; --panel:#121821; --panel2:#0e141c; --line:#243040; --text:#e6edf3; --muted:#8b9bb0;
+    --accent:#4dd0e1; --folder:#5aa9e6; --folder-open:#ffca67; --file:#8b9bb0;
+    --hover:#1a2330; --sel:#17232f; --selborder:#4dd0e1;
+  }
+  @media (prefers-color-scheme: light){
+    :root{ --bg:#f4f6f9; --panel:#ffffff; --panel2:#eef1f5; --line:#d7dee6; --text:#1b2733; --muted:#5b6b7c;
+           --hover:#eaf1fb; --sel:#e3f2fb; }
+  }
+  :root[data-theme="light"]{ --bg:#f4f6f9; --panel:#ffffff; --panel2:#eef1f5; --line:#d7dee6; --text:#1b2733; --muted:#5b6b7c; --hover:#eaf1fb; --sel:#e3f2fb; }
+  :root[data-theme="dark"]{ --bg:#0b0f14; --panel:#121821; --panel2:#0e141c; --line:#243040; --text:#e6edf3; --muted:#8b9bb0; --hover:#1a2330; --sel:#17232f; }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden}
+  header{background:var(--panel);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  header h1{font-size:15px;margin:0;font-weight:700;white-space:nowrap;display:flex;align-items:center;gap:8px}
+  header .sub{color:var(--muted);font-size:11px}
+  #search{flex:1;min-width:140px;max-width:280px;padding:7px 10px;border-radius:7px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-size:12px}
+  .btn{padding:6px 11px;border-radius:7px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-size:11px;cursor:pointer;display:inline-flex;align-items:center;gap:5px}
+  .btn:hover{border-color:var(--accent);color:var(--accent)}
+  .layout{display:flex;height:calc(100vh - 47px)}
+  #tree-pane{width:420px;min-width:260px;max-width:60%;overflow:auto;border-right:1px solid var(--line);background:var(--panel);padding:10px 6px}
+  #resizer{width:5px;cursor:col-resize;background:transparent}
+  #resizer:hover{background:var(--accent)}
+  #detail-pane{flex:1;overflow:auto;padding:22px 26px;background:var(--bg)}
+  ul.tree{list-style:none;margin:0;padding-left:0}
+  ul.tree ul.tree{padding-left:18px;border-left:1px dashed var(--line);margin-left:9px}
+  li.node{margin:1px 0}
+  .row{display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:6px;cursor:pointer;font-size:13px;user-select:none;white-space:nowrap}
+  .row:hover{background:var(--hover)}
+  .row.selected{background:var(--sel);outline:1px solid var(--selborder)}
+  .row .caret{width:14px;height:14px;flex:0 0 14px;display:flex;align-items:center;justify-content:center;color:var(--muted);transition:transform .12s}
+  .row.open>.caret{transform:rotate(90deg)}
+  .row .caret svg{width:9px;height:9px}
+  .row .icon{width:16px;height:16px;flex:0 0 16px;display:flex}
+  .row .icon svg{width:16px;height:16px}
+  .row .label{overflow:hidden;text-overflow:ellipsis}
+  .row .count{margin-left:auto;font-size:10px;color:var(--muted);background:var(--panel2);border:1px solid var(--line);border-radius:99px;padding:0 6px}
+  .children{display:none}
+  .children.open{display:block}
+  .hidden-search{display:none !important}
+
+  .icon-folder{color:var(--folder)}
+  .icon-folder-open{color:var(--folder-open)}
+  .icon-file{color:var(--file)}
+  .icon-core{color:#81c784}
+  .icon-money{color:#f06292}
+  .icon-mining{color:#ffb74d}
+  .icon-social{color:#ba68c8}
+  .icon-ads{color:#ff8a65}
+  .icon-admin{color:#e57373}
+  .icon-frontend{color:#64b5f6}
+  .icon-data{color:#4dd0e1}
+
+  #detail-pane h2{margin:0 0 4px;font-size:20px;display:flex;align-items:center;gap:10px}
+  #detail-pane .path{color:var(--muted);font-size:12px;font-family:ui-monospace,monospace;margin-bottom:16px}
+  #detail-pane .desc{font-size:14px;line-height:1.7;max-width:760px}
+  #detail-pane .desc p{margin:0 0 10px}
+  #detail-pane .desc code{background:var(--panel);border:1px solid var(--line);padding:1px 6px;border-radius:5px;font-size:12.5px}
+  #detail-pane pre.tree-preview{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:14px 16px;font-size:12.5px;line-height:1.7;overflow-x:auto;max-width:760px;margin-top:10px}
+  #detail-pane .badges{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+  .badge{font-size:10.5px;padding:3px 9px;border-radius:99px;background:var(--panel);border:1px solid var(--line);color:var(--muted);font-weight:600}
+  .badge.warn{color:#e57373;border-color:#e5737355}
+  .badge.ok{color:#81c784;border-color:#81c78455}
+  .empty-state{color:var(--muted);font-size:13px;display:flex;flex-direction:column;align-items:flex-start;gap:10px;max-width:600px}
+  .empty-state svg{width:46px;height:46px;color:var(--muted);opacity:.5}
+  .rule-flow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:12px 14px;background:var(--panel);border:1px solid var(--line);border-radius:9px;font-size:13px;font-weight:600;max-width:760px;margin:12px 0}
+  .rule-flow .arrow{color:var(--muted);font-weight:400}
+  ::-webkit-scrollbar{width:9px;height:9px}
+  ::-webkit-scrollbar-thumb{background:var(--line);border-radius:5px}
+
+  /* ---------- lousa / mapa mental (canvas de nós) ---------- */
+  #mindmap-wrap{border:1px solid var(--line);border-radius:12px;background:
+    radial-gradient(circle at 1px 1px, var(--line) 1px, transparent 0) 0 0/18px 18px, var(--panel2);
+    margin-bottom:18px;overflow:hidden;position:relative}
+  #mindmap-svg{display:block;width:100%;height:340px;cursor:grab}
+  #mindmap-svg:active{cursor:grabbing}
+  .mm-edge{fill:none;stroke:var(--line);stroke-width:1.6}
+  .mm-node-circle{stroke-width:2;cursor:pointer;transition:transform .12s}
+  .mm-node-group:hover .mm-node-circle{filter:brightness(1.25)}
+  .mm-node-group{cursor:pointer}
+  .mm-node-label{font-size:11.5px;fill:var(--text);pointer-events:none;font-weight:600}
+  .mm-node-sub{font-size:9.5px;fill:var(--muted);pointer-events:none}
+  .mm-center .mm-node-circle{stroke:var(--accent);stroke-width:2.5}
+  .mm-center .mm-node-label{font-size:13px}
+  .mm-badge-dot{r:4;stroke:var(--panel2);stroke-width:1.5}
+  .mm-hint{position:absolute;top:8px;right:12px;font-size:10px;color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:99px;padding:2px 9px;pointer-events:none}
+  .live-badge{font-size:10px;color:var(--muted);display:inline-flex;align-items:center;gap:4px}
+  .live-dot{width:6px;height:6px;border-radius:50%;background:#81c784;display:inline-block;box-shadow:0 0 0 0 rgba(129,199,132,.6);animation:pulse 2s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(129,199,132,.55)}70%{box-shadow:0 0 0 6px rgba(129,199,132,0)}100%{box-shadow:0 0 0 0 rgba(129,199,132,0)}}
+  .live-dot.stale{background:#e5b95c;animation:none;box-shadow:none}
+</style>
+</head>
+<body>
+<header>
+  <h1>
+    <svg viewBox="0 0 16 16" width="18" height="18" fill="currentColor" style="color:var(--accent)"><path d="M1 2a1 1 0 0 1 1-1h5.5a1 1 0 0 1 .8.4l.975 1.3a.5.5 0 0 0 .4.2H14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2z"/></svg>
+    BlockMiner — Explorador de Arquitetura
+  </h1>
+  <span class="sub">monólito modular · clica na pasta pra abrir/fechar · clica num nó da lousa pra navegar</span>
+  <input id="search" placeholder="Buscar módulo, pasta, arquivo...">
+  <button class="btn" id="expandAll"><svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor"><path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/></svg>Expandir tudo</button>
+  <button class="btn" id="collapseAll"><svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor"><path d="M4 8a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7A.5.5 0 0 1 4 8z"/></svg>Colapsar tudo</button>
+  <span class="live-badge" id="liveStatus"><span class="live-dot" id="liveDot"></span><span id="liveText">status: estático (embutido no HTML)</span></span>
+</header>
+
+<div class="layout">
+  <div id="tree-pane"><ul class="tree" id="tree-root"></ul></div>
+  <div id="resizer"></div>
+  <div id="detail-pane">
+    <div class="empty-state" id="empty-state">
+      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M9.828 3h3.982a2 2 0 0 1 1.992 2.181l-.637 7A2 2 0 0 1 13.174 14H2.826a2 2 0 0 1-1.991-1.819l-.637-7a1.99 1.99 0 0 1 .342-1.31L.5 3a2 2 0 0 1 2-2h3.672a2 2 0 0 1 1.414.586l.828.828A2 2 0 0 0 9.828 3zM2.19 4a1 1 0 0 0-.996 1.09l.637 7a1 1 0 0 0 .995.91h10.348a1 1 0 0 0 .995-.91l.637-7A1 1 0 0 0 13.81 4H2.19z"/></svg>
+      <div>Clica numa pasta ou arquivo na árvore à esquerda pra ver a descrição aqui.<br>Pastas fechadas começam colapsadas — vai abrindo conforme explora.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------- ícones estilo Bootstrap Icons (inline SVG, sem CDN) ---------- */
+const ICONS = {
+  folder: `<svg viewBox="0 0 16 16" fill="currentColor"><path d="M9.828 3h3.982a2 2 0 0 1 1.992 2.181l-.637 7A2 2 0 0 1 13.174 14H2.826a2 2 0 0 1-1.991-1.819l-.637-7a1.99 1.99 0 0 1 .342-1.31L.5 3a2 2 0 0 1 2-2h3.672a2 2 0 0 1 1.414.586l.828.828A2 2 0 0 0 9.828 3zM2.19 4a1 1 0 0 0-.996 1.09l.637 7a1 1 0 0 0 .995.91h10.348a1 1 0 0 0 .995-.91l.637-7A1 1 0 0 0 13.81 4H2.19z"/></svg>`,
+  folderOpen: `<svg viewBox="0 0 16 16" fill="currentColor"><path d="M1.5 3a.5.5 0 0 1 .5-.5h3.379a1.5 1.5 0 0 1 1.06.44l.62.62A.5.5 0 0 0 7.415 4H14a.5.5 0 0 1 .5.5v1.594c-.156-.061-.317-.084-.475-.084H1.975c-.158 0-.319.023-.475.084V3z"/><path d="M1.5 6.5c-.577 0-1.02.578-.836 1.146l1.5 4.6a1 1 0 0 0 .95.754h9.774a1 1 0 0 0 .95-.754l1.5-4.6c.184-.568-.259-1.146-.836-1.146H1.5z"/></svg>`,
+  file: `<svg viewBox="0 0 16 16" fill="currentColor"><path d="M9.293 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4.707A1 1 0 0 0 13.707 4L10 .293A1 1 0 0 0 9.293 0zM9.5 3.5v-2l3 3h-2a1 1 0 0 1-1-1z"/></svg>`,
+  code: `<svg viewBox="0 0 16 16" fill="currentColor"><path d="M6.854 4.646a.5.5 0 0 1 0 .708L4.207 8l2.647 2.646a.5.5 0 0 1-.708.708l-3-3a.5.5 0 0 1 0-.708l3-3a.5.5 0 0 1 .708 0zm2.292 0a.5.5 0 0 0 0 .708L11.793 8l-2.647 2.646a.5.5 0 0 0 .708.708l3-3a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708 0z"/></svg>`,
+  gear: `<svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z"/><path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.433-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319z"/></svg>`,
+  cash: `<svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/><path d="M0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V4zm3 0a2 2 0 0 1-2 2v4a2 2 0 0 1 2 2h10a2 2 0 0 1 2-2V6a2 2 0 0 1-2-2H3z"/></svg>`,
+  cpu: `<svg viewBox="0 0 16 16" fill="currentColor"><path d="M5 0a.5.5 0 0 1 .5.5V2h1V.5a.5.5 0 0 1 1 0V2h1V.5a.5.5 0 0 1 1 0V2h1V.5a.5.5 0 0 1 1 0V2A2.5 2.5 0 0 1 14 4.5h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14a2.5 2.5 0 0 1-2.5 2.5v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14A2.5 2.5 0 0 1 2 11.5H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2A2.5 2.5 0 0 1 4.5 2V.5A.5.5 0 0 1 5 0zM5.5 5a.5.5 0 0 0-.5.5v5a.5.5 0 0 0 .5.5h5a.5.5 0 0 0 .5-.5v-5a.5.5 0 0 0-.5-.5h-5z"/></svg>`,
+  people: `<svg viewBox="0 0 16 16" fill="currentColor"><path d="M15 14s1 0 1-1-1-4-5-4-5 3-5 4 1 1 1 1h8zm-7.978-1A.261.261 0 0 1 7 12.996c.001-.264.167-1.03.76-1.72C8.312 10.629 9.282 10 11 10c1.717 0 2.687.63 3.24 1.276.593.69.758 1.457.76 1.72l-.008.002a.274.274 0 0 1-.014.002H7.022zM11 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm3-2a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM6.936 9.28a5.88 5.88 0 0 0-1.23-.247A7.35 7.35 0 0 0 5 9c-4 0-5 3-5 4 0 .667.333 1 1 1h4.216A2.238 2.238 0 0 1 5 13c0-1.01.377-2.042 1.09-2.904.276-.333.61-.642.846-.816zM4.5 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"/></svg>`,
+  megaphone: `<svg viewBox="0 0 16 16" fill="currentColor"><path d="M13 2.5a1.5 1.5 0 0 1 3 0v11a1.5 1.5 0 0 1-3 0v-.214c-2.162-1.241-4.49-1.843-6.912-2.083l.405 2.712A1 1 0 0 1 5.51 15.1h-.548a1 1 0 0 1-.916-.599l-1.85-3.575a.5.5 0 0 0-.036-.033A2 2 0 0 1 3 7.049V7z"/></svg>`,
+  trophy: `<svg viewBox="0 0 16 16" fill="currentColor"><path d="M2.5.5A.5.5 0 0 1 3 0h10a.5.5 0 0 1 .5.5c0 .538-.012 1.05-.034 1.536a3 3 0 1 1-1.133 5.89c-.79 1.865-1.878 2.777-2.833 3.011v2.173l1.425.356c.194.048.377.135.537.255L13.3 15.1a.5.5 0 0 1-.3.9H3a.5.5 0 0 1-.3-.9l1.838-1.379c.16-.12.343-.207.537-.255L6.5 13.11v-2.173c-.955-.234-2.043-1.146-2.833-3.012a3 3 0 1 1-1.132-5.89A33.076 33.076 0 0 1 2.5.5z"/></svg>`,
+  shield: `<svg viewBox="0 0 16 16" fill="currentColor"><path d="M5.338 1.59a61.44 61.44 0 0 0-2.837.856.481.481 0 0 0-.328.39c-.554 4.157.726 7.19 2.253 9.188a10.725 10.725 0 0 0 2.287 2.233c.346.244.652.42.893.533.12.057.218.095.293.118a.55.55 0 0 0 .101.025.615.615 0 0 0 .1-.025c.076-.023.174-.061.294-.118.24-.113.547-.29.893-.533a10.726 10.726 0 0 0 2.287-2.233c1.527-1.997 2.807-5.031 2.253-9.188a.48.48 0 0 0-.328-.39c-.651-.213-1.75-.56-2.837-.855C9.552 1.29 8.531 1.067 8 1.067c-.53 0-1.552.223-2.662.524zM5.072.56C6.157.265 7.31 0 8 0s1.843.265 2.928.56c1.11.3 2.229.655 2.887.87a1.54 1.54 0 0 1 1.044 1.262c.596 4.477-.787 7.795-2.465 9.99a11.775 11.775 0 0 1-2.517 2.453 7.159 7.159 0 0 1-1.048.625c-.28.132-.581.24-.829.24s-.548-.108-.829-.24a7.158 7.158 0 0 1-1.048-.625 11.777 11.777 0 0 1-2.517-2.453C1.928 10.487.545 7.169 1.141 2.692A1.54 1.54 0 0 1 2.185 1.43 63.44 63.44 0 0 1 5.072.56z"/></svg>`,
+  layers: `<svg viewBox="0 0 16 16" fill="currentColor"><path d="M8.235 1.559a.5.5 0 0 0-.47 0l-7.5 4a.5.5 0 0 0 0 .882L3.188 8 .264 9.559a.5.5 0 0 0 0 .882l7.5 4a.5.5 0 0 0 .47 0l7.5-4a.5.5 0 0 0 0-.882L12.813 8l2.922-1.559a.5.5 0 0 0 0-.882l-7.5-4zM8 9.433 1.562 6 8 2.567 14.438 6 8 9.433z"/></svg>`,
+  window: `<svg viewBox="0 0 16 16" fill="currentColor"><path d="M2.5 4a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0zM4 4a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0zm1.5.5a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"/><path d="M2 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2H2zm12 1a1 1 0 0 1 1 1v2H1V3a1 1 0 0 1 1-1h12zM1 13V6h14v7a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1z"/></svg>`,
+  database: `<svg viewBox="0 0 16 16" fill="currentColor"><path d="M4.318 2.687C5.234 2.271 6.536 2 8 2s2.766.27 3.682.687C12.6 3.104 13 3.605 13 4c0 .395-.4.896-1.318 1.313C10.766 5.729 9.464 6 8 6s-2.766-.27-3.682-.687C3.4 4.896 3 4.395 3 4c0-.395.4-.896 1.318-1.313ZM13 5.698V7c0 .395-.4.896-1.318 1.313C10.766 8.729 9.464 9 8 9s-2.766-.27-3.682-.687C3.4 7.896 3 7.395 3 7V5.698c.271.202.58.378.904.525C4.978 6.712 6.427 7 8 7s3.022-.288 4.096-.777A4.92 4.92 0 0 0 13 5.698ZM14 4c0-1.007-.875-1.755-1.904-2.223C11.022.288 9.573 0 8 0S4.978.288 3.904.777C2.875 1.245 2 1.993 2 3v10c0 1.007.875 1.755 1.904 2.223C4.978 15.712 6.427 16 8 16s3.022-.288 4.096-.777C13.125 14.755 14 14.007 14 13V4Z"/></svg>`,
+  warn: `<svg viewBox="0 0 16 16" fill="currentColor"><path d="M8.982 1.566a1.13 1.13 0 0 0-1.964 0L.165 13.233c-.457.778.091 1.767.982 1.767h13.706c.89 0 1.438-.99.982-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg>`
+};
+function icon(name, cls){ return `<span class="icon ${cls||''}">${ICONS[name]}</span>`; }
+
+/* ---------- dados da árvore ---------- */
+// type: 'dir' | 'file'
+// cls: classe de cor do ícone de pasta (categoria)
+// desc: html de descrição mostrado no painel direito
+// tree: preview textual opcional (pre-formatado)
+
+const D = (name, cls, desc, children, tree) => ({name, type:'dir', cls, desc, children: children||[], tree});
+const F = (name, desc) => ({name, type:'file', desc});
+
+const moduleAnatomy = (mod, extra) => [
+  F(`${mod}.controller.ts`, `HTTP apenas: request → validação → service → response. <b>Nunca</b> regra de negócio, <b>nunca</b> <code>prisma.${mod}.findUnique(...)</code> direto aqui.`),
+  F(`${mod}.service.ts`, `Coração do módulo: regras de negócio, cálculos, validação de negócio, coordenação de repositories, transações. <b>Nunca</b> sabe o que é <code>req</code>/<code>res</code>.`),
+  F(`${mod}.repository.ts`, `Acesso ao banco: Prisma, queries, transactions. Usa a instância única de <code>core/database/prisma.ts</code>.`),
+  F(`${mod}.routes.ts`, `Só registra endpoints + middleware (ex: <code>authMiddleware</code>) apontando pro controller.`),
+  F(`${mod}.schemas.ts`, `Validação de entrada com Zod <code>.strict()</code>.`),
+  F(`${mod}.types.ts`, `Tipos TypeScript específicos do módulo.`),
+  F(`${mod}.errors.ts`, `Erros específicos do domínio (ex: <code>InsufficientBalanceError</code>).`),
+  F(`index.ts`, `<b>Fronteira pública do módulo.</b> Só o que está aqui pode ser importado por outro módulo — nunca <code>from "../${mod}/${mod}.service.ts"</code> direto.`),
+  ...(extra||[])
+];
+
+const simpleModule = (mod) => [
+  F(`${mod}.controller.ts`, 'HTTP apenas — request/validação/response.'),
+  F(`${mod}.service.ts`, 'Regra de negócio do módulo.'),
+  F(`${mod}.repository.ts`, 'Acesso ao banco via Prisma.'),
+  F(`${mod}.routes.ts`, 'Registro de endpoints.'),
+  F('index.ts', 'Fronteira pública do módulo.'),
+];
+
+function domainModule(name, cls, desc, files){
+  return D(name, cls, desc, files || simpleModule(name));
+}
+
+const TREE = D('blockminer/ (current/)', 'core',
+  `<p>Raiz do projeto reconstruído. <b>Monólito modular simples</b>: domínio como fronteira, MVC/service/repository dentro de cada módulo, zero pastas globais de negócio.</p>
+   <div class="rule-flow"><span>bootstrap</span><span class="arrow">↓</span><span>modules</span><span class="arrow">↓</span><span>shared / core</span></div>
+   <p>Frontend (<code>client/</code>) é reaproveitado integralmente — mesmo template, mesma UI — só migra de "pages soltas" pra <code>modules/&lt;dominio&gt;/</code>, espelhando o backend.</p>`,
+  [
+    D('server/', 'core', 'BACKEND — Express 5 + Prisma 7 + Socket.IO 4.', [
+      D('bootstrap/', 'core', '<span class="badge ok" style="display:inline-block;margin-bottom:8px">✅ IMPLEMENTADO (mínimo)</span><br>Ponto de entrada do processo — só wiring, zero regra de negócio. Hoje monta só auth/session/users/admin; mining engine/sockets/cron entram nas próximas fases.', [
+        F('server.ts', 'Express app + Prisma + rotas de auth/session/users/admin montadas. <code>tsx server/bootstrap/server.ts</code> sobe local.'),
+      ]),
+      D('core/', 'core', '<span class="badge ok" style="display:inline-block;margin-bottom:8px">✅ IMPLEMENTADO (mínimo)</span><br>Infraestrutura pura. <b>Zero regra de negócio aqui</b> — se tem lógica de domínio, pertence a <code>modules/</code>. Redis/queue/socket ainda não implementados (entram nas fases de mining/games/notifications).', [
+        D('database/', 'data', 'Camada de acesso a dados — instância única.', [
+          F('prisma.ts', '<b>Instância ÚNICA</b> do Prisma Client + pg.Pool via <code>@prisma/adapter-pg</code>, portado direto de <code>legacy/backend/src/shared/prisma/client.ts</code> — sem o shim <code>_server_vendor</code> do legacy (é um backend só, um build só). Todos os <code>*.repository.ts</code> importam daqui.'),
+        ]),
+        D('http/', 'core', 'Stack HTTP genérico — nada específico de domínio.', [
+          D('middleware/', 'core', 'Preserva as exceções do rate limiter global do legacy: <code>/heartbeat</code>, <code>/balance</code>, <code>/checkin/status</code>.', [
+            F('auth.ts',''), F('csrf.ts',''), F('rateLimit.ts',''), F('validate.ts',''),
+            F('idempotency.ts', '<span class="badge ok">✅ Fase 2</span> requireCriticalIdempotency — Postgres via CallbackQueue + advisory lock, sem Redis. Usado em mutações financeiras (vault, futuramente withdraw/deposit).'),
+            F('distributedRateLimit.ts', '<span class="badge ok">✅ Fase 2</span> createDistributedRateLimiter real — Postgres sliding-window (CallbackQueue), substituiu o alias in-memory que a Fase 1 tinha deixado.'),
+          ]),
+          F('setupHttpStack.ts', 'Helmet/CSP, CORS, body-parser, CSRF, rate-limit — monta o stack completo pro bootstrap.'),
+        ]),
+        D('logger/', 'core', 'Logger estruturado usado por toda a aplicação.', [F('logger.ts',''), F('index.ts','')]),
+      ]),
+      D('shared/', 'core', '<span class="badge ok" style="display:inline-block;margin-bottom:8px">✅ IMPLEMENTADO (mínimo)</span><br>Primitivas de segurança/erro genuinamente cross-domain, usadas por auth/session/users/admin. PEQUENO por definição — antes de por algo aqui, pergunte "isso é realmente cross-domain?".', [
+        D('security/', 'core', 'Portado de legacy/server/modules/auth/shared/*.', [
+          F('token.ts',''), F('authTokens.ts',''), F('cookies.ts',''), F('password.ts',''), F('authUser.ts',''),
+          F('mailer.ts','⚠️ stand-in — SMTP real fica pra módulo de observability/antibot futuro.'),
+          F('turnstile.ts','⚠️ stand-in — chamada real ao siteverify fica pra Fase 8.'),
+          F('securityLogger.ts',''), F('authDebug.ts',''), F('adminPasswordResetPolicy.ts',''),
+        ]),
+        D('errors/', 'core', 'Classes de erro base.', [F('httpStatusError.ts',''), F('prismaHttpErrors.ts','')]),
+        D('http/', 'core', '', [F('clientIp.ts','')]),
+        D('types/', 'core', '', [F('express.d.ts','')]),
+        D('calendar/', 'core', '✅ Fase 4. Cálculo de dia UTC (reset 00:00) — usado por checkin/, games/ (2048), faucet/ e energy-tax/. <b>Decisão explícita do usuário</b>: site inteiro padronizado em UTC, abandonando de propósito o fuso America/Sao_Paulo (21h) que o legacy usava — alinhado com boosts/auto-mining (Fase 3), que já eram UTC. Caso real do "genuinamente cross-domain" que justifica shared/.', [F('utcCalendar.ts','')]),
+      ]),
+
+      D('modules/', 'admin', 'Cada domínio é uma pequena aplicação autocontida. ~45 módulos, organizados nas 8 fases de migração (ver módulo "docs/" pro roadmap completo).', [
+
+        D('auth/', 'money', '<span class="badge ok" style="display:inline-block;margin-bottom:8px">✅ IMPLEMENTADO</span><br>Login, registro, 2FA, refresh/session, logout, troca de senha, forgot-password + login administrativo fundido (<code>auth.admin.*</code>, ex admin-auth/). <b>Fase 1 — concluída</b>.',
+          [
+            F('auth.controller.ts', 'Login, logout, change-password. Fino, sem regra de negócio.'),
+            F('auth.service.ts', 'Fusão de auth.service.ts + auth.security.ts + auth.password-jwt.ts do legacy.'),
+            F('auth.repository.ts', 'Acesso a User/Session/RefreshToken via Prisma.'),
+            F('auth.routes.ts', 'Registro de endpoints /auth/*.'),
+            F('auth.schemas.ts', 'Validação Zod .strict().'),
+            F('auth.types.ts', 'Tipos do módulo.'),
+            F('auth.errors.ts', 'Erros específicos (ex: InvalidCredentialsError).'),
+            F('auth.dto.ts', 'DTOs de request/response.'),
+            F('index.ts', 'Fronteira pública do módulo.'),
+            F('README.md', 'Contrato de cada endpoint documentado (login/register/refresh/logout/admin-login), invariantes de segurança.'),
+            D('login/', 'money', 'Fluxo de login + 2FA.', [F('login.controller.ts',''), F('login.schemas.ts',''), F('login.twoFactor.ts',''), F('login.twoFactorChallenge.ts','')]),
+            D('register/', 'money', 'Fluxo de registro.', [F('register.controller.ts',''), F('registerBodySchema.ts',''), F('registerAllowedEmailDomains.ts','')]),
+            F('auth.admin.controller.ts', 'Login administrativo (fusão do antigo admin-auth/ — não existe AdminUser/AdminSession no Prisma, reaproveita User/Session com role).'),
+            F('auth.admin.routes.ts', 'Rotas de auth administrativas.'),
+          ]),
+        domainModule('session/', 'money', '<span class="badge ok" style="display:inline-block;margin-bottom:8px">✅ IMPLEMENTADO</span><br>Dono único da lógica de sessão — absorveu o sub-fluxo <code>auth/session/</code> do legacy (refresh + leitura de sessão), evitando os dois lugares divergentes que existiam antes. <b>Fase 1 — concluída</b>.', [
+          F('session.controller.ts',''), F('session.auth.controller.ts',''), F('session.refresh.controller.ts',''),
+          F('session.routes.ts',''), F('session.tokens.ts','Rotação de refresh token.'), F('session.heartbeat.service.ts','Presença/heartbeat.'), F('index.ts',''),
+        ]),
+        domainModule('users/', 'money', '<span class="badge ok" style="display:inline-block;margin-bottom:8px">✅ IMPLEMENTADO</span><br>Perfil próprio (self-service) + rotas admin, incl. insights (fusão do antigo adminUserInsights). <b>Fase 1 — concluída</b>. Endpoints de perfil/transações/tickets/send-miner dependentes de mining/support ainda não migrados.', [
+          F('user.controller.ts',''), F('user.repository.ts',''), F('user.routes.ts',''),
+          F('users.admin.controller.ts','List/ban/adjust-balance/unlock/reset-password + wallet-ledger/activity-summary reduzidos.'),
+          F('usersAdmin.repository.ts',''), F('users.admin.routes.ts',''), F('index.ts',''),
+        ]),
+        domainModule('admin/', 'admin', '<span class="badge ok" style="display:inline-block;margin-bottom:8px">✅ IMPLEMENTADO</span><br>Só o que <b>não tem dono natural</b>: bootstrap de admin, permissões, auditoria geral (fusão do antigo admin-system/). <b>Fase 1 — concluída</b>. Backups/fraud-signals/ops só como stubs 501 por ora (Fase 8 completa isso).', [
+          F('admin.controller.ts',''), F('admin.service.ts',''), F('admin.repository.ts',''), F('admin.routes.ts',''),
+          F('admin.auth.middleware.ts',''),
+          F('admin.bootstrap.ts', 'Cria o primeiro admin / seed de permissões.'),
+          F('admin.permissions.ts', 'Definição de papéis/permissões.'),
+          F('admin.audit-log.service.ts', 'Trilha de auditoria geral.'),
+          F('admin.backups.routes.ts', '⚠️ stub 501 — implementação real fica pra Fase 8.'),
+          F('admin.fraud-signals.routes.ts', '⚠️ stub 501 — Fase 8.'),
+          F('admin.ops.routes.ts', '⚠️ stub 501 — Fase 8.'),
+          F('index.ts', 'Fronteira pública.'),
+        ]),
+
+        domainModule('wallet/', 'money', '<span class="badge ok" style="display:inline-block;margin-bottom:8px">✅ IMPLEMENTADO</span><br>O módulo mais crítico — erro aqui custa dinheiro real. <b>Fase 2 — concluída</b>. Subdividido por complexidade real (17 testes no legacy). Saldos vivem como <code>Decimal</code> direto em <code>User</code>, sem model <code>Wallet</code> dedicado.', [
+          D('balance/', 'money', 'GET /balance, /me, /pol-usd.', [F('balance.controller.ts',''),F('balance.service.ts','Preço POL/USD cacheado (CoinGecko, TTL 2min).'),F('balance.repository.ts','')]),
+          D('deposit/', 'money', 'Depósitos on-chain — submit para verificação assíncrona, estimate-gas (fallback; RPC real deferido).', [F('deposit.controller.ts',''),F('deposit.service.ts',''),F('deposit.repository.ts','creditCompletedDeposit roda em $transaction.'),F('deposit.schemas.ts',''),F('deposit.types.ts','')]),
+          D('withdrawal/', 'money', 'Request do usuário + aprovação admin fundida do antigo finance/withdrawalAdmin.controller.ts.', [F('withdrawal.controller.ts','requestWithdrawal + admin approve/reject/complete.'),F('withdrawal.service.ts',''),F('withdrawal.repository.ts','createWithdrawal/markWithdrawalRejected em $transaction.'),F('withdrawal.schemas.ts','')]),
+          D('transaction/', 'money', 'GET /transactions, histórico paginado.', [F('transaction.controller.ts',''),F('transaction.service.ts',''),F('transaction.repository.ts','')]),
+          D('vault/', 'money', 'Warehouse de mineradores (time-lock) — só caminho inventory&lt;-&gt;warehouse; "rack" fica 501 até a Fase 3 (mining/machines).', [F('vault.controller.ts',''),F('vault.service.ts',''),F('vault.repository.ts',''),F('vault.schemas.ts',''),F('vault.routes.ts','')]),
+          F('wallet.admin.controller.ts', 'Re-exporta os handlers admin de withdrawal/withdrawal.controller.ts (fusão do antigo finance/).'),
+          F('wallet.admin.routes.ts', 'Rotas admin de wallet/finance, requireAdminAuth.'),
+          F('wallet.routes.ts', 'Composição das rotas dos subdomínios + rate limit distribuído.'),
+          F('wallet.errors.ts', 'WALLET_ERROR + InsufficientBalanceError.'),
+          F('wallet.types.ts', 'WITHDRAW_MIN_POL, moedas suportadas.'),
+          F('index.ts', 'Fronteira pública — sempre transações em <code>$transaction</code>.'),
+          F('README.md', 'Contrato de cada endpoint, moedas suportadas, invariantes financeiras, desvios documentados.'),
+        ]),
+        domainModule('swap/', 'money', '<span class="badge ok" style="display:inline-block;margin-bottom:8px">✅ IMPLEMENTADO</span><br>Troca entre moedas internas (POL/SHIB/USDC). <b>Fase 2 — concluída</b>.', [
+          F('swap.controller.ts',''), F('swap.service.ts','executeSwapForUser em $transaction.'), F('swap.repository.ts',''), F('swap.routes.ts','Zod .strict().'), F('index.ts',''),
+        ]),
+        domainModule('transparency/', 'money', '<span class="badge ok" style="display:inline-block;margin-bottom:8px">✅ IMPLEMENTADO</span><br>Tracking público de carteiras on-chain (CRUD via Postgres real). <b>Fase 2 — concluída</b>. Busca de atividade on-chain ao vivo (Etherscan-style) e snapshot periódico ficam stub/adiados (dependem de RPC/cron, fora de escopo).', [
+          F('transparency.controller.ts',''), F('transparency.repository.ts',''), F('transparency.validation.ts',''),
+          F('transparency.routes.ts','Endpoints públicos.'), F('transparency.admin.routes.ts','CRUD admin.'), F('index.ts',''),
+        ]),
+
+        domainModule('mining/', 'mining', '<span class="badge ok" style="display:inline-block;margin-bottom:8px">✅ IMPLEMENTADO</span><br>O core do produto. Motor de mineração embutido no módulo (não em <code>core/</code>) — tick em memória, settlement síncrono até o primeiro <code>await</code>, dual-pool POL+SHIB, escrita assíncrona serializada (<code>_settleChain</code>) com retry/backoff e rollback de delta em falha. <b>Fase 3 — concluída</b>. Validado contra o Postgres real: bloco assentou, <code>pol_balance</code> subiu de fato no banco.', [
+          F('mining.engine.ts', 'MiningEngine portado fielmente do legacy — README.md do módulo documenta o pipeline de settlement em detalhe.'),
+          F('mining.controller.ts',''), F('mining.service.ts',''), F('mining.repository.ts',''), F('mining.routes.ts',''),
+          F('mining.config.ts', 'Duração de bloco, allocation bps, etc.'),
+          F('mining.admin.controller.ts', ''), F('mining.admin.routes.ts', ''),
+          F('README.md', 'Documentação do pipeline de settlement — o arquivo mais delicado do projeto.'),
+        ]),
+        domainModule('machines/', 'mining', '<span class="badge ok" style="display:inline-block;margin-bottom:8px">✅ IMPLEMENTADO</span><br>Máquinas e racks. Custo de upgrade: <code>2 + (rigs-1) * 0.8</code>. <b>Fase 3 — concluída</b>.', [
+          F('machines.controller.ts',''), F('machines.service.ts',''), F('machines.repository.ts',''), F('machines.routes.ts',''),
+          D('racks/', 'mining', 'Subdomínio de racks (fundido do antigo módulo racks/ separado).', [F('racks.controller.ts',''),F('racks.repository.ts',''),F('racks.routes.ts',''),F('racks.types.ts','')]),
+          F('machines.admin.controller.ts', 'Admin de máquinas (fusão do antigo admin-miners/).'),
+          F('machines.admin.routes.ts', ''),
+        ]),
+        domainModule('energy-tax/', 'mining', '<span class="badge ok" style="display:inline-block;margin-bottom:8px">✅ IMPLEMENTADO</span><br>Taxa de energia sobre a operação de mineração. <b>Fase 3 — concluída</b>.', [
+          F('energy-tax.controller.ts',''), F('energy-tax.service.ts',''), F('energy-tax.repository.ts',''), F('energy-tax.routes.ts',''),
+          F('energy-tax.activity.ts',''), F('energy-tax.calendar.ts',''),
+        ]),
+        domainModule('boosts/', 'mining', '<span class="badge ok" style="display:inline-block;margin-bottom:8px">✅ IMPLEMENTADO</span><br>Power boost de mineração (equivalente ao antigo powerBoost/), custo 0.01 POL confirmado em runtime. <b>Fase 3 — concluída</b>.', moduleAnatomy('boosts')),
+        domainModule('auto-mining/', 'mining', '<span class="badge ok" style="display:inline-block;margin-bottom:8px">✅ IMPLEMENTADO</span><br>Mineração automática v1 (GPU flow) + v2 (sessão start/stop/pause/resume, claim normal/turbo, banner) + admin CRUD de rewards. <b>Fase 3 — concluída</b>.', [
+          F('auto-mining.controller.ts', 'v1'), F('auto-mining.v2.controller.ts', 'v2'),
+          F('auto-mining.service.ts',''), F('auto-mining.v2.service.ts',''),
+          F('auto-mining.repository.ts',''), F('auto-mining.config.ts',''), F('auto-mining.domain.ts',''),
+          F('auto-mining.admin.controller.ts',''), F('auto-mining.admin.routes.ts',''),
+        ]),
+
+        domainModule('inventory/', 'social', '<span class="badge ok" style="display:inline-block;margin-bottom:8px">✅ IMPLEMENTADO</span><br>Inventário de itens do usuário — install/remove/update + fronteira pública <code>grantPurchasedInventoryItems</code> usada por shop/. <b>Fase 4 — em andamento</b>.', [
+          F('inventory.controller.ts',''), F('inventory.service.ts',''), F('inventory.repository.ts',''), F('inventory.routes.ts',''),
+          F('inventory.types.ts',''), F('inventory.errors.ts',''), F('index.ts',''),
+        ]),
+        domainModule('shop/', 'social', '<span class="badge ok" style="display:inline-block;margin-bottom:8px">✅ IMPLEMENTADO</span><br>Loja de miners. Compra grava em UserInventory/UserOwnedMachine via inventory/ (sem model Shop/Item dedicado — confirmado no schema). <b>Fase 4 — em andamento</b>.', [
+          F('shop.controller.ts',''), F('shop.service.ts',''), F('shop.repository.ts',''), F('shop.routes.ts',''), F('shop.errors.ts',''), F('index.ts',''),
+        ]),
+        domainModule('games/', 'social', '<span class="badge ok" style="display:inline-block;margin-bottom:8px">✅ IMPLEMENTADO</span><br>2048 via HTTP (controller/service dedicados) + os <b>5 minigames Socket.IO do legacy</b> (crypto-memory, crypto-match-3, block-stack, sky-runner, cart-rush) portados via <code>games.socket.ts</code>, o dispatcher compartilhado (session-lock/cooldown/anti-cheat/burst-guard reaproveitados por todos). cart-rush foi o último e mais arriscado (único com tick loop server-side via setInterval) — portado e validado por último. Recompensa creditada via <code>prisma.userPowerGame.create</code> em todos. Validado end-to-end com cliente Socket.IO real contra Postgres real de dev (playthrough completo, burst-guard, session-lock, anti-cheat/rejeição). <b>Fase 4 — concluído</b>.', [
+          D('game2048/', 'social', 'Único jogo HTTP (não Socket.IO), engine+service+controller reais.', [F('game2048.engine.ts','Lógica pura do tabuleiro.'), F('game2048.constants.ts',''), F('game2048.service.ts',''), F('game2048.controller.ts',''), F('game2048.routes.ts','')]),
+          F('games.socket.ts', 'Dispatcher compartilhado dos 5 minigames Socket.IO — game:start/action/end, finishGame().'),
+          F('games.session-lock.ts', 'Lock por usuário/jogo — impede sessão duplicada simultânea.'),
+          F('games.anti-cheat.ts',''), F('games.cooldown.ts',''), F('games.burst-guard.ts',''),
+          F('games.pure.ts', 'Helpers puros compartilhados (parse de slug, clamps).'),
+          F('games.match3.pure.ts', 'Lógica pura do crypto-match-3 (board 8x8, findMatches, cascades).'),
+          F('games.cartrush.pure.ts', 'Lógica pura do cart-rush (spawn de evento, tick, colisão, dificuldade).'),
+          F('games.power.controller.ts','GET /active-powers.'), F('games.memory.constants.ts','Tuning do crypto-memory.'), F('index.ts',''),
+        ]),
+        domainModule('checkin/', 'social', '<span class="badge ok" style="display:inline-block;margin-bottom:8px">✅ IMPLEMENTADO</span><br>Check-in diário (streak + grace/freeze + milestones + streak-recovery). Um único folder com nomes de arquivo claros em vez de subpastas (padrão energy-tax/). ⚠️ Verificação on-chain real (Polygonscan/RPC) é um stub documentado — <code>checkin.chain.ts</code> sempre reporta "pending" pois não há infra de blockchain/ethers em current/ ainda; o fluxo <code>POST /checkin/balance</code> (débito de POL in-game) é 100% funcional e foi validado contra Postgres real. Reward-inbox (entrega de recompensa de milestone) também é stub documentado — o claim único por milestone é preservado, a entrega real fica para quando <code>notifications/</code>(reward-inbox) for portado. <b>Fase 4 — concluído</b>.', [
+          F('checkin.controller.ts', 'HTTP only — status/rewards/history/claim/confirm/wallet/balance/streak-recovery.'),
+          F('checkin.service.ts', 'Regra de negócio: status bundle, balance checkin, wallet checkin, finalize.'),
+          F('checkin.repository.ts', 'Acesso a DailyCheckin/PeriodicCheckin.'),
+          F('checkin.routes.ts', ''),
+          F('checkin.streak.ts', 'Matemática pura de streak + grace/freeze.'),
+          F('checkin.milestones.ts', 'Regras de milestone + fusão com antigo checkin.rewards.ts.'),
+          F('checkin.recovery.ts', 'Streak recovery (paga taxa em POL pra recuperar dias perdidos).'),
+          F('checkin.config.ts', 'Env knobs (modo, grace/freeze, valores em wei) — dia/período vem de shared/calendar/utcCalendar.ts (UTC 00:00).'),
+          F('checkin.chain.ts', '⚠️ Stub documentado — validação pura (tx hash/wallet format) real, verificação on-chain fake-pending.'),
+          F('checkin.notifications.ts', '⚠️ Stub documentado — hooks de mini-pass/daily-tasks/tournaments (módulos ainda não portados).'),
+          F('checkin.errors.ts', ''),
+          F('checkin.admin.controller.ts', 'CRUD de milestones (fusão de checkinMilestone.admin.*).'),
+          F('checkin.admin.routes.ts', ''),
+          F('index.ts', ''),
+        ]),
+        domainModule('faucet/', 'social', '<span class="badge ok" style="display:inline-block;margin-bottom:8px">✅ IMPLEMENTADO</span><br>Recompensa faucet — status/partner-visit/claim + admin config. Reaproveita <code>boosts/</code> (duração de reward) e <code>inventory/</code> (grant de item permanente) via fronteira pública. Validado: partner-wait → claim → UserPowerGame real no Postgres. <b>Fase 4 — concluída</b>.', [
+          F('faucet.controller.ts',''), F('faucet.service.ts',''), F('faucet.repository.ts',''), F('faucet.routes.ts',''),
+          F('faucet.dto.ts',''), F('faucet.types.ts',''), F('faucet.errors.ts',''), F('faucet.admin.routes.ts',''), F('index.ts',''),
+        ]),
+        domainModule('read-earn/', 'social', '<span class="badge ok" style="display:inline-block;margin-bottom:8px">✅ IMPLEMENTADO</span><br>Recompensa por ler conteúdo de parceiro (código bcrypt). 3 tipos de reward: BLK/hashrate/machine, os dois últimos reaproveitando boosts/ e inventory/. Validado: campanha semeada, código errado rejeitado, código certo creditou BLK real, replay bloqueado (claim único). <b>Fase 4 — concluída</b>.', [
+          F('read-earn.controller.ts',''), F('read-earn.service.ts',''), F('read-earn.repository (via admin repo)',''),
+          F('read-earn.routes.ts',''), F('read-earn.schemas.ts',''), F('read-earn.errors.ts',''),
+          F('read-earn.admin.controller.ts',''), F('read-earn.admin.repository.ts',''), F('read-earn.admin.routes.ts',''), F('index.ts',''),
+        ]),
+
+        domainModule('offerwall/', 'ads', 'Integração de offerwall principal. <b>Fase 5</b>.', moduleAnatomy('offerwall')),
+        domainModule('offerwallme/', 'ads', 'Integração OfferwallMe. <b>Fase 5</b>.', moduleAnatomy('offerwallme')),
+        domainModule('internal-offerwall/', 'ads', 'Offerwall interno próprio. <b>Fase 5</b>.', moduleAnatomy('internal-offerwall')),
+        domainModule('ptc/', 'ads', 'Paid-to-click. <b>Fase 5</b>.', moduleAnatomy('ptc')),
+        domainModule('partner-games/', 'ads', 'Jogos parceiros embutidos via iframe. <b>Fase 5</b>.', moduleAnatomy('partner-games')),
+        domainModule('moneyrain/', 'ads', 'Evento MoneyRain. <b>Fase 5</b>.', moduleAnatomy('moneyrain')),
+        domainModule('shortlinks/', 'ads', 'Encurtador de links monetizado. <b>Fase 5</b>.', moduleAnatomy('shortlinks')),
+        domainModule('zerads/', 'ads', 'Integração Zerads. <b>Fase 5</b>.', moduleAnatomy('zerads')),
+        domainModule('traffic/', 'ads', 'Estatísticas de tráfego de aquisição. <b>Fase 5</b>.', moduleAnatomy('traffic')),
+
+        domainModule('chat/', 'social', 'Chat em tempo real. <b>Fase 6</b>.', moduleAnatomy('chat')),
+        domainModule('support/', 'social', 'Tickets de suporte (fusão do antigo publicSupport/). <b>Fase 6</b>.', moduleAnatomy('support')),
+        domainModule('social/', 'social', 'Recursos sociais gerais, incl. antigo rooms/. <b>Fase 6</b>.', moduleAnatomy('social')),
+        domainModule('referrals/', 'social', 'Programa de indicação. <b>Fase 6</b>.', moduleAnatomy('referrals')),
+        domainModule('notifications/', 'social', 'Notificações + reward-inbox + broadcast (3 módulos legacy fundidos). <b>Fase 6</b>.', moduleAnatomy('notifications')),
+
+        domainModule('tournaments/', 'trophy', 'O módulo mais elaborado — outbox pattern, shadow validation. Inclui ranking como subdomínio. <b>Fase 7</b>.', [
+          ...moduleAnatomy('tournaments'),
+          D('ranking/', 'trophy', 'Cálculo e leaderboard (fusão do antigo ranking/).', [F('ranking.service.ts',''),F('ranking.repository.ts','')]),
+          F('tournaments.admin.controller.ts',''), F('tournaments.admin.routes.ts',''),
+        ]),
+        domainModule('burn-events/', 'trophy', 'Eventos de queima de token. <b>Fase 7</b>.', moduleAnatomy('burn-events')),
+        domainModule('mini-pass/', 'trophy', 'Battle-pass style progression, incl. admin. <b>Fase 7</b>.', moduleAnatomy('mini-pass', [F('mini-pass.admin.controller.ts',''), F('mini-pass.admin.routes.ts','')])),
+        domainModule('offer-events/', 'trophy', 'Eventos ligados a ofertas (fusão com o antigo admin-offer-events/). <b>Fase 7</b>.', moduleAnatomy('offer-events', [F('offer-events.admin.controller.ts',''), F('offer-events.admin.routes.ts','')])),
+
+        domainModule('analytics/', 'admin', 'Analytics + stats + public-stats (3 módulos legacy fundidos). <b>Fase 8</b>.', moduleAnatomy('analytics')),
+        domainModule('pricing/', 'admin', 'Preços/cotações de mercado. <b>Fase 8</b>.', moduleAnatomy('pricing')),
+        domainModule('media/', 'admin', 'Mídia + uploads (fusão de 2 módulos legacy). <b>Fase 8</b>.', moduleAnatomy('media')),
+        domainModule('banners/', 'admin', 'Banners promocionais. <b>Fase 8</b>.', moduleAnatomy('banners')),
+        domainModule('antibot/', 'admin', 'Engine antibot + ip-intelligence (fusão). <b>Fase 8</b>.', moduleAnatomy('antibot')),
+        D('sala/', 'warn', '⚠️ Protótipo de posicionamento de rack em grade (comentários em português no schema legacy). <b>Decidir explicitamente se migra antes da Fase 8</b> — não copiar por inércia.', []),
+      ]),
+
+      D('workers/', 'core', 'Infraestrutura de processo worker (BullMQ). Chama o service do módulo dono — nunca reimplementa a regra de negócio.', [
+        F('mining.worker.ts', 'Consome jobs de settlement de mineração → chama <code>modules/mining</code>.'),
+        F('telegram.worker.ts', 'Worker de prova/notificação via Telegram.'),
+        F('notifications.worker.ts', 'Processamento assíncrono de notificações.'),
+        F('index.ts', 'Composição dos workers.'),
+      ]),
+      D('cron/', 'core', '<span class="badge ok" style="display:inline-block;margin-bottom:8px">✅ IMPLEMENTADO (parcial)</span><br>Só agenda (setInterval-based). A regra de negócio vive no service do módulo dono — nunca centenas de linhas dentro do arquivo de cron. mining/energy-tax/auto-mining entraram na Fase 3 (o cron é o próprio coração do motor de mineração); checkin entra na Fase 4.', [
+        F('mining.cron.ts', '✅ Loop de tick de bloco — chama mining.service, inicia no boot.'),
+        F('energy-tax.cron.ts', '✅ Sweep de taxa de energia.'),
+        F('auto-mining-session-cleanup.cron.ts', '✅ Limpeza de sessões órfãs de auto-mining v2.'),
+        F('checkin.cron.ts', '✅ Poll de 5min — resolve DailyCheckin/PeriodicCheckin pendentes via checkin.service.processStalePendingCheckins.'),
+        F('checkin.cron.ts', '⚪ Fase 4 — resolve check-ins pendentes/stale.'),
+      ]),
+    ]),
+
+    D('client/', 'frontend', 'FRONTEND — React 19 + Vite. Reaproveitado integralmente (mesma UI/UX), reorganizado por domínio espelhando o backend.', [
+      D('src/', 'frontend', '', [
+        D('app/', 'frontend', 'Ponto de entrada da aplicação React.', [
+          F('App.tsx', 'Componente raiz, monta os providers e o router.'),
+          F('main.tsx', 'Entry point do Vite.'),
+          F('providers.tsx', 'Providers globais (query client, i18n, theme...).'),
+          F('routes.tsx', 'Definição de rotas — usa os componentes de layout protegido.'),
+        ]),
+        D('core/', 'frontend', 'Infraestrutura da aplicação cliente — equivalente ao <code>core/</code> do backend.', [
+          D('api/', 'frontend', 'Cliente HTTP central.', [
+            F('client.ts', 'Instância axios, <code>baseURL: "/api"</code> (relativo — contrato travado com o legacy). Equivalente ao <code>api</code> exportado de <code>store/auth.ts</code> no legacy.'),
+            F('interceptors.ts', 'Interceptors de request/response: refresh de sessão em 401, injeção de token.'),
+          ]),
+          D('auth/', 'frontend', 'Sessão do usuário no client.', [F('auth.ts','Estado de autenticação.'), F('session.ts','Bootstrap/refresh de sessão via /auth/session e /auth/refresh.')]),
+          D('router/', 'frontend', 'Configuração de rotas protegidas.', [F('router.tsx','')]),
+          D('websocket/', 'frontend', 'Conexão Socket.IO do client.', [F('socket.ts', 'Conecta em "/" (relativo), usado por games e mining em tempo real.')]),
+          D('web3/', 'frontend', 'Carteira e contratos.', [F('wagmi.ts','Config wagmi/viem.'), F('wallet.ts','Conexão via @reown/appkit, ABI do contrato de depósito.')]),
+          D('i18n/', 'frontend', 'Internacionalização.', [F('config.ts',''), D('locales/', 'frontend', 'en.json, es.json, pt-BR.json — inalterados.', [])]),
+        ]),
+        D('shared/', 'frontend', 'PEQUENO por definição — só components/hooks/utils genuinamente reutilizáveis. <b>Nunca</b> <code>walletUtils.ts</code> aqui.', [
+          D('components/', 'frontend', 'Button, Modal, Table, Loading — componentes de UI puros, sem conhecimento de domínio.', []),
+          D('hooks/', 'frontend', 'useDebounce, useMediaQuery — hooks genéricos.', []),
+          D('utils/', 'frontend', 'Helpers genéricos.', []),
+          D('types/', 'frontend', 'Tipos genuinamente compartilhados.', []),
+          D('constants/', 'frontend', 'Constantes globais.', []),
+        ]),
+        D('modules/', 'frontend', 'Espelha 1:1 os módulos do backend — mesmo nome de domínio dos dois lados.', [
+          D('wallet/', 'money', 'Espelha <code>server/modules/wallet/</code>.', [
+            D('pages/', 'money', '', [F('WalletPage.tsx',''), F('TransactionsPage.tsx','')]),
+            D('components/', 'money', '', [F('BalanceCard.tsx',''), F('TransactionList.tsx',''), F('WithdrawalForm.tsx','')]),
+            F('wallet.api.ts', 'Funções REST tipadas consumindo <code>core/api/client.ts</code>.'),
+            F('wallet.hooks.ts', 'React Query hooks do domínio.'),
+            F('wallet.types.ts', ''),
+            F('index.ts', 'Fronteira pública do módulo frontend.'),
+          ]),
+          D('mining/', 'mining', 'Espelha <code>server/modules/mining/</code>.', [
+            D('pages/', 'mining', '', [F('MiningPage.tsx',''), F('MachinesPage.tsx','')]),
+            D('components/', 'mining', '', [F('MiningCard.tsx',''), F('MachineCard.tsx',''), F('MiningStats.tsx',''), F('BoostPanel.tsx','')]),
+            F('mining.api.ts',''), F('mining.hooks.ts',''), F('mining.types.ts',''), F('index.ts',''),
+          ]),
+          D('auth/', 'money', 'Espelha <code>server/modules/auth/</code> — login, registro.', simpleModuleFrontend('auth')),
+          D('tournaments/', 'trophy', 'Espelha <code>server/modules/tournaments/</code>.', simpleModuleFrontend('tournaments')),
+          D('offerwall/', 'ads', 'Espelha <code>server/modules/offerwall/</code>.', simpleModuleFrontend('offerwall')),
+          D('games/', 'social', 'Sessão de jogo via Socket.IO (<code>game:action</code>/<code>game:end</code>), reward concedida no servidor.', simpleModuleFrontend('games')),
+          D('...', 'frontend', 'Um módulo de frontend por domínio do backend — mesmo padrão: pages/, components/, &lt;dominio&gt;.api.ts, &lt;dominio&gt;.hooks.ts, index.ts.', []),
+        ]),
+      ]),
+    ]),
+
+    D('prisma/', 'data', 'Schema e migrations copiados 1:1 do legacy — zero risco pro dado de produção.', [
+      F('schema.prisma', '140+ models, 3053 linhas no legacy — copiado tal como está, só reorganizado em seções comentadas (User/Auth, Mining, Wallet, Games, Offerwall, Tournaments, AntiBot, Admin...).'),
+      D('migrations/', 'data', '124 migrations copiadas 1:1 — histórico de produção nunca se reescreve.', []),
+      F('seed.ts', 'Seed de dados iniciais.'),
+    ]),
+    D('scripts/', 'admin', 'deploy/, build/, maintenance/, ops/, fix/, migration/, admin/, security/ — mesmo papel do legacy, paths ajustados pra nova estrutura.', []),
+    D('tests/', 'data', '<code>node --test</code> por domínio, espelhando <code>server/modules/&lt;dominio&gt;/</code>, mais integration/, e2e/ e fixtures/ pra fluxos cross-módulo.', []),
+    D('docker/', 'core', 'Dockerfile e configs de container — 6 containers (db, redis, app, worker, telegram-worker, nginx), mesma topologia do legacy.', []),
+    D('docs/', 'core', 'Vault de documentação viva.', [
+      F('ESTRUTURA_PROJETO.txt', 'Árvore anotada + checklist legacy→current + roadmap de 9 fases (texto puro).'),
+      F('mapa-mental.html', 'Este arquivo.'),
+    ]),
+    F('package.json', 'Scripts e dependências do monorepo (server+client).'),
+    F('tsconfig.json', 'Config TypeScript raiz.'),
+    F('docker-compose.yml', '6 containers — mesma topologia do legacy, sem o symlink _server_vendor.'),
+    F('.env.example', 'Template de variáveis de ambiente.'),
+  ]
+);
+
+function simpleModuleFrontend(name){
+  return [
+    D('pages/', 'frontend', 'Páginas do domínio.', []),
+    D('components/', 'frontend', 'Componentes específicos do domínio.', []),
+    F(`${name}.api.ts`, 'Funções REST tipadas.'),
+    F(`${name}.hooks.ts`, 'React Query hooks.'),
+    F(`${name}.types.ts`, ''),
+    F('index.ts', 'Fronteira pública.'),
+  ];
+}
+
+/* ---------- render ---------- */
+const clsIcon = {
+  core:'icon-core', money:'icon-money', mining:'icon-mining', social:'icon-social',
+  ads:'icon-ads', admin:'icon-admin', frontend:'icon-frontend', data:'icon-data',
+  trophy:'icon-social', warn:'icon-admin'
+};
+
+let uid = 0;
+function renderNode(node, container, depth, parent){
+  node._parent = parent || null;
+  const li = document.createElement('li');
+  li.className = 'node';
+  const row = document.createElement('div');
+  row.className = 'row';
+  const id = 'n' + (uid++);
+  row.dataset.id = id;
+
+  const hasChildren = node.type === 'dir' && node.children && node.children.length > 0;
+
+  const caret = document.createElement('span');
+  caret.className = 'caret';
+  caret.innerHTML = hasChildren ? `<svg viewBox="0 0 16 16" fill="currentColor"><path d="M6 12.796V3.204L11.481 8 6 12.796zm.659.753 5.48-4.796a1 1 0 0 0 0-1.506L6.66 2.451C6.011 1.885 5 2.345 5 3.204v9.592a1 1 0 0 0 1.659.753z"/></svg>` : '';
+  row.appendChild(caret);
+
+  const iconSpan = document.createElement('span');
+  iconSpan.className = 'icon';
+  if(node.type === 'dir'){
+    iconSpan.classList.add('icon-folder', clsIcon[node.cls]||'icon-folder');
+    iconSpan.innerHTML = ICONS.folder;
+  } else {
+    iconSpan.classList.add('icon-file');
+    iconSpan.innerHTML = ICONS.file;
+  }
+  row.appendChild(iconSpan);
+
+  const label = document.createElement('span');
+  label.className = 'label';
+  label.textContent = node.name;
+  row.appendChild(label);
+
+  if(hasChildren){
+    const count = document.createElement('span');
+    count.className = 'count';
+    count.textContent = node.children.length;
+    row.appendChild(count);
+  }
+
+  row.addEventListener('click', (e) => {
+    e.stopPropagation();
+    document.querySelectorAll('.row.selected').forEach(r => r.classList.remove('selected'));
+    row.classList.add('selected');
+    showDetail(node);
+    if(hasChildren){
+      const isOpen = row.classList.toggle('open');
+      childUl.classList.toggle('open', isOpen);
+      iconSpan.innerHTML = isOpen ? ICONS.folderOpen : ICONS.folder;
+    }
+  });
+
+  li.appendChild(row);
+
+  let childUl;
+  if(hasChildren){
+    childUl = document.createElement('ul');
+    childUl.className = 'tree children';
+    node.children.forEach(child => renderNode(child, childUl, depth+1, node));
+    li.appendChild(childUl);
+  }
+
+  container.appendChild(li);
+  node._row = row;
+  node._childUl = childUl;
+}
+
+/* Seleciona um nó vindo de qualquer lugar (árvore ou lousa): destaca na
+   árvore, abre ancestrais, rola até ele, e redesenha o painel direito. */
+function selectNode(node){
+  document.querySelectorAll('.row.selected').forEach(r => r.classList.remove('selected'));
+  if(node._row){
+    let p = node._parent;
+    while(p){
+      if(p._row){ p._row.classList.add('open'); const ic = p._row.querySelector('.icon'); if(ic) ic.innerHTML = ICONS.folderOpen; }
+      if(p._childUl) p._childUl.classList.add('open');
+      p = p._parent;
+    }
+    if(node.type === 'dir' && node._childUl){
+      node._row.classList.add('open');
+      node._childUl.classList.add('open');
+      const ic = node._row.querySelector('.icon'); if(ic) ic.innerHTML = ICONS.folderOpen;
+    }
+    node._row.classList.add('selected');
+    node._row.scrollIntoView({block:'nearest'});
+  }
+  showDetail(node);
+}
+
+/* ---------- lousa: mapa mental em nós conectados (pai · nó atual · filhos) ---------- */
+const MM_CATEGORY_COLOR = {
+  core:'#81c784', money:'#f06292', mining:'#ffb74d', social:'#ba68c8',
+  ads:'#ff8a65', admin:'#e57373', frontend:'#64b5f6', data:'#4dd0e1', warn:'#e5737'.padEnd(7,'3')
+};
+function mmColor(node){
+  if(node.type === 'file') return 'var(--file)';
+  return MM_CATEGORY_COLOR[node.cls] || 'var(--folder)';
+}
+function mmShortLabel(name){ return name.length > 16 ? name.slice(0,14) + '…' : name; }
+
+function renderMindMap(node){
+  const holder = document.getElementById('mindmap-svg-holder');
+  if(!holder) return;
+  holder.innerHTML = '';
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const W = holder.clientWidth || 760, H = 340;
+  const svg = document.createElementNS(svgNS, 'svg');
+  svg.setAttribute('id', 'mindmap-svg');
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  const edgesG = document.createElementNS(svgNS, 'g');
+  const nodesG = document.createElementNS(svgNS, 'g');
+  svg.appendChild(edgesG); svg.appendChild(nodesG);
+
+  const cx = node._parent ? W * 0.42 : W * 0.22;
+  const cy = H / 2;
+  const children = (node.children || []).slice(0, 14); // limite visual, evita poluir a lousa
+  const overflow = (node.children || []).length - children.length;
+
+  function addEdge(x1,y1,x2,y2){
+    const path = document.createElementNS(svgNS, 'path');
+    const mx = (x1+x2)/2;
+    path.setAttribute('d', `M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`);
+    path.setAttribute('class', 'mm-edge');
+    edgesG.appendChild(path);
+  }
+
+  function addNode(n, x, y, r, isCenter){
+    const g = document.createElementNS(svgNS, 'g');
+    g.setAttribute('class', 'mm-node-group' + (isCenter ? ' mm-center' : ''));
+    g.setAttribute('transform', `translate(${x},${y})`);
+    const circle = document.createElementNS(svgNS, 'circle');
+    circle.setAttribute('r', r);
+    circle.setAttribute('class', 'mm-node-circle');
+    circle.setAttribute('fill', 'var(--panel)');
+    circle.setAttribute('stroke', mmColor(n));
+    g.appendChild(circle);
+    if(n.type === 'file'){
+      const fi = document.createElementNS(svgNS,'path');
+      fi.setAttribute('d', 'M-3.5-5h5l2 2v8h-9v-10z'); // ícone simplificado de arquivo
+      fi.setAttribute('fill', mmColor(n));
+      fi.setAttribute('opacity','0.85');
+      g.appendChild(fi);
+    } else {
+      const dot = document.createElementNS(svgNS,'circle');
+      dot.setAttribute('r', Math.max(3, r*0.32));
+      dot.setAttribute('fill', mmColor(n));
+      g.appendChild(dot);
+    }
+    const label = document.createElementNS(svgNS, 'text');
+    label.setAttribute('class', 'mm-node-label');
+    label.setAttribute('text-anchor', 'middle');
+    label.setAttribute('y', r + 14);
+    label.textContent = mmShortLabel(n.name);
+    g.appendChild(label);
+    if(/IMPLEMENTADO/.test(n.desc||'')){
+      const dot = document.createElementNS(svgNS, 'circle');
+      dot.setAttribute('class','mm-badge-dot');
+      dot.setAttribute('cx', r*0.75); dot.setAttribute('cy', -r*0.75);
+      dot.setAttribute('fill', '#81c784');
+      g.appendChild(dot);
+    }
+    g.style.cursor = 'pointer';
+    g.addEventListener('click', () => selectNode(n));
+    nodesG.appendChild(g);
+    return {x,y,r};
+  }
+
+  // pai (se houver) — nó pequeno à esquerda
+  if(node._parent){
+    const px = W * 0.09, py = H/2;
+    addNode(node._parent, px, py, 20, false);
+    addEdge(px+20, py, cx-34, cy);
+  }
+
+  // nó central (o selecionado)
+  addNode(node, cx, cy, 34, true);
+
+  // filhos — arranjados verticalmente à direita, conectados por curva
+  const fx = node._parent ? W * 0.82 : W * 0.78;
+  const n = children.length;
+  children.forEach((child, i) => {
+    const spread = Math.min(H - 60, n * 56);
+    const y = n <= 1 ? cy : (cy - spread/2) + (spread/(n-1))*i;
+    addNode(child, fx, y, 22, false);
+    addEdge(cx+34, cy, fx-22, y);
+  });
+
+  if(overflow > 0){
+    const label = document.createElementNS(svgNS, 'text');
+    label.setAttribute('x', fx);
+    label.setAttribute('y', H - 10);
+    label.setAttribute('text-anchor', 'middle');
+    label.setAttribute('class', 'mm-node-sub');
+    label.textContent = `+${overflow} não exibidos (abre na árvore à esquerda)`;
+    nodesG.appendChild(label);
+  }
+
+  holder.appendChild(svg);
+}
+
+function showDetail(node){
+  document.getElementById('empty-state').classList.add('hidden-search');
+  const pane = document.getElementById('detail-pane');
+  const isDir = node.type === 'dir';
+  pane.innerHTML = `
+    <div class="badges">
+      <span class="badge">${isDir ? 'pasta' : 'arquivo'}</span>
+      ${node.name.includes('⚠️') || (node.desc||'').includes('⚠️') ? '<span class="badge warn">avaliar</span>' : ''}
+    </div>
+    <h2>${icon(isDir ? 'folderOpen' : 'file')} ${node.name}</h2>
+    <div id="mindmap-wrap"><div id="mindmap-svg-holder"></div><span class="mm-hint">lousa · clica num nó pra navegar</span></div>
+    <div class="desc">${node.desc || '<p style="color:var(--muted)">Sem descrição adicional.</p>'}</div>
+  `;
+  renderMindMap(node);
+}
+
+renderNode(TREE, document.getElementById('tree-root'), 0, null);
+// abre a raiz por padrão
+TREE._row.classList.add('open','selected');
+TREE._childUl.classList.add('open');
+TREE._row.querySelector('.icon').innerHTML = ICONS.folderOpen;
+showDetail(TREE);
+
+/* ---------- auto-atualização: aplica badges ✅/⚪ a partir do estado real do
+   filesystem (current/server/modules/*), gerado por
+   scripts/gen-mapa-mental-status.mjs em current/docs/mapa-mental.status.json.
+   Funciona quando o arquivo é servido via http (ex: `npx serve current/docs`);
+   em file:// o fetch é bloqueado pelo navegador e a página cai de volta pro
+   estado estático já embutido no HTML (sem quebrar nada). ---------- */
+(async function syncLiveStatus(){
+  const dot = document.getElementById('liveDot');
+  const text = document.getElementById('liveText');
+  try {
+    const res = await fetch('./mapa-mental.status.json', {cache:'no-store'});
+    if(!res.ok) throw new Error('sem status.json');
+    const status = await res.json();
+    const implemented = new Set(status.implementedModules || []);
+    (function walk(node){
+      if(node.type === 'dir'){
+        const key = node.name.replace(/\/$/, '');
+        if(implemented.has(key) && !/IMPLEMENTADO/.test(node.desc||'')){
+          node.desc = '<span class="badge ok" style="display:inline-block;margin-bottom:8px">✅ IMPLEMENTADO (detectado ao vivo)</span><br>' + (node.desc||'');
+        }
+        (node.children||[]).forEach(walk);
+      }
+    })(TREE);
+    text.textContent = `status: ao vivo (gerado ${status.generatedAt || '?'})`;
+    dot.classList.remove('stale');
+    // se o nó atualmente selecionado mudou, redesenha
+    const sel = document.querySelector('.row.selected');
+    if(sel){ /* descrições já mutadas por referência; próximo clique reflete */ }
+  } catch (e) {
+    text.textContent = 'status: estático (embutido no HTML — abra via servidor http pra sync ao vivo)';
+    dot.classList.add('stale');
+  }
+})();
+
+/* ---------- busca ---------- */
+document.getElementById('search').addEventListener('input', (e) => {
+  const q = e.target.value.trim().toLowerCase();
+  const allRows = document.querySelectorAll('#tree-root .node');
+  if(!q){
+    allRows.forEach(li => li.classList.remove('hidden-search'));
+    return;
+  }
+  allRows.forEach(li => {
+    const text = li.querySelector(':scope > .row .label').textContent.toLowerCase();
+    const match = text.includes(q);
+    li.classList.toggle('hidden-search', false);
+    if(match){
+      // abre ancestrais
+      let p = li.parentElement;
+      while(p && p.id !== 'tree-root'){
+        if(p.classList.contains('children')){
+          p.classList.add('open');
+          const parentRow = p.previousElementSibling;
+          if(parentRow){ parentRow.classList.add('open'); const ic=parentRow.querySelector('.icon'); if(ic) ic.innerHTML=ICONS.folderOpen; }
+        }
+        p = p.parentElement;
+      }
+    }
+  });
+  allRows.forEach(li => {
+    const text = li.querySelector(':scope > .row .label').textContent.toLowerCase();
+    li.classList.toggle('hidden-search', !text.includes(q) && !Array.from(li.querySelectorAll('.row .label')).some(l=>l.textContent.toLowerCase().includes(q)));
+  });
+});
+
+/* ---------- expandir/colapsar tudo ---------- */
+document.getElementById('expandAll').addEventListener('click', () => {
+  document.querySelectorAll('.row').forEach(r => { r.classList.add('open'); const ic=r.querySelector('.icon'); if(ic && r.nextElementSibling) ic.innerHTML = ICONS.folderOpen; });
+  document.querySelectorAll('.children').forEach(c => c.classList.add('open'));
+});
+document.getElementById('collapseAll').addEventListener('click', () => {
+  document.querySelectorAll('.row').forEach((r,i) => { if(i>0){ r.classList.remove('open'); const ic=r.querySelector('.icon'); if(ic && r.nextElementSibling) ic.innerHTML = ICONS.folder; } });
+  document.querySelectorAll('.children').forEach((c,i) => c.classList.remove('open'));
+  // mantém raiz aberta
+  TREE._row.classList.add('open');
+  TREE._childUl.classList.add('open');
+  TREE._row.querySelector('.icon').innerHTML = ICONS.folderOpen;
+});
+
+/* ---------- resizer ---------- */
+const resizer = document.getElementById('resizer');
+const treePane = document.getElementById('tree-pane');
+let resizing = false;
+resizer.addEventListener('mousedown', () => { resizing = true; document.body.style.userSelect='none'; });
+window.addEventListener('mousemove', (e) => {
+  if(!resizing) return;
+  const w = Math.max(220, Math.min(window.innerWidth*0.6, e.clientX));
+  treePane.style.width = w + 'px';
+});
+window.addEventListener('mouseup', () => { resizing = false; document.body.style.userSelect=''; });
+</script>
+</body>
+</html>

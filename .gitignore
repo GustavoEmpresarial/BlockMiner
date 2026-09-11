@@ -1,0 +1,19 @@
+node_modules/
+dist/
+.env
+.env.local
+.env.production
+.env.production.*
+*.log
+# storage/media-seed/ NÃO é ignorada — é dado versionado (imagens padrão que populam
+# storage/uploads/media/ na primeira vez que o servidor sobe vazio). Só o dado de runtime
+# (upload real de usuário, backup de banco) é ignorado, pasta por pasta.
+/storage/uploads/
+/storage/backups/
+scripts/deploy/vm_config_secret.py
+
+.client-dist-prod/
+.cursor/
+.venv-deploy/
+tmp-*.txt
+client/.env

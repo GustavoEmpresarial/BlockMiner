@@ -1,0 +1,175 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .input-admin {
+    @apply w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white placeholder:text-slate-600 outline-none transition-colors focus:border-amber-500/60;
+  }
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-rewards-glow,
+  .sidebar-offers-alert,
+  .rack-live,
+  .rack-machine-idle,
+  .rack-scan {
+    animation: none !important;
+  }
+}
+
+@keyframes sidebar-rewards-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px rgba(59, 130, 246, 0.45),
+      inset 0 0 0 1px rgba(59, 130, 246, 0.12);
+  }
+  50% {
+    box-shadow:
+      0 0 0 2px rgba(96, 165, 250, 0.65),
+      0 0 20px rgba(59, 130, 246, 0.22),
+      inset 0 0 0 1px rgba(125, 211, 252, 0.2);
+  }
+}
+
+.sidebar-rewards-glow {
+  border-radius: 1rem;
+  animation: sidebar-rewards-pulse 2.6s ease-in-out infinite;
+  background: linear-gradient(125deg, rgba(37, 99, 235, 0.22), rgba(14, 165, 233, 0.12), rgba(37, 99, 235, 0.22));
+}
+
+/* Offers nav alert — brand primary pulse (never emergency red). */
+@keyframes sidebar-offers-alert {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px rgba(59, 130, 246, 0.45),
+      inset 0 0 0 1px rgba(59, 130, 246, 0.12);
+  }
+  50% {
+    box-shadow:
+      0 0 0 2px rgba(96, 165, 250, 0.65),
+      0 0 20px rgba(59, 130, 246, 0.22),
+      inset 0 0 0 1px rgba(125, 211, 252, 0.2);
+  }
+}
+
+.sidebar-offers-alert {
+  color: #fff;
+  border-color: rgb(59 130 246 / 0.45);
+  background: linear-gradient(125deg, rgba(37, 99, 235, 0.22), rgba(14, 165, 233, 0.12), rgba(37, 99, 235, 0.22));
+  animation: sidebar-offers-alert 2.6s ease-in-out infinite;
+}
+
+@keyframes rack-live-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px rgba(59, 130, 246, 0.18),
+      0 12px 28px rgba(0, 0, 0, 0.35);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px rgba(96, 165, 250, 0.4),
+      0 0 22px rgba(59, 130, 246, 0.16),
+      0 12px 28px rgba(0, 0, 0, 0.35);
+  }
+}
+
+@keyframes rack-machine-idle {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes rack-scan {
+  0% {
+    transform: translateY(-30%);
+    opacity: 0;
+  }
+  18% {
+    opacity: 0.28;
+  }
+  82% {
+    opacity: 0.08;
+  }
+  100% {
+    transform: translateY(130%);
+    opacity: 0;
+  }
+}
+
+.rack-live {
+  animation: rack-live-glow 3.2s ease-in-out infinite;
+}
+
+.rack-machine-idle {
+  animation: rack-machine-idle 2.8s ease-in-out infinite;
+}
+
+.rack-scan {
+  pointer-events: none;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 28%;
+  background: linear-gradient(180deg, transparent, rgba(59, 130, 246, 0.16), transparent);
+  animation: rack-scan 4.8s ease-in-out infinite;
+}
+
+@keyframes rack-fan-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.rack-fan-spin {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: rack-fan-spin 0.7s linear infinite;
+}
+
+/* Hide scrollbars used by shell chrome (matches legacy className usage). */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Visible slim scrollbar for the main content area — matches the dark shell instead
+   of the browser's default light-gray bar, but keeps the user's normal scroll cue. */
+#app-main-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.35) transparent;
+}
+#app-main-scroll::-webkit-scrollbar {
+  display: block;
+  width: 10px;
+}
+#app-main-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+#app-main-scroll::-webkit-scrollbar-thumb {
+  background-color: rgba(148, 163, 184, 0.35);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+#app-main-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(148, 163, 184, 0.55);
+  background-clip: padding-box;
+}

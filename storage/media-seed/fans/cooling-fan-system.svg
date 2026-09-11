@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 220" role="img" aria-label="Cooling fan system">
+  <rect width="800" height="220" rx="16" fill="#12151c"/>
+  <rect x="12" y="12" width="776" height="196" rx="14" fill="#2a303c" stroke="#6b7384" stroke-width="3"/>
+  <rect x="24" y="22" width="752" height="28" rx="6" fill="#5b6578"/>
+  <circle cx="748" cy="36" r="5" fill="#22c55e"/>
+  <g fill="#8b93a3">
+    <circle cx="168" cy="118" r="62" fill="#151a23" stroke="#6b7384" stroke-width="3"/>
+    <circle cx="400" cy="118" r="62" fill="#151a23" stroke="#6b7384" stroke-width="3"/>
+    <circle cx="632" cy="118" r="62" fill="#151a23" stroke="#6b7384" stroke-width="3"/>
+    <path d="M168 56 L182 118 L254 118 Z" fill="#8b93a3"/>
+    <path d="M400 56 L414 118 L486 118 Z" fill="#8b93a3"/>
+    <path d="M632 56 L646 118 L718 118 Z" fill="#8b93a3"/>
+    <circle cx="168" cy="118" r="14" fill="#f59e0b"/>
+    <circle cx="400" cy="118" r="14" fill="#f59e0b"/>
+    <circle cx="632" cy="118" r="14" fill="#f59e0b"/>
+  </g>
+</svg>
