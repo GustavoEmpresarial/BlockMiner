@@ -133,7 +133,7 @@ export default function YouTubeWatchPage() {
     setIsPaused(false);
   }, []);
 
-  useYoutubeBlurPause({ isPaused, pauseWatching, powerBoostActive });
+  useYoutubeBlurPause({ isPaused, pauseWatching, powerBoostActive, playerStateRef });
 
   const presenceActive =
     isActivelyWatching || (powerBoostActive && !isPaused && claimCycleRunning);
