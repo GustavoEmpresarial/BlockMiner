@@ -15,6 +15,11 @@ import {
 } from 'lucide-react';
 import { isAxiosError } from 'axios';
 import { api } from '../../../shared/auth/auth.store';
+import {
+  approveWithdrawal,
+  listPendingWithdrawals,
+  rejectWithdrawal,
+} from '../lib/admin.api';
 import { ExecutiveSummaryPanel, type ExecutiveSummary } from '../analytics/ExecutiveSummaryPanel';
 
 type DashboardStats = {
@@ -67,15 +72,14 @@ export default function AdminOverviewPage() {
       const [s, u, w, e] = await Promise.all([
         api.get<{ ok?: boolean; stats?: DashboardStats }>('/admin/stats'),
         api.get<{ ok?: boolean; users?: RecentUser[] }>('/admin/users?limit=10'),
-        api.get<{ ok?: boolean; withdrawals?: PendingWithdrawal[] }>('/admin/withdrawals/pending'),
+        listPendingWithdrawals(),
         api.get<{ ok?: boolean; executive?: ExecutiveSummary }>('/admin/analytics/executive?period=week'),
       ]);
       if (s.data.ok && s.data.stats) setStats(s.data.stats);
       if (u.data.ok) setUsers(u.data.users ?? []);
       if (w.data.ok) {
-        setPending(
-          (w.data.withdrawals ?? []).filter((x) => x.status === 'pending' || x.status === 'approved'),
-        );
+        const rows = (w.data.withdrawals ?? []) as PendingWithdrawal[];
+        setPending(rows.filter((x) => x.status === 'pending' || x.status === 'approved'));
       }
       if (e.data.ok && e.data.executive) setExecutive(e.data.executive);
     } catch (err) {
@@ -105,7 +109,7 @@ export default function AdminOverviewPage() {
   const approve = async (id: number) => {
     if (!window.confirm('Aprovar este saque?')) return;
     try {
-      const res = await api.post(`/admin/withdrawals/${id}/approve`);
+      const res = await approveWithdrawal(id);
       if (res.data?.ok) {
         toast.success('Saque aprovado!');
         await load();
@@ -119,7 +123,7 @@ export default function AdminOverviewPage() {
   const reject = async (id: number) => {
     if (!window.confirm('Rejeitar este saque? O saldo será devolvido ao utilizador.')) return;
     try {
-      const res = await api.post(`/admin/withdrawals/${id}/reject`);
+      const res = await rejectWithdrawal(id);
       if (res.data?.ok) {
         toast.success('Saque rejeitado.');
         await load();
