@@ -5,6 +5,7 @@ import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import BrandLogo from '../../shared/components/BrandLogo';
 import { api, useAuthStore } from '../../shared/auth/auth.store';
 import { resolveApiErrorMessage } from '../../shared/utils/apiErrorI18n';
+import MinimalFooter from '../../shared/components/MinimalFooter';
 
 /**
  * item 95 Parte B (pentest blockminer.space) — consome `?token=` do link enviado por email
@@ -46,10 +47,11 @@ export default function VerifyEmailPage() {
   }, [token, checkSession, t]);
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-6 relative overflow-hidden">
+    <div className="min-h-screen bg-background flex flex-col relative overflow-hidden">
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/10 rounded-full blur-[120px] animate-pulse" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-600/10 rounded-full blur-[120px] animate-pulse delay-700" />
 
+      <div className="flex-1 flex items-center justify-center p-6">
       <div className="w-full max-w-[440px] relative z-10">
         <div className="text-center mb-10">
           <div className="flex justify-center mb-6">
@@ -98,6 +100,10 @@ export default function VerifyEmailPage() {
             {t('common.back')}
           </Link>
         </div>
+      </div>
+      </div>
+      <div className="relative z-10">
+        <MinimalFooter />
       </div>
     </div>
   );

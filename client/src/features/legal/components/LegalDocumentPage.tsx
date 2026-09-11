@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
+import MinimalFooter from '../../../shared/components/MinimalFooter';
 
 type SectionBodyProps = {
   paragraphs: string[];
@@ -188,6 +189,9 @@ export function LegalDocumentPage({
           </div>
         </article>
       </main>
+      <div className="print:hidden">
+        <MinimalFooter />
+      </div>
     </div>
   );
 }
