@@ -1,38 +1,18 @@
 #!/usr/bin/env python3
 """
-Deploy BlockMiner (current/) para a VM, sem git no servidor (sem `git fetch` / GitHub).
+Deploy BlockMiner (current/) to the production VM over SSH (Paramiko).
 
-Ported from legacy/scripts/deploy/deploy.py — BEM mais simples de propósito, porque
-current/ tem uma topologia real diferente da do legacy:
-  - 4 serviços no docker-compose.yml (db, redis, app, nginx), não 6 — sem `worker`/
-    `telegram-worker` separados (tudo roda como cron in-process dentro do `app`, ver
-    docs/PROGRESSO.txt item 10c e seguintes).
-  - Sem client/ nesta árvore ainda (congelado em legacy/) — nenhuma lógica de
-    preservar/mesclar assets do Vite entre deploys, porque não há build de frontend
-    aqui ainda.
-  - Sem backend/_server_vendor (árvore TS única) — nenhum passo de sync de symlink.
-  - Só o endpoint `GET /health` existe hoje (confirmado em server/bootstrap/server.ts) —
-    não há /health/live nem /health/ready ainda, então só checamos /health.
-
-From repo root:
+Default: pull from GitHub on the VM, then rebuild/restart Docker.
+Optional: upload a local zip (`--zip` / `./deploy.sh --zip`) for emergency
+offline deploys.
 
   python3 scripts/deploy/deploy.py
+  python3 scripts/deploy/deploy.py --ref main
   python3 scripts/deploy/deploy.py --zip /tmp/blockminer-current-deploy-*.zip
-  BLOCKMINER_DEPLOY_ZIP=/path/to/file.zip python3 scripts/deploy/deploy.py
 
-Credentials: `scripts/deploy/vm_config_secret.py` (copy from `vm_config_secret.example.py`)
-or env `VM_IP`, `VM_USER`, `VM_PASSWORD`.
+Credentials: `scripts/deploy/vm_config_secret.py` or env VM_IP / VM_PASSWORD.
 
-Never overwrites server `.env` / `.env.production` (backed up before extract, restored after).
-
-Optional env:
-  BLOCKMINER_DEPLOY_ZIP=path         — upload this .zip instead of `git archive` (same as --zip)
-  VM_APP_ROOT=/root/blockminer-current — remote app directory (must exist)
-  BLOCKMINER_DOCKER_BUILD_NO_CACHE=1 — `docker compose build --no-cache app`
-  BLOCKMINER_SKIP_RECONCILE=1        — do NOT remove stale source files (revert to additive extract)
-  SKIP_DOCKER=1                      — only upload + extract tracked files (no compose)
-
-Requires: paramiko, local `git`, remote `docker` + same compose layout as production deploy.
+Never overwrites server `.env` / `.env.production`.
 """
 from __future__ import annotations
 
@@ -40,9 +20,7 @@ import argparse
 import importlib.util
 import os
 import shlex
-import subprocess
 import sys
-import tempfile
 import time
 from pathlib import Path
 
@@ -56,6 +34,9 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent.parent
 SECRET = SCRIPT_DIR / "vm_config_secret.py"
 
+DEFAULT_GIT_URL = "https://github.com/GustavoEmpresarial/BlockMiner.git"
+DEFAULT_GIT_REF = "main"
+
 
 def _docker_no_cache_enabled() -> bool:
     v = os.environ.get("BLOCKMINER_DOCKER_BUILD_NO_CACHE", "").strip().lower()
@@ -67,8 +48,6 @@ def _skip_docker() -> bool:
 
 
 def load_secret(host_override: str = "", password_override: str = "", user_override: str = "") -> tuple[str, str, str]:
-    # --host vence tudo. Sem isto, vm_config_secret.py tem prioridade sobre VM_IP,
-    # então `VM_IP=<nova-vm> deploy` faria deploy silenciosamente na VM ANTIGA.
     if host_override:
         pw = password_override or (os.environ.get("VM_PASSWORD") or "").strip()
         if not pw:
@@ -97,12 +76,22 @@ def load_secret(host_override: str = "", password_override: str = "", user_overr
 
 
 def _parse_args(argv: list[str]) -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="Deploy BlockMiner (current/) tree to VM over SSH (Paramiko)")
+    p = argparse.ArgumentParser(description="Deploy BlockMiner to VM (git pull by default)")
     p.add_argument(
         "--zip",
         metavar="PATH",
         default=os.environ.get("BLOCKMINER_DEPLOY_ZIP", "").strip() or None,
-        help="Local .zip to upload instead of git-archive HEAD (or set BLOCKMINER_DEPLOY_ZIP)",
+        help="Emergency: upload local .zip instead of git pull (or set BLOCKMINER_DEPLOY_ZIP)",
+    )
+    p.add_argument(
+        "--git-url",
+        default=(os.environ.get("BLOCKMINER_GIT_URL") or DEFAULT_GIT_URL).strip(),
+        help=f"Git remote URL (default {DEFAULT_GIT_URL})",
+    )
+    p.add_argument(
+        "--ref",
+        default=(os.environ.get("BLOCKMINER_GIT_REF") or DEFAULT_GIT_REF).strip(),
+        help=f"Git ref to deploy (default {DEFAULT_GIT_REF})",
     )
     p.add_argument("--host", default="", help="Target VM IP. Overrides vm_config_secret.py AND VM_IP.")
     p.add_argument("--password", default="", help="Root password for --host (else VM_PASSWORD)")
@@ -121,7 +110,168 @@ def _resolve_zip_path(raw: str) -> Path:
     return z
 
 
-def _remote_script(app_root: str, *, archive_basename: str) -> str:
+def _docker_stack() -> str:
+    return r'''
+export APP_ROOT
+export BLOCKMINER_DOCKER_BUILD_NO_CACHE="${BLOCKMINER_DOCKER_BUILD_NO_CACHE:-0}"
+cd "$APP_ROOT"
+compose() {
+  local -a c=(docker compose -f "$APP_ROOT/docker-compose.yml")
+  if [[ -f "$APP_ROOT/.env.production" ]]; then
+    c+=(--env-file "$APP_ROOT/.env.production")
+  fi
+  "${c[@]}" "$@"
+}
+if [[ "${BLOCKMINER_DOCKER_BUILD_NO_CACHE:-0}" == "1" ]]; then
+  compose build --no-cache app
+else
+  compose build app
+fi
+compose up -d --remove-orphans db redis kafka app phd nginx stats-materializer
+compose exec -T app npx prisma migrate deploy --schema=prisma/schema.prisma || true
+curl -sS -o /dev/null -w "health:%{http_code}\n" http://127.0.0.1:3000/health || true
+echo "[vm] docker steps finished"
+'''
+
+
+def _env_backup_restore() -> tuple[str, str]:
+    backup = """BM_ENV_BACKUP="$(mktemp -d /tmp/bm-env-XXXXXX)"
+for f in .env .env.production; do
+  if [[ -f "$APP_ROOT/$f" ]]; then cp -a "$APP_ROOT/$f" "$BM_ENV_BACKUP/$f"; fi
+done
+"""
+    restore = """for f in .env .env.production; do
+  if [[ -f "$BM_ENV_BACKUP/$f" ]]; then cp -a "$BM_ENV_BACKUP/$f" "$APP_ROOT/$f"; fi
+done
+rm -rf "$BM_ENV_BACKUP"
+"""
+    return backup, restore
+
+
+def _preserve_runtime_artifacts() -> str:
+    """Keep untracked build/runtime dirs across git reset (dist is gitignored)."""
+    return r'''
+BM_KEEP="$(mktemp -d /tmp/bm-keep-XXXXXX)"
+for path in dist client/dist storage/uploads storage/backups; do
+  if [[ -e "$APP_ROOT/$path" ]]; then
+    mkdir -p "$BM_KEEP/$(dirname "$path")"
+    cp -a "$APP_ROOT/$path" "$BM_KEEP/$path"
+  fi
+done
+# Prefer live container SPA/server dist if present (freshest running build).
+if docker inspect blockminer-current-app >/dev/null 2>&1; then
+  docker cp blockminer-current-app:/app/dist "$BM_KEEP/dist-from-container" 2>/dev/null || true
+  docker cp blockminer-current-app:/app/client/dist "$BM_KEEP/client-dist-from-container" 2>/dev/null || true
+fi
+'''
+
+
+def _restore_runtime_artifacts() -> str:
+    return r'''
+# Restore preserved artifacts when git tree has no dist/ (gitignored).
+if [[ -d "$BM_KEEP/dist-from-container" ]]; then
+  rm -rf "$APP_ROOT/dist"
+  mv "$BM_KEEP/dist-from-container" "$APP_ROOT/dist"
+elif [[ -d "$BM_KEEP/dist" ]]; then
+  rm -rf "$APP_ROOT/dist"
+  mv "$BM_KEEP/dist" "$APP_ROOT/dist"
+fi
+if [[ -d "$BM_KEEP/client-dist-from-container" ]]; then
+  mkdir -p "$APP_ROOT/client"
+  # Preserve cartrush game assets if the new tree lacks them.
+  if [[ -d "$APP_ROOT/client/dist/games/cartrush" ]]; then
+    :
+  elif [[ -d "$BM_KEEP/client-dist-from-container/games/cartrush" ]]; then
+    mkdir -p "$BM_KEEP/client-dist-from-container/games"
+  fi
+  rm -rf "$APP_ROOT/client/dist"
+  mv "$BM_KEEP/client-dist-from-container" "$APP_ROOT/client/dist"
+elif [[ -d "$BM_KEEP/client/dist" ]]; then
+  mkdir -p "$APP_ROOT/client"
+  rm -rf "$APP_ROOT/client/dist"
+  mv "$BM_KEEP/client/dist" "$APP_ROOT/client/dist"
+fi
+for path in storage/uploads storage/backups; do
+  if [[ -d "$BM_KEEP/$path" ]]; then
+    mkdir -p "$APP_ROOT/$(dirname "$path")"
+    rm -rf "$APP_ROOT/$path"
+    mv "$BM_KEEP/$path" "$APP_ROOT/$path"
+  fi
+done
+rm -rf "$BM_KEEP"
+'''
+
+
+def _build_client_on_vm() -> str:
+    """Rebuild SPA from source when Node is available; otherwise keep preserved dist."""
+    return r'''
+if [[ -f "$APP_ROOT/client/package.json" ]]; then
+  if command -v npm >/dev/null 2>&1; then
+    echo "[vm] building client SPA with host npm"
+    ( cd "$APP_ROOT/client" && npm ci --no-audit --no-fund && npm run build ) || echo "[vm] WARN: client build failed — keeping previous client/dist"
+  elif command -v docker >/dev/null 2>&1; then
+    echo "[vm] building client SPA via node container"
+    docker run --rm \
+      -v "$APP_ROOT/client:/app" \
+      -w /app \
+      node:22-bookworm-slim \
+      bash -lc 'npm ci --no-audit --no-fund && npm run build' \
+      || echo "[vm] WARN: client container build failed — keeping previous client/dist"
+  else
+    echo "[vm] WARN: no npm/docker to rebuild client — keeping previous client/dist"
+  fi
+fi
+'''
+
+
+def _remote_git_script(app_root: str, git_url: str, git_ref: str) -> str:
+    no_cache = "export BLOCKMINER_DOCKER_BUILD_NO_CACHE=1\n" if _docker_no_cache_enabled() else ""
+    env_backup, env_restore = _env_backup_restore()
+    pull = f'''command -v git >/dev/null 2>&1 || {{ apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq git; }}
+mkdir -p "$(dirname "$APP_ROOT")"
+{env_backup}
+{_preserve_runtime_artifacts()}
+if [[ ! -d "$APP_ROOT/.git" ]]; then
+  echo "[vm] cloning {git_url} -> $APP_ROOT"
+  TMP_CLONE="$(mktemp -d /tmp/bm-clone-XXXXXX)"
+  git clone --depth 1 --branch {shlex.quote(git_ref)} {shlex.quote(git_url)} "$TMP_CLONE"
+  # Keep existing APP_ROOT runtime files; replace tree with clone.
+  if [[ -d "$APP_ROOT" ]]; then
+    # Move clone contents over APP_ROOT without deleting the directory mount points.
+    find "$APP_ROOT" -mindepth 1 -maxdepth 1 ! -name '.env' ! -name '.env.production' ! -name 'storage' -exec rm -rf {{}} +
+    shopt -s dotglob
+    mv "$TMP_CLONE"/* "$APP_ROOT"/
+    shopt -u dotglob
+    rm -rf "$TMP_CLONE"
+  else
+    mv "$TMP_CLONE" "$APP_ROOT"
+  fi
+else
+  echo "[vm] fetching {git_ref} from origin"
+  cd "$APP_ROOT"
+  git remote set-url origin {shlex.quote(git_url)} || git remote add origin {shlex.quote(git_url)}
+  git fetch --depth 1 origin {shlex.quote(git_ref)}
+  git checkout -B {shlex.quote(git_ref)} FETCH_HEAD
+  git reset --hard FETCH_HEAD
+  git clean -fd --exclude=dist --exclude=client/dist --exclude=storage --exclude=.env --exclude=.env.production
+fi
+{_restore_runtime_artifacts()}
+{env_restore}
+{_build_client_on_vm()}
+echo "[vm] git sync OK @ $(cd "$APP_ROOT" && git rev-parse --short HEAD 2>/dev/null || echo unknown)"
+'''
+    if _skip_docker():
+        return f"""set -euo pipefail
+{no_cache}APP_ROOT={shlex.quote(app_root)}
+{pull}echo "[vm] SKIP_DOCKER=1"
+"""
+    return f"""set -euo pipefail
+{no_cache}APP_ROOT={shlex.quote(app_root)}
+{pull}{_docker_stack()}
+"""
+
+
+def _remote_zip_script(app_root: str, *, archive_basename: str) -> str:
     no_cache = "export BLOCKMINER_DOCKER_BUILD_NO_CACHE=1\n" if _docker_no_cache_enabled() else ""
     skip_reconcile = (
         "export BLOCKMINER_SKIP_RECONCILE=1\n"
@@ -129,22 +279,7 @@ def _remote_script(app_root: str, *, archive_basename: str) -> str:
         else ""
     )
     remote_arc = f"/tmp/{archive_basename}"
-    # Nunca deixa a extração sobrescrever segredos do lado do servidor: faz backup dos
-    # arquivos de env, extrai, restaura no APP_ROOT final.
-    env_restore_loop = """for f in .env .env.production; do
-  if [[ -f "$BM_ENV_BACKUP/$f" ]]; then cp -a "$BM_ENV_BACKUP/$f" "$APP_ROOT/$f"; fi
-done
-rm -rf "$BM_ENV_BACKUP"
-"""
-    env_backup_loop = """BM_ENV_BACKUP="$(mktemp -d /tmp/bm-env-XXXXXX)"
-for f in .env .env.production; do
-  if [[ -f "$APP_ROOT/$f" ]]; then cp -a "$APP_ROOT/$f" "$BM_ENV_BACKUP/$f"; fi
-done
-"""
-    # Reconcilia diretórios de source com o arquivo enviado, pra que arquivos deletados
-    # no repo também desapareçam da VM (a extração é aditiva por padrão). Restrito às
-    # raízes de source reais de current/ — NUNCA toca em .env*, storage/, node_modules,
-    # dist ou volumes.
+    env_backup, env_restore = _env_backup_restore()
     reconcile = """if [[ "${BLOCKMINER_SKIP_RECONCILE:-0}" != "1" && -s "$BM_MANIFEST" ]]; then
   RECONCILE_ROOTS="server tests scripts prisma client nginx"
   BM_VMLIST="$(mktemp /tmp/bm-vmlist-XXXXXX)"
@@ -166,79 +301,46 @@ rm -f "$BM_MANIFEST"
 """
     extract = f'''command -v unzip >/dev/null 2>&1 || {{ apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq unzip; }}
 mkdir -p "$APP_ROOT"
-{env_backup_loop}
+{env_backup}
 BM_MANIFEST="$(mktemp /tmp/bm-manifest-XXXXXX)"
 unzip -Z1 "{remote_arc}" | sed 's#/$##' | sort -u > "$BM_MANIFEST"
 unzip -o -q "{remote_arc}" -d "$APP_ROOT"
 rm -f "{remote_arc}"
-{reconcile}{env_restore_loop}
-'''
-    docker_stack = r'''
-export APP_ROOT
-export BLOCKMINER_DOCKER_BUILD_NO_CACHE="${BLOCKMINER_DOCKER_BUILD_NO_CACHE:-0}"
-cd "$APP_ROOT"
-compose() {
-  local -a c=(docker compose -f "$APP_ROOT/docker-compose.yml")
-  if [[ -f "$APP_ROOT/.env.production" ]]; then
-    c+=(--env-file "$APP_ROOT/.env.production")
-  fi
-  "${c[@]}" "$@"
-}
-if [[ "${BLOCKMINER_DOCKER_BUILD_NO_CACHE:-0}" == "1" ]]; then
-  compose build --no-cache app
-else
-  compose build app
-fi
-# phd reuses the app image (same compose file). Build app first, then bring the stack up.
-compose up -d --remove-orphans db redis kafka app phd nginx stats-materializer
-compose exec -T app npx prisma migrate deploy --schema=prisma/schema.prisma || true
-curl -sS -o /dev/null -w "health:%{http_code}\n" http://127.0.0.1:3000/health || true
-echo "[vm] docker steps finished"
+{reconcile}{env_restore}
 '''
     if _skip_docker():
         return f"""set -euo pipefail
 {no_cache}{skip_reconcile}APP_ROOT={shlex.quote(app_root)}
 {extract}echo "[vm] extract OK (SKIP_DOCKER=1)"
 """
-    k8s_stack = r'''
-export APP_ROOT
-cd "$APP_ROOT"
-if command -v kubectl >/dev/null 2>&1 && [[ -d "$APP_ROOT/deploy/k8s" ]]; then
-  echo "[vm] applying Kustomize deploy/k8s (BLOCKMINER_USE_K8S=1)"
-  kubectl apply -k "$APP_ROOT/deploy/k8s" || true
-  echo "[vm] k8s apply finished"
-else
-  echo "[vm] kubectl or deploy/k8s missing — cannot USE_K8S"
-  exit 1
-fi
-'''
-    # Opt-in K8s cutover: BLOCKMINER_USE_K8S=1. After default flips to K8s, SKIP_K8S=1 keeps Compose.
-    use_k8s = os.environ.get("BLOCKMINER_USE_K8S", "").strip().lower() in ("1", "true", "yes", "on")
-    skip_k8s = os.environ.get("SKIP_K8S", "").strip().lower() in ("1", "true", "yes", "on")
-    if use_k8s and not skip_k8s:
-        return f"""set -euo pipefail
-{no_cache}{skip_reconcile}APP_ROOT={shlex.quote(app_root)}
-{extract}{k8s_stack}
-"""
     return f"""set -euo pipefail
 {no_cache}{skip_reconcile}APP_ROOT={shlex.quote(app_root)}
-{extract}{docker_stack}
+{extract}{_docker_stack()}
 """
+
+
+def _run_remote(client: paramiko.SSHClient, script: str) -> int:
+    stdin, stdout, stderr = client.exec_command("bash -s", get_pty=False)
+    stdin.write(script)
+    stdin.close()
+    ch = stdout.channel
+    while True:
+        if ch.recv_ready():
+            chunk = ch.recv(65536)
+            if chunk:
+                os.write(1, chunk)
+        if ch.recv_stderr_ready():
+            chunk = ch.recv_stderr(65536)
+            if chunk:
+                os.write(2, chunk)
+        if ch.exit_status_ready():
+            break
+        time.sleep(0.25)
+    return int(ch.recv_exit_status())
 
 
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv if argv is not None else sys.argv[1:])
-
-    if not args.zip:
-        raise SystemExit(
-            "current/ deploy requires --zip (or BLOCKMINER_DEPLOY_ZIP) — use ./deploy.sh, "
-            "que gera o zip via `git ls-files` + `dist/` já buildado antes de chamar este script."
-        )
-    archive = _resolve_zip_path(args.zip)
-    remote_name = "blockminer_current_deploy.zip"
-    print(f"[local] using zip {archive.stat().st_size} bytes -> {archive}", flush=True)
-
-    remote_path = f"/tmp/{remote_name}"
     host, user, password = load_secret(args.host, args.password, args.user)
     print(f"[deploy] target: {user}@{host}", flush=True)
     app_root = (os.environ.get("VM_APP_ROOT") or "/root/blockminer-current").strip()
@@ -256,46 +358,37 @@ def main(argv: list[str] | None = None) -> int:
         allow_agent=False,
     )
 
-    size = archive.stat().st_size
-    t0 = time.monotonic()
-    sftp = client.open_sftp()
-    print(f"[sftp] {archive.name} -> {user}@{host}:{remote_path} ({size} bytes)", flush=True)
+    try:
+        if args.zip:
+            archive = _resolve_zip_path(args.zip)
+            remote_name = "blockminer_current_deploy.zip"
+            remote_path = f"/tmp/{remote_name}"
+            print(f"[local] zip fallback {archive.stat().st_size} bytes -> {archive}", flush=True)
+            size = archive.stat().st_size
+            t0 = time.monotonic()
+            sftp = client.open_sftp()
+            print(f"[sftp] {archive.name} -> {user}@{host}:{remote_path} ({size} bytes)", flush=True)
+            last = [0]
 
-    last = [0]
+            def progress(done: int, total: int) -> None:
+                if total <= 0:
+                    return
+                step = 5 * 1024 * 1024
+                if done == total or done - last[0] >= step:
+                    last[0] = done
+                    pct = 100.0 * done / total
+                    print(f"[sftp] {done / (1024 * 1024):.1f} / {total / (1024 * 1024):.1f} MiB ({pct:.0f}%)", flush=True)
 
-    def progress(done: int, total: int) -> None:
-        if total <= 0:
-            return
-        step = 5 * 1024 * 1024
-        if done == total or done - last[0] >= step:
-            last[0] = done
-            pct = 100.0 * done / total
-            print(f"[sftp] {done / (1024 * 1024):.1f} / {total / (1024 * 1024):.1f} MiB ({pct:.0f}%)", flush=True)
-
-    sftp.put(str(archive), remote_path, callback=progress)
-    sftp.close()
-    print(f"[sftp] upload done in {time.monotonic() - t0:.1f}s", flush=True)
-
-    # No PTY: avoids an interactive prompt hanging the session after long docker steps.
-    stdin, stdout, stderr = client.exec_command("bash -s", get_pty=False)
-    stdin.write(_remote_script(app_root, archive_basename=remote_name))
-    stdin.close()
-    ch = stdout.channel
-    while True:
-        if ch.recv_ready():
-            chunk = ch.recv(65536)
-            if chunk:
-                os.write(1, chunk)
-        if ch.recv_stderr_ready():
-            chunk = ch.recv_stderr(65536)
-            if chunk:
-                os.write(2, chunk)
-        if ch.exit_status_ready():
-            break
-        time.sleep(0.25)
-    code = ch.recv_exit_status()
-    client.close()
-    return int(code)
+            sftp.put(str(archive), remote_path, callback=progress)
+            sftp.close()
+            print(f"[sftp] upload done in {time.monotonic() - t0:.1f}s", flush=True)
+            code = _run_remote(client, _remote_zip_script(app_root, archive_basename=remote_name))
+        else:
+            print(f"[deploy] git pull {args.git_url} @ {args.ref}", flush=True)
+            code = _run_remote(client, _remote_git_script(app_root, args.git_url, args.ref))
+    finally:
+        client.close()
+    return code
 
 
 if __name__ == "__main__":
