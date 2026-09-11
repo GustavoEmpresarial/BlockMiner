@@ -5,14 +5,15 @@ import { Cookie } from 'lucide-react';
 import { getCookieConsent, setCookieConsent } from '../utils/cookieConsent';
 
 /**
- * Site-wide cookie consent banner. Mounted once in App.tsx so it shows on every page until
+ * Site-wide cookie consent popup. Mounted once in App.tsx so it shows on every page until
  * the visitor makes a choice — not just the landing page, since the essential session
  * cookies it discloses (blockminer_access/refresh/csrf) are set the moment anyone logs in
  * or registers, wherever they land first.
  *
- * Deliberately a SOLID background (bg-[#050810], not a translucent/blurred one) with a
- * visible top border and shadow: an earlier version of this banner nearly blended into dark
- * page backgrounds and was reported as barely legible. This one is opaque on purpose.
+ * A floating card in the bottom-right corner (not a full-width bar) — deliberately a SOLID
+ * background (bg-[#0a0f1c], not translucent/blurred) with a visible border, ring and heavy
+ * shadow so it reads as a distinct panel floating over the page, never blending into a dark
+ * background like an earlier full-width version did.
  */
 export default function CookieConsentBanner() {
   const { t } = useTranslation();
@@ -33,11 +34,13 @@ export default function CookieConsentBanner() {
     <div
       role="region"
       aria-label={t('cookieConsent.policyLink', { defaultValue: 'Cookie Policy' })}
-      className="fixed inset-x-0 bottom-0 z-[60] border-t border-white/10 bg-[#050810] px-4 py-4 shadow-[0_-8px_30px_rgba(0,0,0,0.45)] sm:px-6"
+      className="fixed inset-x-4 bottom-4 z-[60] sm:inset-x-auto sm:right-5 sm:bottom-5 sm:w-[380px]"
     >
-      <div className="mx-auto flex max-w-5xl flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="rounded-2xl border border-white/15 bg-[#0a0f1c] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.6)] ring-1 ring-black/40">
         <div className="flex items-start gap-3">
-          <Cookie className="mt-0.5 h-5 w-5 shrink-0 text-sky-400" aria-hidden />
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sky-500/15">
+            <Cookie className="h-4.5 w-4.5 text-sky-400" aria-hidden />
+          </span>
           <p className="text-sm leading-6 text-slate-200">
             {t('cookieConsent.message')}{' '}
             <Link to="/cookie-policy" className="font-semibold text-sky-400 underline underline-offset-2 hover:text-sky-300">
@@ -45,18 +48,18 @@ export default function CookieConsentBanner() {
             </Link>
           </p>
         </div>
-        <div className="flex w-full shrink-0 gap-2 sm:w-auto">
+        <div className="mt-4 flex gap-2">
           <button
             type="button"
             onClick={() => choose('declined')}
-            className="flex-1 rounded-full border border-white/15 px-4 py-2 text-sm font-semibold text-slate-200 transition-colors hover:bg-white/5 sm:flex-none"
+            className="flex-1 rounded-full border border-white/15 px-4 py-2 text-sm font-semibold text-slate-200 transition-colors hover:bg-white/5"
           >
             {t('cookieConsent.decline')}
           </button>
           <button
             type="button"
             onClick={() => choose('accepted')}
-            className="flex-1 rounded-full bg-sky-500 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-sky-500/25 transition-colors hover:bg-sky-400 sm:flex-none"
+            className="flex-1 rounded-full bg-sky-500 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-sky-500/25 transition-colors hover:bg-sky-400"
           >
             {t('cookieConsent.accept')}
           </button>
