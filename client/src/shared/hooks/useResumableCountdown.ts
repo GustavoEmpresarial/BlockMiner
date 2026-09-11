@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { parseStoredTimer, type StoredTimer } from '../../features/shortlinks/lib/shortlinkBackground';
 
 type Options = {
@@ -70,14 +70,22 @@ export function useResumableCountdown({
     if (paused) setWasPaused(true);
   }, [paused]);
 
+  // Stable identity across ticks on purpose — `remaining` changes every second, and this used
+  // to be defined inline inside the useMemo factory below, so it got a fresh function identity
+  // every second too. A consumer that depends on `dismissPaused` in a useCallback/useEffect dep
+  // array (see YouTubeWatchPage's resetClaimCycle) would then itself change identity every
+  // second, cascading into anything depending on *that* — which is exactly what caused the
+  // YouTube player to be destroyed and recreated once per second (2026-09-11 fix).
+  const dismissPaused = useCallback(() => setWasPaused(false), []);
+
   return useMemo(
     () => ({
       remaining,
       isComplete: remaining <= 0,
       expired: remaining <= 0,
       wasPaused,
-      dismissPaused: () => setWasPaused(false),
+      dismissPaused,
     }),
-    [remaining, wasPaused],
+    [remaining, wasPaused, dismissPaused],
   );
 }

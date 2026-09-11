@@ -162,7 +162,14 @@ export default function YouTubeWatchPage() {
       /* ignore */
     }
     setClaimCycleRunning(false);
-  }, [countdown]);
+    // Depend on countdown.dismissPaused (now stable — see useResumableCountdown.ts), NOT the
+    // whole `countdown` object: that object gets a new identity every second because
+    // `remaining` ticks down every second. Depending on the whole object made resetClaimCycle
+    // change identity every second too, which cascaded into the YT.Player-creation effect
+    // below (it has resetClaimCycle as a dep) re-running every second — destroying and
+    // recreating the live YouTube iframe once per second (the "fica piscando preto" bug,
+    // 2026-09-11).
+  }, [countdown.dismissPaused]);
 
   const loadStatus = useCallback(async () => {
     try {
