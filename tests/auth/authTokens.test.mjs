@@ -50,6 +50,33 @@ test("verifyAccessToken rejects a token with the wrong issuer/audience even if s
   assert.equal(authTokens.verifyAccessToken(wrongAud), null);
 });
 
+test("signAccessToken always signs with HS256 (explicit, never left to the library default)", () => {
+  const token = authTokens.signAccessToken({ id: 1, name: "X", email: "x@example.com" });
+  const [headerB64] = token.split(".");
+  const header = JSON.parse(Buffer.from(headerB64, "base64url").toString("utf8"));
+  assert.equal(header.alg, "HS256");
+});
+
+test("verifyAccessToken rejects a token signed with a different HMAC algorithm even with the right secret (2026-09-11 hardening: algorithms pinned)", () => {
+  const hs512Token = jwt.sign({ sub: "1" }, process.env.JWT_SECRET, {
+    algorithm: "HS512",
+    expiresIn: "1h",
+    issuer: authTokens.JWT_ISSUER,
+    audience: authTokens.JWT_AUDIENCE,
+  });
+  assert.equal(authTokens.verifyAccessToken(hs512Token), null);
+});
+
+test('verifyAccessToken rejects an unsigned ("alg: none") token even with a matching payload', () => {
+  const noneToken = jwt.sign({ sub: "1" }, undefined, {
+    algorithm: "none",
+    expiresIn: "1h",
+    issuer: authTokens.JWT_ISSUER,
+    audience: authTokens.JWT_AUDIENCE,
+  });
+  assert.equal(authTokens.verifyAccessToken(noneToken), null);
+});
+
 test("verifyAccessToken rejects an expired token", () => {
   const expired = jwt.sign({ sub: "1" }, process.env.JWT_SECRET, {
     expiresIn: -10, // already expired

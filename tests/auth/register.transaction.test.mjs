@@ -94,6 +94,15 @@ test("registerPost: creates the user row with the expected defaults", async () =
   assert.ok(user.refCode && user.refCode.length > 0);
 });
 
+test("registerPost: hashes the password at bcrypt cost 12 (2026-09-11 hardening, was 10)", async () => {
+  const { res } = await register();
+  const userId = res.calls.json.user.id;
+  const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
+  // bcrypt hash shape: $<version>$<cost>$<salt+hash>, e.g. "$2a$12$...".
+  const cost = Number(user.passwordHash.split("$")[2]);
+  assert.equal(cost, 12);
+});
+
 test("registerPost: grants the welcome-miner inventory in the same transaction", async () => {
   const { res } = await register();
   const userId = res.calls.json.user.id;

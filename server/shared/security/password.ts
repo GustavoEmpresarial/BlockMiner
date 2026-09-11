@@ -1,7 +1,15 @@
 /** Password hashing (bcrypt) — ported from legacy auth.password-jwt-adjacent auth.service.ts. */
 import bcrypt from "bcryptjs";
 
-export function hashPassword(plain: string, rounds = 10): Promise<string> {
+/**
+ * OWASP's current password-storage baseline for bcrypt is a work factor of 12 (10 is the
+ * hard floor). New password hashes should use this; existing rows keep working unchanged —
+ * bcrypt embeds its own cost in the stored hash, so bcrypt.compare() auto-detects whatever
+ * cost each row was hashed at regardless of what BCRYPT_COST is today.
+ */
+export const BCRYPT_COST = 12;
+
+export function hashPassword(plain: string, rounds = BCRYPT_COST): Promise<string> {
   return bcrypt.hash(plain, rounds);
 }
 

@@ -117,7 +117,10 @@ export async function registerPost(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    const passwordHash = await hashPassword(String(password ?? ""), 10);
+    // 2026-09-11 hardening: bcrypt cost bumped from 10 to OWASP's current baseline (12) for
+    // newly-created accounts — see BCRYPT_COST in shared/security/password.ts. Existing
+    // password hashes keep verifying fine; bcrypt reads its own cost back out of the hash.
+    const passwordHash = await hashPassword(String(password ?? ""));
     const refCode = await generateUniqueRefCode();
     let referrerId: number | null = null;
 
