@@ -235,13 +235,22 @@ if [[ ! -d "$APP_ROOT/.git" ]]; then
   echo "[vm] cloning {git_url} -> $APP_ROOT"
   TMP_CLONE="$(mktemp -d /tmp/bm-clone-XXXXXX)"
   git clone --depth 1 --branch {shlex.quote(git_ref)} {shlex.quote(git_url)} "$TMP_CLONE"
-  # Keep existing APP_ROOT runtime files; replace tree with clone.
   if [[ -d "$APP_ROOT" ]]; then
-    # Move clone contents over APP_ROOT without deleting the directory mount points.
-    find "$APP_ROOT" -mindepth 1 -maxdepth 1 ! -name '.env' ! -name '.env.production' ! -name 'storage' -exec rm -rf {{}} +
-    shopt -s dotglob
-    mv "$TMP_CLONE"/* "$APP_ROOT"/
-    shopt -u dotglob
+    # Overlay clone onto existing runtime tree. Never wipe storage/ or env files.
+    command -v rsync >/dev/null 2>&1 || {{ apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq rsync; }}
+    rsync -a --delete \
+      --exclude '.env' \
+      --exclude '.env.production' \
+      --exclude 'storage/uploads/' \
+      --exclude 'storage/backups/' \
+      --exclude 'dist/' \
+      --exclude 'client/dist/' \
+      "$TMP_CLONE"/ "$APP_ROOT"/
+    # Ensure versioned media-seed lands even if storage/ already existed.
+    if [[ -d "$TMP_CLONE/storage/media-seed" ]]; then
+      mkdir -p "$APP_ROOT/storage"
+      rsync -a "$TMP_CLONE/storage/media-seed"/ "$APP_ROOT/storage/media-seed"/
+    fi
     rm -rf "$TMP_CLONE"
   else
     mv "$TMP_CLONE" "$APP_ROOT"
