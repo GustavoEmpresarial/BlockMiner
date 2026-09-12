@@ -16,6 +16,7 @@
  * purchase balance fix (item 43): now calls miningEngine.reloadMinerProfile(userId) so the
  * engine's cached baseHashRate mirrors the DB immediately after every install/uninstall.
  */
+import { Prisma as PrismaNs } from "@prisma/client";
 import prisma from "../../core/database/prisma.js";
 import { HttpStatusError } from "../../shared/errors/httpStatusError.js";
 import { logger } from "../../core/logger/index.js";
@@ -34,6 +35,10 @@ import * as roomsRepo from "./rooms.repository.js";
 import { RACKS_PER_ROOM, ROOM_MAX, starterRackSlotCount, type MinerWithMinerRel, type RackMoveBackRow } from "./rooms.types.js";
 
 const log = logger.child("rooms.service");
+
+function isUniqueViolation(err: unknown): boolean {
+  return err instanceof PrismaNs.PrismaClientKnownRequestError && err.code === "P2002";
+}
 
 async function moveRackMinerBackToInventoryTx(
   tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
@@ -320,40 +325,58 @@ export async function installMinerForUser(
     eventImageUrl: inventoryItem.ownedMachine?.eventMiner?.imageUrl,
   });
 
-  await prisma.$transaction(async (tx) => {
-    const omId = await roomsRepo.ensureOwnedMachineForInventoryTx(tx, inventoryItem);
-    const newMiner = await roomsRepo.createUserMinerForRackTx(tx, {
-      userId,
-      slotIndex,
-      minerId: inventoryItem.minerId,
-      level: inventoryItem.level,
-      hashRate: inventoryItem.hashRate,
-      slotSize: inventoryItem.slotSize,
-      imageUrl: display.imageUrl,
-      isActive: true,
-      ownedMachineId: omId,
-    });
+  try {
+    await prisma.$transaction(async (tx) => {
+      const omId = await roomsRepo.ensureOwnedMachineForInventoryTx(tx, inventoryItem);
+      const newMiner = await roomsRepo.createUserMinerForRackTx(tx, {
+        userId,
+        slotIndex,
+        minerId: inventoryItem.minerId,
+        level: inventoryItem.level,
+        hashRate: inventoryItem.hashRate,
+        slotSize: inventoryItem.slotSize,
+        imageUrl: display.imageUrl,
+        isActive: true,
+        ownedMachineId: omId,
+      });
 
-    await roomsRepo.updateRackInstallationTx(tx, rackId, {
-      userMinerId: newMiner.id,
-      installedAt: new Date(),
-    });
+      await roomsRepo.updateRackInstallationTx(tx, rackId, {
+        userMinerId: newMiner.id,
+        installedAt: new Date(),
+      });
 
-    if (slotSize >= 2 && adjacentRack) {
-      await roomsRepo.setRackBlockedByMinerTx(tx, adjacentRack.id, newMiner.id);
+      if (slotSize >= 2 && adjacentRack) {
+        await roomsRepo.setRackBlockedByMinerTx(tx, adjacentRack.id, newMiner.id);
+      }
+
+      await roomsRepo.syncOwnedMachineSnapshotTx(tx, omId, "RACK", {
+        minerId: inventoryItem.minerId,
+        minerName: display.minerName,
+        level: inventoryItem.level,
+        hashRate: inventoryItem.hashRate,
+        slotSize: inventoryItem.slotSize ?? 1,
+        imageUrl: display.imageUrl,
+      });
+
+      await roomsRepo.deleteInventoryItemByIdTx(tx, inventoryId);
+    });
+  } catch (err) {
+    // The preflight occupancy check (resolveInstallMinerContext, above) reads before this
+    // transaction writes — a genuine TOCTOU window under concurrent installs into the same
+    // rack. The `@@unique([userId, slotIndex])` constraint on UserMiner is the real backstop
+    // (confirmed by a concurrent-install integration test: exactly one writer ever wins,
+    // never a double-install), but until this catch, the loser's P2002 surfaced as an
+    // unhandled 500 instead of the same clean, already-established RACE_CONDITION_DETECTED
+    // shape every other mutation in this codebase (machines/, shop/, offer-events/) returns.
+    if (isUniqueViolation(err)) {
+      return {
+        status: 409,
+        code: "RACE_CONDITION_DETECTED",
+        message: "This action conflicted with another request. Refresh the page and try again.",
+      };
     }
-
-    await roomsRepo.syncOwnedMachineSnapshotTx(tx, omId, "RACK", {
-      minerId: inventoryItem.minerId,
-      minerName: display.minerName,
-      level: inventoryItem.level,
-      hashRate: inventoryItem.hashRate,
-      slotSize: inventoryItem.slotSize ?? 1,
-      imageUrl: display.imageUrl,
-    });
-
-    await roomsRepo.deleteInventoryItemByIdTx(tx, inventoryId);
-  });
+    throw err;
+  }
 
   try {
     await miningEngine.reloadMinerProfile(userId);
