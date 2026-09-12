@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, afterEach } from 'vitest';
 import {
   buildReferralRegisterUrl,
   displayDashboardUserName,
@@ -106,10 +106,53 @@ describe('buildReferralRegisterUrl', () => {
 });
 
 describe('publicSiteOrigin', () => {
+  const originalLocation = window.location;
+
+  afterEach(() => {
+    Object.defineProperty(window, 'location', { value: originalLocation, configurable: true, writable: true });
+    delete process.env.APP_URL;
+  });
+
+  function stubHostname(hostname: string) {
+    Object.defineProperty(window, 'location', {
+      value: { ...originalLocation, hostname, origin: `https://${hostname}` },
+      configurable: true,
+      writable: true,
+    });
+  }
+
   it('returns a non-empty https origin in a jsdom (non-dev-host) environment', () => {
     const origin = publicSiteOrigin();
     expect(typeof origin).toBe('string');
     expect(origin.length).toBeGreaterThan(0);
+  });
+
+  it('always points invites at the prod domain when browsed from dev.blockminer.space', () => {
+    stubHostname('dev.blockminer.space');
+    expect(publicSiteOrigin()).toBe('https://blockminer.space');
+  });
+
+  it('also redirects a subdomain of the dev host to prod', () => {
+    stubHostname('staging.dev.blockminer.space');
+    expect(publicSiteOrigin()).toBe('https://blockminer.space');
+  });
+
+  it('uses APP_URL when it is a well-formed non-localhost https URL', () => {
+    stubHostname('some-other-host.example');
+    process.env.APP_URL = 'https://blockminer.space/';
+    expect(publicSiteOrigin()).toBe('https://blockminer.space');
+  });
+
+  it('ignores a localhost APP_URL and falls back to window.location.origin', () => {
+    stubHostname('minercore.online');
+    process.env.APP_URL = 'http://localhost:3000';
+    expect(publicSiteOrigin()).toBe('https://minercore.online');
+  });
+
+  it('ignores a malformed (non-http) APP_URL and falls back to window.location.origin', () => {
+    stubHostname('minercore.online');
+    process.env.APP_URL = 'not-a-url';
+    expect(publicSiteOrigin()).toBe('https://minercore.online');
   });
 });
 

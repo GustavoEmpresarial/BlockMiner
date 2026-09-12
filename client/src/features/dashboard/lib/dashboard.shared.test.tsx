@@ -50,6 +50,24 @@ describe('formatDashboardBlockTime', () => {
   it('falls back to em dash for a value that cannot be parsed as a date at all', () => {
     expect(formatDashboardBlockTime({ timestamp: {} as unknown as string })).toBe('—');
   });
+
+  it('falls back to createdAt/time when timestamp is absent', () => {
+    expect(formatDashboardBlockTime({ createdAt: '2026-01-01T00:00:00Z' } as never)).not.toBe('—');
+    expect(formatDashboardBlockTime({ time: '2026-01-01T00:00:00Z' } as never)).not.toBe('—');
+  });
+
+  it('treats a numeric-looking string timestamp under 1e12 as seconds', () => {
+    expect(formatDashboardBlockTime({ timestamp: '1600000000' })).not.toBe('—');
+  });
+
+  it('accepts a Date instance directly', () => {
+    expect(formatDashboardBlockTime({ timestamp: new Date('2026-01-01T00:00:00Z') })).not.toBe('—');
+  });
+
+  it('returns em dash instead of throwing when the row itself is malformed (property access throws)', () => {
+    expect(formatDashboardBlockTime(null as never)).toBe('—');
+    expect(formatDashboardBlockTime(undefined as never)).toBe('—');
+  });
 });
 
 describe('Card', () => {
@@ -82,6 +100,16 @@ describe('Card', () => {
     expect(img).toBeInTheDocument();
     fireEvent.error(img!);
     expect(container.querySelector('img')).not.toBeInTheDocument();
+    expect(container.querySelector('svg')).toBeInTheDocument();
+  });
+
+  it('falls back to the unit-initial glyph when there is neither a logo nor an icon', () => {
+    render(<Card label="Mystery" value="1" unit="xyz" color="amber" />);
+    expect(screen.getByText('x')).toBeInTheDocument();
+  });
+
+  it('falls back to the blue tone for an unrecognized color key instead of crashing', () => {
+    const { container } = render(<Card icon={Zap} label="Speed" value="1" unit="x" color="not-a-real-color" />);
     expect(container.querySelector('svg')).toBeInTheDocument();
   });
 });

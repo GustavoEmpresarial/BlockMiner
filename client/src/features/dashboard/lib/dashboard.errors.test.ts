@@ -81,4 +81,15 @@ describe('logDashboardError', () => {
     expect(cycle.severity).toBe('ERROR');
     expect(cycle.impact).toBe('LOW');
   });
+
+  it('falls back to a Date.now()+random id when crypto.randomUUID is unavailable (older browsers)', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.stubGlobal('crypto', undefined);
+    try {
+      const id = logDashboardError('DASHBOARD_CYCLE_FETCH_FAILED', new Error('x'));
+      expect(id).toMatch(/^err_\d+-[a-z0-9]+$/);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
 });
