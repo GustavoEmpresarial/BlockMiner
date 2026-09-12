@@ -297,6 +297,7 @@ export default function DashboardBannersCarousel() {
         <>
           <button
             type="button"
+            aria-label="Anterior"
             onClick={() => {
               step(-1);
               restartAuto();
@@ -307,6 +308,7 @@ export default function DashboardBannersCarousel() {
           </button>
           <button
             type="button"
+            aria-label="Próximo"
             onClick={() => {
               step(1);
               restartAuto();
@@ -323,6 +325,8 @@ export default function DashboardBannersCarousel() {
             <button
               key={dot}
               type="button"
+              aria-label={`Ir para o slide ${dot + 1}`}
+              aria-current={dot === index}
               onClick={() => {
                 setIndex(dot);
                 restartAuto();

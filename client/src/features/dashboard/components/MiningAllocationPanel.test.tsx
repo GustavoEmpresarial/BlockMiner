@@ -76,6 +76,18 @@ describe('MiningAllocationPanel', () => {
     expect(props.onPreset).toHaveBeenCalledWith(50);
   });
 
+  it('closes the modal when the backdrop is clicked while not saving', () => {
+    const props = renderPanel({ allocModalOpen: true, savingAlloc: false });
+    fireEvent.click(document.querySelector('.fixed.inset-0')!);
+    expect(props.onCloseModal).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignores a backdrop click while saving, so an in-flight save cannot be lost by a stray click', () => {
+    const props = renderPanel({ allocModalOpen: true, savingAlloc: true });
+    fireEvent.click(document.querySelector('.fixed.inset-0')!);
+    expect(props.onCloseModal).not.toHaveBeenCalled();
+  });
+
   it('falls back to 0 for a non-finite draft value instead of rendering NaN in the bar width', () => {
     renderPanel({ allocModalOpen: true, draftPol: 'not-a-number', draftShib: 'also-bad' });
     // Should not throw during render; NaN would otherwise propagate into style width.
