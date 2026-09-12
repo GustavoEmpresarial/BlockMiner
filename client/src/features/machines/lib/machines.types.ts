@@ -50,6 +50,10 @@ export type RoomPayload = {
   unlocked: boolean;
   racks?: UserRackSlot[];
   visualCount?: number;
+  /** BLK unlock price + optional promo fields — only meaningful while `unlocked` is false. */
+  price?: number;
+  listPrice?: number;
+  onOffer?: boolean;
 };
 
 export type RoomsSummaryState = {
@@ -58,10 +62,17 @@ export type RoomsSummaryState = {
   freeRacks: number;
 };
 
+/**
+ * What ImageRackCard actually passes to onSlotClick (see
+ * inventory2/components/ImageRackCard.tsx) and SlotModal actually consumes — this
+ * type used to declare `{ rackId, roomNumber, slot }`, a shape nothing in the
+ * codebase produced or read; fixed 2026-09-12 to match the real, live contract.
+ */
 export type SelectedSlotPayload = {
-  rackId: number;
-  roomNumber: number;
-  slot: UserRackSlot;
+  rack: UserRackSlot | null | undefined;
+  miner: UserRackSlot['miner'];
+  visualRackNumber: number;
+  slotInRack: number;
 };
 
 export type VisualRackPlacement = {
@@ -69,8 +80,16 @@ export type VisualRackPlacement = {
   floorSlot: number | null;
 };
 
+/**
+ * What ImageRackCard's rack-slot hover tooltip actually tracks (see
+ * inventory2/components/ImageRackCard.tsx's showMachineTipNow/scheduleShowMachineTip) —
+ * this type used to declare `{ rackId, x, y }`, a shape nothing produced or read;
+ * fixed 2026-09-12 to match the real, live contract.
+ */
 export type MachineTipState = {
-  rackId: number;
-  x: number;
-  y: number;
+  anchorEl: HTMLElement;
+  slotKey: number;
+  displayName: string;
+  hashrateStr: string;
+  slotSize: number;
 };

@@ -233,13 +233,14 @@ export const ImageRackCard = memo(function ImageRackCard({
             const rendered = [];
             let i = 0;
             while (i < slots.length) {
-              const rack = slots[i];
+              const slotIndex = i;
+              const rack = slots[slotIndex];
               const machine = rack ? rack.miner : null;
               const descriptor = machine ? getMachineDescriptor(machine) : null;
               const isOccupied = !!machine;
               const isBlocked = !machine && !!rack?.blockedByMinerId;
               const isDoubleSlot = isOccupied && machine != null && Number(machine.slotSize) >= 2;
-              const slotKey = rack?.id ?? i;
+              const slotKey = rack?.id ?? slotIndex;
               const isDragTarget = dragOverId === slotKey;
 
               if (isBlocked) {
@@ -247,7 +248,7 @@ export const ImageRackCard = memo(function ImageRackCard({
                 continue;
               }
 
-              const overlay = computeSlotOverlayStyle(i, isDoubleSlot ? 2 : 1);
+              const overlay = computeSlotOverlayStyle(slotIndex, isDoubleSlot ? 2 : 1);
               if (!overlay) {
                 i++;
                 continue;
@@ -256,7 +257,7 @@ export const ImageRackCard = memo(function ImageRackCard({
               const displayName = machine ? safeDisplayLabel(machine.minerName || descriptor?.name || '') : '';
               const hashrateStr = machine ? formatHashrate(machine.hashRate) : '';
               const slotSizeNum = machine ? Math.max(1, Number(machine.slotSize) || 1) : 1;
-              const stableSlotKey = rack?.id ?? i;
+              const stableSlotKey = rack?.id ?? slotIndex;
               const occupiedAria = machine
                 ? t('inventory.rack_slot_machine_aria', { name: displayName, power: hashrateStr, slots: slotSizeNum })
                 : t('inventory.slot_empty_tooltip');
@@ -270,11 +271,11 @@ export const ImageRackCard = memo(function ImageRackCard({
 
               rendered.push(
                 <button
-                  key={rack ? rack.id : i}
+                  key={rack ? rack.id : slotIndex}
                   type="button"
                   disabled={rackActionBusy || rackDismantleLoading}
                   aria-label={occupiedAria}
-                  onClick={() => onSlotClick({ rack, miner: machine, visualRackNumber: rackNumber, slotInRack: i })}
+                  onClick={() => onSlotClick({ rack, miner: machine, visualRackNumber: rackNumber, slotInRack: slotIndex })}
                   style={overlay}
                   onDragOver={
                     !isOccupied && !rackActionBusy
@@ -347,7 +348,7 @@ export const ImageRackCard = memo(function ImageRackCard({
                   {isOccupied && machine ? (
                     <div
                       className="rack-machine-idle pointer-events-none flex h-full w-full items-end justify-center pb-1"
-                      style={{ animationDelay: `${(i % 8) * 0.18}s` }}
+                      style={{ animationDelay: `${(slotIndex % 8) * 0.18}s` }}
                     >
                       <MachineImage
                         key={`${machine.id}-${machine.imageUrl ?? ''}`}

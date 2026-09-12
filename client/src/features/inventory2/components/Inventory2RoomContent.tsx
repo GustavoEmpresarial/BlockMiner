@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { Lock, PackageMinus, Plus, Zap, X } from 'lucide-react';
 import { ImageRackCard } from './ImageRackCard';
 import { DEFAULT_RACK_IMAGE_URL, parseVisualFanDrag } from '../lib/inventory2.rackLayout';
-import type { SelectedSlotPayload, UserRackSlot } from '../../machines/lib/machines.types';
+import type { RoomPayload, SelectedSlotPayload, UserRackSlot } from '../../machines/lib/machines.types';
 
 export type PendingPlacement =
   | { type: 'rack'; visualIndex: number }
@@ -23,15 +23,6 @@ type VisualRackGroup = {
 type VisualRackPlacement = {
   visualIndex: number;
   floorSlot: number | null;
-};
-
-type RoomPayload = {
-  roomNumber: number;
-  unlocked: boolean;
-  price?: number;
-  listPrice?: number;
-  onOffer?: boolean;
-  racks: UserRackSlot[];
 };
 
 export type Inventory2RoomContentProps = {
@@ -204,7 +195,7 @@ export function Inventory2RoomContent({
   const [pickerFloorSlot, setPickerFloorSlot] = useState<number | null>(null);
 
   const occupiedSlots = useMemo(
-    () => (currentRoom?.unlocked ? currentRoom.racks.filter((r) => r.miner) : []),
+    () => (currentRoom?.unlocked ? (currentRoom.racks ?? []).filter((r) => r.miner) : []),
     [currentRoom],
   );
 
@@ -412,7 +403,7 @@ export function Inventory2RoomContent({
         loading={rackDismantleLoading}
         onConfirm={async () => {
           try {
-            await onDismantleRack(currentRoom.racks, t('inventory.dismantle_room_success'));
+            await onDismantleRack(currentRoom.racks ?? [], t('inventory.dismantle_room_success'));
             setDismantleOpen(false);
           } catch {
             /* parent toasts */

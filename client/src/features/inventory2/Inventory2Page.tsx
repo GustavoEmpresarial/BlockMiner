@@ -429,7 +429,7 @@ export default function Inventory2Page() {
   const activeMachinesHashRate = useMemo(
     () =>
       rooms
-        .flatMap((r) => (r.unlocked && 'racks' in r ? r.racks : []))
+        .flatMap((r) => (r.unlocked && 'racks' in r ? r.racks ?? [] : []))
         .filter((rack) => rack.miner)
         .reduce((sum, rack) => sum + Number(rack.miner?.hashRate || 0), 0),
     [rooms],
@@ -438,16 +438,9 @@ export default function Inventory2Page() {
   const currentRoom = useMemo(() => rooms.find((room) => room.roomNumber === activeRoom) ?? null, [rooms, activeRoom]);
   const visualRacksOfCurrent = useMemo(() => {
     if (!currentRoom?.unlocked) return [];
-    return groupIntoRacks(currentRoom.racks);
+    return groupIntoRacks(currentRoom.racks ?? []);
   }, [currentRoom]);
   const rackOffset = currentRoom ? (currentRoom.roomNumber - 1) * 24 : 0;
-  const handleSelectRackToPlace = useCallback((visualIndex: number) => {
-    setPendingPlacement((prev) => (prev?.type === 'rack' && prev.visualIndex === visualIndex ? null : { type: 'rack', visualIndex }));
-  }, []);
-
-  const handleSelectFanToPlace = useCallback(() => {
-    setPendingPlacement((prev) => (prev?.type === 'fan' ? null : { type: 'fan' }));
-  }, []);
 
   const handleSelectSlot = useCallback((slot: SelectedSlotPayload) => {
     setBackpackWarehouseModal(null);

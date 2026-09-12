@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
+import { AxiosError } from 'axios';
 import {
   canMachineFitVisualSlot,
   groupIntoRacks,
   groupInventoryStacks,
   dedupeOccupiedSlotsForDismantle,
   formatHashrate,
+  getMachineDescriptor,
+  parsePositiveIntFromDrag,
   resolveDisplayMachineImageSrc,
   resolveOwnedMachineImageUrl,
   sumRackHashRate,
@@ -76,6 +79,10 @@ describe('canMachineFitVisualSlot', () => {
   it('rejects when slot.position is not an integer', () => {
     expect(canMachineFitVisualSlot(slot({ position: NaN }), backpackItem({ slotSize: 2 }))).toBe(false);
   });
+
+  it('treats a falsy/zero slotSize as 1 (always fits)', () => {
+    expect(canMachineFitVisualSlot(slot({ position: 3 }), backpackItem({ slotSize: 0 }))).toBe(true);
+  });
 });
 
 describe('groupInventoryStacks', () => {
@@ -101,6 +108,18 @@ describe('groupInventoryStacks', () => {
   it('returns an empty array for no rows', () => {
     expect(groupInventoryStacks([])).toEqual([]);
   });
+
+  it('treats an absent/falsy hashRate as 0 when sorting', () => {
+    const rows = [backpackItem({ id: 1, minerId: 1, hashRate: undefined }), backpackItem({ id: 2, minerId: 2, hashRate: 5 })];
+    const groups = groupInventoryStacks(rows);
+    expect(groups[0]!.minerId).toBe(2);
+  });
+
+  it('treats a falsy hashRate as 0 regardless of comparator argument order', () => {
+    const rows = [backpackItem({ id: 1, minerId: 1, hashRate: 5 }), backpackItem({ id: 2, minerId: 2, hashRate: undefined })];
+    const groups = groupInventoryStacks(rows);
+    expect(groups[0]!.minerId).toBe(1);
+  });
 });
 
 describe('dedupeOccupiedSlotsForDismantle', () => {
@@ -119,6 +138,10 @@ describe('dedupeOccupiedSlotsForDismantle', () => {
   it('keeps distinct machines', () => {
     const slots = [slot({ id: 1, miner: { id: 1, hashRate: 10 } }), slot({ id: 2, miner: { id: 2, hashRate: 20 } })];
     expect(dedupeOccupiedSlotsForDismantle(slots)).toHaveLength(2);
+  });
+
+  it('treats a null/undefined slots argument as an empty list rather than throwing', () => {
+    expect(dedupeOccupiedSlotsForDismantle(undefined as unknown as UserRackSlot[])).toEqual([]);
   });
 });
 
@@ -222,6 +245,91 @@ describe('apiErrorMessage', () => {
 
   it('returns the fallback when the payload has no message field', () => {
     expect(apiErrorMessage({ response: { data: {} } }, 'fallback')).toBe('fallback');
+  });
+
+  function axiosErrorWith(data: unknown) {
+    return new AxiosError('request failed', 'ERR', undefined, undefined, {
+      status: 400,
+      statusText: 'Bad Request',
+      headers: {},
+      config: {} as never,
+      data,
+    });
+  }
+
+  it('extracts the server message from a real AxiosError payload', () => {
+    expect(apiErrorMessage(axiosErrorWith({ message: 'Slot already occupied.' }), 'fallback')).toBe('Slot already occupied.');
+  });
+
+  it('falls back when the AxiosError payload has no response at all', () => {
+    expect(apiErrorMessage(new AxiosError('network error'), 'fallback')).toBe('fallback');
+  });
+
+  it('falls back when the AxiosError message field is empty or non-string', () => {
+    expect(apiErrorMessage(axiosErrorWith({ message: '' }), 'fallback')).toBe('fallback');
+    expect(apiErrorMessage(axiosErrorWith({ message: 123 }), 'fallback')).toBe('fallback');
+  });
+});
+
+describe('getMachineDescriptor', () => {
+  it('picks a tier by hashrate: >=1000 Quantum, >=500 Elite, >=100 Pro, >=50 Advanced, >=10 Standard, else Basic', () => {
+    expect(getMachineDescriptor({ hashRate: 1000 }).name).toBe('Quantum Miner');
+    expect(getMachineDescriptor({ hashRate: 1000 }).size).toBe(2);
+    expect(getMachineDescriptor({ hashRate: 500 }).size).toBe(2);
+    expect(getMachineDescriptor({ hashRate: 100 }).size).toBe(2);
+    expect(getMachineDescriptor({ hashRate: 50 }).size).toBe(1);
+    expect(getMachineDescriptor({ hashRate: 10 }).size).toBe(1);
+    expect(getMachineDescriptor({ hashRate: 1 }).size).toBe(1);
+  });
+
+  it('uses an explicit minerName/miner_name/name over the computed tier label', () => {
+    expect(getMachineDescriptor({ hashRate: 5, minerName: 'Custom' }).name).toBe('Custom');
+    expect(getMachineDescriptor({ hashRate: 5, miner_name: 'Snake case' }).name).toBe('Snake case');
+    expect(getMachineDescriptor({ hashRate: 5, name: 'Plain name' }).name).toBe('Plain name');
+  });
+
+  it('falls back to the computed tier label when no name field is present', () => {
+    expect(getMachineDescriptor({ hashRate: 1000 }).name).toBe('Quantum Miner');
+    expect(getMachineDescriptor({ hashRate: 1 }).name).toBe('Basic Miner');
+  });
+
+  it('respects an explicit integer slotSize/slot_size over the tier default', () => {
+    expect(getMachineDescriptor({ hashRate: 1000, slotSize: 1 }).size).toBe(1);
+    expect(getMachineDescriptor({ hashRate: 5, slot_size: 2 }).size).toBe(2);
+  });
+
+  it('reads hash_rate (snake_case) as a fallback for hashRate', () => {
+    expect(getMachineDescriptor({ hash_rate: 1000 }).size).toBe(2);
+  });
+
+  it('resolves image from imageUrl or image_url, trimmed, or null when blank/absent', () => {
+    expect(getMachineDescriptor({ hashRate: 1, imageUrl: '  /x.png  ' }).image).toBe('/x.png');
+    expect(getMachineDescriptor({ hashRate: 1, image_url: '/y.png' }).image).toBe('/y.png');
+    expect(getMachineDescriptor({ hashRate: 1, imageUrl: '   ' }).image).toBeNull();
+    expect(getMachineDescriptor({ hashRate: 1 }).image).toBeNull();
+  });
+
+  it('handles null/undefined row without throwing', () => {
+    expect(getMachineDescriptor(null)).toEqual({ name: 'Basic Miner', image: null, size: 1 });
+    expect(getMachineDescriptor(undefined)).toEqual({ name: 'Basic Miner', image: null, size: 1 });
+  });
+});
+
+describe('parsePositiveIntFromDrag', () => {
+  it('parses a positive integer string', () => {
+    expect(parsePositiveIntFromDrag('5')).toBe(5);
+  });
+
+  it('returns null for null/undefined/empty', () => {
+    expect(parsePositiveIntFromDrag(null)).toBeNull();
+    expect(parsePositiveIntFromDrag(undefined)).toBeNull();
+    expect(parsePositiveIntFromDrag('')).toBeNull();
+  });
+
+  it('returns null for zero, negative, or non-numeric values', () => {
+    expect(parsePositiveIntFromDrag('0')).toBeNull();
+    expect(parsePositiveIntFromDrag('-3')).toBeNull();
+    expect(parsePositiveIntFromDrag('abc')).toBeNull();
   });
 });
 

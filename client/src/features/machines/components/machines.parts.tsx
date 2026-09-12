@@ -1,6 +1,5 @@
-import { useState } from "react";
 import type { TFunction } from "i18next";
-import { AlertCircle, Box, Calculator, ChevronDown, Lock, Warehouse, X, Zap } from "lucide-react";
+import { AlertCircle, Box, Calculator, ChevronDown, Lock, Warehouse, Zap } from "lucide-react";
 import { getMachineDisplayImageUrl } from '../lib/machineDisplayImage';
 import { MachineImage } from './MachineImage';
 import { inventoryStackKey } from '../../../shared/utils/inventoryStackKey';
@@ -8,17 +7,11 @@ import type {
   BackpackItem,
   InventoryStackGroup,
   RoomPayload,
-  SelectedSlotPayload,
-  UserRackSlot,
-  VisualRackGroup,
 } from '../lib/machines.types';
 import {
-  dedupeOccupiedSlotsForDismantle,
   formatHashrate,
   safeDisplayLabel,
 } from '../lib/machines.shared';
-import { RackCard } from './machines.rackCard';
-import { RoomDismantleModal } from './machines.dismantleModal';
 
 export type MachinesHeaderProps = {
   t: TFunction;
@@ -123,119 +116,6 @@ export function MachinesRoomTabs({ t, rooms, activeRoom, onSelectRoom, extraTab 
           {extraTab.label}
         </button>
       ) : null}
-    </div>
-  );
-}
-
-export type MachinesRoomContentProps = {
-  t: TFunction;
-  currentRoom: RoomPayload | null;
-  visualRacksOfCurrent: VisualRackGroup[];
-  rackOffset: number;
-  onSelectSlot: (slot: SelectedSlotPayload) => void;
-  onInstall: (rackId: number, inventoryId: number) => void | Promise<void>;
-  onDismantleRack: (slots: UserRackSlot[], successMessageKey?: string) => Promise<void>;
-  rackDismantleLoading: boolean;
-  rackActionBusy: boolean;
-  buyingRoom: boolean;
-  onBuyRoom: (roomNumber: number) => void | Promise<void>;
-};
-
-export function MachinesRoomContent({
-  t,
-  currentRoom,
-  visualRacksOfCurrent,
-  rackOffset,
-  onSelectSlot,
-  onInstall,
-  onDismantleRack,
-  rackDismantleLoading,
-  rackActionBusy,
-  buyingRoom,
-  onBuyRoom,
-}: MachinesRoomContentProps) {
-  const [confirmingRoomDismantle, setConfirmingRoomDismantle] = useState(false);
-  const occupiedRoomSlots = currentRoom?.unlocked
-    ? dedupeOccupiedSlotsForDismantle(currentRoom.racks)
-    : [];
-
-  return (
-    <div role="tabpanel">
-      {currentRoom ? (
-        currentRoom.unlocked ? (
-          <div className="space-y-4">
-            {occupiedRoomSlots.length > 0 && (
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => setConfirmingRoomDismantle(true)}
-                  disabled={rackDismantleLoading || rackActionBusy}
-                  title={t("inventory.dismantle_room_tooltip")}
-                  aria-label={t("inventory.dismantle_room_aria")}
-                  className="inline-flex min-h-11 items-center gap-2 rounded-2xl border border-red-500/25 bg-red-500/10 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-red-400 transition-colors hover:bg-red-500/20 disabled:pointer-events-none disabled:opacity-40"
-                >
-                  <X className="h-4 w-4 shrink-0" strokeWidth={2.5} aria-hidden />
-                  {t("inventory.dismantle_room")}
-                </button>
-              </div>
-            )}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {visualRacksOfCurrent.map((vr) => (
-                <RackCard
-                  key={vr.rackNumber}
-                  rackNumber={rackOffset + vr.rackNumber}
-                  slots={vr.slots}
-                  onSlotClick={onSelectSlot}
-                  onSlotDrop={onInstall}
-                  onDismantleRack={onDismantleRack}
-                  rackDismantleLoading={rackDismantleLoading}
-                  rackActionBusy={rackActionBusy}
-                />
-              ))}
-            </div>
-            <RoomDismantleModal
-              open={confirmingRoomDismantle}
-              onClose={() => !rackDismantleLoading && setConfirmingRoomDismantle(false)}
-              displayRoomNumber={currentRoom.roomNumber}
-              machineCount={occupiedRoomSlots.length}
-              loading={rackDismantleLoading}
-              onConfirm={async () => {
-                try {
-                  await onDismantleRack(currentRoom.racks, "inventory.dismantle_room_success");
-                  setConfirmingRoomDismantle(false);
-                } catch {
-                  /* Errors and toasts are handled in the parent handler */
-                }
-              }}
-            />
-          </div>
-        ) : (
-          <div className="bg-surface border border-gray-800/30 rounded-3xl p-6 sm:p-10 flex flex-col items-center justify-center gap-6 text-center min-h-64">
-            <div className="w-16 h-16 rounded-2xl bg-gray-800/40 border border-gray-800/50 flex items-center justify-center">
-              <Lock className="w-7 h-7 text-gray-600" />
-            </div>
-            <div>
-              <p className="text-base font-bold text-gray-400">{t("inventory.room_locked", { room: currentRoom.roomNumber })}</p>
-              <p className="text-xs text-gray-600 mt-1">{t("inventory.room_locked_desc")}</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => onBuyRoom(currentRoom.roomNumber)}
-              disabled={buyingRoom}
-              className="px-8 py-3 rounded-2xl bg-primary text-white text-xs font-black uppercase tracking-wider hover:bg-primary/80 transition-all disabled:opacity-50 flex items-center gap-2"
-            >
-              {buyingRoom
-                ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                : <><Zap className="w-3.5 h-3.5" />{currentRoom.price === 0 ? t("inventory.unlock_free") : t("inventory.buy_room", { price: currentRoom.price })}</>
-              }
-            </button>
-          </div>
-        )
-      ) : (
-        <div className="flex items-center justify-center min-h-64">
-          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-        </div>
-      )}
     </div>
   );
 }

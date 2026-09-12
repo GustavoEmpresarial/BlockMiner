@@ -90,73 +90,10 @@ export function RackDismantleModal({
   );
 }
 
-export type RoomDismantleModalProps = {
-  open: boolean;
-  roomNumber: number;
-  machineCount: number;
-  loading: boolean;
-  onConfirm: () => void;
-  onClose: () => void;
-};
-
-/** Room-wide dismantle — not used by inventory2 floor UI yet; keep non-stub for machines.parts. */
-export function RoomDismantleModal({
-  open,
-  onClose,
-  roomNumber,
-  machineCount,
-  loading,
-  onConfirm,
-}: RoomDismantleModalProps) {
-  const { t } = useTranslation();
-  if (!open || typeof document === 'undefined') return null;
-
-  return createPortal(
-    <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 p-4 backdrop-blur-md animate-in fade-in duration-300"
-      role="presentation"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget && !loading) onClose();
-      }}
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        className="relative w-full max-w-md overflow-hidden rounded-[2.5rem] border border-gray-800 bg-surface p-8 shadow-2xl"
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <div className="space-y-6 text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl border border-red-500/30 bg-red-500/10">
-            <AlertTriangle className="h-8 w-8 text-red-400" aria-hidden />
-          </div>
-          <div className="space-y-2">
-            <h2 className="text-xl font-black uppercase italic tracking-tight text-white">
-              {t('inventory.dismantle_room_confirm', {
-                room: roomNumber,
-                count: machineCount,
-                defaultValue: `Desmontar sala {{room}} ({{count}} máquinas)?`,
-              })}
-            </h2>
-            <p className="text-sm text-gray-400">
-              {t('inventory.dismantle_room_warning', {
-                defaultValue: 'Todas as máquinas voltam ao inventário.',
-              })}
-            </p>
-          </div>
-          <button
-            type="button"
-            disabled={loading}
-            onClick={() => onConfirm()}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-red-500/90 px-6 py-4 text-xs font-black uppercase tracking-widest text-white disabled:opacity-50"
-          >
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : t('inventory.dismantle_rack_confirm_button')}
-          </button>
-          <button type="button" disabled={loading} onClick={onClose} className="w-full py-2 text-xs font-bold uppercase tracking-widest text-gray-500">
-            {t('common.cancel')}
-          </button>
-        </div>
-      </div>
-    </div>,
-    document.body,
-  );
-}
+// RoomDismantleModal used to be exported here too, for machines.parts.tsx's
+// MachinesRoomContent. Both were dead (never imported by the live /inventory
+// screen, which uses Inventory2RoomContent's own local RoomDismantleModal
+// instead) and MachinesRoomContent had two real, TypeScript-confirmed bugs
+// (a wrong prop name into this component, and a read of RoomPayload.price
+// which doesn't exist on the type) — removed together rather than fixed
+// forward, 2026-09-12.

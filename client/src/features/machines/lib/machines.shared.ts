@@ -40,7 +40,7 @@ export function groupIntoRacks(racks: UserRackSlot[]): VisualRackGroup[] {
 
 export function canMachineFitVisualSlot(
   slot: UserRackSlot | null | undefined,
-  machine: (Partial<BackpackItem> & { slotSize?: number }) | null | undefined
+  machine: (Partial<BackpackItem> & { slotSize?: number | null }) | null | undefined
 ): boolean {
   if (!slot || !machine) return false;
   const slotSize = Math.max(1, Number(machine.slotSize) || 1);
