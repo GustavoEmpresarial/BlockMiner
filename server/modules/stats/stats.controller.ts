@@ -177,9 +177,10 @@ export async function getPowerStats(req: Request, res: Response): Promise<void> 
     }
     expirations.sort((a, b) => String(a.expiresAt).localeCompare(String(b.expiresAt)));
 
+    type GameBoostItem = { id: number; hashRate: number; expiresAt: string | null; playedAt: string | null };
     const gameBySlug = new Map<
       string,
-      { slug: string; name: string; totalHashRate: number; items: Array<Record<string, unknown>> }
+      { slug: string; name: string; totalHashRate: number; items: GameBoostItem[] }
     >();
     for (const g of gamePowers) {
       const slug = g.game?.slug || `power-game-${g.id}`;

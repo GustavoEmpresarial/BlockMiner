@@ -1,5 +1,5 @@
 import { memo, Suspense, useMemo, useState } from 'react';
-import { lazyWithRetry } from '../../utils/lazyWithRetry';
+import { lazyWithRetry } from '../../../../shared/utils/lazyWithRetry';
 import { useTranslation } from 'react-i18next';
 import type { BoostFilter } from '../../lib/stats.config';
 import { collectAllBoostRows, filterBoostRows } from '../../utils/boostRows';

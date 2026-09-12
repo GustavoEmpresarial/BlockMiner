@@ -1,6 +1,31 @@
-// @ts-nocheck
-// RECOVERED: this source file was missing from git history (never committed) while
-// production kept running off a stale compiled dist/ via Docker build cache.
-// Reconstructed verbatim from the last known-good compiled output on 2026-09-11.
-// TODO: remove @ts-nocheck once someone re-adds proper types for this file.
-export const POWER_BOOST_REWARD_SYSTEMS = ["faucet", "shortlinks", "youtube", "autoMining"];
+import type { TaxPayBalances, TaxPayCurrency, TaxPayQuotes } from "../../shared/taxPaymentCurrency.js";
+
+export const POWER_BOOST_REWARD_SYSTEMS = ["faucet", "shortlinks", "youtube", "autoMining"] as const;
+
+/** Reward source a boosted-TTL grant belongs to — currently informational only (see boosts.service.ts). */
+export type PowerBoostRewardSystem = (typeof POWER_BOOST_REWARD_SYSTEMS)[number];
+
+export type PowerBoostStatus = {
+  active: boolean;
+  dayKey: string;
+  costPol: number;
+  costQuotes: TaxPayQuotes;
+  balances: TaxPayBalances;
+  entitlementExpiresAt: string | null;
+  currentRewardDurationHours: number;
+  normalRewardDurationHours: number;
+  boostedRewardDurationHours: number;
+};
+
+export type ActivateResult =
+  | { ok: false; code: "ALREADY_ACTIVE"; message: string }
+  | { ok: false; code: "INSUFFICIENT_BALANCE"; message: string; currency: TaxPayCurrency }
+  | {
+      ok: true;
+      dayKey: string;
+      polBalance: number;
+      balances: TaxPayBalances;
+      currency: TaxPayCurrency;
+      feePaid: number;
+      entitlementExpiresAt: string;
+    };

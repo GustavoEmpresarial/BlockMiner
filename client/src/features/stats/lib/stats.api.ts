@@ -87,7 +87,7 @@ export type UserPowerStatsPayload = {
       slug: string;
       name: string;
       totalHashRate: number;
-      items: Array<Record<string, unknown>>;
+      items: Array<{ id: number; hashRate: number; expiresAt: string | null; playedAt: string | null }>;
     }>;
   };
   autoMining: {

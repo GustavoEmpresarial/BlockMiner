@@ -1,5 +1,5 @@
 import { memo, Suspense, useMemo } from 'react';
-import { lazyWithRetry } from '../../utils/lazyWithRetry';
+import { lazyWithRetry } from '../../../../shared/utils/lazyWithRetry';
 import { useTranslation } from 'react-i18next';
 import { Cpu } from 'lucide-react';
 import { formatHashrate } from '../../utils/format';

@@ -2,7 +2,7 @@ import { memo, Suspense } from 'react';
 import { lazyWithRetry } from '../../../../shared/utils/lazyWithRetry';
 import { useTranslation } from 'react-i18next';
 import { Download, Wrench } from 'lucide-react';
-import type { StatsDashboardContext } from '../../stats.types';
+import type { StatsDashboardContext } from '../../lib/stats.types';
 import { exportEarningsCsv, exportPowerStatsCsv } from '../../utils/exportStats';
 
 const CalculatorPage = lazyWithRetry(() => import('../../../calculator/CalculatorPage'));

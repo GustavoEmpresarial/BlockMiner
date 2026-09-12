@@ -4,19 +4,9 @@ import type { TFunction } from 'i18next';
 import { CalendarCheck, Gamepad2, Timer, Youtube } from 'lucide-react';
 import { formatHashrate } from '../utils/format';
 import type { UserPowerStatsPayload } from '../lib/stats.api';
-
-function formatDurationMs(ms: number) {
-  if (ms <= 0) return '0s';
-  const s = Math.floor(ms / 1000);
-  const d = Math.floor(s / 86400);
-  const h = Math.floor((s % 86400) / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const sec = s % 60;
-  if (d > 0) return `${d}d ${h}h`;
-  if (h > 0) return `${h}h ${m}m`;
-  if (m > 0) return `${m}m ${sec}s`;
-  return `${sec}s`;
-}
+// A third byte-for-byte copy of this lived here (ExpiryProgressList and BoostsTable each
+// had their own too) — consolidated on ExpiryProgressList's as the shared source.
+import { formatDurationMs } from './ExpiryProgressList';
 
 function ExpiryBadge({ expiresAt, t }: { expiresAt?: string | null; t: TFunction }) {
   const [, bump] = useState(0);

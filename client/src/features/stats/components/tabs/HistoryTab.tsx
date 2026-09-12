@@ -1,7 +1,7 @@
 import { memo, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Download, History } from 'lucide-react';
-import { lazyWithRetry } from '../../utils/lazyWithRetry';
+import { lazyWithRetry } from '../../../../shared/utils/lazyWithRetry';
 import type { StatsDashboardContext } from '../../lib/stats.types';
 import PeriodPills from '../ui/PeriodPills';
 import ChartsFallback from '../ui/ChartsFallback';

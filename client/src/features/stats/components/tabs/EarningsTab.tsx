@@ -1,7 +1,7 @@
 import { memo, Suspense, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Award, Clock, Coins, TrendingUp } from 'lucide-react';
-import { lazyWithRetry } from '../../utils/lazyWithRetry';
+import { lazyWithRetry } from '../../../../shared/utils/lazyWithRetry';
 import { formatUtcChartDay } from '../../utils/format';
 import {
   computeEarningsInsights,

@@ -5,12 +5,21 @@ import { useUserPowerStats, useUserEarningsStats } from './lib/stats.hooks';
 import { STATS_TABS, type StatsTabId, type EarningsUiFilter } from './lib/stats.config';
 import type { StatsDashboardContext } from './lib/stats.types';
 
-import { lazyWithRetry } from './utils/lazyWithRetry';
+import { lazyWithRetry } from '../../shared/utils/lazyWithRetry';
 
 /**
  * Prefer eager imports once `client/` can Vite-build again.
  * Live SPA was patched to skip Vite `__vitePreload` + use absolute `/assets/...`
  * imports because hand-renamed chunks + mapDeps caused power-stats 404 storms.
+ *
+ * Uses the shared `lazyWithRetry` (not a local copy) because it was built with this
+ * exact page in mind: one quiet retry on a transient chunk-load blip, and — only
+ * once the server confirms it actually shipped a new build id — a single guarded
+ * reload instead of bubbling to RootErrorBoundary and blanking the whole app over
+ * one lazy tab. The module used to carry its own simplified copy (`./utils/
+ * lazyWithRetry`) with none of that build-id confirmation or reload-loop guard,
+ * which is the more likely reason a stale post-deploy chunk here escalated into a
+ * full-page crash instead of a quiet recovery.
  */
 const SummaryTab = lazyWithRetry(() => import('./components/tabs/SummaryTab'));
 const EarningsTab = lazyWithRetry(() => import('./components/tabs/EarningsTab'));

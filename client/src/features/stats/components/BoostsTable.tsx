@@ -2,30 +2,12 @@ import { memo, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Timer } from 'lucide-react';
 import { formatHashrate } from '../../../shared/utils/machine';
-import type { ExpiryRow } from './ExpiryProgressList';
-
-function formatDurationMs(ms: number) {
-  if (ms <= 0) return '0s';
-  const s = Math.floor(ms / 1000);
-  const d = Math.floor(s / 86400);
-  const h = Math.floor((s % 86400) / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const sec = s % 60;
-  if (d > 0) return `${d}d ${h}h`;
-  if (h > 0) return `${h}h ${m}m`;
-  if (m > 0) return `${m}m ${sec}s`;
-  return `${sec}s`;
-}
+// formatDurationMs/progressPercent used to be reimplemented here byte-for-byte identical
+// to ExpiryProgressList's — same boost-expiry math rendered as a table instead of a list.
+import { formatDurationMs, progressPercentAt, type ExpiryRow } from './ExpiryProgressList';
 
 function progressPercent(playedAt: string | null | undefined, expiresAt: string | null | undefined): number {
-  if (!playedAt || !expiresAt) return 0;
-  const start = new Date(playedAt).getTime();
-  const end = new Date(expiresAt).getTime();
-  const now = Date.now();
-  const total = end - start;
-  if (total <= 0) return 0;
-  const elapsed = Math.min(Math.max(now - start, 0), total);
-  return Math.round((elapsed / total) * 100);
+  return progressPercentAt(playedAt, expiresAt, Date.now());
 }
 
 type Props = {

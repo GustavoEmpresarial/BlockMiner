@@ -1,7 +1,7 @@
 import { memo, Suspense, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Activity, Coins, Cpu, Zap, TrendingUp } from 'lucide-react';
-import { lazyWithRetry } from '../../utils/lazyWithRetry';
+import { lazyWithRetry } from '../../../../shared/utils/lazyWithRetry';
 import { formatHashrate } from '../../utils/format';
 import {
   computeEarningsInsights,
