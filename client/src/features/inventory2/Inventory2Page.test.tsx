@@ -201,7 +201,7 @@ describe('Inventory2Page — initial load', () => {
     const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     await act(async () => mount());
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Erro ao carregar sala de mineração.'));
-    expect(errSpy).toHaveBeenCalledWith('inventory2: rooms fetch failed', expect.anything());
+    expect(errSpy).toHaveBeenCalledWith('[inventory2]', expect.objectContaining({ code: 'INVENTORY_ROOMS_FETCH_FAILED' }));
     errSpy.mockRestore();
   });
 
@@ -211,7 +211,7 @@ describe('Inventory2Page — initial load', () => {
     const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     await act(async () => mount());
     await waitFor(() => expect(screen.getByTestId('room-content')).toBeInTheDocument());
-    expect(errSpy).toHaveBeenCalledWith('inventory2: inventory fetch failed', expect.anything());
+    expect(errSpy).toHaveBeenCalledWith('[inventory2]', expect.objectContaining({ code: 'INVENTORY_BACKPACK_FETCH_FAILED' }));
     expect(toast.error).toHaveBeenCalledWith('Erro ao carregar sala de mineração.');
     errSpy.mockRestore();
   });
@@ -222,8 +222,8 @@ describe('Inventory2Page — initial load', () => {
     const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     await act(async () => mount());
     await waitFor(() => expect(screen.getByTestId('room-content')).toBeInTheDocument());
-    expect(errSpy).toHaveBeenCalledWith('inventory2: placements fetch failed', expect.anything());
-    expect(errSpy).toHaveBeenCalledWith('inventory2: fan placements fetch failed', expect.anything());
+    expect(errSpy).toHaveBeenCalledWith('[inventory2]', expect.objectContaining({ code: 'INVENTORY_PLACEMENTS_FETCH_FAILED' }));
+    expect(errSpy).toHaveBeenCalledWith('[inventory2]', expect.objectContaining({ code: 'INVENTORY_FAN_PLACEMENTS_FETCH_FAILED' }));
     errSpy.mockRestore();
   });
 
