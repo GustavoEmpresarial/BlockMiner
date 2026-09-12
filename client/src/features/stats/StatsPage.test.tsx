@@ -94,6 +94,49 @@ describe('StatsPage', () => {
     expect(refetchEarnings).toHaveBeenCalled();
   });
 
+  it('WAI-ARIA APG tab pattern: ArrowRight/ArrowLeft move selection and focus, wrapping at the ends', async () => {
+    useUserPowerStats.mockReturnValue({ data: minimalPower(), loading: false, error: null, refetch: vi.fn() });
+    useUserEarningsStats.mockReturnValue({ data: undefined, isLoading: false, refetch: vi.fn() });
+    await act(async () => {
+      render(withProviders(<StatsPage />));
+    });
+    const tabs = screen.getAllByRole('tab');
+    const first = tabs[0];
+    expect(first).toHaveAttribute('aria-selected', 'true');
+    expect(first).toHaveAttribute('tabIndex', '0');
+    expect(tabs[1]).toHaveAttribute('tabIndex', '-1');
+
+    fireEvent.keyDown(first, { key: 'ArrowRight' });
+    await waitFor(() => expect(tabs[1]).toHaveAttribute('aria-selected', 'true'));
+    expect(tabs[1]).toHaveFocus();
+
+    fireEvent.keyDown(tabs[1], { key: 'ArrowLeft' });
+    await waitFor(() => expect(first).toHaveAttribute('aria-selected', 'true'));
+
+    // Wraps from the first tab back to the last one.
+    fireEvent.keyDown(first, { key: 'ArrowLeft' });
+    const last = tabs[tabs.length - 1];
+    await waitFor(() => expect(last).toHaveAttribute('aria-selected', 'true'));
+
+    fireEvent.keyDown(last, { key: 'Home' });
+    await waitFor(() => expect(first).toHaveAttribute('aria-selected', 'true'));
+
+    fireEvent.keyDown(first, { key: 'End' });
+    await waitFor(() => expect(last).toHaveAttribute('aria-selected', 'true'));
+  });
+
+  it('links the active tab and its panel via aria-controls/aria-labelledby for screen readers', async () => {
+    useUserPowerStats.mockReturnValue({ data: minimalPower(), loading: false, error: null, refetch: vi.fn() });
+    useUserEarningsStats.mockReturnValue({ data: undefined, isLoading: false, refetch: vi.fn() });
+    await act(async () => {
+      render(withProviders(<StatsPage />));
+    });
+    const activeTab = screen.getAllByRole('tab').find((t) => t.getAttribute('aria-selected') === 'true')!;
+    const panel = screen.getByRole('tabpanel');
+    expect(activeTab.getAttribute('aria-controls')).toBe(panel.getAttribute('id'));
+    expect(panel.getAttribute('aria-labelledby')).toBe(activeTab.getAttribute('id'));
+  });
+
   it('computes the ratio bar as 50/50 when totalHashrate is 0/absent, instead of dividing by zero', async () => {
     useUserPowerStats.mockReturnValue({
       data: { ...minimalPower(), overview: { totalHashrate: 0 } },
