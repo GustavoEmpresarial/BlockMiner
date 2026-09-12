@@ -70,6 +70,8 @@ export function Card({
   children,
   className = '',
 }: DashboardStatCardProps & { children?: ReactNode; className?: string }) {
+  const [logoFailed, setLogoFailed] = useState(false);
+
   if (children != null && label === undefined) {
     return (
       <div className={`rounded-3xl border border-gray-800/50 bg-surface p-6 ${className}`}>{children}</div>
@@ -77,7 +79,6 @@ export function Card({
   }
 
   const tone = CARD_COLOR_CLASS[color] ?? CARD_COLOR_CLASS.blue;
-  const [logoFailed, setLogoFailed] = useState(false);
   const showLogo = Boolean(logoUrl && !logoFailed);
 
   return (

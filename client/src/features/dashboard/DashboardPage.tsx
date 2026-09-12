@@ -46,6 +46,8 @@ import {
 import { MiningAllocationPanel } from './components/MiningAllocationPanel';
 import DashboardBannersCarousel from './components/DashboardBannersCarousel';
 import DashboardEnergyTaxModal from './components/DashboardEnergyTaxModal';
+import { logDashboardError } from './lib/dashboard.errors';
+import { useDashboardPoll } from './lib/useDashboardPoll';
 
 function mergeCycleWithSocket(
   rest: DashboardCycleState | null,
@@ -130,7 +132,9 @@ export default function DashboardPage() {
         setFreeRacks(Number(res.freeRacks ?? 0));
         setInventoryCount(Number(res.inventoryCount ?? 0));
       })
-      .catch(() => {})
+      .catch((err: unknown) => {
+        logDashboardError('DASHBOARD_SLOTS_FETCH_FAILED', err);
+      })
       .finally(() => {
         if (!cancelled) setSlotsLoading(false);
       });
@@ -142,7 +146,9 @@ export default function DashboardPage() {
         setFeeWaived(Boolean(res.feeWaived));
         setFeeAlreadyChargedToday(Boolean(res.feeAlreadyChargedToday));
       })
-      .catch(() => {})
+      .catch((err: unknown) => {
+        logDashboardError('DASHBOARD_FEE_INFO_FETCH_FAILED', err);
+      })
       .finally(() => {
         if (!cancelled) setFeeInfoLoading(false);
       });
@@ -151,63 +157,29 @@ export default function DashboardPage() {
     };
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-    const fetchCycle = async () => {
-      try {
-        const data = await getMiningCycle();
-        if (cancelled || !data?.ok) return;
-        setCycleRest(data);
-        const nowMs = Date.now();
-        blockAnchorRef.current = nextBlockCountdownAnchor(data, blockAnchorRef.current, nowMs);
-      } catch {
-        /* ignore */
-      }
-    };
-    void fetchCycle();
-    const intervalId = window.setInterval(() => void fetchCycle(), DASHBOARD_REST_POLL_MS);
-    const onVisible = () => {
-      if (!document.hidden) void fetchCycle();
-    };
-    const onFocus = () => void fetchCycle();
-    document.addEventListener('visibilitychange', onVisible);
-    window.addEventListener('focus', onFocus);
-    return () => {
-      cancelled = true;
-      window.clearInterval(intervalId);
-      document.removeEventListener('visibilitychange', onVisible);
-      window.removeEventListener('focus', onFocus);
-    };
-  }, []);
+  useDashboardPoll(async () => {
+    try {
+      const data = await getMiningCycle();
+      if (!data?.ok) return;
+      setCycleRest(data);
+      const nowMs = Date.now();
+      blockAnchorRef.current = nextBlockCountdownAnchor(data, blockAnchorRef.current, nowMs);
+    } catch (err: unknown) {
+      logDashboardError('DASHBOARD_CYCLE_FETCH_FAILED', err);
+    }
+  }, DASHBOARD_REST_POLL_MS);
 
-  useEffect(() => {
-    let cancelled = false;
-    const fetchBalance = async () => {
-      try {
-        const data = await getWalletBalance();
-        if (cancelled || data?.ok === false) return;
-        const mapped = mapWalletBalancePayload(data);
-        setWalletBalances(mapped);
-        setBlkBalance(mapped.BLK);
-      } catch {
-        /* ignore */
-      }
-    };
-    void fetchBalance();
-    const intervalId = window.setInterval(() => void fetchBalance(), DASHBOARD_REST_POLL_MS);
-    const onVisible = () => {
-      if (!document.hidden) void fetchBalance();
-    };
-    const onFocus = () => void fetchBalance();
-    document.addEventListener('visibilitychange', onVisible);
-    window.addEventListener('focus', onFocus);
-    return () => {
-      cancelled = true;
-      window.clearInterval(intervalId);
-      document.removeEventListener('visibilitychange', onVisible);
-      window.removeEventListener('focus', onFocus);
-    };
-  }, []);
+  useDashboardPoll(async () => {
+    try {
+      const data = await getWalletBalance();
+      if (data?.ok === false) return;
+      const mapped = mapWalletBalancePayload(data);
+      setWalletBalances(mapped);
+      setBlkBalance(mapped.BLK);
+    } catch (err: unknown) {
+      logDashboardError('DASHBOARD_BALANCE_FETCH_FAILED', err);
+    }
+  }, DASHBOARD_REST_POLL_MS);
 
   useEffect(() => {
     const id = window.setInterval(() => setLiveClockMs(Date.now()), 1000);
@@ -249,6 +221,7 @@ export default function DashboardPage() {
           setPendingAllocPercent(null);
         }
       } catch (err: unknown) {
+        logDashboardError('DASHBOARD_ALLOCATION_SAVE_FAILED', err);
         toast.error(apiErrorMessage(err, t('common.error')));
         setPendingAllocPercent(null);
       } finally {
@@ -292,7 +265,8 @@ export default function DashboardPage() {
       setReferralCopied(true);
       toast.success(t('dashboard.referral_copied'));
       window.setTimeout(() => setReferralCopied(false), 2000);
-    } catch {
+    } catch (err: unknown) {
+      logDashboardError('DASHBOARD_REFERRAL_COPY_FAILED', err);
       toast.error(t('dashboard.referral_copy_failed'));
     }
   };
@@ -309,6 +283,7 @@ export default function DashboardPage() {
         await checkSession({ silent: true });
       }
     } catch (err: unknown) {
+      logDashboardError('DASHBOARD_REFERRAL_LINK_FAILED', err);
       const message = isAxiosError(err)
         ? (err.response?.data as { message?: string } | undefined)?.message
         : undefined;
@@ -414,7 +389,6 @@ export default function DashboardPage() {
       />
 
       <DashboardCards
-        miner={miner}
         cycle={cycle}
         blkBalance={blkBalance}
         walletBalances={walletBalances}

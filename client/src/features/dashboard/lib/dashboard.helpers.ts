@@ -1,6 +1,9 @@
 import type { WalletBalancePayload } from './dashboard.api';
 import type { DashboardWalletBalances } from './dashboardBalanceCurrency';
-import { DASHBOARD_REFERRAL_CODE_MAX_LEN } from './dashboard.config';
+import {
+  DASHBOARD_REFERRAL_CODE_MAX_LEN,
+  DASHBOARD_BLOCK_COUNTDOWN_RESYNC_SECONDS,
+} from './dashboard.config';
 
 export function mapWalletBalancePayload(payload: WalletBalancePayload): DashboardWalletBalances {
   const pol = Number(payload.balance ?? payload.polBalance ?? 0);
@@ -78,7 +81,7 @@ export function nextBlockCountdownAnchor(
     return { fetchedAtMs: nowMs, countdownAtFetch: nextCd, durationSeconds: nextDur };
   }
   const localRem = Math.max(0, previous.countdownAtFetch - (nowMs - previous.fetchedAtMs) / 1000);
-  if (Math.abs(localRem - nextCd) > 2) {
+  if (Math.abs(localRem - nextCd) > DASHBOARD_BLOCK_COUNTDOWN_RESYNC_SECONDS) {
     return { fetchedAtMs: nowMs, countdownAtFetch: nextCd, durationSeconds: nextDur };
   }
   return previous;

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { ChevronLeft, ChevronRight, Clock, ExternalLink, X } from 'lucide-react';
 import { getDashboardBanners, type DashboardBannerPayload } from '../lib/dashboard.api';
 import { DASHBOARD_BANNER_AUTO_ADVANCE_MS } from '../lib/dashboard.config';
+import { logDashboardError } from '../lib/dashboard.errors';
 
 function isVideoMediaUrl(url: string): boolean {
   return /\.(mp4|webm|ogg|mov|avi)$/i.test(url);
@@ -213,7 +214,9 @@ export default function DashboardBannersCarousel() {
       .then((res) => {
         if (!cancelled && res.ok && Array.isArray(res.banners)) setBanners(res.banners);
       })
-      .catch(() => {});
+      .catch((err: unknown) => {
+        logDashboardError('DASHBOARD_BANNERS_FETCH_FAILED', err);
+      });
     return () => {
       cancelled = true;
     };

@@ -15,7 +15,7 @@ import {
   TrendingUp,
   Zap,
 } from 'lucide-react';
-import type { DashboardBlockRow, DashboardMinerStats, DashboardCycleState } from '../lib/dashboard.types';
+import type { DashboardBlockRow, DashboardCycleState } from '../lib/dashboard.types';
 import { safeDashboardNumber, Card, formatDashboardBlockTime } from './dashboard.shared';
 import {
   DASHBOARD_BALANCE_CURRENCIES,
@@ -26,7 +26,6 @@ import {
 } from '../lib/dashboardBalanceCurrency';
 
 export type DashboardCardsProps = {
-  miner: DashboardMinerStats | undefined;
   cycle: DashboardCycleState | null;
   blkBalance: number | null;
   walletBalances?: DashboardWalletBalances;
@@ -212,7 +211,6 @@ function BalanceCurrencyPicker({
 }
 
 export function DashboardCards({
-  miner: _miner,
   cycle,
   blkBalance,
   walletBalances,
