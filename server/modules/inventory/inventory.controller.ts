@@ -1,7 +1,6 @@
 import { requireSessionUser } from "../../shared/errors/httpStatusError.js";
-import { logger } from "../../core/logger/index.js";
+import { reportError } from "../../core/errors/error-reporter.js";
 import * as inventoryService from "./inventory.service.js";
-const log = logger.child("inventory.controller");
 export async function getInventory(req, res) {
     try {
         const user = requireSessionUser(req, res);
@@ -11,7 +10,14 @@ export async function getInventory(req, res) {
         res.json({ ok: true, inventory });
     }
     catch (error) {
-        log.error("getInventory failed", { error: String(error) });
+        reportError({
+            code: "INVENTORY_LIST_FAILED",
+            category: "DATABASE",
+            severity: "ERROR",
+            module: "inventory.list",
+            error,
+            req,
+        });
         res.status(500).json({ ok: false, messageKey: "inventory.errors.load_failed", message: "Unable to load inventory." });
     }
 }
