@@ -6,6 +6,7 @@ import { Loader2, ShieldAlert, X, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, useAuthStore } from '../../../shared/auth/auth.store';
 import { getEnergyTaxSummary, type EnergyTaxSummaryResponse } from '../lib/dashboard.api';
+import { logDashboardError } from '../lib/dashboard.errors';
 import { TaxPayCurrencyPicker } from '../../taxes/components/TaxPayCurrencyPicker';
 import {
   formatTaxPayAmount,
@@ -72,7 +73,8 @@ export default function DashboardEnergyTaxModal() {
           setPayCurrency(pickDefaultTaxPayCurrency(data.todayPayQuotes));
         }
       })
-      .catch(() => {
+      .catch((err: unknown) => {
+        logDashboardError('DASHBOARD_ENERGY_TAX_FETCH_FAILED', err);
         if (!cancelled) setVisible(false);
       });
     return () => {
@@ -106,6 +108,7 @@ export default function DashboardEnergyTaxModal() {
       setVisible(false);
       await checkSession({ silent: true });
     } catch (err: unknown) {
+      logDashboardError('DASHBOARD_ENERGY_TAX_PAY_FAILED', err);
       const message = isAxiosError(err)
         ? (err.response?.data as { message?: string } | undefined)?.message
         : undefined;

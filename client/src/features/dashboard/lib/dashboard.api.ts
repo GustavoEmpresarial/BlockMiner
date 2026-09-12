@@ -1,12 +1,9 @@
 import { api } from '../../../shared/auth/auth.store';
 import type { DashboardCycleState } from './dashboard.types';
 
-// All endpoints below are real current/server routes (verified against
+// All endpoints below are real current/server routes, verified against
 // current/server/modules/*/*.routes.ts + *.controller.ts + *.service.ts
-// before wiring). See DashboardPage.tsx header comment for the full
-// legacy-endpoint -> current-endpoint cross-reference, including the one
-// legacy call (getRoomsSlotsSummary) that maps onto a REST route that isn't
-// mounted in current/server/bootstrap/server.ts yet.
+// and against the mount points in current/server/bootstrap/server.ts.
 
 export type WalletBalancePayload = {
   ok?: boolean;
