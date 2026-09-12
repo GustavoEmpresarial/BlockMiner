@@ -8,27 +8,52 @@ export type DailyEarningsDelta = {
   byCategory: Partial<Record<EarningsCategoryKey, number>>;
 };
 
-/** History points are already per UTC calendar day (not cumulative). */
+const EARNINGS_CATEGORY_DELTA_KEYS: EarningsCategoryKey[] = [
+  'mining',
+  'offerwall',
+  'faucet',
+  'shortlinks',
+  'autoMining',
+  'games',
+  'youtube',
+  'checkin',
+  'referrals',
+];
+
+/**
+ * GET /stats/earnings returns `history` as a RUNNING CUMULATIVE series (see server
+ * stats.earnings.service.ts's toCumulativeHistory — intentional, it's what
+ * EarningsChartsPanel's "evolução dos ganhos" line chart wants, per its own i18n note
+ * "Curva acumulada no período selecionado"). But "today"/"yesterday"/"best day"/
+ * "last category credit" are only meaningful as PER-DAY deltas, not lifetime-to-date
+ * totals — reading the cumulative total directly used to make "ganho hoje" show the
+ * user's entire running total instead of what they actually earned that day, and
+ * "melhor dia" always picked the most recent day (cumulative only grows). Diff
+ * consecutive cumulative rows here instead of re-deriving the same bug in every caller.
+ */
 export function deriveDailyDeltas(history: EarningsHistoryPoint[]): DailyEarningsDelta[] {
   const sorted = [...(history || [])].sort((a, b) => a.date.localeCompare(b.date));
-  const keys: EarningsCategoryKey[] = [
-    'mining',
-    'offerwall',
-    'faucet',
-    'shortlinks',
-    'autoMining',
-    'games',
-    'youtube',
-    'checkin',
-    'referrals',
-  ];
-  return sorted.map((point) => {
+  const deltas: DailyEarningsDelta[] = [];
+  let prevTotal = 0;
+  const prevByCategory: Record<EarningsCategoryKey, number> = Object.fromEntries(
+    EARNINGS_CATEGORY_DELTA_KEYS.map((k) => [k, 0]),
+  ) as Record<EarningsCategoryKey, number>;
+
+  for (const point of sorted) {
+    const cumulativeTotal = Number(point.total) || 0;
+    // Clamp at 0: a cumulative series should never decrease, but guards float
+    // rounding or a data correction from producing a negative "earned today".
+    const total = Math.max(0, Math.round((cumulativeTotal - prevTotal) * 1e8) / 1e8);
     const byCategory: Partial<Record<EarningsCategoryKey, number>> = {};
-    for (const key of keys) {
-      byCategory[key] = Number(point[key]) || 0;
+    for (const key of EARNINGS_CATEGORY_DELTA_KEYS) {
+      const cumulativeValue = Number(point[key]) || 0;
+      byCategory[key] = Math.max(0, Math.round((cumulativeValue - prevByCategory[key]) * 1e8) / 1e8);
+      prevByCategory[key] = cumulativeValue;
     }
-    return { date: point.date, total: Number(point.total) || 0, byCategory };
-  });
+    prevTotal = cumulativeTotal;
+    deltas.push({ date: point.date, total, byCategory });
+  }
+  return deltas;
 }
 
 function utcYesterdayKey(): string {

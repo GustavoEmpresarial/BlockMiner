@@ -32,11 +32,38 @@ describe('deriveDailyDeltas', () => {
   });
 
   it('sorts points by date ascending regardless of input order', () => {
-    const result = deriveDailyDeltas([point('2026-03-02'), point('2026-03-01')]);
+    const result = deriveDailyDeltas([point('2026-03-02', { total: 20 }), point('2026-03-01', { total: 10 })]);
     expect(result.map((r) => r.date)).toEqual(['2026-03-01', '2026-03-02']);
   });
 
-  it('coerces missing/non-numeric category and total fields to 0 instead of NaN', () => {
+  it('diffs the server\'s CUMULATIVE running total into a per-day delta — the first day is its own value, later days subtract the previous cumulative total', () => {
+    // API returns a running total (see stats.earnings.service.ts toCumulativeHistory),
+    // e.g. day1=10 (earned 10), day2=25 (earned 15 more), day3=25 (earned nothing more).
+    const result = deriveDailyDeltas([
+      point('2026-03-01', { total: 10 }),
+      point('2026-03-02', { total: 25 }),
+      point('2026-03-03', { total: 25 }),
+    ]);
+    expect(result.map((r) => r.total)).toEqual([10, 15, 0]);
+  });
+
+  it('diffs each category independently the same way', () => {
+    const result = deriveDailyDeltas([
+      point('2026-03-01', { mining: 4, total: 4 }),
+      point('2026-03-02', { mining: 9, total: 9 }),
+    ]);
+    expect(result.map((r) => r.byCategory.mining)).toEqual([4, 5]);
+  });
+
+  it('clamps a delta at 0 instead of going negative if the cumulative series ever dips (data correction/float noise)', () => {
+    const result = deriveDailyDeltas([
+      point('2026-03-01', { total: 10 }),
+      point('2026-03-02', { total: 9.9999999 }),
+    ]);
+    expect(result[1]!.total).toBe(0);
+  });
+
+  it('coerces missing/non-numeric total fields to 0 instead of NaN', () => {
     const result = deriveDailyDeltas([point('2026-03-01', { mining: 'oops' as unknown as number, total: undefined as unknown as number })]);
     expect(result[0]!.byCategory.mining).toBe(0);
     expect(result[0]!.total).toBe(0);
@@ -84,21 +111,24 @@ describe('computeEarningsInsights', () => {
     expect(insights.avgDaily).toBe(totals.total); // dayCount clamped to 1
   });
 
-  it('reads today/yesterday from the matching UTC-day rows', () => {
+  it('reads today/yesterday as deltas off the cumulative history, not the raw running total', () => {
+    // Cumulative: 20 by end of the 9th, 35 by end of the 10th -> earned 20 on the
+    // 9th (first tracked day) and 15 more on the 10th, not 35.
     const history = [point('2026-03-09', { total: 20 }), point('2026-03-10', { total: 35 })];
     const insights = computeEarningsInsights(totals, history);
-    expect(insights.today).toBe(35);
+    expect(insights.today).toBe(15);
     expect(insights.yesterday).toBe(20);
   });
 
-  it('picks the highest-total day as bestDay, ignoring zero-total days', () => {
+  it('picks the highest-DELTA day as bestDay (not the highest cumulative total), ignoring zero-delta days', () => {
     const history = [
       point('2026-03-01', { total: 0 }),
-      point('2026-03-05', { total: 50 }),
-      point('2026-03-08', { total: 12 }),
+      point('2026-03-05', { total: 50 }), // delta 50 — the actual best day
+      point('2026-03-08', { total: 62 }), // cumulative is higher, but delta is only 12
     ];
     const insights = computeEarningsInsights(totals, history);
     expect(insights.bestDay?.date).toBe('2026-03-05');
+    expect(insights.bestDay?.total).toBe(50);
   });
 
   it('picks the category with the highest total as bestSystem', () => {
