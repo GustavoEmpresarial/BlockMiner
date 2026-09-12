@@ -1,6 +1,15 @@
 /** Hashrate display (matches production stats bundle). */
 export function formatHashrate(value: unknown): string {
-  const n = Number(value || 0);
+  // Found by fast-check fuzzing: an object with a non-function `toString` (e.g.
+  // `{ toString: {} }`) makes JS's Number() coercion throw "Cannot convert object
+  // to primitive value" instead of returning NaN — a real uncaught-exception path
+  // this display helper could hit from any malformed API payload.
+  let n: number;
+  try {
+    n = Number(value || 0);
+  } catch {
+    return '0 H/s';
+  }
   if (!Number.isFinite(n) || n === 0) return '0 H/s';
   const units = ['H/s', 'KH/s', 'MH/s', 'GH/s', 'TH/s', 'PH/s'];
   let scaled = n;

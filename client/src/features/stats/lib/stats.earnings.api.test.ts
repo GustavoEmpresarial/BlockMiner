@@ -22,6 +22,11 @@ describe('formatPolAmount', () => {
   it('uses at most 2 decimals at/above 100', () => {
     expect(formatPolAmount(150.123456)).toBe('150.12');
   });
+
+  it('returns "0" instead of throwing when the runtime value is a malformed object (broken toString)', () => {
+    expect(() => formatPolAmount({ toString: {} } as unknown as number)).not.toThrow();
+    expect(formatPolAmount({ toString: {} } as unknown as number)).toBe('0');
+  });
 });
 
 describe('fetchUserEarningsStats', () => {

@@ -176,3 +176,61 @@ describe('useUserEarningsStats', () => {
     expect(fetchUserEarningsStats).toHaveBeenCalledTimes(2);
   });
 });
+
+describe('resilience — recovering from transient failures', () => {
+  it('useUserPowerStats: keeps retrying on every poll tick after a generic (non-401/403/500/503) failure, and recovers once the API comes back', async () => {
+    fetchPowerStatsEnvelope
+      .mockRejectedValueOnce(new Error('ECONNRESET'))
+      .mockRejectedValueOnce(new Error('ECONNRESET'))
+      .mockResolvedValueOnce({ ok: true, overview: { totalHashrate: 1 } });
+    vi.useFakeTimers();
+    const { result } = renderHook(() => useUserPowerStats(5_000));
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(result.current.error).toBeTruthy();
+    expect(result.current.data).toBeNull();
+
+    await act(async () => {
+      vi.advanceTimersByTime(5_000);
+      await Promise.resolve();
+    });
+    expect(fetchPowerStatsEnvelope).toHaveBeenCalledTimes(2);
+    expect(result.current.error).toBeTruthy();
+
+    await act(async () => {
+      vi.advanceTimersByTime(5_000);
+      await Promise.resolve();
+    });
+    expect(fetchPowerStatsEnvelope).toHaveBeenCalledTimes(3);
+    expect(result.current.error).toBeNull();
+    expect(result.current.data).toEqual({ ok: true, overview: { totalHashrate: 1 } });
+  });
+
+  it('useUserPowerStats: a slow (not-yet-resolved) request does not leave the hook stuck in loading forever once it finally settles', async () => {
+    let resolveSlow: (v: unknown) => void = () => {};
+    fetchPowerStatsEnvelope.mockReturnValue(new Promise((resolve) => (resolveSlow = resolve)));
+    const { result } = renderHook(() => useUserPowerStats(0));
+    expect(result.current.loading).toBe(true);
+
+    await act(async () => {
+      resolveSlow({ ok: true, overview: {} });
+      await Promise.resolve();
+    });
+    expect(result.current.loading).toBe(false);
+    expect(result.current.data).toEqual({ ok: true, overview: {} });
+  });
+
+  it('useUserEarningsStats: recovers on the next refetch after a transient rejection, without getting stuck in a permanent error state', async () => {
+    fetchUserEarningsStats.mockRejectedValueOnce(new Error('timeout'));
+    const { result } = renderHook(() => useUserEarningsStats('30d'));
+    await waitFor(() => expect(result.current.error).toBeTruthy());
+
+    fetchUserEarningsStats.mockResolvedValue({ ok: true, total: 42 });
+    await act(async () => {
+      await result.current.refetch();
+    });
+    expect(result.current.error).toBeNull();
+    expect(result.current.data).toEqual({ ok: true, total: 42 });
+  });
+});

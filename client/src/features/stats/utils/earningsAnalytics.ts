@@ -121,9 +121,18 @@ export function computeEarningsInsights(
   };
 }
 
+/**
+ * Found by fast-check property testing: `total` being a denormalized-but-positive
+ * float (e.g. 5e-324) slipped past the old `total <= 0` guard and produced
+ * Infinity/-Infinity (division by a value effectively zero but not caught by the
+ * check). `total` is always a real POL/BLK/SHIB earnings sum in practice, never
+ * that pathological, but the function is defensive-coded anyway rather than
+ * trusting every future caller to only pass sane values.
+ */
 export function percentOfTotal(value: number, total: number): number {
-  if (!total || total <= 0) return 0;
-  return Math.round((value / total) * 1000) / 10;
+  if (!Number.isFinite(value) || !Number.isFinite(total) || total <= 0) return 0;
+  const pct = Math.round((value / total) * 1000) / 10;
+  return Number.isFinite(pct) ? pct : 0;
 }
 
 export function emptyTotals(): EarningsTotals {
