@@ -28,6 +28,11 @@ import * as vaultService from "./vault.service.js";
  * what the server actually sends, instead of the stale legacy code list.
  */
 const KNOWN_VAULT_VALIDATION_REASONS = new Set(["INVALID_RACK_REF", "INVALID_SELECTION", "INVALID_VAULT_ITEM", "INVALID_SLOT"]);
+/** Prisma errors carry a `P####` code; anything else here is a code/dependency bug, not the DB. */
+function looksLikeDatabaseError(error) {
+    const c = error && typeof error === "object" ? error.code : undefined;
+    return typeof c === "string" && /^P\d{4}$/.test(c);
+}
 /** Exported for tests/wallet/vault.controller.errorContract.test.mjs — verifies the
  * client-facing error contract without needing a live DB or full request/response mocking. */
 export function respondVaultError(res, error, req, module, context) {
@@ -42,14 +47,22 @@ export function respondVaultError(res, error, req, module, context) {
         res.status(501).json({ ok: false, code: code || "NOT_IMPLEMENTED", message: msg });
         return;
     }
-    if (http === 400) {
+    // The `msg` fallback mirrors the NOT_FOUND branch above: vault.service.ts throws a plain
+    // `new Error("NOT_FOUND")` from inside its repo loops (not an HttpStatusError), so a
+    // future/nested plain `new Error("INVALID_SELECTION")` must not silently fall through to
+    // the 500 branch and get reported as an infra failure when it's really user input.
+    if (http === 400 || KNOWN_VAULT_VALIDATION_REASONS.has(msg)) {
         const specificCode = KNOWN_VAULT_VALIDATION_REASONS.has(msg) ? `VAULT_${msg}` : "VAULT_INVALID_STATE";
         res.status(400).json({ ok: false, code: specificCode, message: "Invalid selection." });
         return;
     }
     reportError({
         code: `VAULT_${module.toUpperCase()}_FAILED`,
-        category: "DATABASE",
+        // Not hard-coded to DATABASE: this branch catches anything that isn't a 400/404/501 —
+        // an idempotency-lease failure, a TypeError in the service, an unavailable
+        // notification dependency. Only classify as DATABASE when the error actually looks
+        // like one, so alerting doesn't page as a DB incident for a code bug.
+        category: looksLikeDatabaseError(error) ? "DATABASE" : "UNKNOWN",
         severity: "ERROR",
         module: `vault.${module}`,
         error,
@@ -69,7 +82,7 @@ export async function getVault(req, res) {
     catch (error) {
         reportError({
             code: "VAULT_LIST_FAILED",
-            category: "DATABASE",
+            category: looksLikeDatabaseError(error) ? "DATABASE" : "UNKNOWN",
             severity: "ERROR",
             module: "vault.list",
             error,

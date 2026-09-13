@@ -14,7 +14,7 @@ describe('logVaultError', () => {
     const [, entry] = spy.mock.calls[0]!;
     expect(entry).toMatchObject({
       code: 'VAULT_RETRIEVE_FAILED',
-      severity: 'CRITICAL',
+      severity: 'ERROR',
       impact: 'MEDIUM',
       source: 'vault',
       message: 'boom',
@@ -31,14 +31,37 @@ describe('logVaultError', () => {
     expect(id1).not.toBe(id2);
   });
 
-  it('scores the read-only list fetch as ERROR/LOW, and the retrieve mutation as CRITICAL/MEDIUM', () => {
+  it('keeps severity and impact as independent axes — the retrieve mutation is higher impact but still ERROR, not CRITICAL', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
     logVaultError('VAULT_LIST_FETCH_FAILED', new Error('x'));
     logVaultError('VAULT_RETRIEVE_FAILED', new Error('x'));
     const [, fetchEntry] = spy.mock.calls[0]!;
     const [, retrieveEntry] = spy.mock.calls[1]!;
     expect(fetchEntry).toMatchObject({ severity: 'ERROR', impact: 'LOW' });
-    expect(retrieveEntry).toMatchObject({ severity: 'CRITICAL', impact: 'MEDIUM' });
+    // Higher impact, same severity: a failed retrieve is recoverable and user-visible,
+    // so it must not page as CRITICAL just because its impact is MEDIUM.
+    expect(retrieveEntry).toMatchObject({ severity: 'ERROR', impact: 'MEDIUM' });
+  });
+
+  it('uses the server x-request-id as the correlationId so the client log joins the server report', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const err = new AxiosError('bad', 'ERR', undefined, undefined, {
+      status: 500,
+      statusText: 'Server Error',
+      headers: { 'x-request-id': 'req_abc123' },
+      config: {} as never,
+      data: {},
+    });
+    logVaultError('VAULT_RETRIEVE_FAILED', err);
+    const [, entry] = spy.mock.calls[0]!;
+    expect(entry.correlationId).toBe('req_abc123');
+  });
+
+  it('falls back to a locally generated correlationId when there is no response (network failure)', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    logVaultError('VAULT_RETRIEVE_FAILED', new Error('network down'));
+    const [, entry] = spy.mock.calls[0]!;
+    expect(entry.correlationId).toMatch(/^corr_/);
   });
 
   it('extracts the HTTP status from an AxiosError response', () => {

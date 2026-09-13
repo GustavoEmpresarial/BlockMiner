@@ -32,6 +32,18 @@ const IMPACT_BY_CODE: Record<VaultErrorCode, VaultErrorImpact> = {
   VAULT_RETRIEVE_FAILED: 'MEDIUM',
 };
 
+/**
+ * Explicit, NOT derived from impact. Severity ("did the operation fail?") and impact ("how
+ * much does it matter?") are deliberately separate axes — deriving one from the other
+ * collapses them back into one. A single failed retrieve is a real failure the user sees
+ * and can retry: ERROR, not CRITICAL. CRITICAL is reserved for something that leaves state
+ * inconsistent, which the server's transaction guarantees prevent here.
+ */
+const SEVERITY_BY_CODE: Record<VaultErrorCode, VaultErrorSeverity> = {
+  VAULT_LIST_FETCH_FAILED: 'ERROR',
+  VAULT_RETRIEVE_FAILED: 'ERROR',
+};
+
 function newId(prefix: string): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return `${prefix}_${crypto.randomUUID()}`;
@@ -56,6 +68,24 @@ export function fingerprintVaultError(code: VaultErrorCode, err: unknown): strin
   return `vault:${code}:${status}`;
 }
 
+/**
+ * A correlation id minted locally correlates nothing — it would have the same cardinality
+ * as errorId and could never be joined to the request it came from. The server stamps
+ * every response with `x-request-id` (see core/http requestContext middleware, which
+ * `reportError` also reads for its own `request_id`), so prefer that: it's the one value
+ * that ties this client log line to the server-side report for the SAME request. Falls
+ * back to a locally generated id only when there's no response at all (network failure).
+ */
+function correlationIdOf(err: unknown): string {
+  const headers = (err as { response?: { headers?: unknown } } | null)?.response?.headers;
+  if (headers && typeof headers === 'object') {
+    const h = headers as Record<string, unknown> & { get?: (name: string) => unknown };
+    const raw = typeof h.get === 'function' ? h.get('x-request-id') : h['x-request-id'];
+    if (typeof raw === 'string' && raw.trim()) return raw.trim();
+  }
+  return newId('corr');
+}
+
 export type VaultErrorLogEntry = {
   errorId: string;
   correlationId: string;
@@ -76,10 +106,10 @@ export type VaultErrorLogEntry = {
  */
 export function logVaultError(code: VaultErrorCode, err: unknown): string {
   const errorId = newId('err');
-  const correlationId = newId('corr');
+  const correlationId = correlationIdOf(err);
   const fingerprint = fingerprintVaultError(code, err);
   const impact = IMPACT_BY_CODE[code];
-  const severity: VaultErrorSeverity = impact === 'MEDIUM' ? 'CRITICAL' : 'ERROR';
+  const severity = SEVERITY_BY_CODE[code];
   const entry: VaultErrorLogEntry = {
     errorId,
     correlationId,

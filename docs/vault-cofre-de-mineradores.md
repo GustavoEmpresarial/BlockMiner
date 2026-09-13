@@ -91,6 +91,20 @@ Cada código tem uma entrada correspondente em `vault.errors.*` nos três
 locales. Regressão coberta por
 `tests/wallet/vault.controller.errorContract.test.mjs`.
 
+Os cinco códigos 400 também foram adicionados a `EXPECTED_CLIENT_UX_CODES`
+(`client/src/shared/utils/clientErrorTelemetry.ts`) — são resultados normais
+de input do usuário (seleção vazia, slot inválido) e não devem virar ruído
+no dashboard de erros do admin, exatamente como o `INVALID_STATE` genérico
+que eles substituíram já não virava.
+
+> **`VAULT_RACK_LINK` não é um código do servidor.** Essa chave é disparada
+> pelo client em cima do **status 409** de `move-to-vault`
+> (`Inventory2Page.tsx`), não por um `code` da resposta. Ela foi apagada por
+> engano na primeira versão desta correção (a auditoria só olhou os códigos
+> emitidos por `respondVaultError`) e restaurada depois que o code review
+> pegou o teste quebrado. Ao mexer em `vault.errors.*`, grepar os usos no
+> client, não só os códigos do servidor.
+
 ## Erros / Observabilidade
 
 Antes desta revisão, `getVault`'s catch descartava o erro por completo
@@ -106,8 +120,19 @@ mutações nunca reportava nada. Hoje:
   padrão de `inventory2.errors.ts`/`stats.errors.ts`) — `errorId` +
   `correlationId` + `fingerprint` + `severity`/`impact` por ocorrência,
   nunca loga corpo de resposta/headers, só status HTTP + mensagem.
-  - `VAULT_LIST_FETCH_FAILED` — impacto `LOW` (degrada pra view vazia/stale).
-  - `VAULT_RETRIEVE_FAILED` — impacto `MEDIUM` (mutação que move um ativo real).
+  - `VAULT_LIST_FETCH_FAILED` — severidade `ERROR`, impacto `LOW` (degrada
+    pra view vazia/stale).
+  - `VAULT_RETRIEVE_FAILED` — severidade `ERROR`, impacto `MEDIUM` (mutação
+    que move um ativo real).
+  - Severidade e impacto são **mapas separados e explícitos**, não derivados
+    um do outro: derivar colapsaria de volta os dois eixos que o desenho
+    separa de propósito (uma retirada que falhou é recuperável e visível pro
+    usuário — `ERROR`, não `CRITICAL`).
+  - `correlationId` vem do header `x-request-id` da resposta quando existe —
+    é o que realmente liga esta linha de log ao report do servidor para a
+    **mesma** requisição. Um id gerado localmente não correlacionaria nada
+    (teria a mesma cardinalidade do `errorId`); a geração local é só o
+    fallback pra falha de rede, quando não há resposta nenhuma.
   - Mover **para** o cofre acontece na tela de inventário e já é logado por
     `inventory2.errors.ts` (`INVENTORY_MOVE_TO_VAULT_FAILED` /
     `INVENTORY_MOVE_RACK_TO_VAULT_FAILED`) — não duplicado aqui.
@@ -161,6 +186,14 @@ Este módulo é código de **servidor** (TypeScript compilado para
 `storage/scripts/deploy/deploy.py` recompila `dist/` (ver
 `_build_server_on_vm()`; requer `npm` ou fallback via container Docker no
 VM — corrigido em `b363006` depois de descobrir que `npm` nunca está no
-`PATH` da sessão SSH não-interativa usada pelo deploy). Deploys deste
-trabalho vão para o container **dev/staging** (`blockminer-staging-*`); não
-para produção, salvo pedido explícito.
+`PATH` da sessão SSH não-interativa usada pelo deploy).
+
+A verificação pós-build compara a **data** de `dist/server/bootstrap/server.js`
+contra um marcador criado antes do build. Checar só a *existência* do arquivo
+não prova nada: `_preserve_runtime_artifacts()` copia o `dist/` do container
+antigo pra frente e o rsync do clone exclui `dist/`, então o arquivo está
+sempre lá — inclusive quando o build falhou ou nem rodou, que é justamente o
+no-op silencioso que essa checagem existe pra pegar.
+
+Deploys deste trabalho vão para o container **dev/staging**
+(`blockminer-staging-*`); não para produção, salvo pedido explícito.

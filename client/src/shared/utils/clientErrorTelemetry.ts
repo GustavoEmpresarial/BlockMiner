@@ -45,6 +45,15 @@ const BENIGN_AUTO_MINING_CODES = new Set([
 /** Expected UX / policy codes the UI already surfaces — not defects. */
 export const EXPECTED_CLIENT_UX_CODES = new Set([
   "INVALID_STATE",
+  // Vault 400s used to be sent as a single generic INVALID_STATE (above); they now carry
+  // the specific reason (docs/vault-cofre-de-mineradores.md#api-contract). All five are
+  // ordinary user-input outcomes — an empty selection, a bad slot — so they must stay out
+  // of the client-error dashboard the same way INVALID_STATE already was.
+  "VAULT_INVALID_STATE",
+  "VAULT_INVALID_SELECTION",
+  "VAULT_INVALID_SLOT",
+  "VAULT_INVALID_VAULT_ITEM",
+  "VAULT_INVALID_RACK_REF",
   "INVALID_BODY",
   "INVALID_AMOUNT",
   "INVALID_TX_HASH",

@@ -3791,13 +3791,14 @@
     "error_loading": "Error loading vault.",
     "retry": "Try again",
     "errors": {
+      "VAULT_RACK_LINK": "This machine is still linked to a rack. Refresh the page and try again.",
       "VAULT_UNAVAILABLE": "Could not complete vault storage. Try again in a moment.",
       "VAULT_NOT_FOUND": "Machine or item was not found.",
-      "VAULT_INVALID_RACK_REF": "Invalid rack machine reference.",
-      "VAULT_INVALID_SELECTION": "Invalid selection. Choose at least one machine.",
-      "VAULT_INVALID_VAULT_ITEM": "Invalid vault item.",
-      "VAULT_INVALID_SLOT": "Invalid rack slot.",
-      "VAULT_INVALID_STATE": "Could not complete this action. Refresh the page and try again."
+      "VAULT_INVALID_RACK_REF": "Referencia de máquina del rack inválida.",
+      "VAULT_INVALID_SELECTION": "Selección inválida. Elige al menos una máquina.",
+      "VAULT_INVALID_VAULT_ITEM": "Elemento de la caja fuerte inválido.",
+      "VAULT_INVALID_SLOT": "Ranura del rack inválida.",
+      "VAULT_INVALID_STATE": "No se pudo completar la acción. Actualiza la página e inténtalo de nuevo."
     }
   },
   "adminAuth": {

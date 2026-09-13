@@ -256,6 +256,12 @@ def _build_server_on_vm() -> str:
     exit code as pass/fail; instead verify the one file server.ts always produces.
     """
     return r'''
+# Freshness marker, written BEFORE the build. A presence check on
+# dist/server/bootstrap/server.js proves nothing: _preserve_runtime_artifacts() copies
+# dist/ forward from the old container and the clone rsync excludes dist/, so that file is
+# ALWAYS there — including when the build never ran or failed. Comparing against this
+# marker is what actually distinguishes "rebuilt" from "stale carry-forward".
+BM_BUILD_MARKER="$(mktemp /tmp/bm-build-marker-XXXXXX)"
 if [[ "${SKIP_SERVER_BUILD:-0}" == "1" ]]; then
   echo "[vm] SKIP_SERVER_BUILD=1 — keeping previous server dist/"
 elif command -v npm >/dev/null 2>&1; then
@@ -276,11 +282,16 @@ elif command -v docker >/dev/null 2>&1; then
 else
   echo "[vm] WARN: no npm/docker to rebuild server — keeping previous dist (server-side changes in this deploy were NOT applied)"
 fi
-if [[ -f "$APP_ROOT/dist/server/bootstrap/server.js" ]]; then
-  echo "[vm] server dist present (dist/server/bootstrap/server.js)"
-else
+if [[ ! -f "$APP_ROOT/dist/server/bootstrap/server.js" ]]; then
   echo "[vm] ERROR: dist/server/bootstrap/server.js is missing — server-side changes in this deploy were NOT applied"
+elif [[ "${SKIP_SERVER_BUILD:-0}" == "1" ]]; then
+  echo "[vm] server dist carried forward (SKIP_SERVER_BUILD=1)"
+elif [[ -n "$(find "$APP_ROOT/dist/server/bootstrap/server.js" -newer "$BM_BUILD_MARKER" 2>/dev/null)" ]]; then
+  echo "[vm] server build OK — dist/server/bootstrap/server.js is newer than this deploy's build marker"
+else
+  echo "[vm] ERROR: dist/server/bootstrap/server.js was NOT rebuilt by this deploy (stale carry-forward from the previous container) — server-side changes in this deploy were NOT applied"
 fi
+rm -f "$BM_BUILD_MARKER"
 '''
 
 

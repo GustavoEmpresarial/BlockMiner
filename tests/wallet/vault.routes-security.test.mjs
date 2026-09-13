@@ -33,15 +33,29 @@ describe("vault.routes.ts — the /vault surface", () => {
     assert.deepEqual(paths.sort(), ["/", "/move-to-vault", "/retrieve-from-vault"].sort());
   });
 
-  it("POST /move-to-vault has a rate limiter + body validation + idempotency guard before the controller", () => {
-    const names = routeStack(vaultRouter, "/move-to-vault");
-    assert.equal(names.length, 4, `expected rateLimiter + validateBody + idempotency + controller, got: ${names.join(", ")}`);
-  });
-
-  it("POST /retrieve-from-vault has a rate limiter + body validation + idempotency guard before the controller", () => {
-    const names = routeStack(vaultRouter, "/retrieve-from-vault");
-    assert.equal(names.length, 4, `expected rateLimiter + validateBody + idempotency + controller, got: ${names.join(", ")}`);
-  });
+  // Assert on the handler NAMES, not just the count: a PR that swaps
+  // requireCriticalIdempotency for something else, or replaces the rate limiter with a
+  // no-op, keeps the arity at 4 and would sail past a length-only check — exactly the
+  // regression this file exists to catch.
+  for (const path of ["/move-to-vault", "/retrieve-from-vault"]) {
+    it(`POST ${path} has the rate limiter, body validation and idempotency guard (by name) before the controller`, () => {
+      const names = routeStack(vaultRouter, path);
+      assert.equal(names.length, 4, `expected rateLimiter + validateBody + idempotency + controller, got: ${names.join(", ")}`);
+      // validateBody() returns an anonymous closure, so it can only be pinned by position
+      // (slot 1); the other two guards are named functions and are asserted by name.
+      assert.equal(
+        names[0],
+        "distributedRateLimiter",
+        `expected the distributed rate limiter first on ${path}, got: ${names.join(", ")}`,
+      );
+      assert.equal(names[1], "<anonymous>", `expected validateBody's closure second on ${path}, got: ${names.join(", ")}`);
+      assert.equal(
+        names[2],
+        "criticalIdempotency",
+        `expected the critical-idempotency guard third on ${path}, got: ${names.join(", ")}`,
+      );
+    });
+  }
 
   it("GET / (list) has no extra guards beyond the router-wide requireAuth — read-only, no rate limiter needed", () => {
     const names = routeStack(vaultRouter, "/");
