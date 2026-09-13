@@ -3791,14 +3791,13 @@
     "error_loading": "Error loading vault.",
     "retry": "Try again",
     "errors": {
-      "VAULT_RACK_LINK": "This machine is still linked to a rack. Refresh the page and try again.",
       "VAULT_UNAVAILABLE": "Could not complete vault storage. Try again in a moment.",
       "VAULT_NOT_FOUND": "Machine or item was not found.",
-      "VAULT_BAD_REQUEST": "Invalid request.",
-      "VAULT_BAD_ITEM": "Invalid machine reference.",
-      "VAULT_BAD_SOURCE": "Invalid source.",
-      "VAULT_BAD_DESTINATION": "Invalid destination.",
-      "VAULT_ALREADY_STORED": "This machine is already in the warehouse. Refresh the page and try again."
+      "VAULT_INVALID_RACK_REF": "Invalid rack machine reference.",
+      "VAULT_INVALID_SELECTION": "Invalid selection. Choose at least one machine.",
+      "VAULT_INVALID_VAULT_ITEM": "Invalid vault item.",
+      "VAULT_INVALID_SLOT": "Invalid rack slot.",
+      "VAULT_INVALID_STATE": "Could not complete this action. Refresh the page and try again."
     }
   },
   "adminAuth": {
