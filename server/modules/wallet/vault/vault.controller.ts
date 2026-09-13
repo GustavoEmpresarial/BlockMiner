@@ -5,8 +5,16 @@
 // TODO: remove @ts-nocheck once someone re-adds proper types for this file.
 import { requireSessionUser, readHttpStatus, readErrorCode, readErrorMessage } from "../../../shared/errors/httpStatusError.js";
 import { resolveCriticalMutation, finalizeCriticalMutationSuccess, cancelCriticalMutation } from "../../../core/http/middleware/idempotency.js";
+import { reportError } from "../../../core/errors/error-reporter.js";
 import * as vaultService from "./vault.service.js";
-function respondVaultError(res, error) {
+/**
+ * Structured error reporting was entirely absent here before this pass — getVault's
+ * catch discarded the error object completely (bare `catch { ... }`, not even a
+ * console.error), and the mutation paths' generic-500 fallback never reported
+ * anything either. Same "página que mais dá problema" pattern already fixed for
+ * inventory/rooms (see server/modules/inventory/inventory.controller.ts).
+ */
+function respondVaultError(res, error, req, module, context) {
     const http = readHttpStatus(error);
     const code = readErrorCode(error);
     const msg = readErrorMessage(error);
@@ -22,6 +30,15 @@ function respondVaultError(res, error) {
         res.status(400).json({ ok: false, code: "INVALID_STATE", message: "Invalid selection." });
         return;
     }
+    reportError({
+        code: `VAULT_${module.toUpperCase()}_FAILED`,
+        category: "DATABASE",
+        severity: "ERROR",
+        module: `vault.${module}`,
+        error,
+        req,
+        context,
+    });
     res.status(500).json({ ok: false, code: "VAULT_UNAVAILABLE", message: "Could not complete vault operation." });
 }
 export async function getVault(req, res) {
@@ -32,7 +49,15 @@ export async function getVault(req, res) {
         const vault = await vaultService.listVaultForUser(user.id);
         res.json({ ok: true, vault });
     }
-    catch {
+    catch (error) {
+        reportError({
+            code: "VAULT_LIST_FAILED",
+            category: "DATABASE",
+            severity: "ERROR",
+            module: "vault.list",
+            error,
+            req,
+        });
         res.status(500).json({ ok: false, message: "Unable to load vault." });
     }
 }
@@ -51,7 +76,7 @@ export async function moveToVault(req, res) {
     }
     catch (error) {
         await cancelCriticalMutation(idem.lease);
-        respondVaultError(res, error);
+        respondVaultError(res, error, req, "move", { userId: user.id, source: req.body?.source });
     }
 }
 export async function retrieveFromVault(req, res) {
@@ -69,6 +94,6 @@ export async function retrieveFromVault(req, res) {
     }
     catch (error) {
         await cancelCriticalMutation(idem.lease);
-        respondVaultError(res, error);
+        respondVaultError(res, error, req, "retrieve", { userId: user.id, destination: req.body?.destination });
     }
 }

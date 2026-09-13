@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { toast } from 'sonner';
 import { io, type Socket } from 'socket.io-client';
 import { api } from '../../../shared/auth/auth.store';
+import { logVaultError } from '../../machines/lib/vault.errors';
 
 const AUTH_REFRESH_COOLDOWN_MS = 30_000;
 
@@ -393,7 +394,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
         set({ vaultError: 'LOAD_FAILED' });
       }
     } catch (error) {
-      console.error('fetchVault:', error);
+      logVaultError('VAULT_LIST_FETCH_FAILED', error);
       set({ vaultError: 'NETWORK' });
     } finally {
       set({ vaultLoading: false });

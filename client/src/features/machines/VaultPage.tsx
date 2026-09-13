@@ -6,6 +6,7 @@ import { Shield, AlertCircle, Pickaxe } from 'lucide-react';
 import { isAxiosError } from 'axios';
 import { useGameStore } from '../shell/lib/game.store';
 import { postRetrieveFromVault } from './lib/machines.api';
+import { logVaultError } from './lib/vault.errors';
 import { groupInventoryStacks, apiErrorMessage, safeDisplayLabel, formatHashrate } from './lib/machines.shared';
 import { getMachineDisplayImageUrl } from './lib/machineDisplayImage';
 import { MachineImage } from './components/MachineImage';
@@ -93,6 +94,7 @@ export default function VaultPage() {
         setVaultQtyModalGroup(null);
         await Promise.all([fetchVault(), fetchMachines(), fetchInventory()]);
       } catch (error) {
+        logVaultError('VAULT_RETRIEVE_FAILED', error);
         let apiCode: string | undefined;
         if (isAxiosError(error) && error.response?.data && typeof error.response.data === 'object') {
           const d = error.response.data as { code?: unknown };

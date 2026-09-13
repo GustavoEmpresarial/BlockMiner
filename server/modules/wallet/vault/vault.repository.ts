@@ -21,12 +21,6 @@ export async function listVault(userId) {
         orderBy: { storedAt: "asc" },
     });
 }
-export async function findInventoryItem(userId, id) {
-    return prisma.userInventory.findFirst({ where: { id, userId } });
-}
-export async function findVaultItem(userId, id) {
-    return prisma.userVault.findFirst({ where: { id, userId } });
-}
 async function ensureOwnedMachineForInventoryRowTx(tx, item) {
     if (item.ownedMachineId != null)
         return item.ownedMachineId;
@@ -79,12 +73,6 @@ export async function moveInventoryItemToVaultInTx(tx, userId, inventoryId) {
         },
     });
     await tx.userInventory.delete({ where: { id: inventoryId } });
-}
-/** Moves one inventory row into the vault (warehouse) atomically — preserves ownedMachineId. */
-export async function moveInventoryItemToVaultTx(userId, inventoryId) {
-    return prisma.$transaction(async (tx) => {
-        await moveInventoryItemToVaultInTx(tx, userId, inventoryId);
-    });
 }
 // ─── Rack <-> vault tx-scoped helpers (used from a caller-owned prisma.$transaction
 // alongside machines/index.ts calls, so a rack move and the UserVault write commit
@@ -157,10 +145,4 @@ export async function retrieveVaultItemToInventoryInTx(tx, userId, vaultId) {
         },
     });
     await tx.userVault.delete({ where: { id: vaultId } });
-}
-/** Moves one vault row back into inventory atomically — preserves ownedMachineId. */
-export async function retrieveVaultItemToInventoryTx(userId, vaultId) {
-    return prisma.$transaction(async (tx) => {
-        await retrieveVaultItemToInventoryInTx(tx, userId, vaultId);
-    });
 }

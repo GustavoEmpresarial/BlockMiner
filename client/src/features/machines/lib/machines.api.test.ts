@@ -21,12 +21,6 @@ describe('machines.api — thin endpoint wrappers', () => {
     expect(api.get).toHaveBeenCalledWith('/inventory', { timeout: 25000, signal: undefined });
   });
 
-  it('getVault calls GET /vault', async () => {
-    const { getVault } = await import('./machines.api');
-    getVault();
-    expect(api.get).toHaveBeenCalledWith('/vault', { timeout: 25000, signal: undefined });
-  });
-
   it('postBuyRoom calls POST /rooms/buy with no body', async () => {
     const { postBuyRoom } = await import('./machines.api');
     postBuyRoom();

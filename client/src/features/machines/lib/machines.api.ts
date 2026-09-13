@@ -11,7 +11,6 @@ export const MACHINES_API = {
   rackInstall: '/rooms/rack/install',
   rackUninstall: '/rooms/rack/uninstall',
   rackUninstallBatch: '/rooms/rack/uninstall-batch',
-  vault: '/vault',
   vaultMove: '/vault/move-to-vault',
   vaultRetrieve: '/vault/retrieve-from-vault',
 } as const;
@@ -22,10 +21,6 @@ export function getRooms(signal?: AbortSignal) {
 
 export function getInventory(signal?: AbortSignal) {
   return api.get(MACHINES_API.inventory, { timeout: 25000, signal });
-}
-
-export function getVault(signal?: AbortSignal) {
-  return api.get(MACHINES_API.vault, { timeout: 25000, signal });
 }
 
 export function postBuyRoom() {
