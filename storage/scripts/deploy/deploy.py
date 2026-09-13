@@ -261,13 +261,25 @@ if [[ "${SKIP_SERVER_BUILD:-0}" == "1" ]]; then
 elif command -v npm >/dev/null 2>&1; then
   echo "[vm] building server with host npm (tsc may report known pre-existing type errors in unrelated modules; JS is still emitted for everything that type-checks — see tsconfig noEmitOnError)"
   ( cd "$APP_ROOT" && npm ci --no-audit --no-fund && npm run build; true )
-  if [[ -f "$APP_ROOT/dist/server/bootstrap/server.js" ]]; then
-    echo "[vm] server build OK (dist/server/bootstrap/server.js present)"
-  else
-    echo "[vm] ERROR: server build did not produce dist/server/bootstrap/server.js — keeping previous dist (server-side changes in this deploy were NOT applied)"
-  fi
+elif command -v docker >/dev/null 2>&1; then
+  # Found 2026-09-13: host npm is NEVER present in this non-interactive SSH session
+  # (every deploy since _build_server_on_vm() was added hit the "no npm" branch below
+  # and silently kept stale dist/ — same silent-no-op bug this function exists to fix,
+  # just moved into itself). Mirrors _build_client_on_vm()'s existing container fallback.
+  echo "[vm] building server via node container (host npm unavailable)"
+  docker run --rm \
+    -v "$APP_ROOT:/app" \
+    -w /app \
+    node:22-bookworm-slim \
+    bash -lc 'npm ci --no-audit --no-fund && npm run build' \
+    || echo "[vm] WARN: server container build reported an error (see tsc note above — may still be fine)"
 else
-  echo "[vm] WARN: no npm to rebuild server — keeping previous dist (server-side changes in this deploy were NOT applied)"
+  echo "[vm] WARN: no npm/docker to rebuild server — keeping previous dist (server-side changes in this deploy were NOT applied)"
+fi
+if [[ -f "$APP_ROOT/dist/server/bootstrap/server.js" ]]; then
+  echo "[vm] server dist present (dist/server/bootstrap/server.js)"
+else
+  echo "[vm] ERROR: dist/server/bootstrap/server.js is missing — server-side changes in this deploy were NOT applied"
 fi
 '''
 
