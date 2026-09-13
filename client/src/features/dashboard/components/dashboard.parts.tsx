@@ -97,7 +97,8 @@ function BalanceCurrencyPicker({
       return;
     }
     const place = () => {
-      const r = btnRef.current!.getBoundingClientRect();
+      if (!btnRef.current) return;
+      const r = btnRef.current.getBoundingClientRect();
       const left = Math.min(
         Math.max(8, r.right - MENU_W),
         window.innerWidth - MENU_W - 8,
@@ -112,10 +113,11 @@ function BalanceCurrencyPicker({
     };
     place();
     // Re-measure after first paint so menuH is accurate.
-    requestAnimationFrame(place);
+    const raf = requestAnimationFrame(place);
     window.addEventListener('scroll', place, true);
     window.addEventListener('resize', place);
     return () => {
+      cancelAnimationFrame(raf);
       window.removeEventListener('scroll', place, true);
       window.removeEventListener('resize', place);
     };

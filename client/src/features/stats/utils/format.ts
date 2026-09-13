@@ -1,6 +1,15 @@
 /** Hashrate display (matches production stats bundle). */
 export function formatHashrate(value: unknown): string {
-  const n = Number(value || 0);
+  // Found by fast-check fuzzing: an object with a non-function `toString` (e.g.
+  // `{ toString: {} }`) makes JS's Number() coercion throw "Cannot convert object
+  // to primitive value" instead of returning NaN — a real uncaught-exception path
+  // this display helper could hit from any malformed API payload.
+  let n: number;
+  try {
+    n = Number(value || 0);
+  } catch {
+    return '0 H/s';
+  }
   if (!Number.isFinite(n) || n === 0) return '0 H/s';
   const units = ['H/s', 'KH/s', 'MH/s', 'GH/s', 'TH/s', 'PH/s'];
   let scaled = n;
@@ -29,12 +38,12 @@ export function formatUtcDayStartLabel(dateKey: string): string {
   return `${dateKey} 00:00:00 UTC`;
 }
 
-/** Alias used by some stats panels for POL amounts (prefer formatPolAmount from earnings API for locale). */
-export function formatPol(value: number, locale?: string): string {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return '0';
-  return new Intl.NumberFormat(locale || 'en-US', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: n >= 100 ? 2 : 8,
-  }).format(n);
-}
+/**
+ * Alias used by some stats panels for POL amounts. Re-exports formatPolAmount from the
+ * earnings API module — this file used to carry its own byte-for-byte copy of the same
+ * Intl.NumberFormat logic, which is exactly the kind of drift where one gets a bugfix
+ * and the other doesn't. (Similar copies also exist outside this module in
+ * referrals/lib/referrals.api.ts and tournaments/lib/tournamentMetricDisplay.ts — left
+ * alone here since deduping across features is a separate, larger change.)
+ */
+export { formatPolAmount as formatPol } from '../lib/stats.earnings.api';

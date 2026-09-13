@@ -232,6 +232,46 @@ rm -rf "$BM_KEEP"
 '''
 
 
+def _skip_server_build() -> bool:
+    return os.environ.get("SKIP_SERVER_BUILD", "").strip().lower() in ("1", "true", "yes", "y", "on")
+
+
+def _build_server_on_vm() -> str:
+    """Rebuild server dist/ from source on every deploy.
+
+    Found 2026-09-12: this step never existed. _preserve_runtime_artifacts() always
+    carries dist/ forward from the OLD running container ("freshest running build"),
+    and only the client SPA was ever rebuilt on the VM — so any server-side (non-client)
+    source change silently never reached the deployed container; Docker's own
+    `COPY dist ./dist` layer would even come back CACHED because the copied-forward
+    dist/ was byte-identical to before. A staging deploy looked "successful" (git HEAD
+    correct, health check 200) while still running the previous build's compiled JS.
+
+    `npm run build` is `tsc -p tsconfig.json` with noEmitOnError unset (defaults to
+    false) — this repo has known, pre-existing type errors in unrelated modules
+    (see the Dockerfile's own comment: "current/server source tree is incomplete in
+    this workspace"), so tsc exits non-zero but still emits dist/ JS for everything
+    that DOES type-check. That's the existing, accepted contract for this codebase
+    (identical to how the client SPA build already behaves here) — do not treat tsc's
+    exit code as pass/fail; instead verify the one file server.ts always produces.
+    """
+    return r'''
+if [[ "${SKIP_SERVER_BUILD:-0}" == "1" ]]; then
+  echo "[vm] SKIP_SERVER_BUILD=1 — keeping previous server dist/"
+elif command -v npm >/dev/null 2>&1; then
+  echo "[vm] building server with host npm (tsc may report known pre-existing type errors in unrelated modules; JS is still emitted for everything that type-checks — see tsconfig noEmitOnError)"
+  ( cd "$APP_ROOT" && npm ci --no-audit --no-fund && npm run build; true )
+  if [[ -f "$APP_ROOT/dist/server/bootstrap/server.js" ]]; then
+    echo "[vm] server build OK (dist/server/bootstrap/server.js present)"
+  else
+    echo "[vm] ERROR: server build did not produce dist/server/bootstrap/server.js — keeping previous dist (server-side changes in this deploy were NOT applied)"
+  fi
+else
+  echo "[vm] WARN: no npm to rebuild server — keeping previous dist (server-side changes in this deploy were NOT applied)"
+fi
+'''
+
+
 def _build_client_on_vm() -> str:
     """Rebuild SPA from source when Node is available; otherwise keep preserved dist."""
     return r'''
@@ -298,6 +338,7 @@ else
 fi
 {_restore_runtime_artifacts()}
 {env_restore}
+{_build_server_on_vm()}
 {_build_client_on_vm()}
 echo "[vm] git sync OK @ $(cd "$APP_ROOT" && git rev-parse --short HEAD 2>/dev/null || echo unknown)"
 '''

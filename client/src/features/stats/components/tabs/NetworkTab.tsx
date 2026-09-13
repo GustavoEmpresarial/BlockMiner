@@ -4,6 +4,7 @@ import { Globe, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatHashrate } from '../../utils/format';
 import { updateMiningPayoutMode } from '../../lib/stats.api';
+import { logStatsError } from '../../lib/stats.errors';
 import type { StatsDashboardContext } from '../../lib/stats.types';
 
 function NetworkTab({ power, onRefetchPower }: StatsDashboardContext) {
@@ -20,7 +21,8 @@ function NetworkTab({ power, onRefetchPower }: StatsDashboardContext) {
       if (!res.ok) throw new Error(res.message || 'Failed');
       toast.success(t('powerStats.payout.switch_success', { mode: mode.toUpperCase() }));
       await onRefetchPower?.();
-    } catch {
+    } catch (err: unknown) {
+      logStatsError('STATS_PAYOUT_MODE_SWITCH_FAILED', err);
       toast.error(t('powerStats.payout.switch_error'));
     } finally {
       setSwitching(false);

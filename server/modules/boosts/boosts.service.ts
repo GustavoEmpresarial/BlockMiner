@@ -10,7 +10,7 @@
  */
 import { Prisma as PrismaNs } from "@prisma/client";
 import prisma from "../../core/database/prisma.js";
-import type { TxClient } from "../../core/database/prisma.js";
+import type { AppPrisma, TxClient } from "../../core/database/prisma.js";
 import * as boostsRepo from "./boosts.repository.js";
 import type { ActivateResult, PowerBoostRewardSystem, PowerBoostStatus } from "./boosts.types.js";
 import {
@@ -127,12 +127,17 @@ function isUniqueViolation(err: unknown): boolean {
 export async function activateBoost(
   userId: number,
   currency: TaxPayCurrency = "POL",
+  // Injectable so the money-moving path (balance check, debit, unique-per-day
+  // constraint, audit log) can be unit-tested against a fake Prisma client instead
+  // of only being reachable through a live DB — see boosts.service.test.mjs. Every
+  // real caller (boosts.controller.ts) gets the real singleton via this default.
+  client: AppPrisma = prisma,
 ): Promise<ActivateResult> {
   const dayKey = todayKeyUTC();
   const debitAmount = await convertPolFeeToCurrency(BOOST_COST_POL, currency);
 
   try {
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await client.$transaction(async (tx) => {
       const existing = await boostsRepo.findBoostForDayTx(tx, userId, dayKey);
       if (existing) {
         return { ok: false, code: "ALREADY_ACTIVE", message: "Power boost já ativo hoje." } as const;

@@ -96,5 +96,9 @@ export default defineConfig({
   },
   test: {
     environment: 'jsdom',
+    // e2e/ holds real-browser Playwright specs (run via `npx playwright test`), not
+    // Vitest unit/component tests — without this, Vitest tries to collect them too
+    // and fails immediately (test.describe() from @playwright/test isn't Vitest's).
+    exclude: ['**/node_modules/**', '**/dist/**', 'e2e/**'],
   },
 });

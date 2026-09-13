@@ -110,7 +110,6 @@ export default function App() {
           {/* Principal */}
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/inventory" element={<Inventory2Page />} />
-          <Route path="/inventory2" element={<Inventory2Page />} />
           <Route path="/vault" element={<VaultPage />} />
           <Route path="/power-stats" element={<StatsPage />} />
           <Route path="/inventario" element={<InventarioPage />} />

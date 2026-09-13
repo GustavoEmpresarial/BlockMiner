@@ -1,16 +1,25 @@
-import { Suspense, useMemo, useState } from 'react';
+import { Suspense, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Activity, Loader2, RefreshCw } from 'lucide-react';
 import { useUserPowerStats, useUserEarningsStats } from './lib/stats.hooks';
 import { STATS_TABS, type StatsTabId, type EarningsUiFilter } from './lib/stats.config';
 import type { StatsDashboardContext } from './lib/stats.types';
 
-import { lazyWithRetry } from './utils/lazyWithRetry';
+import { lazyWithRetry } from '../../shared/utils/lazyWithRetry';
 
 /**
  * Prefer eager imports once `client/` can Vite-build again.
  * Live SPA was patched to skip Vite `__vitePreload` + use absolute `/assets/...`
  * imports because hand-renamed chunks + mapDeps caused power-stats 404 storms.
+ *
+ * Uses the shared `lazyWithRetry` (not a local copy) because it was built with this
+ * exact page in mind: one quiet retry on a transient chunk-load blip, and — only
+ * once the server confirms it actually shipped a new build id — a single guarded
+ * reload instead of bubbling to RootErrorBoundary and blanking the whole app over
+ * one lazy tab. The module used to carry its own simplified copy (`./utils/
+ * lazyWithRetry`) with none of that build-id confirmation or reload-loop guard,
+ * which is the more likely reason a stale post-deploy chunk here escalated into a
+ * full-page crash instead of a quiet recovery.
  */
 const SummaryTab = lazyWithRetry(() => import('./components/tabs/SummaryTab'));
 const EarningsTab = lazyWithRetry(() => import('./components/tabs/EarningsTab'));
@@ -33,6 +42,24 @@ export default function StatsPage() {
   const { t } = useTranslation();
   const { data, loading, error, refetch } = useUserPowerStats(45000);
   const [tab, setTab] = useState<StatsTabId>('summary');
+  const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+
+  // WAI-ARIA APG tab pattern: arrow keys move focus + selection between tabs,
+  // Home/End jump to the first/last one. Previously only mouse clicks worked —
+  // every tab button was independently Tab-focusable with no roving tabindex,
+  // which is both non-standard and a real keyboard-only-user blocker.
+  const onTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    let nextIndex: number | null = null;
+    if (event.key === 'ArrowRight') nextIndex = (index + 1) % STATS_TABS.length;
+    else if (event.key === 'ArrowLeft') nextIndex = (index - 1 + STATS_TABS.length) % STATS_TABS.length;
+    else if (event.key === 'Home') nextIndex = 0;
+    else if (event.key === 'End') nextIndex = STATS_TABS.length - 1;
+    if (nextIndex === null) return;
+    event.preventDefault();
+    const nextId = STATS_TABS[nextIndex];
+    setTab(nextId);
+    tabRefs.current[nextId]?.focus();
+  };
   const [earningsFilter, setEarningsFilter] = useState<EarningsUiFilter>('30d');
   const { data: earnings, isLoading: earningsLoading, refetch: refetchEarnings } = useUserEarningsStats(earningsFilter);
 
@@ -95,13 +122,20 @@ export default function StatsPage() {
             role="tablist"
             aria-label={t('powerStats.tabs_label')}
           >
-            {STATS_TABS.map((id) => (
+            {STATS_TABS.map((id, index) => (
               <button
                 key={id}
+                ref={(el) => {
+                  tabRefs.current[id] = el;
+                }}
                 type="button"
                 role="tab"
+                id={`power-stats-tab-${id}`}
                 aria-selected={tab === id}
+                aria-controls={`power-stats-panel-${id}`}
+                tabIndex={tab === id ? 0 : -1}
                 onClick={() => setTab(id)}
+                onKeyDown={(event) => onTabKeyDown(event, index)}
                 className={`shrink-0 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors whitespace-nowrap ${
                   tab === id ? 'bg-primary text-slate-950 shadow-lg' : 'text-slate-500 hover:text-white hover:bg-slate-800/60'
                 }`}
@@ -111,21 +145,18 @@ export default function StatsPage() {
             ))}
           </div>
 
-          
-
-          <Suspense fallback={<TabFallback />}>
-            {tab === 'summary' && <SummaryTab {...ctx} />}
-            {tab === 'earnings' && <EarningsTab {...ctx} />}
-            {tab === 'power' && <PowerTab {...ctx} />}
-            {tab === 'machines' && <MachinesTab {...ctx} />}
-            {tab === 'boosts' && <BoostsTab {...ctx} />}
-            {tab === 'network' && <NetworkTab {...ctx} />}
-            {tab === 'history' && <HistoryTab {...ctx} />}
-            {tab === 'tools' && <ToolsTab {...ctx} />}
-          </Suspense>
-
-          
-          
+          <div id={`power-stats-panel-${tab}`} role="tabpanel" aria-labelledby={`power-stats-tab-${tab}`} tabIndex={0}>
+            <Suspense fallback={<TabFallback />}>
+              {tab === 'summary' && <SummaryTab {...ctx} />}
+              {tab === 'earnings' && <EarningsTab {...ctx} />}
+              {tab === 'power' && <PowerTab {...ctx} />}
+              {tab === 'machines' && <MachinesTab {...ctx} />}
+              {tab === 'boosts' && <BoostsTab {...ctx} />}
+              {tab === 'network' && <NetworkTab {...ctx} />}
+              {tab === 'history' && <HistoryTab {...ctx} />}
+              {tab === 'tools' && <ToolsTab {...ctx} />}
+            </Suspense>
+          </div>
         </>
       ) : null}
     </div>

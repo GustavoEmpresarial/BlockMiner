@@ -1,8 +1,9 @@
-import { resolveOwnedMachineImageUrl, type MachineImageSource } from './machines.shared';
+import { resolveOwnedMachineImageUrl } from './machines.shared';
+import type { MachineImageSource } from './machines.types';
 
 export type MachineImageRow = {
   imageUrl?: string | null;
-  imageSource?: MachineImageSource;
+  imageSource?: MachineImageSource | null;
 };
 
 /**

@@ -323,7 +323,18 @@ function mergeDailyRows(rows: DailyRow[]): Map<string, EarningsHistoryPoint> {
   return byDate;
 }
 
-function toCumulativeHistory(points: EarningsHistoryPoint[]): EarningsHistoryPoint[] {
+/**
+ * Turns per-day earning rows into a RUNNING CUMULATIVE series (each day's total is
+ * everything earned up to and including that day). This is intentional — it's what
+ * the client's "evolução dos ganhos" line chart plots directly. But the SAME `history`
+ * array is also fed into the client's computeEarningsInsights (today/yesterday/best
+ * day/last category credit), which needs per-day DELTAS, not a running total — the
+ * client is responsible for diffing consecutive points back into deltas
+ * (features/stats/utils/earningsAnalytics.ts's deriveDailyDeltas). Exported so this
+ * contract has an explicit test instead of only being discoverable by reading both
+ * sides of the wire.
+ */
+export function toCumulativeHistory(points: EarningsHistoryPoint[]): EarningsHistoryPoint[] {
   const sorted = [...points].sort((a, b) => a.date.localeCompare(b.date));
   const cumulative: EarningsHistoryPoint = {
     date: "",

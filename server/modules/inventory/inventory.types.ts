@@ -10,19 +10,13 @@
  * `miner.imageUrl` (current catalog) and the row/owned-machine snapshot only — event
  * miners fall back to their snapshot image instead of the live event catalog image.
  * Revisit once an events module lands.
+ *
+ * MAX_SLOT_INDEX / isValidSlotIndex / isValidInventoryId / computeTargetSlots used to
+ * live here too, for the since-removed install/remove routes (see inventory.routes.ts
+ * header). They were exact duplicates of machines/machines.types.ts's own versions,
+ * which is what the live rack-install path (rooms/ + machines/) actually uses — removed
+ * rather than kept as a second, unreachable copy.
  */
-/** Max addressable rack slot (0..79), mirrors legacy inventory.controller install bound check. */
-export const MAX_SLOT_INDEX = 80;
-export function isValidSlotIndex(slotIndex) {
-    return Number.isInteger(slotIndex) && slotIndex >= 0 && slotIndex < MAX_SLOT_INDEX;
-}
-export function isValidInventoryId(inventoryId) {
-    return Number.isInteger(inventoryId) && inventoryId >= 1;
-}
-/** Ported from legacy inventory.service.ts `installInventoryItemForUser` (target slot range for a slotSize-N machine). */
-export function computeTargetSlots(slotIndex, slotSize) {
-    return Array.from({ length: slotSize }, (_, i) => slotIndex + i);
-}
 const STOCK_PLACEHOLDER_PATHS = new Set(["/media/brand/icon.webp"]);
 function trimUrl(url) {
     return typeof url === "string" ? url.trim() : "";

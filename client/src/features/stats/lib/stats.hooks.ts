@@ -7,6 +7,7 @@ import {
 import type { EarningsUiFilter } from './stats.config';
 import { fetchPowerStatsEnvelope, type UserPowerStatsPayload } from './stats.api';
 import { fetchUserEarningsStats, type UserEarningsPayload } from './stats.earnings.api';
+import { logStatsError } from './stats.errors';
 
 const DEFAULT_POWER_POLL_MS = 45_000;
 const MIN_POLL_MS = 5_000;
@@ -29,10 +30,12 @@ export function useUserPowerStats(pollMs: number = DEFAULT_POWER_POLL_MS) {
         setError(null);
         pollingEnabledRef.current = true;
       } else {
+        logStatsError('STATS_POWER_FETCH_FAILED', res);
         setError(res?.message || 'Failed to load power statistics');
         pollingEnabledRef.current = false;
       }
     } catch (e: unknown) {
+      logStatsError('STATS_POWER_FETCH_FAILED', e);
       const status = readAxiosHttpStatus(e);
       if (shouldStopApiPolling(status)) {
         pollingEnabledRef.current = false;
@@ -81,9 +84,11 @@ export function useUserEarningsStats(filter: EarningsUiFilter) {
         setData(res);
         setError(null);
       } else {
+        logStatsError('STATS_EARNINGS_FETCH_FAILED', res);
         setError(res.message || 'Failed to load earnings');
       }
     } catch (e: unknown) {
+      logStatsError('STATS_EARNINGS_FETCH_FAILED', e);
       setError(readAxiosResponseMessage(e, 'Failed to load earnings'));
     } finally {
       setIsLoading(false);

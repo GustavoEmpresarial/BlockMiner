@@ -10,6 +10,13 @@
 #    distribution) writing to the SAME live database would double-process everything. Staging's
 #    DB starts from a trimmed copy of production (see storage/scripts/deploy — same pg_dump
 #    approach already used earlier this session for local verification).
+#    IMPORTANT: every time staging's DB is refreshed from a prod pg_dump, the DB rows will
+#    reference real uploaded files (miner images, support attachments, etc.) that only exist
+#    on prod's filesystem — storage/uploads/ is gitignored and staging's own copy only gets
+#    the small seed set from server/modules/media/media.seed.ts, not real uploads. Run
+#    `python3 storage/scripts/deploy/sync_staging_uploads.py` right after each DB refresh, or
+#    machine/support images will silently 404 on staging (found 2026-09-12: 6/63 miner images
+#    present until synced).
 #  - `phd` (the ONLY service holding POLYGON_HD_MNEMONIC, i.e. real-fund custody) IS included
 #    here and uses the SAME mnemonic as production, by explicit choice of the project owner —
 #    NOT this file's default recommendation. Because of that, staging's own .env.production

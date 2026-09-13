@@ -42,7 +42,16 @@ type EarningsErrorEnvelope = { ok: false; message?: string };
 export type EarningsEnvelope = (UserEarningsPayload & { ok: true }) | EarningsErrorEnvelope;
 
 export function formatPolAmount(value: number, locale?: string): string {
-  const n = Number(value);
+  // Same defensive guard as formatHashrate: the `number` type is only a compile-time
+  // promise — at runtime this reads straight from a JSON API response, so a malformed
+  // object with a broken toString can still reach here and make Number() throw
+  // instead of yielding NaN.
+  let n: number;
+  try {
+    n = Number(value);
+  } catch {
+    return '0';
+  }
   if (!Number.isFinite(n)) return '0';
   return new Intl.NumberFormat(locale || 'en-US', {
     minimumFractionDigits: 0,

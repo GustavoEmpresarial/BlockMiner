@@ -40,6 +40,7 @@ import {
 import { Inventory2RoomContent, type PendingPlacement } from './components/Inventory2RoomContent';
 import { Inventory2Distributor } from './components/Inventory2Distributor';
 import { DEFAULT_RACK_IMAGE_URL } from './lib/inventory2.rackLayout';
+import { logInventory2Error } from './lib/inventory2.errors';
 
 const INVENTORY_REFRESH_DEBOUNCE_MS = 160;
 
@@ -118,7 +119,7 @@ export default function Inventory2Page() {
           farmRef.current = { ...farmRef.current, rooms: nextRooms, summary: nextSummary };
         }
       } else if (!axios.isCancel(roomsOutcome.reason)) {
-        console.error('inventory2: rooms fetch failed', roomsOutcome.reason);
+        logInventory2Error('INVENTORY_ROOMS_FETCH_FAILED', roomsOutcome.reason);
       }
 
       if (invOutcome.status === 'fulfilled') {
@@ -132,7 +133,7 @@ export default function Inventory2Page() {
           farmRef.current = { ...farmRef.current, inventory: rows };
         }
       } else if (!axios.isCancel(invOutcome.reason)) {
-        console.error('inventory2: inventory fetch failed', invOutcome.reason);
+        logInventory2Error('INVENTORY_BACKPACK_FETCH_FAILED', invOutcome.reason);
       }
 
       if (placeOutcome.status === 'fulfilled' && placeOutcome.value.data?.ok) {
@@ -142,7 +143,7 @@ export default function Inventory2Page() {
         }
         setPlacementsByRoom(next);
       } else if (placeOutcome.status === 'rejected' && !axios.isCancel(placeOutcome.reason)) {
-        console.error('inventory2: placements fetch failed', placeOutcome.reason);
+        logInventory2Error('INVENTORY_PLACEMENTS_FETCH_FAILED', placeOutcome.reason);
       }
 
       if (fanOutcome.status === 'fulfilled' && fanOutcome.value.data?.ok) {
@@ -155,7 +156,7 @@ export default function Inventory2Page() {
           setFanCredits(Math.max(0, fanOutcome.value.data.fanCredits));
         }
       } else if (fanOutcome.status === 'rejected' && !axios.isCancel(fanOutcome.reason)) {
-        console.error('inventory2: fan placements fetch failed', fanOutcome.reason);
+        logInventory2Error('INVENTORY_FAN_PLACEMENTS_FETCH_FAILED', fanOutcome.reason);
       }
 
       const roomsRejectedCancel = roomsOutcome.status === 'rejected' && axios.isCancel(roomsOutcome.reason);
@@ -238,6 +239,7 @@ export default function Inventory2Page() {
           toast.error(resolveApiPayloadMessage(res.data, t('common.error')));
         }
       } catch (err) {
+        logInventory2Error('INVENTORY_BUY_ROOM_FAILED', err);
         toast.error(apiErrorMessage(err, t('common.error')));
       } finally {
         buyRoomLock.current = false;
@@ -276,6 +278,7 @@ export default function Inventory2Page() {
         toast.error(resolveApiPayloadMessage(res.data, t('common.error')));
         await fetchData({ background: true });
       } catch (err) {
+        logInventory2Error('INVENTORY_INSTALL_FAILED', err);
         toast.error(apiErrorMessage(err, t('common.error')));
         await fetchData({ background: true }).catch(() => {});
       } finally {
@@ -309,6 +312,7 @@ export default function Inventory2Page() {
         toast.error(resolveApiPayloadMessage(res.data, t('common.error')));
         await fetchData({ background: true });
       } catch (err) {
+        logInventory2Error('INVENTORY_REMOVE_FAILED', err);
         toast.error(apiErrorMessage(err, t('common.error')));
         await fetchData({ background: true }).catch(() => {});
       } finally {
@@ -338,6 +342,7 @@ export default function Inventory2Page() {
         setBackpackVaultBusy(false);
         void fetchData({ background: true });
       } catch (err) {
+        logInventory2Error('INVENTORY_MOVE_TO_VAULT_FAILED', err);
         toast.error(apiErrorMessage(err, t('vault.move_error')));
         backpackVaultLock.current = false;
         setBackpackVaultBusy(false);
@@ -364,6 +369,7 @@ export default function Inventory2Page() {
         setRackActionBusy(false);
         void fetchData({ background: true });
       } catch (err) {
+        logInventory2Error('INVENTORY_MOVE_RACK_TO_VAULT_FAILED', err);
         if (isAxiosError(err) && err.response?.status === 409) {
           toast.error(t('vault.errors.VAULT_RACK_LINK'));
         } else {
@@ -399,6 +405,7 @@ export default function Inventory2Page() {
         void fetchData({ background: true });
       } catch (err) {
         if (err instanceof Error && err.message !== 'UNINSTALL_FAILED') {
+          logInventory2Error('INVENTORY_DISMANTLE_RACK_FAILED', err);
           toast.error(apiErrorMessage(err, t('common.error')));
           await fetchData({ background: true });
         }
@@ -429,7 +436,7 @@ export default function Inventory2Page() {
   const activeMachinesHashRate = useMemo(
     () =>
       rooms
-        .flatMap((r) => (r.unlocked && 'racks' in r ? r.racks : []))
+        .flatMap((r) => (r.unlocked && 'racks' in r ? r.racks ?? [] : []))
         .filter((rack) => rack.miner)
         .reduce((sum, rack) => sum + Number(rack.miner?.hashRate || 0), 0),
     [rooms],
@@ -438,16 +445,9 @@ export default function Inventory2Page() {
   const currentRoom = useMemo(() => rooms.find((room) => room.roomNumber === activeRoom) ?? null, [rooms, activeRoom]);
   const visualRacksOfCurrent = useMemo(() => {
     if (!currentRoom?.unlocked) return [];
-    return groupIntoRacks(currentRoom.racks);
+    return groupIntoRacks(currentRoom.racks ?? []);
   }, [currentRoom]);
   const rackOffset = currentRoom ? (currentRoom.roomNumber - 1) * 24 : 0;
-  const handleSelectRackToPlace = useCallback((visualIndex: number) => {
-    setPendingPlacement((prev) => (prev?.type === 'rack' && prev.visualIndex === visualIndex ? null : { type: 'rack', visualIndex }));
-  }, []);
-
-  const handleSelectFanToPlace = useCallback(() => {
-    setPendingPlacement((prev) => (prev?.type === 'fan' ? null : { type: 'fan' }));
-  }, []);
 
   const handleSelectSlot = useCallback((slot: SelectedSlotPayload) => {
     setBackpackWarehouseModal(null);
@@ -488,6 +488,7 @@ export default function Inventory2Page() {
         toast.error(res.data?.message || t('inventory2.place_error'));
         return;
       } catch (err: unknown) {
+        logInventory2Error('INVENTORY_PLACE_RACK_FAILED', err);
         const code = isAxiosError(err) ? (err.response?.data as { code?: string } | undefined)?.code : undefined;
         toast.error(
           code === 'RACK_NOT_EMPTY'
@@ -530,6 +531,7 @@ export default function Inventory2Page() {
         }
         toast.error(res.data?.message || t('inventory2.fan_error'));
       } catch (err: unknown) {
+        logInventory2Error('INVENTORY_MOUNT_FAN_FAILED', err);
         const code = isAxiosError(err) ? (err.response?.data as { code?: string } | undefined)?.code : undefined;
         toast.error(
           code === 'FAN_NEED_RACK'
@@ -560,6 +562,7 @@ export default function Inventory2Page() {
         }
         toast.error(res.data?.message || t('inventory2.fan_error'));
       } catch (err: unknown) {
+        logInventory2Error('INVENTORY_UNMOUNT_FAN_FAILED', err);
         toast.error(apiErrorMessage(err, t('inventory2.fan_error')));
       }
     },
