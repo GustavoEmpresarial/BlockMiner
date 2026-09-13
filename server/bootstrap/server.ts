@@ -223,7 +223,14 @@ export function createApp() {
     // All uploaded images/media are served from the persistent uploads/media/<category>/ tree —
     // see server/modules/media/media.config.ts for the on-disk resolution.
     app.use(MEDIA_PUBLIC_PREFIX, createMediaStaticHeadersMiddleware());
-    app.use(MEDIA_PUBLIC_PREFIX, express.static(mediaRootDir()));
+    // maxAge + immutable: every uploaded file gets a fresh, unique name (timestamp+hash, e.g.
+    // miner-1779308014546-fa8dfa74a766ec02.webp) — nothing here is ever overwritten in place,
+    // so it's always safe to tell the browser never to revalidate. Before this, express.static's
+    // default (no Cache-Control at all) meant every single /inventory visit re-fetched every
+    // machine/rack/fan image from scratch; found 2026-09-12 right after syncing real prod
+    // uploads to staging made the tab noticeably heavier (dozens of real images loading where
+    // most had previously 404'd to a lightweight placeholder).
+    app.use(MEDIA_PUBLIC_PREFIX, express.static(mediaRootDir(), { maxAge: "30d", immutable: true }));
     // Public S2S callback (Zerads PTC provider) — root-level path, NOT under /api, matches
     // the exact URL configured on the provider's side. Auth is IP allowlist + password, not
     // session/CSRF (see zerads.controller.ts / zerads.service.ts). Rate-limited like legacy
