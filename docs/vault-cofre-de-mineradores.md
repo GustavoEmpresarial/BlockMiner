@@ -84,7 +84,8 @@ visível ao client (`server/modules/wallet/vault/vault.controller.ts`,
 | 400 | `VAULT_INVALID_VAULT_ITEM` | `retrieve-from-vault` com `destination: "rack"` e `vaultId` ausente/inválido. |
 | 400 | `VAULT_INVALID_SLOT` | `retrieve-from-vault` com `destination: "rack"` e `slotIndex` ausente/fora de 0–79. |
 | 400 (fallback) | `VAULT_INVALID_STATE` | Qualquer 400 futuro ainda não mapeado — nunca quebra, mas vale revisar se aparecer nos logs. |
-| 500 | `VAULT_UNAVAILABLE` | Falha inesperada — reportada via `reportError` (categoria `DATABASE`). |
+| 500 | `VAULT_UNAVAILABLE` | Falha inesperada nas mutações — reportada via `reportError` (categoria `DATABASE`). |
+| 500 | `VAULT_LIST_UNAVAILABLE` | Falha inesperada em `GET /api/vault` — mesmo tratamento, código próprio para diferenciar leitura de escrita nos logs/alertas. |
 
 Cada código tem uma entrada correspondente em `vault.errors.*` nos três
 locales. Regressão coberta por

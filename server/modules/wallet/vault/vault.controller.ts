@@ -75,7 +75,7 @@ export async function getVault(req, res) {
             error,
             req,
         });
-        res.status(500).json({ ok: false, message: "Unable to load vault." });
+        res.status(500).json({ ok: false, code: "VAULT_LIST_UNAVAILABLE", message: "Unable to load vault." });
     }
 }
 export async function moveToVault(req, res) {
