@@ -2030,7 +2030,7 @@
     "purchase_success": "Purchase successful!",
     "purchase_success_detail": "{{count}} cooling system(s) added to your inventory!",
     "errors": {
-      "not_available_yet": "Rack sales are not available yet.",
+      "not_available_yet": "Cooling fan sales are not available yet.",
       "invalid_sku": "Invalid product.",
       "invalid_quantity": "Quantity must be between 1 and {{maxBulk}}.",
       "insufficient_balance": "Insufficient BLK balance.",

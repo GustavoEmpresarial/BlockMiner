@@ -2030,7 +2030,7 @@
     "purchase_success": "¡Compra realizada!",
     "purchase_success_detail": "¡{{count}} sistema(s) de refrigeración añadido(s) al inventario!",
     "errors": {
-      "not_available_yet": "Las ventas de racks aún no están disponibles.",
+      "not_available_yet": "Las ventas de sistemas de refrigeración aún no están disponibles.",
       "invalid_sku": "Producto inválido.",
       "invalid_quantity": "La cantidad debe estar entre 1 y {{maxBulk}}.",
       "insufficient_balance": "Saldo BLK insuficiente.",

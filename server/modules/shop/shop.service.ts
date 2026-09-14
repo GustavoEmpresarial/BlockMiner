@@ -42,9 +42,18 @@ export type MinerPurchaseResult = {
   currency: typeof SHOP_CURRENCY;
 };
 
+export const shopRepoRef = {
+  listActiveMiners: shopRepo.listActiveMiners,
+  findActiveMinerForPurchaseTx: shopRepo.findActiveMinerForPurchaseTx,
+  countUserOwnedMachinesForMinerTx: shopRepo.countUserOwnedMachinesForMinerTx,
+  findUserForPurchaseTx: shopRepo.findUserForPurchaseTx,
+  decrementUserBalanceTx: shopRepo.decrementUserBalanceTx,
+  incrementMinerStockSoldTx: shopRepo.incrementMinerStockSoldTx,
+};
+
 export async function listMinersForShop(page: number, pageSize: number) {
   const now = new Date();
-  const { miners, total } = await shopRepo.listActiveMiners(page, pageSize);
+  const { miners, total } = await shopRepoRef.listActiveMiners(page, pageSize);
   return {
     total,
     currency: SHOP_CURRENCY,

@@ -1,1 +1,12 @@
 export { default as ShopPage } from './ShopPage';
+export * from './components/ShopMinerCard';
+export * from './components/ShopFanCard';
+export * from './components/ShopRackCard';
+export * from './components/ShopSectionHeader';
+export * from './components/ShopPurchaseModal';
+export * from './components/ShopLoadingState';
+export * from './components/ShopEmptyState';
+export * from './hooks/useShopCatalog';
+export * from './hooks/useShopPurchase';
+export * from './lib/shop.api';
+export * from './lib/shop.types';
