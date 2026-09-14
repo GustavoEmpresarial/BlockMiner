@@ -3802,7 +3802,8 @@
       "VAULT_UNAVAILABLE": "Não foi possível guardar no cofre. Tente novamente daqui a pouco.",
       "VAULT_NOT_FOUND": "Máquina ou item não encontrado.",
       "VAULT_INVALID_RACK_REF": "Referência de máquina do rack inválida.",
-      "VAULT_INVALID_SELECTION": "Seleção inválida. Escolha pelo menos uma máquina.",
+      "VAULT_INVALID_SELECTION": "Seleção inválida. Escolha entre uma e 120 máquinas.",
+      "VAULT_BULK_LIMIT": "Dá para mover no máximo {{max}} máquinas de uma vez. Reduza a seleção e tente novamente.",
       "VAULT_INVALID_VAULT_ITEM": "Item do cofre inválido.",
       "VAULT_INVALID_SLOT": "Slot do rack inválido.",
       "VAULT_INVALID_STATE": "Não foi possível completar a operação. Atualize a página e tente novamente."

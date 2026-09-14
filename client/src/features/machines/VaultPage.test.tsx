@@ -40,6 +40,9 @@ vi.mock('./components/machines.quantityModal', () => ({
         <button type="button" onClick={() => (props.onConfirm as (q: number) => void)(2)}>
           do-confirm-qty
         </button>
+        <button type="button" onClick={() => (props.onConfirm as (q: number) => void)(999)}>
+          do-confirm-over-limit
+        </button>
         <button type="button" onClick={() => (props.onClose as () => void)()}>
           do-close-modal
         </button>
@@ -241,6 +244,25 @@ describe('VaultPage — retrieve from vault flow', () => {
       expect(errSpy).toHaveBeenCalledWith('[vault]', expect.objectContaining({ code: 'VAULT_RETRIEVE_FAILED' })),
     );
     errSpy.mockRestore();
+  });
+
+  it('never sends more ids than the server accepts, even when the stack is larger than VAULT_BULK_MAX', async () => {
+    // A stack of 130 identical machines: the server's zod schema rejects arrays > 120 with
+    // a 400 whose message reads "choose at least one" — the opposite of what happened. The
+    // modal is capped so that request can't be built in the first place.
+    api.postRetrieveFromVault.mockResolvedValue({ data: { ok: true } });
+    storeState = {
+      vaultItems: Array.from({ length: 130 }, (_, i) => vaultRow({ id: i + 1 })),
+      vaultLoading: false,
+      vaultError: null,
+    };
+    await mount();
+    fireEvent.click(screen.getByText('Retirar do Cofre'));
+    // The mocked modal confirms with a deliberately over-the-limit quantity.
+    fireEvent.click(screen.getByText('do-confirm-over-limit'));
+    await waitFor(() => expect(api.postRetrieveFromVault).toHaveBeenCalled());
+    const [[body]] = api.postRetrieveFromVault.mock.calls;
+    expect(body.vaultIds).toHaveLength(120);
   });
 
   it('a bulk retrieve (quantity > 1) sends all selected ids, sorted, capped at group size', async () => {

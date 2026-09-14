@@ -24,6 +24,7 @@ import {
   groupInventoryStacks,
   apiErrorMessage,
   SIDEBAR_GROUP_PAGE_SIZE,
+  VAULT_BULK_MAX,
 } from '../machines/lib/machines.shared';
 import { resolveApiPayloadMessage } from '../../shared/utils/apiErrorI18n';
 import { SlotModal } from '../machines/components/machines.slotModal';
@@ -328,6 +329,13 @@ export default function Inventory2Page() {
       const ids = (Array.isArray(inventoryItemIds) ? inventoryItemIds : [inventoryItemIds]).map((x) => Number(x)).filter((n) => Number.isInteger(n) && n > 0);
       if (ids.length === 0) {
         toast.error(t('common.error'));
+        return;
+      }
+      // The server's zod schema caps itemIds at VAULT_BULK_MAX; sending more is a
+      // guaranteed 400 whose single code reads as "choose at least one", the opposite of
+      // what happened. Tell the user the real limit instead.
+      if (ids.length > VAULT_BULK_MAX) {
+        toast.error(t('vault.errors.VAULT_BULK_LIMIT', { max: VAULT_BULK_MAX }));
         return;
       }
       if (backpackVaultLock.current) return;

@@ -7,7 +7,7 @@ import { isAxiosError } from 'axios';
 import { useGameStore } from '../shell/lib/game.store';
 import { postRetrieveFromVault } from './lib/machines.api';
 import { logVaultError } from './lib/vault.errors';
-import { groupInventoryStacks, apiErrorMessage, safeDisplayLabel, formatHashrate } from './lib/machines.shared';
+import { groupInventoryStacks, apiErrorMessage, safeDisplayLabel, formatHashrate, VAULT_BULK_MAX } from './lib/machines.shared';
 import { getMachineDisplayImageUrl } from './lib/machineDisplayImage';
 import { MachineImage } from './components/MachineImage';
 import { MachineQuantityModal } from './components/machines.quantityModal';
@@ -77,7 +77,9 @@ export default function VaultPage() {
     async (qtyRaw: number) => {
       const group = vaultQtyModalGroup;
       if (!group || retrieveLock.current) return;
-      const qty = Math.min(Math.max(1, Math.floor(Number(qtyRaw)) || 1), group.quantity);
+      // Also capped at VAULT_BULK_MAX: the server's zod schema rejects longer arrays with
+      // a 400, so sending one is a guaranteed failure with a misleading message.
+      const qty = Math.min(Math.max(1, Math.floor(Number(qtyRaw)) || 1), group.quantity, VAULT_BULK_MAX);
       const sorted = [...group.items].sort((a, b) => a.id - b.id);
       const ids = sorted.slice(0, qty).map((r) => r.id).filter((id) => Number.isInteger(id) && id > 0);
       if (ids.length === 0) {
@@ -195,7 +197,7 @@ export default function VaultPage() {
         title={t('vault.quantity_modal_title')}
         subtitle={t('vault.quantity_modal_subtitle')}
         quantityLabel={t('vault.quantity_field')}
-        max={vaultQtyModalGroup?.quantity ?? 1}
+        max={Math.min(vaultQtyModalGroup?.quantity ?? 1, VAULT_BULK_MAX)}
         min={1}
         confirmLabel={t('vault.quantity_confirm')}
         cancelLabel={t('common.cancel')}

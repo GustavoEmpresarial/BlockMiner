@@ -9,6 +9,16 @@ import type {
 } from './machines.types';
 
 
+/**
+ * Mirrors VAULT_BULK_MAX in server/modules/wallet/vault/vault.schemas.ts — the zod schema
+ * rejects any itemIds/vaultIds array longer than this with a 400. Without the client
+ * enforcing the same ceiling, a user with more than 120 identical stacked machines can
+ * build a request that is guaranteed to fail, and the server's single 400 code for that
+ * branch (VAULT_INVALID_SELECTION) reads as "choose at least one" — the opposite of what
+ * happened. Keep the two in sync.
+ */
+export const VAULT_BULK_MAX = 120;
+
 export const RACK_TOOLTIP_SHOW_MS = 120;
 export const RACK_TOOLTIP_HIDE_MS = 80;
 export const SLOTS_PER_VISUAL_RACK = 8;

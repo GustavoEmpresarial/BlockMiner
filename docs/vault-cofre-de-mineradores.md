@@ -80,7 +80,7 @@ visível ao client (`server/modules/wallet/vault/vault.controller.ts`,
 |---|---|---|
 | 404 | `VAULT_NOT_FOUND` | Item/máquina não pertence ao usuário ou não existe. |
 | 400 | `VAULT_INVALID_RACK_REF` | `move-to-vault` com `source: "rack"` e `itemId` ausente/inválido. |
-| 400 | `VAULT_INVALID_SELECTION` | Seleção vazia ou maior que `VAULT_BULK_MAX` (120). |
+| 400 | `VAULT_INVALID_SELECTION` | Seleção vazia ou maior que `VAULT_BULK_MAX` (120). O client agora impede os dois casos antes de enviar (ver abaixo), então isto vira uma rede de segurança. |
 | 400 | `VAULT_INVALID_VAULT_ITEM` | `retrieve-from-vault` com `destination: "rack"` e `vaultId` ausente/inválido. |
 | 400 | `VAULT_INVALID_SLOT` | `retrieve-from-vault` com `destination: "rack"` e `slotIndex` ausente/fora de 0–79. |
 | 400 (fallback) | `VAULT_INVALID_STATE` | Qualquer 400 futuro ainda não mapeado — nunca quebra, mas vale revisar se aparecer nos logs. |
@@ -115,6 +115,30 @@ não virava:
 > emitidos por `respondVaultError`) e restaurada depois que o code review
 > pegou o teste quebrado. Ao mexer em `vault.errors.*`, grepar os usos no
 > client, não só os códigos do servidor.
+
+### Limite de lote (`VAULT_BULK_MAX = 120`)
+
+O schema Zod do servidor rejeita `itemIds`/`vaultIds` com mais de 120 itens.
+O client **não** espelhava esse teto: o modal de quantidade oferecia até
+`group.quantity` e o move-to-vault do inventário mandava a seleção inteira,
+então um usuário com mais de 120 máquinas idênticas empilhadas conseguia
+montar uma request garantidamente inválida — e o 400 resultante usa um único
+código (`VAULT_INVALID_SELECTION`) cuja mensagem dizia *"escolha pelo menos
+uma máquina"*, o oposto do que tinha acontecido.
+
+Corrigido em `client/src/features/machines/lib/machines.shared.ts`
+(`VAULT_BULK_MAX`, espelhando a constante do servidor — manter as duas em
+sincronia):
+
+- `VaultPage.tsx`: o `max` do modal e o clamp do handler saturam em 120, então
+  a request inválida não chega a ser construída.
+- `Inventory2Page.tsx` (move-to-vault): bloqueia com `vault.errors.VAULT_BULK_LIMIT`,
+  que informa o limite real em vez de deixar estourar no servidor.
+- A mensagem de `VAULT_INVALID_SELECTION` passou a cobrir as duas pontas
+  ("entre uma e 120"), já que o servidor usa o mesmo código para vazio e excesso.
+
+Regressão coberta em `VaultPage.test.tsx` ("never sends more ids than the
+server accepts") — verificado que o teste falha (130 ids) sem o cap.
 
 ## Erros / Observabilidade
 

@@ -3795,7 +3795,8 @@
       "VAULT_UNAVAILABLE": "Could not complete vault storage. Try again in a moment.",
       "VAULT_NOT_FOUND": "Machine or item was not found.",
       "VAULT_INVALID_RACK_REF": "Invalid rack machine reference.",
-      "VAULT_INVALID_SELECTION": "Invalid selection. Choose at least one machine.",
+      "VAULT_INVALID_SELECTION": "Invalid selection. Choose between one and 120 machines.",
+      "VAULT_BULK_LIMIT": "You can move at most {{max}} machines at once. Reduce the selection and try again.",
       "VAULT_INVALID_VAULT_ITEM": "Invalid vault item.",
       "VAULT_INVALID_SLOT": "Invalid rack slot.",
       "VAULT_INVALID_STATE": "Could not complete this action. Refresh the page and try again."

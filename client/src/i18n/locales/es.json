@@ -3795,7 +3795,8 @@
       "VAULT_UNAVAILABLE": "Could not complete vault storage. Try again in a moment.",
       "VAULT_NOT_FOUND": "Machine or item was not found.",
       "VAULT_INVALID_RACK_REF": "Referencia de máquina del rack inválida.",
-      "VAULT_INVALID_SELECTION": "Selección inválida. Elige al menos una máquina.",
+      "VAULT_INVALID_SELECTION": "Selección inválida. Elige entre una y 120 máquinas.",
+      "VAULT_BULK_LIMIT": "Puedes mover como máximo {{max}} máquinas a la vez. Reduce la selección e inténtalo de nuevo.",
       "VAULT_INVALID_VAULT_ITEM": "Elemento de la caja fuerte inválido.",
       "VAULT_INVALID_SLOT": "Ranura del rack inválida.",
       "VAULT_INVALID_STATE": "No se pudo completar la acción. Actualiza la página e inténtalo de nuevo."
