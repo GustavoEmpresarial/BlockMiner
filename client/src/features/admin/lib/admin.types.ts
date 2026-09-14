@@ -651,6 +651,10 @@ export type AdminOfferEventListRow = {
   deletedAt?: string | Date | null;
   minerCount?: number;
   purchaseCount?: number;
+  unitSales?: number;
+  uniqueBuyers?: number;
+  checkoutBatches?: number;
+  revenuePol?: number;
 };
 
 export type AdminOfferEventsListSuccess = {
@@ -730,6 +734,9 @@ export type AdminOfferEventPurchaseRow = {
   userId: number;
   eventMinerId?: number;
   pricePaid: number;
+  unitPrice?: number;
+  quantity?: number;
+  totalPaid?: number;
   currency: string;
   createdAt: string | Date;
   user?: AdminOfferEventPurchaseUser | null;
@@ -737,7 +744,19 @@ export type AdminOfferEventPurchaseRow = {
 };
 
 export type AdminOfferEventPurchasesListResponse =
-  | { ok: true; purchases: AdminOfferEventPurchaseRow[]; page?: number; pageSize?: number; total?: number }
+  | {
+      ok: true;
+      purchases: AdminOfferEventPurchaseRow[];
+      page?: number;
+      pageSize?: number;
+      total?: number;
+      stats?: {
+        unitSales: number;
+        uniqueBuyers: number;
+        checkoutBatches: number;
+        revenuePol: number;
+      };
+    }
   | { ok: false; message?: string };
 
 /** Local form for create/edit event miner modal. */
