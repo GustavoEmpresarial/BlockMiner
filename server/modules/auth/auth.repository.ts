@@ -16,6 +16,45 @@ export function normalizeEmail(value: unknown): string {
   return normalizeIdentifier(value).toLowerCase();
 }
 
+/**
+ * True when `normalizedEmail` has a non-empty local part before the "@".
+ * `"@gmail.com"` is the cheapest form of the suffix attack and is rejected here.
+ * Exported for tests/auth/findUserByIdentifier.legacyFallback.test.mjs.
+ */
+export function hasEmailLocalPart(normalizedEmail: string): boolean {
+  return normalizedEmail.indexOf("@") > 0;
+}
+
+/**
+ * The security rule for the legacy suffix fallback, kept pure so it can be asserted
+ * without a database. A stored row only confirms the input when it is the SAME address
+ * modulo surrounding whitespace — the real legacy shape. A row whose local part merely
+ * *ends with* the input ("joao@gmail.com" vs "o@gmail.com") must never match, because
+ * that is what let an unauthenticated caller resolve, and then lock out, someone else's
+ * account. Exported for tests/auth/findUserByIdentifier.legacyFallback.test.mjs.
+ */
+export function isVerifiedLegacyEmailMatch(storedEmail: unknown, normalizedEmail: string): boolean {
+  if (!normalizedEmail || !hasEmailLocalPart(normalizedEmail)) return false;
+  return String(storedEmail ?? "").trim().toLowerCase() === normalizedEmail;
+}
+
+/**
+ * SECURITY (fixed 2026-09-13): the legacy fallback below is a suffix match over
+ * attacker-controlled input, and it drives authentication lookups.
+ *
+ * Unguarded — `endsWith(input)` ordered by `id desc` — it resolved an arbitrary account
+ * from a bare suffix: `{"identifier":"@gmail.com"}` returned the newest Gmail user, and
+ * `"o@gmail.com"` returned `joao@gmail.com`. login.controller.ts then recorded the failed
+ * attempt against THAT user, so 10 unauthenticated requests locked a stranger out for an
+ * hour (5 failures -> 15min, 10 -> 60min) without the attacker ever learning their address.
+ * forgot-password resolves through the same helper, so a reset mail could be aimed at an
+ * unintended account too.
+ *
+ * The fallback is kept (real legacy rows depend on it) but is now only allowed to confirm
+ * a row that is the SAME address modulo surrounding whitespace — the actual legacy shape.
+ * A candidate whose local part merely ends with the input ("joao" vs "o") is rejected, so
+ * neither the untargeted nor the targeted variant resolves anything.
+ */
 export async function findUserByIdentifier(identifier: unknown) {
   const normalizedEmail = normalizeEmail(identifier);
   const user = await prisma.user.findFirst({
@@ -23,17 +62,37 @@ export async function findUserByIdentifier(identifier: unknown) {
   });
   if (user) return user;
 
-  const legacyUser = await prisma.user.findFirst({
+  // A suffix with no local part ("@gmail.com") can never be a real address — and is the
+  // cheapest form of the attack, so reject it before touching the database.
+  if (!hasEmailLocalPart(normalizedEmail)) return null;
+
+  // `endsWith` is now only a cheap DB-side prefilter; the decision is made in JS below.
+  // Bounded so a broad suffix can't turn into an unbounded scan.
+  const candidates = await prisma.user.findMany({
     where: { email: { endsWith: normalizedEmail, mode: "insensitive" } },
     orderBy: { id: "desc" },
+    take: 25,
   });
-  if (legacyUser) {
-    repositoryLogger.warn("findUserByIdentifier: legacy email endsWith fallback matched", {
-      identifierSuffix: normalizedEmail.slice(-8),
-      userId: legacyUser.id,
-    });
+  const matches = candidates.filter((candidate) => isVerifiedLegacyEmailMatch(candidate.email, normalizedEmail));
+  // Exactly one, never "the newest of several": picking a winner among ambiguous rows is
+  // what let an attacker choose a victim.
+  if (matches.length !== 1) {
+    if (candidates.length > 0) {
+      repositoryLogger.warn("findUserByIdentifier: legacy fallback rejected a non-exact suffix match", {
+        identifierSuffix: normalizedEmail.slice(-8),
+        candidateCount: candidates.length,
+        verifiedMatchCount: matches.length,
+      });
+    }
+    return null;
   }
-  return legacyUser ?? null;
+
+  const legacyUser = matches[0]!;
+  repositoryLogger.warn("findUserByIdentifier: legacy email whitespace fallback matched", {
+    identifierSuffix: normalizedEmail.slice(-8),
+    userId: legacyUser.id,
+  });
+  return legacyUser;
 }
 
 export async function findUserBySatspaySubject(subject: string) {
