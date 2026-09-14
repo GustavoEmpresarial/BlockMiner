@@ -117,6 +117,14 @@ export const EXPECTED_AUTH_TEXT = /session invalid|not authenticated|login requi
  */
 export const EXPECTED_CLIENT_UX_CODES = new Set([
   "INVALID_STATE",
+  // Vault 400s carry the specific reason instead of the generic INVALID_STATE above
+  // (docs/vault-cofre-de-mineradores.md#api-contract). Ordinary user input — keep out
+  // of the admin dashboard. Mirrored in clientErrorTelemetry.ts + collector-v4.
+  "VAULT_INVALID_STATE",
+  "VAULT_INVALID_SELECTION",
+  "VAULT_INVALID_SLOT",
+  "VAULT_INVALID_VAULT_ITEM",
+  "VAULT_INVALID_RACK_REF",
   "INVALID_BODY",
   "INVALID_AMOUNT",
   "INVALID_TX_HASH",

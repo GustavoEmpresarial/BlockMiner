@@ -37,6 +37,14 @@
   };
   var UX_CODES = {
     INVALID_STATE: 1,
+    // Vault 400s carry the specific reason instead of the generic INVALID_STATE above
+    // (docs/vault-cofre-de-mineradores.md#api-contract). Ordinary user input — keep out
+    // of the admin dashboard. Mirrored in clientErrorTelemetry.ts + traffic.errors.ts.
+    VAULT_INVALID_STATE: 1,
+    VAULT_INVALID_SELECTION: 1,
+    VAULT_INVALID_SLOT: 1,
+    VAULT_INVALID_VAULT_ITEM: 1,
+    VAULT_INVALID_RACK_REF: 1,
     INVALID_BODY: 1,
     INVALID_AMOUNT: 1,
     INVALID_TX_HASH: 1,

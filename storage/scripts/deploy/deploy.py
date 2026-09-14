@@ -272,6 +272,16 @@ elif command -v docker >/dev/null 2>&1; then
   # (every deploy since _build_server_on_vm() was added hit the "no npm" branch below
   # and silently kept stale dist/ — same silent-no-op bug this function exists to fix,
   # just moved into itself). Mirrors _build_client_on_vm()'s existing container fallback.
+  #
+  # KNOWN RACE (not fixed here — see docs/vault-cofre-de-mineradores.md#deploy):
+  # docker-compose.yml bind-mounts ./dist into the LIVE app container, so tsc emits the new
+  # JS file-by-file into the directory the OLD process is still serving from, seconds-to-
+  # minutes before `compose up --force-recreate` replaces it. A dynamic import() in that
+  # window would load new code against old in-memory state. The fix is to build into a
+  # staging dir and swap atomically (the force-recreate already handles the new inode) —
+  # deliberately NOT done in this pass because it cannot be validated without a real
+  # deploy, and a mistake here breaks every deploy. Do it as its own change, verified end
+  # to end on staging first.
   echo "[vm] building server via node container (host npm unavailable)"
   docker run --rm \
     -v "$APP_ROOT:/app" \
@@ -321,6 +331,9 @@ def _remote_git_script(
     app_root: str, git_url: str, git_ref: str, *, compose_file: str, container_app: str, health_port: int
 ) -> str:
     no_cache = "export BLOCKMINER_DOCKER_BUILD_NO_CACHE=1\n" if _docker_no_cache_enabled() else ""
+    # Must be exported into the remote script the same way no_cache is — _build_server_on_vm()
+    # reads $SKIP_SERVER_BUILD on the VM, and a local-only env var never reaches it.
+    skip_server_build = "export SKIP_SERVER_BUILD=1\n" if _skip_server_build() else ""
     env_backup, env_restore = _env_backup_restore()
     pull = f'''command -v git >/dev/null 2>&1 || {{ apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq git; }}
 mkdir -p "$(dirname "$APP_ROOT")"
@@ -367,11 +380,11 @@ echo "[vm] git sync OK @ $(cd "$APP_ROOT" && git rev-parse --short HEAD 2>/dev/n
 '''
     if _skip_docker():
         return f"""set -euo pipefail
-{no_cache}APP_ROOT={shlex.quote(app_root)}
+{no_cache}{skip_server_build}APP_ROOT={shlex.quote(app_root)}
 {pull}echo "[vm] SKIP_DOCKER=1"
 """
     return f"""set -euo pipefail
-{no_cache}APP_ROOT={shlex.quote(app_root)}
+{no_cache}{skip_server_build}APP_ROOT={shlex.quote(app_root)}
 {pull}{_docker_stack(compose_file, health_port)}
 """
 

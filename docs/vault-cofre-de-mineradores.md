@@ -84,18 +84,29 @@ visível ao client (`server/modules/wallet/vault/vault.controller.ts`,
 | 400 | `VAULT_INVALID_VAULT_ITEM` | `retrieve-from-vault` com `destination: "rack"` e `vaultId` ausente/inválido. |
 | 400 | `VAULT_INVALID_SLOT` | `retrieve-from-vault` com `destination: "rack"` e `slotIndex` ausente/fora de 0–79. |
 | 400 (fallback) | `VAULT_INVALID_STATE` | Qualquer 400 futuro ainda não mapeado — nunca quebra, mas vale revisar se aparecer nos logs. |
-| 500 | `VAULT_UNAVAILABLE` | Falha inesperada nas mutações — reportada via `reportError` (categoria `DATABASE`). |
+| 500 | `VAULT_UNAVAILABLE` | Falha inesperada nas mutações — reportada via `reportError` (categoria `DATABASE` só quando o erro tem código Prisma `P####`, senão `UNKNOWN`). |
 | 500 | `VAULT_LIST_UNAVAILABLE` | Falha inesperada em `GET /api/vault` — mesmo tratamento, código próprio para diferenciar leitura de escrita nos logs/alertas. |
 
 Cada código tem uma entrada correspondente em `vault.errors.*` nos três
 locales. Regressão coberta por
 `tests/wallet/vault.controller.errorContract.test.mjs`.
 
-Os cinco códigos 400 também foram adicionados a `EXPECTED_CLIENT_UX_CODES`
-(`client/src/shared/utils/clientErrorTelemetry.ts`) — são resultados normais
-de input do usuário (seleção vazia, slot inválido) e não devem virar ruído
-no dashboard de erros do admin, exatamente como o `INVALID_STATE` genérico
-que eles substituíram já não virava.
+Os cinco códigos 400 também foram adicionados às **três** listas espelhadas
+de "erro esperado de UX" — são resultados normais de input do usuário
+(seleção vazia, slot inválido) e não devem virar ruído no dashboard de erros
+do admin, exatamente como o `INVALID_STATE` genérico que eles substituíram já
+não virava:
+
+1. `client/src/shared/utils/clientErrorTelemetry.ts` — `EXPECTED_CLIENT_UX_CODES`
+2. `client/public/assets/client-error-collector-v4.js` — `UX_CODES` (coletor
+   global carregado pelo `index.html`, que faz patch de XHR/fetch por conta
+   própria e **não** passa pelo item 1)
+3. `server/modules/traffic/traffic.errors.ts` — segunda linha de defesa no servidor
+
+> As três precisam andar juntas (o cabeçalho do item 1 diz "keep in sync").
+> Na primeira versão desta correção só a primeira foi atualizada, o que
+> deixaria os 400 do vault inundando o dashboard mesmo assim — pego no
+> segundo code review.
 
 > **`VAULT_RACK_LINK` não é um código do servidor.** Essa chave é disparada
 > pelo client em cima do **status 409** de `move-to-vault`
@@ -113,7 +124,9 @@ mutações nunca reportava nada. Hoje:
 
 - **Servidor**: todo catch chama `reportError` (`core/errors/error-reporter.ts`)
   com um `code` estável (`VAULT_LIST_FAILED`, `VAULT_MOVE_FAILED`,
-  `VAULT_RETRIEVE_FAILED`), categoria `DATABASE`, e contexto (`userId` +
+  `VAULT_RETRIEVE_FAILED`), categoria `DATABASE` **apenas** quando o erro
+  carrega um código Prisma `P####` — senão `UNKNOWN`, para um `TypeError` ou
+  falha de dependência não alertar como incidente de banco —, e contexto (`userId` +
   `source`/`destination` do corpo da requisição) — nunca o corpo/headers
   brutos da request.
 - **Client**: `client/src/features/machines/lib/vault.errors.ts` (mesmo
@@ -187,6 +200,17 @@ Este módulo é código de **servidor** (TypeScript compilado para
 `_build_server_on_vm()`; requer `npm` ou fallback via container Docker no
 VM — corrigido em `b363006` depois de descobrir que `npm` nunca está no
 `PATH` da sessão SSH não-interativa usada pelo deploy).
+
+**Race conhecida, ainda não corrigida**: o `docker-compose.yml` faz bind-mount
+de `./dist` no container **em execução**, então o build emite o JS novo
+arquivo a arquivo dentro do diretório que o processo **antigo** ainda está
+servindo, segundos/minutos antes do `compose up --force-recreate` trocar o
+container. Um `import()` dinâmico nessa janela carregaria código novo contra
+estado antigo em memória. A correção é buildar num diretório de staging e
+trocar atomicamente (o force-recreate já cuida do inode novo) — deixada de
+fora desta passada de propósito, porque não dá pra validar sem um deploy
+real e um erro aqui quebra todos os deploys. Fazer como mudança própria,
+verificada ponta a ponta no staging.
 
 A verificação pós-build compara a **data** de `dist/server/bootstrap/server.js`
 contra um marcador criado antes do build. Checar só a *existência* do arquivo
