@@ -37,13 +37,13 @@ export async function start(req: Request, res: Response): Promise<void> {
     res.status(400).json({ ok: false, message: "Invalid id" });
     return;
   }
-  const { minerIds } = req.body as { minerIds?: unknown };
+  const { minerIds, feeCurrency } = req.body as { minerIds?: unknown; feeCurrency?: unknown };
   if (!Array.isArray(minerIds)) {
     res.status(400).json({ ok: false, message: "minerIds must be an array of UserOwnedMachine ids" });
     return;
   }
   try {
-    const result = await svc.startBurnEvent(user.id, eventId, minerIds);
+    const result = await svc.startBurnEvent(user.id, eventId, minerIds, feeCurrency);
     res.json(result);
   } catch (err) {
     const code = readErrorCode(err) ?? "ERROR";

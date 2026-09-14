@@ -8,36 +8,61 @@ import {
   finalizeCriticalMutationSuccess,
   cancelCriticalMutation,
 } from "../../core/http/middleware/idempotency.js";
-import { logger } from "../../core/logger/index.js";
+import { reportError } from "../../core/errors/error-reporter.js";
 import * as shopService from "./shop.service.js";
-import { SHOP_ERROR_MESSAGE } from "./shop.errors.js";
+import { SHOP_ERROR_MESSAGE, SHOP_ERROR_CODE } from "./shop.errors.js";
 import { SHOP_CURRENCY } from "./shop.config.js";
+import {
+  readShopMaxBulkQuantity,
+  listMinersQuerySchema,
+  createPurchaseMinerSchema,
+  createPurchaseFanSchema,
+  createPurchaseRackSchema,
+} from "./shop.schemas.js";
 import { purchaseFansForUser, FAN_ERROR_MESSAGE, readFanMaxBulkQuantity } from "../fans/index.js";
 import { purchaseRacksForUser, RACK_ERROR_MESSAGE, readRackMaxBulkQuantity } from "../racks/index.js";
 
-const log = logger.child("shop.controller");
+export { readShopMaxBulkQuantity };
 
-/** Product default max bulk qty; override with SHOP_MAX_BULK_QUANTITY. */
-const DEFAULT_SHOP_MAX_BULK_QUANTITY = 25;
-
-function readShopMaxBulkQuantity(): number {
-  const raw = Number(process.env.SHOP_MAX_BULK_QUANTITY || DEFAULT_SHOP_MAX_BULK_QUANTITY);
-  return Number.isInteger(raw) && raw > 0 ? raw : DEFAULT_SHOP_MAX_BULK_QUANTITY;
-}
+export const shopServiceRef = {
+  listMinersForShop: shopService.listMinersForShop,
+  executeMinerPurchaseTransaction: shopService.executeMinerPurchaseTransaction,
+};
 
 export async function listMiners(req: Request, res: Response): Promise<void> {
   try {
-    const rawPage = Number(req.query?.page || 1);
-    const rawPageSize = Number(req.query?.pageSize || 24);
-    const page = Number.isInteger(rawPage) && rawPage > 0 ? rawPage : 1;
-    const pageSize = Number.isInteger(rawPageSize) ? Math.min(Math.max(rawPageSize, 6), 48) : 24;
-    const { items, total, currency, fans, racks, fanSalesAvailableAt, rackSalesAvailableAt } = await shopService.listMinersForShop(page, pageSize);
-    res.json({ ok: true, page, pageSize, total, currency, miners: items, fans, racks, fanSalesAvailableAt, rackSalesAvailableAt });
+    const parsedQuery = listMinersQuerySchema.safeParse(req.query);
+    const page = parsedQuery.success ? parsedQuery.data.page : 1;
+    const pageSize = parsedQuery.success ? parsedQuery.data.pageSize : 24;
+
+    const { items, total, currency, fans, racks, fanSalesAvailableAt, rackSalesAvailableAt } =
+      await shopServiceRef.listMinersForShop(page, pageSize);
+
+    res.json({
+      ok: true,
+      page,
+      pageSize,
+      total,
+      currency,
+      miners: items,
+      fans,
+      racks,
+      fanSalesAvailableAt,
+      rackSalesAvailableAt,
+    });
   } catch (error) {
-    log.error("listMiners error", { error: String(error) });
+    reportError({
+      code: SHOP_ERROR_CODE.SHOP_LIST_ERROR,
+      category: "DATABASE",
+      severity: "ERROR",
+      module: "shop.listMiners",
+      error,
+      req,
+      context: { page: req.query?.page, pageSize: req.query?.pageSize },
+    });
     res.status(500).json({
       ok: false,
-      code: "SHOP_LIST_ERROR",
+      code: SHOP_ERROR_CODE.SHOP_LIST_ERROR,
       messageKey: "shop.errors.list_error",
       message: "Unable to load miners.",
     });
@@ -48,38 +73,48 @@ export async function purchaseMiner(req: Request, res: Response): Promise<void> 
   try {
     const user = requireSessionUser(req, res);
     if (!user) return;
-    const minerId = Number(req.body?.minerId);
-    const quantity = Number(req.body?.quantity || 1);
+
     const maxBulk = readShopMaxBulkQuantity();
-    if (!Number.isInteger(minerId) || minerId <= 0) {
+    const parsed = createPurchaseMinerSchema(maxBulk).safeParse(req.body);
+
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0];
+      const isQuantityError = issue?.path.includes("quantity");
+
+      if (isQuantityError) {
+        res.status(400).json({
+          ok: false,
+          code: SHOP_ERROR_CODE.SHOP_INVALID_QUANTITY,
+          messageKey: "shop.errors.invalid_quantity",
+          messageParams: { maxBulk },
+          message: `Quantity must be between 1 and ${maxBulk}.`,
+        });
+        return;
+      }
+
       res.status(400).json({
         ok: false,
-        code: "SHOP_INVALID_MINER_ID",
+        code: SHOP_ERROR_CODE.SHOP_INVALID_MINER_ID,
         messageKey: "shop.errors.invalid_miner_id",
         message: "Invalid miner ID.",
       });
       return;
     }
-    if (!Number.isInteger(quantity) || quantity < 1 || quantity > maxBulk) {
-      res.status(400).json({
-        ok: false,
-        code: "SHOP_INVALID_QUANTITY",
-        messageKey: "shop.errors.invalid_quantity",
-        messageParams: { maxBulk },
-        message: `Quantity must be between 1 and ${maxBulk}.`,
-      });
-      return;
-    }
+
+    const { minerId, quantity } = parsed.data;
+
     const idem = await resolveCriticalMutation(req, res);
     if (!idem) return;
     const { lease, ci } = idem;
+
     try {
-      const result = await shopService.executeMinerPurchaseTransaction(
+      const result = await shopServiceRef.executeMinerPurchaseTransaction(
         user.id,
         minerId,
         quantity,
         new Date(),
       );
+
       const payload = {
         ok: true,
         messageKey: "shop.purchase_success_detail",
@@ -88,156 +123,234 @@ export async function purchaseMiner(req: Request, res: Response): Promise<void> 
         newBalance: result.newBalance,
         currency: result.currency ?? SHOP_CURRENCY,
       };
+
       await finalizeCriticalMutationSuccess(lease, {
         requestHash: ci.requestHash,
         responseJson: payload,
       });
+
       res.json(payload);
     } catch (error) {
       await cancelCriticalMutation(lease);
       const msg = error instanceof Error ? error.message : String(error);
+
       if (msg === SHOP_ERROR_MESSAGE.MINER_UNAVAILABLE) {
+        reportError({
+          code: SHOP_ERROR_CODE.SHOP_MINER_UNAVAILABLE,
+          category: "BUSINESS",
+          severity: "INFO",
+          module: "shop.purchaseMiner",
+          req,
+          context: { userId: user.id, minerId, quantity },
+        });
         res.status(404).json({
           ok: false,
-          code: "SHOP_MINER_UNAVAILABLE",
+          code: SHOP_ERROR_CODE.SHOP_MINER_UNAVAILABLE,
           messageKey: "shop.errors.miner_unavailable",
           message: "Miner not found.",
         });
         return;
       }
+
       if (msg === SHOP_ERROR_MESSAGE.OUT_OF_STOCK) {
+        reportError({
+          code: SHOP_ERROR_CODE.SHOP_OUT_OF_STOCK,
+          category: "BUSINESS",
+          severity: "INFO",
+          module: "shop.purchaseMiner",
+          req,
+          context: { userId: user.id, minerId, quantity },
+        });
         res.status(400).json({
           ok: false,
-          code: "SHOP_OUT_OF_STOCK",
+          code: SHOP_ERROR_CODE.SHOP_OUT_OF_STOCK,
           messageKey: "shop.errors.out_of_stock",
           message: msg,
         });
         return;
       }
+
       if (msg === SHOP_ERROR_MESSAGE.PURCHASE_LIMIT_REACHED) {
+        reportError({
+          code: SHOP_ERROR_CODE.SHOP_PURCHASE_LIMIT_REACHED,
+          category: "BUSINESS",
+          severity: "INFO",
+          module: "shop.purchaseMiner",
+          req,
+          context: { userId: user.id, minerId, quantity },
+        });
         res.status(400).json({
           ok: false,
-          code: "SHOP_PURCHASE_LIMIT_REACHED",
+          code: SHOP_ERROR_CODE.SHOP_PURCHASE_LIMIT_REACHED,
           messageKey: "shop.errors.purchase_limit_reached",
           message: msg,
         });
         return;
       }
+
       if (msg === SHOP_ERROR_MESSAGE.INSUFFICIENT_BALANCE) {
+        reportError({
+          code: SHOP_ERROR_CODE.SHOP_INSUFFICIENT_BALANCE,
+          category: "BUSINESS",
+          severity: "INFO",
+          module: "shop.purchaseMiner",
+          req,
+          context: { userId: user.id, minerId, quantity },
+        });
         res.status(400).json({
           ok: false,
-          code: "SHOP_INSUFFICIENT_BALANCE",
+          code: SHOP_ERROR_CODE.SHOP_INSUFFICIENT_BALANCE,
           messageKey: "shop.errors.insufficient_balance",
           message: msg,
         });
         return;
       }
+
       if (readErrorCode(error) === "DISTRIBUTED_LOCK_BUSY") {
+        reportError({
+          code: SHOP_ERROR_CODE.RACE_CONDITION_DETECTED,
+          category: "INFRASTRUCTURE",
+          severity: "WARNING",
+          module: "shop.purchaseMiner",
+          req,
+          context: { userId: user.id, minerId, quantity },
+        });
         res.status(409).json({
           ok: false,
-          code: "RACE_CONDITION_DETECTED",
+          code: SHOP_ERROR_CODE.RACE_CONDITION_DETECTED,
           message: "This action conflicted with another request. Refresh the page and try again.",
         });
         return;
       }
-      log.error("purchaseMiner transaction error", { error: msg });
+
+      reportError({
+        code: SHOP_ERROR_CODE.SHOP_PURCHASE_ERROR,
+        category: "DATABASE",
+        severity: "ERROR",
+        module: "shop.purchaseMiner",
+        error,
+        req,
+        context: { userId: user.id, minerId, quantity },
+      });
       res.status(500).json({
         ok: false,
-        code: "SHOP_PURCHASE_ERROR",
+        code: SHOP_ERROR_CODE.SHOP_PURCHASE_ERROR,
         messageKey: "shop.errors.purchase_error",
         message: "Purchase error.",
       });
     }
   } catch (error) {
-    log.error("purchaseMiner fatal error", { error: String(error) });
+    reportError({
+      code: SHOP_ERROR_CODE.SHOP_PURCHASE_ERROR,
+      category: "UNKNOWN",
+      severity: "CRITICAL",
+      module: "shop.purchaseMiner.fatal",
+      error,
+      req,
+    });
     res.status(500).json({
       ok: false,
-      code: "SHOP_PURCHASE_ERROR",
+      code: SHOP_ERROR_CODE.SHOP_PURCHASE_ERROR,
       messageKey: "shop.errors.purchase_error",
       message: "Purchase error.",
     });
   }
 }
 
-function mapFanPurchaseError(res: Response, msg: string): boolean {
-  if (msg === FAN_ERROR_MESSAGE.NOT_AVAILABLE_YET) {
-    res.status(403).json({
-      ok: false,
-      code: "FAN_NOT_AVAILABLE_YET",
-      messageKey: "fans.errors.not_available_yet",
-      message: "Fan sales are not open yet.",
-    });
-    return true;
-  }
-  if (msg === FAN_ERROR_MESSAGE.INVALID_SKU) {
-    res.status(400).json({
-      ok: false,
-      code: "FAN_INVALID_SKU",
-      messageKey: "fans.errors.invalid_sku",
-      message: "Invalid fan product.",
-    });
-    return true;
-  }
-  if (msg === FAN_ERROR_MESSAGE.INVALID_QUANTITY) {
-    res.status(400).json({
-      ok: false,
-      code: "FAN_INVALID_QUANTITY",
-      messageKey: "fans.errors.invalid_quantity",
-      messageParams: { maxBulk: readFanMaxBulkQuantity() },
-      message: "Invalid quantity.",
-    });
-    return true;
-  }
-  if (msg === FAN_ERROR_MESSAGE.INSUFFICIENT_BALANCE) {
-    res.status(400).json({
-      ok: false,
-      code: "FAN_INSUFFICIENT_BALANCE",
-      messageKey: "fans.errors.insufficient_balance",
-      message: "Insufficient BLK balance.",
-    });
-    return true;
-  }
-  return false;
-}
+function handleHardwareCatalogPurchaseError(
+  res: Response,
+  req: Request,
+  userId: number,
+  sku: string,
+  quantity: number,
+  error: unknown,
+  moduleType: "fans" | "racks",
+): boolean {
+  const msg = error instanceof Error ? error.message : String(error);
+  const isFan = moduleType === "fans";
+  const NOT_AVAILABLE = isFan ? FAN_ERROR_MESSAGE.NOT_AVAILABLE_YET : RACK_ERROR_MESSAGE.NOT_AVAILABLE_YET;
+  const INVALID_SKU = isFan ? FAN_ERROR_MESSAGE.INVALID_SKU : RACK_ERROR_MESSAGE.INVALID_SKU;
+  const INVALID_QTY = isFan ? FAN_ERROR_MESSAGE.INVALID_QUANTITY : RACK_ERROR_MESSAGE.INVALID_QUANTITY;
+  const INSUFFICIENT = isFan ? FAN_ERROR_MESSAGE.INSUFFICIENT_BALANCE : RACK_ERROR_MESSAGE.INSUFFICIENT_BALANCE;
 
-function mapRackPurchaseError(res: Response, msg: string): boolean {
-  if (msg === RACK_ERROR_MESSAGE.NOT_AVAILABLE_YET) {
+  const prefix = isFan ? "FAN" : "RACK";
+  const messageKeyPrefix = isFan ? "fans" : "racks";
+  const maxBulk = isFan ? readFanMaxBulkQuantity() : readRackMaxBulkQuantity();
+
+  if (msg === NOT_AVAILABLE) {
+    reportError({
+      code: `${prefix}_NOT_AVAILABLE_YET`,
+      category: "BUSINESS",
+      severity: "INFO",
+      module: `shop.purchase${isFan ? "Fan" : "Rack"}`,
+      req,
+      context: { userId, sku, quantity },
+    });
     res.status(403).json({
       ok: false,
-      code: "RACK_NOT_AVAILABLE_YET",
-      messageKey: "racks.errors.not_available_yet",
-      message: "Rack sales are not open yet.",
+      code: `${prefix}_NOT_AVAILABLE_YET`,
+      messageKey: `${messageKeyPrefix}.errors.not_available_yet`,
+      message: `${isFan ? "Fan" : "Rack"} sales are not open yet.`,
     });
     return true;
   }
-  if (msg === RACK_ERROR_MESSAGE.INVALID_SKU) {
+
+  if (msg === INVALID_SKU) {
     res.status(400).json({
       ok: false,
-      code: "RACK_INVALID_SKU",
-      messageKey: "racks.errors.invalid_sku",
-      message: "Invalid rack product.",
+      code: `${prefix}_INVALID_SKU`,
+      messageKey: `${messageKeyPrefix}.errors.invalid_sku`,
+      message: `Invalid ${isFan ? "fan" : "rack"} product.`,
     });
     return true;
   }
-  if (msg === RACK_ERROR_MESSAGE.INVALID_QUANTITY) {
+
+  if (msg === INVALID_QTY) {
     res.status(400).json({
       ok: false,
-      code: "RACK_INVALID_QUANTITY",
-      messageKey: "racks.errors.invalid_quantity",
-      messageParams: { maxBulk: readRackMaxBulkQuantity() },
+      code: `${prefix}_INVALID_QUANTITY`,
+      messageKey: `${messageKeyPrefix}.errors.invalid_quantity`,
+      messageParams: { maxBulk },
       message: "Invalid quantity.",
     });
     return true;
   }
-  if (msg === RACK_ERROR_MESSAGE.INSUFFICIENT_BALANCE) {
+
+  if (msg === INSUFFICIENT) {
+    reportError({
+      code: `${prefix}_INSUFFICIENT_BALANCE`,
+      category: "BUSINESS",
+      severity: "INFO",
+      module: `shop.purchase${isFan ? "Fan" : "Rack"}`,
+      req,
+      context: { userId, sku, quantity },
+    });
     res.status(400).json({
       ok: false,
-      code: "RACK_INSUFFICIENT_BALANCE",
-      messageKey: "racks.errors.insufficient_balance",
+      code: `${prefix}_INSUFFICIENT_BALANCE`,
+      messageKey: `${messageKeyPrefix}.errors.insufficient_balance`,
       message: "Insufficient BLK balance.",
     });
     return true;
   }
+
+  if (readErrorCode(error) === "DISTRIBUTED_LOCK_BUSY") {
+    reportError({
+      code: SHOP_ERROR_CODE.RACE_CONDITION_DETECTED,
+      category: "INFRASTRUCTURE",
+      severity: "WARNING",
+      module: `shop.purchase${isFan ? "Fan" : "Rack"}`,
+      req,
+      context: { userId, sku, quantity },
+    });
+    res.status(409).json({
+      ok: false,
+      code: SHOP_ERROR_CODE.RACE_CONDITION_DETECTED,
+      message: "This action conflicted with another request. Refresh the page and try again.",
+    });
+    return true;
+  }
+
   return false;
 }
 
@@ -245,31 +358,40 @@ export async function purchaseFan(req: Request, res: Response): Promise<void> {
   try {
     const user = requireSessionUser(req, res);
     if (!user) return;
-    const sku = typeof req.body?.sku === "string" ? req.body.sku.trim() : "";
-    const quantity = Number(req.body?.quantity || 1);
+
     const maxBulk = readFanMaxBulkQuantity();
-    if (!sku) {
+    const parsed = createPurchaseFanSchema(maxBulk).safeParse(req.body);
+
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0];
+      const isQuantityError = issue?.path.includes("quantity");
+
+      if (isQuantityError) {
+        res.status(400).json({
+          ok: false,
+          code: SHOP_ERROR_CODE.FAN_INVALID_QUANTITY,
+          messageKey: "fans.errors.invalid_quantity",
+          messageParams: { maxBulk },
+          message: `Quantity must be between 1 and ${maxBulk}.`,
+        });
+        return;
+      }
+
       res.status(400).json({
         ok: false,
-        code: "FAN_INVALID_SKU",
+        code: SHOP_ERROR_CODE.FAN_INVALID_SKU,
         messageKey: "fans.errors.invalid_sku",
         message: "Invalid fan product.",
       });
       return;
     }
-    if (!Number.isInteger(quantity) || quantity < 1 || quantity > maxBulk) {
-      res.status(400).json({
-        ok: false,
-        code: "FAN_INVALID_QUANTITY",
-        messageKey: "fans.errors.invalid_quantity",
-        messageParams: { maxBulk },
-        message: `Quantity must be between 1 and ${maxBulk}.`,
-      });
-      return;
-    }
+
+    const { sku, quantity } = parsed.data;
+
     const idem = await resolveCriticalMutation(req, res);
     if (!idem) return;
     const { lease, ci } = idem;
+
     try {
       const result = await purchaseFansForUser(user.id, sku, quantity, "shop", new Date());
       const payload = {
@@ -281,36 +403,47 @@ export async function purchaseFan(req: Request, res: Response): Promise<void> {
         fanCredits: result.fanCredits,
         currency: SHOP_CURRENCY,
       };
+
       await finalizeCriticalMutationSuccess(lease, {
         requestHash: ci.requestHash,
         responseJson: payload,
       });
+
       res.json(payload);
     } catch (error) {
       await cancelCriticalMutation(lease);
-      const msg = error instanceof Error ? error.message : String(error);
-      if (mapFanPurchaseError(res, msg)) return;
-      if (readErrorCode(error) === "DISTRIBUTED_LOCK_BUSY") {
-        res.status(409).json({
-          ok: false,
-          code: "RACE_CONDITION_DETECTED",
-          message: "This action conflicted with another request. Refresh the page and try again.",
-        });
+      if (handleHardwareCatalogPurchaseError(res, req, user.id, sku, quantity, error, "fans")) {
         return;
       }
-      log.error("purchaseFan transaction error", { error: msg });
+
+      reportError({
+        code: SHOP_ERROR_CODE.FAN_PURCHASE_ERROR,
+        category: "DATABASE",
+        severity: "ERROR",
+        module: "shop.purchaseFan",
+        error,
+        req,
+        context: { userId: user.id, sku, quantity },
+      });
       res.status(500).json({
         ok: false,
-        code: "FAN_PURCHASE_ERROR",
+        code: SHOP_ERROR_CODE.FAN_PURCHASE_ERROR,
         messageKey: "fans.errors.purchase_error",
         message: "Purchase error.",
       });
     }
   } catch (error) {
-    log.error("purchaseFan fatal error", { error: String(error) });
+    reportError({
+      code: SHOP_ERROR_CODE.FAN_PURCHASE_ERROR,
+      category: "UNKNOWN",
+      severity: "CRITICAL",
+      module: "shop.purchaseFan.fatal",
+      error,
+      req,
+    });
     res.status(500).json({
       ok: false,
-      code: "FAN_PURCHASE_ERROR",
+      code: SHOP_ERROR_CODE.FAN_PURCHASE_ERROR,
       messageKey: "fans.errors.purchase_error",
       message: "Purchase error.",
     });
@@ -321,31 +454,40 @@ export async function purchaseRack(req: Request, res: Response): Promise<void> {
   try {
     const user = requireSessionUser(req, res);
     if (!user) return;
-    const sku = typeof req.body?.sku === "string" ? req.body.sku.trim() : "";
-    const quantity = Number(req.body?.quantity || 1);
+
     const maxBulk = readRackMaxBulkQuantity();
-    if (!sku) {
+    const parsed = createPurchaseRackSchema(maxBulk).safeParse(req.body);
+
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0];
+      const isQuantityError = issue?.path.includes("quantity");
+
+      if (isQuantityError) {
+        res.status(400).json({
+          ok: false,
+          code: SHOP_ERROR_CODE.RACK_INVALID_QUANTITY,
+          messageKey: "racks.errors.invalid_quantity",
+          messageParams: { maxBulk },
+          message: `Quantity must be between 1 and ${maxBulk}.`,
+        });
+        return;
+      }
+
       res.status(400).json({
         ok: false,
-        code: "RACK_INVALID_SKU",
+        code: SHOP_ERROR_CODE.RACK_INVALID_SKU,
         messageKey: "racks.errors.invalid_sku",
         message: "Invalid rack product.",
       });
       return;
     }
-    if (!Number.isInteger(quantity) || quantity < 1 || quantity > maxBulk) {
-      res.status(400).json({
-        ok: false,
-        code: "RACK_INVALID_QUANTITY",
-        messageKey: "racks.errors.invalid_quantity",
-        messageParams: { maxBulk },
-        message: `Quantity must be between 1 and ${maxBulk}.`,
-      });
-      return;
-    }
+
+    const { sku, quantity } = parsed.data;
+
     const idem = await resolveCriticalMutation(req, res);
     if (!idem) return;
     const { lease, ci } = idem;
+
     try {
       const result = await purchaseRacksForUser(user.id, sku, quantity, "shop", new Date());
       const payload = {
@@ -357,36 +499,47 @@ export async function purchaseRack(req: Request, res: Response): Promise<void> {
         rackCredits: result.rackCredits,
         currency: SHOP_CURRENCY,
       };
+
       await finalizeCriticalMutationSuccess(lease, {
         requestHash: ci.requestHash,
         responseJson: payload,
       });
+
       res.json(payload);
     } catch (error) {
       await cancelCriticalMutation(lease);
-      const msg = error instanceof Error ? error.message : String(error);
-      if (mapRackPurchaseError(res, msg)) return;
-      if (readErrorCode(error) === "DISTRIBUTED_LOCK_BUSY") {
-        res.status(409).json({
-          ok: false,
-          code: "RACE_CONDITION_DETECTED",
-          message: "This action conflicted with another request. Refresh the page and try again.",
-        });
+      if (handleHardwareCatalogPurchaseError(res, req, user.id, sku, quantity, error, "racks")) {
         return;
       }
-      log.error("purchaseRack transaction error", { error: msg });
+
+      reportError({
+        code: SHOP_ERROR_CODE.RACK_PURCHASE_ERROR,
+        category: "DATABASE",
+        severity: "ERROR",
+        module: "shop.purchaseRack",
+        error,
+        req,
+        context: { userId: user.id, sku, quantity },
+      });
       res.status(500).json({
         ok: false,
-        code: "RACK_PURCHASE_ERROR",
+        code: SHOP_ERROR_CODE.RACK_PURCHASE_ERROR,
         messageKey: "racks.errors.purchase_error",
         message: "Purchase error.",
       });
     }
   } catch (error) {
-    log.error("purchaseRack fatal error", { error: String(error) });
+    reportError({
+      code: SHOP_ERROR_CODE.RACK_PURCHASE_ERROR,
+      category: "UNKNOWN",
+      severity: "CRITICAL",
+      module: "shop.purchaseRack.fatal",
+      error,
+      req,
+    });
     res.status(500).json({
       ok: false,
-      code: "RACK_PURCHASE_ERROR",
+      code: SHOP_ERROR_CODE.RACK_PURCHASE_ERROR,
       messageKey: "racks.errors.purchase_error",
       message: "Purchase error.",
     });

@@ -2030,7 +2030,7 @@
     "purchase_success": "¡Compra realizada!",
     "purchase_success_detail": "¡{{count}} sistema(s) de refrigeración añadido(s) al inventario!",
     "errors": {
-      "not_available_yet": "Las ventas de racks aún no están disponibles.",
+      "not_available_yet": "Las ventas de sistemas de refrigeración aún no están disponibles.",
       "invalid_sku": "Producto inválido.",
       "invalid_quantity": "La cantidad debe estar entre 1 y {{maxBulk}}.",
       "insufficient_balance": "Saldo BLK insuficiente.",
@@ -5494,7 +5494,20 @@
     "required_label": "Quema mínima",
     "stock_label": "Stock",
     "your_claims": "Tus canjes",
-    "opens_at": "Abre el {{date}} UTC"
+    "opens_at": "Abre el {{date}} UTC",
+    "fee_title": "Tarifa de Quema (Elige moneda)",
+    "fee_description": "Tarifa fija por quema: 20 SHIB, 0.01 POL o 0.001 BLK.",
+    "fee_available": "Disponible",
+    "fee_insufficient": "Falta saldo",
+    "fee_required_label": "Tarifa",
+    "your_balance": "Saldo actual:",
+    "insufficient_fee_warning_title": "¡Saldo insuficiente para la tarifa!",
+    "insufficient_fee_warning_body": "Necesitas al menos {{amount}} {{currency}} para iniciar esta quema. Elige otra moneda o recarga tu billetera.",
+    "auto_select_lowest": "Auto-seleccionar menor poder",
+    "clear_selection": "Limpiar selección",
+    "sorted_lowest_to_highest_hint": "Máquinas ordenadas de menor a mayor poder",
+    "available_unit": "disponibles",
+    "fee_summary": "Tarifa cobrada: {{amount}} {{currency}}"
   },
   "adminCheckin": {
     "title": "Check-in milestones",

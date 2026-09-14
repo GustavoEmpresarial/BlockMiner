@@ -116,7 +116,7 @@ export async function listUserBurnableMachines(userId: number) {
       location: { in: ["INVENTORY", "RACK"] },
       ...(locked.length ? { id: { notIn: locked } } : {}),
     },
-    orderBy: [{ hashRate: "desc" }, { id: "asc" }],
+    orderBy: [{ hashRate: "asc" }, { id: "asc" }],
     select: {
       id: true,
       location: true,
@@ -125,6 +125,43 @@ export async function listUserBurnableMachines(userId: number) {
       slotSize: true,
       imageUrl: true,
       level: true,
+    },
+  });
+}
+
+export async function findUserBalancesTx(tx: Tx, userId: number) {
+  return tx.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      polBalance: true,
+      shibBalance: true,
+      blkBalance: true,
+    },
+  });
+}
+
+export async function decrementUserFeeBalanceTx(
+  tx: Tx,
+  userId: number,
+  currency: "SHIB" | "POL" | "BLK",
+  amount: number,
+) {
+  const data =
+    currency === "SHIB"
+      ? { shibBalance: { decrement: amount } }
+      : currency === "POL"
+        ? { polBalance: { decrement: amount } }
+        : { blkBalance: { decrement: amount } };
+
+  return tx.user.update({
+    where: { id: userId },
+    data,
+    select: {
+      id: true,
+      polBalance: true,
+      shibBalance: true,
+      blkBalance: true,
     },
   });
 }
@@ -201,15 +238,26 @@ export async function cancelPendingBurnSessions(userId: number, eventId: number)
   `;
 }
 
-export async function createBurnSession(opts: {
-  eventId: number;
-  userId: number;
-  ownedMachineIds: number[];
-  startedAt: Date;
-  completesAt: Date;
-}): Promise<BurnSessionRow> {
-  await cancelPendingBurnSessions(opts.userId, opts.eventId);
-  const rows = await prisma.$queryRaw<BurnSessionRow[]>`
+export async function cancelPendingBurnSessionsTx(tx: Tx, userId: number, eventId: number): Promise<void> {
+  await tx.$executeRaw`
+    UPDATE burn_sessions
+    SET status = 'cancelled', updated_at = NOW()
+    WHERE user_id = ${userId} AND event_id = ${eventId} AND status = 'pending'
+  `;
+}
+
+export async function createBurnSessionTx(
+  tx: Tx,
+  opts: {
+    eventId: number;
+    userId: number;
+    ownedMachineIds: number[];
+    startedAt: Date;
+    completesAt: Date;
+  },
+): Promise<BurnSessionRow> {
+  await cancelPendingBurnSessionsTx(tx, opts.userId, opts.eventId);
+  const rows = await tx.$queryRaw<BurnSessionRow[]>`
     INSERT INTO burn_sessions (event_id, user_id, owned_machine_ids, started_at, completes_at, status, created_at, updated_at)
     VALUES (
       ${opts.eventId},
@@ -224,6 +272,16 @@ export async function createBurnSession(opts: {
     RETURNING id, event_id, user_id, owned_machine_ids, started_at, completes_at, status
   `;
   return rows[0]!;
+}
+
+export async function createBurnSession(opts: {
+  eventId: number;
+  userId: number;
+  ownedMachineIds: number[];
+  startedAt: Date;
+  completesAt: Date;
+}): Promise<BurnSessionRow> {
+  return prisma.$transaction((tx) => createBurnSessionTx(tx, opts));
 }
 
 export async function findPendingBurnSession(

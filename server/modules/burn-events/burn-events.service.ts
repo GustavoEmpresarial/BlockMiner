@@ -5,10 +5,15 @@
 import prisma from "../../core/database/prisma.js";
 import { logger } from "../../core/logger/index.js";
 import { createRewardInboxEntry } from "../notifications/index.js";
-import { syncUserBaseHashRate } from "../mining/index.js";
+import { miningEngine, syncUserBaseHashRate } from "../mining/index.js";
 import { BURN_EVENTS_ERROR, burnEventsError } from "./burn-events.errors.js";
 import { isEventCurrentlyOpen, isEventVisibleOnHub, normalizeMinerIds } from "./burn-events.helpers.js";
-import { readBurnProcessDurationSeconds } from "./burn-events.config.js";
+import {
+  readBurnProcessDurationSeconds,
+  isAllowedBurnFeeCurrency,
+  getBurnFeeAmount,
+  type BurnFeeCurrency,
+} from "./burn-events.config.js";
 import * as repo from "./burn-events.repository.js";
 
 const log = logger.child("BurnEventsService");
@@ -144,23 +149,37 @@ export async function getUserBurnableMachines(userId: number) {
   return repo.listUserBurnableMachines(userId);
 }
 
+export const repoRef = {
+  findBurnEventWithRewardMinerTx: repo.findBurnEventWithRewardMinerTx,
+  countUserBurnClaimsTx: repo.countUserBurnClaimsTx,
+  findOwnedMachinesForBurnTx: repo.findOwnedMachinesForBurnTx,
+  findUserBalancesTx: repo.findUserBalancesTx,
+  decrementUserFeeBalanceTx: repo.decrementUserFeeBalanceTx,
+  createBurnSessionTx: repo.createBurnSessionTx,
+  deleteBurnedMachineRowsTx: repo.deleteBurnedMachineRowsTx,
+  incrementBurnEventStockClaimedTx: repo.incrementBurnEventStockClaimedTx,
+  createBurnClaimTx: repo.createBurnClaimTx,
+  completeBurnSession: repo.completeBurnSession,
+  findPendingBurnSession: repo.findPendingBurnSession,
+};
+
 async function assertCanStartOrClaim(
   tx: Parameters<typeof repo.findBurnEventWithRewardMinerTx>[0],
   userId: number,
   eventId: number,
   uniqueIds: number[],
 ) {
-  const event = await repo.findBurnEventWithRewardMinerTx(tx, eventId);
+  const event = await repoRef.findBurnEventWithRewardMinerTx(tx, eventId);
   if (!event) throw burnEventsError(BURN_EVENTS_ERROR.EVENT_NOT_FOUND);
   if (!isEventCurrentlyOpen(event)) throw burnEventsError(BURN_EVENTS_ERROR.EVENT_CLOSED);
-  const userClaimCount = await repo.countUserBurnClaimsTx(tx, eventId, userId);
+  const userClaimCount = await repoRef.countUserBurnClaimsTx(tx, eventId, userId);
   if (userClaimCount >= event.claimLimitPerUser) {
     throw burnEventsError(BURN_EVENTS_ERROR.CLAIM_LIMIT_REACHED);
   }
   if (event.stockTotal != null && event.stockClaimed >= event.stockTotal) {
     throw burnEventsError(BURN_EVENTS_ERROR.OUT_OF_STOCK);
   }
-  const machines = await repo.findOwnedMachinesForBurnTx(tx, uniqueIds, userId);
+  const machines = await repoRef.findOwnedMachinesForBurnTx(tx, uniqueIds, userId);
   if (machines.length !== uniqueIds.length) {
     throw burnEventsError(BURN_EVENTS_ERROR.INVALID_MACHINES);
   }
@@ -172,31 +191,91 @@ async function assertCanStartOrClaim(
 }
 
 /** Start the burn clock — machines stay owned until claim after completesAt. */
-export async function startBurnEvent(userId: number, eventId: number, ownedMachineIds: unknown) {
+export async function startBurnEvent(
+  userId: number,
+  eventId: number,
+  ownedMachineIds: unknown,
+  feeCurrencyRaw?: unknown,
+) {
+  const feeCurrency = String(feeCurrencyRaw || "").trim().toUpperCase();
+  if (!isAllowedBurnFeeCurrency(feeCurrency)) {
+    throw burnEventsError(
+      BURN_EVENTS_ERROR.INVALID_FEE_CURRENCY,
+      "Moeda de taxa inválida. Escolha entre 'SHIB', 'POL' ou 'BLK'.",
+    );
+  }
+
+  const feeAmount = getBurnFeeAmount(feeCurrency);
+
   const uniqueIds = normalizeMinerIds(ownedMachineIds);
   if (uniqueIds.length === 0) {
     throw burnEventsError(BURN_EVENTS_ERROR.NO_MACHINES_SELECTED);
   }
+
   const durationSeconds = readBurnProcessDurationSeconds();
-  await prisma.$transaction(async (tx) => {
-    await assertCanStartOrClaim(tx, userId, eventId, uniqueIds);
-  });
   const startedAt = new Date();
   const completesAt = new Date(startedAt.getTime() + durationSeconds * 1000);
-  const session = await repo.createBurnSession({
-    eventId,
-    userId,
-    ownedMachineIds: uniqueIds,
-    startedAt,
-    completesAt,
+
+  const session = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(${userId}::int, ${eventId}::int)`;
+
+    await assertCanStartOrClaim(tx, userId, eventId, uniqueIds);
+
+    const userBalances = await repoRef.findUserBalancesTx(tx, userId);
+    if (!userBalances) {
+      throw burnEventsError("USER_NOT_FOUND", "Usuário não encontrado.");
+    }
+
+    const currentBalance =
+      feeCurrency === "SHIB"
+        ? Number(userBalances.shibBalance || 0)
+        : feeCurrency === "POL"
+          ? Number(userBalances.polBalance || 0)
+          : Number(userBalances.blkBalance || 0);
+
+    if (currentBalance < feeAmount) {
+      throw burnEventsError(
+        BURN_EVENTS_ERROR.INSUFFICIENT_FEE_BALANCE,
+        `Saldo insuficiente de ${feeCurrency}. Necessário: ${feeAmount}, disponível: ${currentBalance}.`,
+      );
+    }
+
+    await repoRef.decrementUserFeeBalanceTx(tx, userId, feeCurrency, feeAmount);
+
+    return repoRef.createBurnSessionTx(tx, {
+      eventId,
+      userId,
+      ownedMachineIds: uniqueIds,
+      startedAt,
+      completesAt,
+    });
   });
-  log.info("burn.start", { userId, eventId, sessionId: session.id, completesAt: completesAt.toISOString() });
+
+  try {
+    await miningEngine.reloadMinerProfile(userId, { forceBalanceSync: true });
+  } catch {
+    /* engine cache resync is best-effort */
+  }
+
+  log.info("burn.start", {
+    userId,
+    eventId,
+    sessionId: session.id,
+    completesAt: completesAt.toISOString(),
+    feeCurrency,
+    feeAmount,
+  });
+
   return {
     ok: true as const,
     sessionId: session.id,
     startedAt: startedAt.toISOString(),
     completesAt: completesAt.toISOString(),
     burnDurationSeconds: durationSeconds,
+    feePaid: {
+      currency: feeCurrency,
+      amount: feeAmount,
+    },
   };
 }
 
@@ -205,7 +284,7 @@ export async function claimBurnEvent(userId: number, eventId: number, sessionIdR
   if (!Number.isInteger(sessionId) || sessionId <= 0) {
     throw burnEventsError(BURN_EVENTS_ERROR.BURN_SESSION_INVALID);
   }
-  const session = await repo.findPendingBurnSession(sessionId, userId, eventId);
+  const session = await repoRef.findPendingBurnSession(sessionId, userId, eventId);
   if (!session) throw burnEventsError(BURN_EVENTS_ERROR.BURN_SESSION_NOT_FOUND);
 
   const now = new Date();
@@ -222,6 +301,8 @@ export async function claimBurnEvent(userId: number, eventId: number, sessionIdR
   let rewardInboxId: number | null = null;
 
   await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(${userId}::int, ${eventId}::int)`;
+
     const { event, machines, totalHashRate } = await assertCanStartOrClaim(
       tx,
       userId,
@@ -229,8 +310,8 @@ export async function claimBurnEvent(userId: number, eventId: number, sessionIdR
       uniqueIds,
     );
     burnedFromRack = machines.some((m) => m.location === "RACK");
-    await repo.deleteBurnedMachineRowsTx(tx, uniqueIds, userId);
-    await repo.incrementBurnEventStockClaimedTx(tx, eventId);
+    await repoRef.deleteBurnedMachineRowsTx(tx, uniqueIds, userId);
+    await repoRef.incrementBurnEventStockClaimedTx(tx, eventId);
     const reward = event.rewardMiner;
     const inbox = await createRewardInboxEntry(tx, {
       userId,
@@ -244,7 +325,7 @@ export async function claimBurnEvent(userId: number, eventId: number, sessionIdR
       metaJson: { burnEventId: event.id, burnEventTitle: event.title, burnSessionId: sessionId },
     });
     rewardInboxId = inbox.id;
-    await repo.createBurnClaimTx(tx, {
+    await repoRef.createBurnClaimTx(tx, {
       eventId,
       userId,
       totalHashRate,
@@ -268,7 +349,7 @@ export async function claimBurnEvent(userId: number, eventId: number, sessionIdR
     });
   });
 
-  await repo.completeBurnSession(sessionId);
+  await repoRef.completeBurnSession(sessionId);
 
   if (burnedFromRack) {
     try {
