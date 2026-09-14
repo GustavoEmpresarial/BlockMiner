@@ -6,7 +6,6 @@ import {
   CheckCircle2,
   ChevronLeft,
   Clock,
-  Coins,
   Cpu,
   Flame,
   Gift,
@@ -27,7 +26,6 @@ import { BurnFeeSelector } from './components/BurnFeeSelector';
 import {
   type BurnFeeCurrency,
   BURN_FEE_RATES,
-  getBurnFeeAmount,
   hasSufficientFeeBalance,
 } from './lib/burnFee.config';
 import {
@@ -639,26 +637,14 @@ function EventDetail({
           />
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/5 pt-2 text-xs">
-          <div className="flex items-center gap-1.5 text-slate-300">
-            <Coins className="h-3.5 w-3.5 text-orange-400" />
-            <span>
-              {t('burnEvents.fee_required_label')}:{' '}
-              <strong className="text-white">
-                {getBurnFeeAmount(feeCurrency)} {feeCurrency}
-              </strong>
-            </span>
-          </div>
-
-          <span
-            className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-              isFeeSufficient
-                ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20'
-                : 'bg-red-500/15 text-red-400 border border-red-500/20'
-            }`}
-          >
-            {isFeeSufficient ? t('burnEvents.fee_available') : t('burnEvents.fee_insufficient')}
-          </span>
+        <div className="border-t border-white/5 pt-3">
+          <BurnFeeSelector
+            selectedCurrency={feeCurrency}
+            onSelectCurrency={setFeeCurrency}
+            balances={balances}
+            loadingBalances={loadingBalances}
+            disabled={submitting}
+          />
         </div>
 
         <button
