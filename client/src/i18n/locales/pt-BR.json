@@ -5512,7 +5512,20 @@
     "enter_event": "Entrar no evento",
     "required_label": "Queima mínima",
     "stock_label": "Estoque",
-    "your_claims": "Seus resgates"
+    "your_claims": "Seus resgates",
+    "fee_title": "Taxa da Queima (Escolha a moeda)",
+    "fee_description": "Taxa fixa cobrada por queima: 20 SHIB, 0.01 POL ou 0.001 BLK.",
+    "fee_available": "Disponível",
+    "fee_insufficient": "Falta saldo",
+    "fee_required_label": "Taxa",
+    "your_balance": "Saldo atual:",
+    "insufficient_fee_warning_title": "Saldo insuficiente para a taxa!",
+    "insufficient_fee_warning_body": "Você precisa de pelo menos {{amount}} {{currency}} para iniciar esta queima. Escolha outra moeda ou abasteça sua carteira.",
+    "auto_select_lowest": "Auto-selecionar menor poder",
+    "clear_selection": "Limpar seleção",
+    "sorted_lowest_to_highest_hint": "Máquinas ordenadas do menor para o maior poder",
+    "available_unit": "disponíveis",
+    "fee_summary": "Taxa cobrada: {{amount}} {{currency}}"
   },
   "adminCheckin": {
     "title": "Marcos de check-in",

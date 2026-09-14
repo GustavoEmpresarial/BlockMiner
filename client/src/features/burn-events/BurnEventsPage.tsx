@@ -1,23 +1,44 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  ArrowDownUp,
   Calendar,
   CheckCircle2,
   ChevronLeft,
   Clock,
+  Coins,
   Cpu,
   Flame,
   Gift,
   Loader2,
   Lock,
   RefreshCw,
+  Sparkles,
   Timer,
+  Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { isAxiosError } from 'axios';
 import { api } from '../../shared/auth/auth.store';
 import { resolveApiErrorMessage } from '../../shared/utils/apiErrorI18n';
 import { MachineImage } from '../machines/components/MachineImage';
+import { BurnMachineGroupCard } from './components/BurnMachineGroupCard';
+import { BurnFeeSelector } from './components/BurnFeeSelector';
+import {
+  type BurnFeeCurrency,
+  BURN_FEE_RATES,
+  getBurnFeeAmount,
+  hasSufficientFeeBalance,
+} from './lib/burnFee.config';
+import {
+  groupAndSortMachines,
+  addOneFromGroup,
+  removeOneFromGroup,
+  setGroupQuantity,
+  autoSelectLowestPower,
+  type BurnMachineGroup,
+} from './lib/burnGroup.helpers';
+import type { WalletBalanceResponse } from '../wallet/lib/wallet.types';
 
 function tr(t: (key: string, opts?: Record<string, unknown>) => string, key: string, fallback: string) {
   const v = t(key);
@@ -334,6 +355,13 @@ function EventDetail({
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [confirming, setConfirming] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [feeCurrency, setFeeCurrency] = useState<BurnFeeCurrency>('SHIB');
+  const [balances, setBalances] = useState<{ shib: number; pol: number; blk: number }>({
+    shib: 0,
+    pol: 0,
+    blk: 0,
+  });
+  const [loadingBalances, setLoadingBalances] = useState(false);
   const [burning, setBurning] = useState<{
     sessionId: number;
     completesAtMs: number;
@@ -356,9 +384,27 @@ function EventDetail({
     }
   }, [t]);
 
+  const loadBalances = useCallback(async () => {
+    setLoadingBalances(true);
+    try {
+      const res = await api.get<WalletBalanceResponse>('/wallet/balance');
+      if (res.data) {
+        const pol = Number(res.data.polBalance ?? res.data.balance ?? 0);
+        const shib = Number(res.data.shibBalance ?? 0);
+        const blk = Number(res.data.blkBalance ?? 0);
+        setBalances({ pol, shib, blk });
+      }
+    } catch {
+      // Keep existing balances
+    } finally {
+      setLoadingBalances(false);
+    }
+  }, []);
+
   useEffect(() => {
     void load();
-  }, [load]);
+    void loadBalances();
+  }, [load, loadBalances]);
 
   useEffect(() => {
     if (!burning) return;
@@ -367,13 +413,42 @@ function EventDetail({
     return () => window.clearInterval(id);
   }, [burning]);
 
-  const toggle = (id: number) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+  const machineGroups = useMemo(
+    () => groupAndSortMachines(machines, selected),
+    [machines, selected],
+  );
+
+  const selectedGroups = useMemo(
+    () => machineGroups.filter((g) => g.selectedCount > 0),
+    [machineGroups],
+  );
+
+  const handleAdd = (group: BurnMachineGroup) => {
+    setSelected((prev) => addOneFromGroup(group, prev));
+  };
+
+  const handleRemove = (group: BurnMachineGroup) => {
+    setSelected((prev) => removeOneFromGroup(group, prev));
+  };
+
+  const handleToggleMax = (group: BurnMachineGroup) => {
+    setSelected((prev) =>
+      setGroupQuantity(
+        group,
+        prev,
+        group.selectedCount === group.availableCount ? 0 : group.availableCount,
+      ),
+    );
+  };
+
+  const handleAutoSelectLowest = () => {
+    const autoSel = autoSelectLowestPower(machineGroups, event.requiredHashRate);
+    setSelected(autoSel);
+    toast.info(t('burnEvents.auto_select_lowest'));
+  };
+
+  const handleClearSelection = () => {
+    setSelected(new Set());
   };
 
   const totalSelectedHashRate = useMemo(
@@ -381,13 +456,16 @@ function EventDetail({
     [machines, selected],
   );
 
+  const isFeeSufficient = hasSufficientFeeBalance(feeCurrency, balances);
+
   const canClaim =
     event.isOpen !== false &&
     event.userCanClaim &&
     totalSelectedHashRate >= event.requiredHashRate &&
-    selected.size > 0;
+    selected.size > 0 &&
+    isFeeSufficient;
+
   const progress = Math.min(100, (totalSelectedHashRate / event.requiredHashRate) * 100);
-  const selectedMachines = machines.filter((m) => selected.has(m.id));
   const prizeImg = resolveAssetUrl(event.rewardMiner.imageUrl || event.imageUrl);
   const range = formatDateRange(event.startsAt, event.endsAt, i18n.language || 'pt-BR');
   const stockLabel =
@@ -418,6 +496,7 @@ function EventDetail({
         if (!res.data.ok) throw new Error(res.data.message);
         toast.success(t('burnEvents.claim_success', { miner: event.rewardMiner.name }));
         setBurning(null);
+        void loadBalances();
         onClaimed();
       } catch (e) {
         toast.error(resolveApiErrorMessage(e, t('burnEvents.claim_error')));
@@ -425,7 +504,7 @@ function EventDetail({
         setSubmitting(false);
       }
     },
-    [event.id, event.rewardMiner.name, onClaimed, t],
+    [event.id, event.rewardMiner.name, onClaimed, loadBalances, t],
   );
 
   useEffect(() => {
@@ -443,7 +522,10 @@ function EventDetail({
         burnDurationSeconds?: number;
         message?: string;
         code?: string;
-      }>(`/burn-events/${event.id}/start`, { minerIds: Array.from(selected) });
+      }>(`/burn-events/${event.id}/start`, {
+        minerIds: Array.from(selected),
+        feeCurrency,
+      });
       if (!res.data.ok || res.data.sessionId == null || !res.data.completesAt) {
         throw new Error(res.data.message);
       }
@@ -452,6 +534,7 @@ function EventDetail({
         event.burnDurationSeconds ??
         Math.max(0, Math.round((new Date(res.data.completesAt).getTime() - Date.now()) / 1000));
       setConfirming(false);
+      void loadBalances();
       setBurning({
         sessionId: res.data.sessionId,
         completesAtMs: new Date(res.data.completesAt).getTime(),
@@ -532,26 +615,57 @@ function EventDetail({
         </div>
       </div>
 
-      <div className="sticky top-0 z-10 rounded-[1.75rem] border border-orange-500/20 bg-slate-950/95 p-4 shadow-lg shadow-black/40 backdrop-blur-md">
-        <div className="mb-2 flex items-center justify-between gap-3">
+      <div className="sticky top-0 z-10 space-y-3 rounded-[1.75rem] border border-orange-500/20 bg-slate-950/95 p-4 shadow-lg shadow-black/40 backdrop-blur-md">
+        <div className="flex items-center justify-between gap-3">
           <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
             {t('burnEvents.progress')}
           </span>
-          <span className={`text-xs font-black ${canClaim ? 'text-emerald-400' : 'text-orange-300'}`}>
+          <span
+            className={`text-xs font-black ${
+              totalSelectedHashRate >= event.requiredHashRate ? 'text-emerald-400' : 'text-orange-300'
+            }`}
+          >
             {formatHashRate(totalSelectedHashRate)} / {formatHashRate(event.requiredHashRate)}
           </span>
         </div>
         <div className="h-2.5 overflow-hidden rounded-full bg-slate-800">
           <div
-            className={`h-full rounded-full transition-all duration-300 ${ canClaim ? 'bg-gradient-to-r from-emerald-500 to-emerald-400' : 'bg-gradient-to-r from-orange-500 to-amber-400' }`}
+            className={`h-full rounded-full transition-all duration-300 ${
+              totalSelectedHashRate >= event.requiredHashRate
+                ? 'bg-gradient-to-r from-emerald-500 to-emerald-400'
+                : 'bg-gradient-to-r from-orange-500 to-amber-400'
+            }`}
             style={{ width: `${progress}%` }}
           />
         </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/5 pt-2 text-xs">
+          <div className="flex items-center gap-1.5 text-slate-300">
+            <Coins className="h-3.5 w-3.5 text-orange-400" />
+            <span>
+              {t('burnEvents.fee_required_label')}:{' '}
+              <strong className="text-white">
+                {getBurnFeeAmount(feeCurrency)} {feeCurrency}
+              </strong>
+            </span>
+          </div>
+
+          <span
+            className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+              isFeeSufficient
+                ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20'
+                : 'bg-red-500/15 text-red-400 border border-red-500/20'
+            }`}
+          >
+            {isFeeSufficient ? t('burnEvents.fee_available') : t('burnEvents.fee_insufficient')}
+          </span>
+        </div>
+
         <button
           type="button"
           onClick={() => setConfirming(true)}
           disabled={!canClaim || submitting}
-          className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-400 py-3.5 text-sm font-black text-white shadow-lg shadow-orange-500/20 transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
+          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-400 py-3.5 text-sm font-black text-white shadow-lg shadow-orange-500/20 transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
         >
           <Flame className="h-4 w-4" />
           {t('burnEvents.burn_and_claim', { count: selected.size })}
@@ -559,55 +673,75 @@ function EventDetail({
       </div>
 
       <div>
-        <div className="mb-3 flex items-center justify-between">
-          <p className="font-mono text-[10px] uppercase tracking-widest text-slate-500">
-            {t('burnEvents.your_machines')}
-          </p>
-          <button
-            type="button"
-            onClick={() => void load()}
-            className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-white/5 hover:text-white"
-          >
-            <RefreshCw className="h-3.5 w-3.5" />
-          </button>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="font-mono text-[10px] uppercase tracking-widest text-slate-400 font-bold">
+              {t('burnEvents.your_machines')}
+            </p>
+            <span className="inline-flex items-center gap-1 rounded-full border border-orange-500/20 bg-orange-500/10 px-2 py-0.5 text-[9px] font-bold text-orange-300">
+              <ArrowDownUp className="h-3 w-3" />
+              {t('burnEvents.sorted_lowest_to_highest_hint')}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={handleAutoSelectLowest}
+              disabled={machines.length === 0}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-orange-500/30 bg-orange-500/10 px-2.5 py-1 text-xs font-bold text-orange-300 transition-colors hover:bg-orange-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+              title={t('burnEvents.auto_select_lowest')}
+            >
+              <Sparkles className="h-3.5 w-3.5 text-orange-400" />
+              <span className="hidden sm:inline">{t('burnEvents.auto_select_lowest')}</span>
+            </button>
+
+            {selected.size > 0 && (
+              <button
+                type="button"
+                onClick={handleClearSelection}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-slate-900/60 px-2.5 py-1 text-xs font-bold text-slate-400 transition-colors hover:bg-white/5 hover:text-white"
+                title={t('burnEvents.clear_selection')}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">{t('burnEvents.clear_selection')}</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => {
+                void load();
+                void loadBalances();
+              }}
+              className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-white/5 hover:text-white"
+              title="Atualizar"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+            </button>
+          </div>
         </div>
+
         {loading ? (
           <div className="flex justify-center py-12">
             <Loader2 className="h-6 w-6 animate-spin text-slate-500" />
           </div>
-        ) : machines.length === 0 ? (
+        ) : machineGroups.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-[1.75rem] border border-dashed border-white/10 bg-slate-950/40 py-14 text-center text-slate-500">
             <Cpu className="mb-2 h-10 w-10 opacity-30" />
             <p className="text-sm">{t('burnEvents.no_machines')}</p>
           </div>
         ) : (
-          <div className="grid gap-2.5 sm:grid-cols-2">
-            {machines.map((m) => {
-              const isSel = selected.has(m.id);
-              const img = resolveAssetUrl(m.imageUrl);
-              return (
-                <button
-                  key={m.id}
-                  type="button"
-                  onClick={() => toggle(m.id)}
-                  className={`flex items-center gap-3 rounded-2xl border p-3 text-left transition-all duration-200 ${ isSel ? 'border-orange-500/25 bg-orange-500/15 shadow-lg shadow-orange-500/20' : 'border-white/10 bg-slate-950/50 hover:border-white/20 hover:bg-slate-900/70' }`}
-                >
-                  <div
-                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 ${ isSel ? 'border-orange-400 bg-orange-500' : 'border-slate-600' }`}
-                  >
-                    {isSel ? <CheckCircle2 className="h-4 w-4 text-white" /> : null}
-                  </div>
-                  <BurnMachineThumb src={img} name={m.minerName} />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-bold text-white">{m.minerName}</p>
-                    <p className="text-[10px] text-slate-500">
-                      {formatHashRate(m.hashRate)} ·{' '}
-                      {m.location === 'RACK' ? t('burnEvents.loc_rack') : t('burnEvents.loc_inventory')}
-                    </p>
-                  </div>
-                </button>
-              );
-            })}
+          <div className="space-y-2.5">
+            {machineGroups.map((group) => (
+              <BurnMachineGroupCard
+                key={group.groupKey}
+                group={group}
+                onAdd={() => handleAdd(group)}
+                onRemove={() => handleRemove(group)}
+                onToggleMax={() => handleToggleMax(group)}
+              />
+            ))}
           </div>
         )}
       </div>
@@ -656,29 +790,62 @@ function EventDetail({
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md space-y-4 rounded-[2rem] border border-red-500/30 bg-slate-950 p-6 shadow-2xl"
+            className="w-full max-w-lg space-y-4 rounded-[2rem] border border-red-500/30 bg-slate-950 p-6 shadow-2xl max-h-[90vh] overflow-y-auto"
           >
             <div className="flex items-center gap-3">
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-500/20">
                 <Flame className="h-6 w-6 text-red-400" />
               </div>
-              <p className="text-lg font-black text-white">{t('burnEvents.confirm_title')}</p>
+              <div>
+                <p className="text-lg font-black text-white">{t('burnEvents.confirm_title')}</p>
+                <p className="text-xs text-slate-400">{t('burnEvents.confirm_body')}</p>
+              </div>
             </div>
-            <p className="text-sm text-slate-300">{t('burnEvents.confirm_body')}</p>
-            <div className="max-h-40 space-y-1 overflow-y-auto rounded-2xl border border-white/5 bg-slate-900/80 p-3">
-              {selectedMachines.map((m) => (
-                <div key={m.id} className="flex items-center justify-between text-xs">
-                  <span className="mr-2 truncate text-slate-300">{m.minerName}</span>
-                  <span className="shrink-0 text-slate-500">{formatHashRate(m.hashRate)}</span>
-                </div>
-              ))}
+
+            {/* Selector de taxa com exibição de saldos */}
+            <div className="rounded-2xl border border-white/10 bg-slate-900/60 p-3.5">
+              <BurnFeeSelector
+                selectedCurrency={feeCurrency}
+                onSelectCurrency={setFeeCurrency}
+                balances={balances}
+                loadingBalances={loadingBalances}
+                disabled={submitting}
+              />
             </div>
+
+            {/* Máquinas selecionadas consolidadas por grupo */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-xs text-slate-400">
+                <span>Máquinas a queimar ({selected.size} total):</span>
+                <span className="font-bold text-orange-400">
+                  {formatHashRate(totalSelectedHashRate)}
+                </span>
+              </div>
+              <div className="max-h-36 space-y-1.5 overflow-y-auto rounded-2xl border border-white/5 bg-slate-900/80 p-3">
+                {selectedGroups.map((g) => (
+                  <div key={g.groupKey} className="flex items-center justify-between text-xs">
+                    <span className="mr-2 truncate text-slate-300">
+                      <strong className="text-white">{g.selectedCount}x</strong> {g.minerName}{' '}
+                      <span className="text-[10px] text-slate-500">
+                        ({g.location === 'RACK' ? t('burnEvents.loc_rack') : t('burnEvents.loc_inventory')})
+                      </span>
+                    </span>
+                    <span className="shrink-0 font-mono font-bold text-slate-400">
+                      {formatHashRate(g.selectedCount * g.hashRate)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Recompensa a receber */}
             <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-3.5 text-xs">
               <p className="font-bold text-emerald-400">{t('burnEvents.you_receive')}</p>
-              <p className="mt-1 font-black text-white">{event.rewardMiner.name}</p>
+              <p className="mt-1 font-black text-white text-sm">{event.rewardMiner.name}</p>
               <p className="mt-0.5 text-slate-400">{t('burnEvents.goes_to_inbox')}</p>
             </div>
-            <div className="flex gap-2">
+
+            <div className="flex gap-2 pt-2">
               <button
                 type="button"
                 disabled={submitting}
@@ -689,9 +856,9 @@ function EventDetail({
               </button>
               <button
                 type="button"
-                disabled={submitting}
+                disabled={submitting || !isFeeSufficient}
                 onClick={() => void submit()}
-                className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-red-500 py-3 text-sm font-black text-white transition-colors hover:bg-red-400 disabled:opacity-50"
+                className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-red-500 py-3 text-sm font-black text-white transition-colors hover:bg-red-400 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Flame className="h-4 w-4" />}
                 {t('burnEvents.confirm_burn')}
