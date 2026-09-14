@@ -12,28 +12,37 @@ import { logger } from "../../core/logger/index.js";
 
 const log = logger.child("Mailer");
 
-const SMTP_HOST = process.env.SMTP_HOST || "";
-const SMTP_PORT = Number(process.env.SMTP_PORT || 465);
-const SMTP_SECURE = String(process.env.SMTP_SECURE || "true").toLowerCase() === "true";
-const SMTP_USER = process.env.SMTP_USER || "";
-const SMTP_PASS = process.env.SMTP_PASS || "";
-const SMTP_FROM = process.env.SMTP_FROM || "";
+function readSmtpConfig() {
+  return {
+    host: process.env.SMTP_HOST || "",
+    port: Number(process.env.SMTP_PORT || 465),
+    secure: String(process.env.SMTP_SECURE || "true").toLowerCase() === "true",
+    user: process.env.SMTP_USER || "",
+    pass: process.env.SMTP_PASS || "",
+    from: process.env.SMTP_FROM || "",
+  };
+}
 
 let transporter: Transporter | null = null;
+let transporterFingerprint = "";
 
 export function isSmtpConfigured(): boolean {
-  return Boolean(SMTP_HOST && SMTP_PORT && SMTP_USER && SMTP_PASS && SMTP_FROM);
+  const cfg = readSmtpConfig();
+  return Boolean(cfg.host && cfg.port && cfg.user && cfg.pass && cfg.from);
 }
 
 function getTransporter(): Transporter | null {
-  if (!isSmtpConfigured()) return null;
-  if (!transporter) {
+  const cfg = readSmtpConfig();
+  if (!cfg.host || !cfg.port || !cfg.user || !cfg.pass || !cfg.from) return null;
+  const fingerprint = `${cfg.host}|${cfg.port}|${cfg.secure}|${cfg.user}|${cfg.from}`;
+  if (!transporter || transporterFingerprint !== fingerprint) {
     transporter = nodemailer.createTransport({
-      host: SMTP_HOST,
-      port: SMTP_PORT,
-      secure: SMTP_SECURE,
-      auth: { user: SMTP_USER, pass: SMTP_PASS },
+      host: cfg.host,
+      port: cfg.port,
+      secure: cfg.secure,
+      auth: { user: cfg.user, pass: cfg.pass },
     });
+    transporterFingerprint = fingerprint;
   }
   return transporter;
 }
@@ -79,7 +88,7 @@ export async function sendPasswordResetEmail(input: {
     "Se você não solicitou, ignore este e-mail.",
   ].join("\n");
 
-  await tx.sendMail({ from: SMTP_FROM, to: input.to, subject: "BlockMiner - Redefinição de Senha", text, html });
+  await tx.sendMail({ from: readSmtpConfig().from, to: input.to, subject: "BlockMiner - Redefinição de Senha", text, html });
   log.info("Password reset email sent", { to: input.to });
 }
 
@@ -123,7 +132,7 @@ export async function sendEmailVerificationEmail(input: {
     "Se você não criou uma conta no BlockMiner, ignore este e-mail.",
   ].join("\n");
 
-  await tx.sendMail({ from: SMTP_FROM, to: input.to, subject: "BlockMiner - Confirme seu e-mail", text, html });
+  await tx.sendMail({ from: readSmtpConfig().from, to: input.to, subject: "BlockMiner - Confirme seu e-mail", text, html });
   log.info("Email verification email sent", { to: input.to });
 }
 
@@ -166,6 +175,6 @@ export async function sendLoginTwoFactorCodeEmail(input: {
     "Se não foi você, ignore este e-mail e troque sua senha.",
   ].join("\n");
 
-  await tx.sendMail({ from: SMTP_FROM, to: input.to, subject: "BlockMiner - Código de verificação de login", text, html });
+  await tx.sendMail({ from: readSmtpConfig().from, to: input.to, subject: "BlockMiner - Código de verificação de login", text, html });
   log.info("Login 2FA email sent", { to: input.to });
 }

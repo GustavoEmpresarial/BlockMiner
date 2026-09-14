@@ -174,6 +174,7 @@ const IDEMPOTENCY_PATH_MARKERS = [
   '/wallet/withdraw',
   '/wallet/blk/convert',
   '/internal-offerwall/',
+  '/energy-tax/pay-daily',
 ];
 
 api.interceptors.request.use(

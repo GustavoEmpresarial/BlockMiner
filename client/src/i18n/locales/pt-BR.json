@@ -741,6 +741,7 @@
         "email_2fa_unavailable": "Verificação por e-mail indisponível no momento.",
         "two_factor_challenge_required": "Sessão 2FA incompleta. Volte e solicite um novo código.",
         "two_factor_code_required": "Informe o código enviado ao seu e-mail.",
+        "two_factor_expired": "Este código expirou. Entre de novo para receber outro.",
         "account_disabled": "Conta bloqueada."
       },
       "validation": {

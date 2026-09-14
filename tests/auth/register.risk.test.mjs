@@ -9,7 +9,39 @@ import crypto from "node:crypto";
 
 const { evaluateRegistrationAttempt } = await import("../../server/modules/auth/register/register.risk.ts");
 const { registerPost } = await import("../../server/modules/auth/register/register.controller.ts");
+const { listEnabledProxyProviders } = await import("../../server/modules/ip-intelligence/index.ts");
 const prisma = (await import("../../server/core/database/prisma.ts")).default;
+
+async function seedResidentialIpIntel(ip) {
+  const now = new Date();
+  const freshUntil = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+  const proxySource = listEnabledProxyProviders().map((p) => p.id).join(",") || "test";
+  await prisma.ipIntelligenceCache.upsert({
+    where: { ip },
+    create: {
+      ip,
+      ipVersion: 4,
+      providerType: "isp",
+      confidence: "high",
+      source: "test",
+      checkedAt: now,
+      expiresAt: freshUntil,
+      proxyDetected: false,
+      proxyCheckedAt: now,
+      proxyExpiresAt: freshUntil,
+      proxySource,
+    },
+    update: {
+      providerType: "isp",
+      proxyDetected: false,
+      checkedAt: now,
+      expiresAt: freshUntil,
+      proxyCheckedAt: now,
+      proxyExpiresAt: freshUntil,
+      proxySource,
+    },
+  });
+}
 
 function fakeRes() {
   const calls = { status: null, json: null, headers: {} };
@@ -107,9 +139,36 @@ test("register.risk: evaluateRegistrationAttempt blocks when the same device fin
   assert.equal(result.recentFingerprint, 2);
 });
 
+test("register.risk: evaluateRegistrationAttempt blocks a hosting/VPN IP that already registered once", async () => {
+  const ip = randomIp();
+  const now = new Date();
+  const seedUsers = await prisma.user.findMany({ select: { id: true }, take: 1 });
+  assert.ok(seedUsers.length >= 1, "expected at least 1 existing user in dev DB to seed userIpLog");
+  await prisma.userIpLog.create({
+    data: {
+      userId: seedUsers[0].id,
+      ip,
+      deviceFingerprint: crypto.randomBytes(16).toString("hex"),
+      registerCount: 1,
+      lastSeen: now,
+    },
+  });
+
+  const result = await evaluateRegistrationAttempt(prisma, {
+    ip,
+    networkCidr: null,
+    providerType: "hosting",
+    deviceFingerprint: crypto.randomBytes(16).toString("hex"),
+  });
+  assert.equal(result.allowed, false);
+  assert.ok(result.score >= 70);
+  assert.equal(result.recentExactIp, 1);
+});
+
 test("register.risk: registerPost blocks the 3rd registration in a row sharing the same device fingerprint + IP", async () => {
   const suffix = Date.now().toString(36) + crypto.randomBytes(2).toString("hex");
   const ip = randomIp();
+  await seedResidentialIpIntel(ip);
   const antiBotPayload = deviceFingerprintHeader(suffix);
 
   const attempt = async (n) => {

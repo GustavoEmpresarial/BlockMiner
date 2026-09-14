@@ -8,12 +8,14 @@ test("redactContext masks any key that looks like a secret, recursively, without
   const original = {
     userId: 42,
     password: "hunter2",
+    passwordHash: "$2b$12$not-a-real-hash",
     nested: { refreshToken: "abc.def.ghi", ok: true },
     Authorization: "Bearer xyz",
   };
   const redacted = redactContext(original);
   assert.equal(redacted.userId, 42);
   assert.equal(redacted.password, "[REDACTED]");
+  assert.equal(redacted.passwordHash, "[REDACTED]");
   assert.equal(redacted.nested.refreshToken, "[REDACTED]");
   assert.equal(redacted.nested.ok, true);
   assert.equal(redacted.Authorization, "[REDACTED]");

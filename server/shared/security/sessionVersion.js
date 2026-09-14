@@ -7,6 +7,6 @@ export function readTokenSessionVersion(payload) {
 export function isTokenSessionCurrent(payload, userSessionVersion) {
     const tokenSv = readTokenSessionVersion(payload);
     if (tokenSv === undefined)
-        return true; // token predates this feature — allow through
+        return false;
     return tokenSv === userSessionVersion;
 }

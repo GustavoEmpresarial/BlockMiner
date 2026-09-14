@@ -101,8 +101,9 @@ export function pendingPolAccrual(params: {
   blockDurationSeconds: number;
 }): number {
   const { networkHashRate, userHashRate, blockRewardPol, countdownSeconds, blockDurationSeconds } = params;
-  const share =
+  const rawShare =
     networkHashRate > 0 ? userHashRate / networkHashRate : userHashRate > 0 ? 1 : 0;
+  const share = Math.min(1, rawShare);
   const progress = Math.min(1, Math.max(0, 1 - countdownSeconds / Math.max(1, blockDurationSeconds)));
   return share * blockRewardPol * progress;
 }

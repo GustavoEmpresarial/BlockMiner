@@ -21,24 +21,63 @@ async function withEnv(vars, fn) {
 }
 
 test("resolveTurnstileSecret: falls back to the generic secret when no purpose-specific one is set", () => {
-  withEnv({ TURNSTILE_SECRET_KEY: "generic", TURNSTILE_SECRET_KEY_LOGIN: "", TURNSTILE_SECRET_KEY_REGISTER: "" }, () => {
-    assert.equal(turnstile.resolveTurnstileSecret("login"), "generic");
-    assert.equal(turnstile.resolveTurnstileSecret("register"), "generic");
-    assert.equal(turnstile.resolveTurnstileSecret(undefined), "generic");
-  });
+  withEnv(
+    {
+      TURNSTILE_SECRET_KEY: "generic",
+      TURNSTILE_SECRET_KEY_LOGIN: "",
+      TURNSTILE_SECRET_KEY_REGISTER: "",
+      TURNSTILE_SECRET_KEY_FORGOT: "",
+    },
+    () => {
+      assert.equal(turnstile.resolveTurnstileSecret("login"), "generic");
+      assert.equal(turnstile.resolveTurnstileSecret("register"), "generic");
+      assert.equal(turnstile.resolveTurnstileSecret("forgot"), "generic");
+      assert.equal(turnstile.resolveTurnstileSecret(undefined), "generic");
+    },
+  );
 });
 
 test("resolveTurnstileSecret: a purpose-specific secret takes precedence over the generic one", () => {
   withEnv({ TURNSTILE_SECRET_KEY: "generic", TURNSTILE_SECRET_KEY_LOGIN: "login-only" }, () => {
     assert.equal(turnstile.resolveTurnstileSecret("login"), "login-only");
     assert.equal(turnstile.resolveTurnstileSecret("register"), "generic");
+    assert.equal(turnstile.resolveTurnstileSecret("forgot"), "generic");
+  });
+});
+
+test("resolveTurnstileSecret: TURNSTILE_SECRET_KEY_FORGOT wins for purpose forgot", () => {
+  withEnv({ TURNSTILE_SECRET_KEY: "generic", TURNSTILE_SECRET_KEY_FORGOT: "forgot-only" }, () => {
+    assert.equal(turnstile.resolveTurnstileSecret("forgot"), "forgot-only");
+    assert.equal(turnstile.resolveTurnstileSecret("login"), "generic");
   });
 });
 
 test("isTurnstileEnforced: false when no secret at all is configured (today's production default)", () => {
-  withEnv({ TURNSTILE_SECRET_KEY: "", TURNSTILE_SECRET_KEY_LOGIN: "", TURNSTILE_SECRET_KEY_REGISTER: "" }, () => {
-    assert.equal(turnstile.isTurnstileEnforced(), false);
-  });
+  withEnv(
+    {
+      TURNSTILE_SECRET_KEY: "",
+      TURNSTILE_SECRET_KEY_LOGIN: "",
+      TURNSTILE_SECRET_KEY_REGISTER: "",
+      TURNSTILE_SECRET_KEY_FORGOT: "",
+    },
+    () => {
+      assert.equal(turnstile.isTurnstileEnforced(), false);
+    },
+  );
+});
+
+test("isTurnstileEnforced: true if only the forgot secret is set", () => {
+  withEnv(
+    {
+      TURNSTILE_SECRET_KEY: "",
+      TURNSTILE_SECRET_KEY_LOGIN: "",
+      TURNSTILE_SECRET_KEY_REGISTER: "",
+      TURNSTILE_SECRET_KEY_FORGOT: "forgot-secret",
+    },
+    () => {
+      assert.equal(turnstile.isTurnstileEnforced(), true);
+    },
+  );
 });
 
 test("isTurnstileEnforced: true if even just one purpose-specific secret is set", () => {
@@ -146,6 +185,32 @@ test("requireTurnstileWhenConfigured: 400 CAPTCHA_REQUIRED when configured but n
     },
   };
   await withEnv({ TURNSTILE_SECRET_KEY_LOGIN: "login-secret" }, async () => {
+    let nextCalled = false;
+    await middleware(req, res, () => {
+      nextCalled = true;
+    });
+    assert.equal(nextCalled, false);
+    assert.equal(calls.status, 400);
+    assert.equal(calls.json.code, "CAPTCHA_REQUIRED");
+  });
+});
+
+test("requireTurnstileWhenConfigured: purpose forgot returns 400 CAPTCHA_REQUIRED without a token", async () => {
+  const fetchImpl = async () => ({ json: async () => ({ success: true }) });
+  const middleware = turnstile.requireTurnstileWhenConfigured({ purpose: "forgot", fetchImpl });
+  const calls = { status: null, json: null };
+  const req = { body: {}, headers: {}, path: "/auth/forgot-password", ip: "4.4.4.4" };
+  const res = {
+    status(code) {
+      calls.status = code;
+      return this;
+    },
+    json(body) {
+      calls.json = body;
+      return this;
+    },
+  };
+  await withEnv({ TURNSTILE_SECRET_KEY_FORGOT: "forgot-secret" }, async () => {
     let nextCalled = false;
     await middleware(req, res, () => {
       nextCalled = true;

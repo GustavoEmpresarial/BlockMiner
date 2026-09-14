@@ -31,7 +31,7 @@ export function signAccessToken(user) {
         sub: String(user.id),
         name: user.name ?? undefined,
         email: user.email ?? undefined,
-        sv: user.sessionVersion ?? undefined,
+        sv: Number(user.sessionVersion) || 0,
     };
     const signOptions = {
         algorithm: JWT_ALGORITHM,

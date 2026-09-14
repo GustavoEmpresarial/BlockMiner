@@ -17,13 +17,17 @@ export function resolveTurnstileSecret(purpose) {
     if (purpose === "register") {
         return String(process.env.TURNSTILE_SECRET_KEY_REGISTER || "").trim() || fallback;
     }
+    if (purpose === "forgot") {
+        return String(process.env.TURNSTILE_SECRET_KEY_FORGOT || "").trim() || fallback;
+    }
     return fallback;
 }
 /** True quando qualquer secret está configurado — o gate está ativo. */
 export function isTurnstileEnforced() {
     return (resolveTurnstileSecret(undefined).length > 0 ||
         resolveTurnstileSecret("login").length > 0 ||
-        resolveTurnstileSecret("register").length > 0);
+        resolveTurnstileSecret("register").length > 0 ||
+        resolveTurnstileSecret("forgot").length > 0);
 }
 function isRecord(value) {
     return typeof value === "object" && value !== null;
@@ -70,11 +74,11 @@ export async function verifyTurnstileToken(token, remoteIp, options = {}) {
     }
 }
 function normalizePurpose(arg) {
-    if (arg === "login" || arg === "register")
+    if (arg === "login" || arg === "register" || arg === "forgot")
         return arg;
     if (arg && typeof arg === "object") {
         const p = arg.purpose;
-        if (p === "login" || p === "register")
+        if (p === "login" || p === "register" || p === "forgot")
             return p;
     }
     return undefined;

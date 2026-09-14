@@ -7,6 +7,39 @@ import crypto from "node:crypto";
 // user row, and the referral / self-referral / duplicate-account business rules.
 const prisma = (await import("../../server/core/database/prisma.ts")).default;
 const { registerPost } = await import("../../server/modules/auth/register/register.controller.ts");
+const { hashPassword } = await import("../../server/modules/auth/auth.service.ts");
+const { listEnabledProxyProviders } = await import("../../server/modules/ip-intelligence/index.ts");
+
+async function seedResidentialIpIntel(ip) {
+  const now = new Date();
+  const freshUntil = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+  const proxySource = listEnabledProxyProviders().map((p) => p.id).join(",") || "test";
+  await prisma.ipIntelligenceCache.upsert({
+    where: { ip },
+    create: {
+      ip,
+      ipVersion: 4,
+      providerType: "isp",
+      confidence: "high",
+      source: "test",
+      checkedAt: now,
+      expiresAt: freshUntil,
+      proxyDetected: false,
+      proxyCheckedAt: now,
+      proxyExpiresAt: freshUntil,
+      proxySource,
+    },
+    update: {
+      providerType: "isp",
+      proxyDetected: false,
+      checkedAt: now,
+      expiresAt: freshUntil,
+      proxyCheckedAt: now,
+      proxyExpiresAt: freshUntil,
+      proxySource,
+    },
+  });
+}
 
 function fakeRes() {
   const calls = { status: null, json: null, headers: {} };
@@ -151,6 +184,7 @@ test("registerPost: an invalid/unknown refCode is silently ignored (still 201, n
 
 test("registerPost: self-referral (same IP as the referrer's registration IP) is blocked — no Referral row created", async () => {
   const sharedIp = randomIp();
+  await seedResidentialIpIntel(sharedIp);
   const { res: firstRes } = await register({}, sharedIp);
   const firstUserId = firstRes.calls.json.user.id;
   const firstUser = await prisma.user.findUniqueOrThrow({ where: { id: firstUserId } });
@@ -182,6 +216,25 @@ test("registerPost: duplicate email (case-insensitive) responds 409 USER_ALREADY
 
   const count = await prisma.user.count({ where: { email: body.email } });
   assert.equal(count, 1, "must not have created a second user row");
+});
+
+test("registerPost: an existing display name does not block a free username", async () => {
+  const suffix = Date.now().toString(36) + crypto.randomBytes(3).toString("hex");
+  const displayName = `sharedname_${suffix}`;
+  const seed = await prisma.user.create({
+    data: {
+      name: displayName,
+      username: `otheruser_${suffix}`,
+      email: `otheruser_${suffix}@gmail.com`,
+      passwordHash: await hashPassword("supersecret1"),
+      registrationIp: "203.0.113.80",
+      ip: "203.0.113.80",
+    },
+  });
+  createdUserIds.push(seed.id);
+
+  const { res } = await register({ username: displayName, email: `newuser_${suffix}@gmail.com` });
+  assert.equal(res.calls.status, 201, JSON.stringify(res.calls.json));
 });
 
 test("registerPost: duplicate username (case-insensitive) responds 409 USER_ALREADY_EXISTS", async () => {

@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { Mail, Loader2, ChevronRight, AlertCircle } from 'lucide-react';
 import AuthShell from '../../shared/components/AuthShell';
 import { useForgotPasswordForm } from './lib/useForgotPasswordForm';
+import TurnstileField from '../../shared/components/auth/TurnstileField';
+import { resolveTurnstileSiteKeyForgot } from '../../shared/constants/turnstilePublic';
 
 export default function ForgotPasswordPage() {
   const { t } = useTranslation();
@@ -19,6 +21,8 @@ export default function ForgotPasswordPage() {
     error,
     handleSubmit,
     handleResetPassword,
+    setTurnstileToken,
+    turnstileRef,
   } = useForgotPasswordForm();
 
   return (
@@ -70,6 +74,11 @@ export default function ForgotPasswordPage() {
                 required
               />
             </div>
+            <TurnstileField
+              ref={turnstileRef}
+              siteKey={resolveTurnstileSiteKeyForgot()}
+              onToken={setTurnstileToken}
+            />
             <button
               type="submit"
               disabled={isSubmitting}

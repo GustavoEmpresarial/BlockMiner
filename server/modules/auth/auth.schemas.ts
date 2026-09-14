@@ -18,5 +18,6 @@ export const forgotPasswordSchema = z
         .min(1, "Email é obrigatório.")
         .max(254, "Email muito longo.")
         .email("Email inválido."),
+    cfTurnstileToken: z.string().trim().max(4096).optional(),
 })
     .strict();

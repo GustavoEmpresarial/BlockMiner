@@ -85,7 +85,13 @@ authRouter.post("/logout", logoutPost);
 authRouter.post("/mark-adblock", requireAuth, markAdblockPost);
 authRouter.post("/legacy-password-reset", passwordResetCompleteLimiter, AuthCtrl.legacyPasswordResetPost);
 authRouter.post("/reset-password-manual", adminManualPasswordResetLimiter, AuthCtrl.resetPasswordManualPost);
-authRouter.post("/forgot-password", authLimiter, validateBody(forgotPasswordSchema), AuthCtrl.forgotPasswordPost);
+authRouter.post(
+  "/forgot-password",
+  authLimiter,
+  validateBody(forgotPasswordSchema),
+  requireTurnstileWhenConfigured({ purpose: "forgot" }),
+  AuthCtrl.forgotPasswordPost,
+);
 authRouter.post("/admin/force-password-reset", adminManualPasswordResetLimiter, AuthCtrl.adminForcePasswordResetPost);
 authRouter.post("/change-password", requireAuth, validateBody(changePasswordSchema), AuthCtrl.changePasswordPost);
 authRouter.post("/verify-email", passwordResetCompleteLimiter, AuthCtrl.verifyEmailPost);

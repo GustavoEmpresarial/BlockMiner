@@ -8,6 +8,8 @@ import { unknownErrorMessage } from "../../shared/errors/prismaHttpErrors.js";
 import { requireSessionUser } from "../../shared/errors/httpStatusError.js";
 import { APP_URL, PASSWORD_RESET_TOKEN_TTL, comparePassword, hashPassword, signPasswordResetToken, verifyPasswordResetToken, signEmailVerificationToken, verifyEmailVerificationToken, } from "./auth.service.js";
 import { findUserByIdentifier, normalizeEmail } from "./auth.repository.js";
+import { replacePasswordAndRevokeSessions } from "./auth.passwordWrite.js";
+import { reportError } from "../../core/errors/index.js";
 const log = logger.child("AuthController");
 export async function legacyPasswordResetPost(req, res) {
     try {
@@ -18,21 +20,29 @@ export async function legacyPasswordResetPost(req, res) {
             return;
         }
         const payload = verifyPasswordResetToken(resetToken);
-        if (!payload?.sub) {
+        if (!payload?.sub || typeof payload.prv !== "number") {
             res.status(401).json({ ok: false, message: "Token de reset inválido ou expirado." });
             return;
         }
         const user = await prisma.user.findUnique({ where: { id: Number(payload.sub) } });
-        if (!user) {
-            res.status(404).json({ ok: false, message: "Usuário não encontrado." });
+        if (!user || user.passwordResetVersion !== payload.prv) {
+            res.status(401).json({ ok: false, message: "Token de reset inválido ou expirado." });
             return;
         }
-        const newPasswordHash = await hashPassword(String(newPassword), 10);
-        await prisma.user.update({ where: { id: user.id }, data: { passwordHash: newPasswordHash } });
+        const newPasswordHash = await hashPassword(String(newPassword));
+        await replacePasswordAndRevokeSessions(user.id, newPasswordHash);
         log.info("Legacy password reset completed", { userId: user.id, ip: req.ip });
         res.json({ ok: true, message: "Sua senha foi atualizada com sucesso. Agora você já pode logar!" });
     }
-    catch {
+    catch (error) {
+        reportError({
+            code: "PASSWORD_WRITE_FAILED",
+            category: "AUTH",
+            severity: "ERROR",
+            module: "auth.passwordWrite",
+            error,
+            req,
+        });
         res.status(500).json({ ok: false, message: "Erro ao resetar senha de migração." });
     }
 }
@@ -57,12 +67,20 @@ export async function resetPasswordManualPost(req, res) {
             res.status(404).json({ ok: false, message: "User not found." });
             return;
         }
-        const newPasswordHash = await hashPassword(String(newPassword ?? ""), 10);
-        await prisma.user.update({ where: { id: user.id }, data: { passwordHash: newPasswordHash } });
+        const newPasswordHash = await hashPassword(String(newPassword ?? ""));
+        await replacePasswordAndRevokeSessions(user.id, newPasswordHash);
         log.info(`Manual password reset for ${String(email ?? "")}`);
         res.json({ ok: true, message: "Senha alterada com sucesso." });
     }
-    catch {
+    catch (error) {
+        reportError({
+            code: "PASSWORD_WRITE_FAILED",
+            category: "AUTH",
+            severity: "ERROR",
+            module: "auth.passwordWrite",
+            error,
+            req,
+        });
         res.status(500).json({ ok: false, message: "Erro no reset manual." });
     }
 }
@@ -85,7 +103,12 @@ export async function forgotPasswordPost(req, res) {
             res.json({ ok: true, message: "Se o email existe, você receberá instruções de redefinição." });
             return;
         }
-        const resetToken = signPasswordResetToken(user.id);
+        const bumped = await prisma.user.update({
+            where: { id: user.id },
+            data: { passwordResetVersion: { increment: 1 } },
+            select: { passwordResetVersion: true },
+        });
+        const resetToken = signPasswordResetToken(user.id, bumped.passwordResetVersion);
         const resetUrl = `${APP_URL.replace(/\/$/, "")}/forgot-password?token=${encodeURIComponent(resetToken)}`;
         // item 95 (pentest A1): uma falha de envio (SMTP fora do ar, etc.) AQUI DENTRO não pode
         // vazar como 500 pro chamador — antes isso criava um oráculo de enumeração (email
@@ -134,13 +157,20 @@ export async function adminForcePasswordResetPost(req, res) {
             res.status(404).json({ ok: false, message: "Usuário não encontrado." });
             return;
         }
-        const newPasswordHash = await hashPassword(String(newPassword), 10);
-        await prisma.user.update({ where: { id: user.id }, data: { passwordHash: newPasswordHash } });
+        const newPasswordHash = await hashPassword(String(newPassword));
+        await replacePasswordAndRevokeSessions(user.id, newPasswordHash);
         log.info(`[ADMIN] Force password reset completed for email: ${normalizedEmail}`);
         res.json({ ok: true, message: "Senha redefinida com sucesso." });
     }
     catch (error) {
-        log.error("Admin force reset error", { error: unknownErrorMessage(error) });
+        reportError({
+            code: "PASSWORD_WRITE_FAILED",
+            category: "AUTH",
+            severity: "ERROR",
+            module: "auth.passwordWrite",
+            error,
+            req,
+        });
         res.status(500).json({ ok: false, message: "Erro ao forçar redefinição de senha." });
     }
 }
@@ -155,11 +185,19 @@ export async function changePasswordPost(req, res) {
             res.status(401).json({ ok: false, message: "Senha atual incorreta." });
             return;
         }
-        const newPasswordHash = await hashPassword(String(newPassword ?? ""), 10);
-        await prisma.user.update({ where: { id: user.id }, data: { passwordHash: newPasswordHash } });
+        const newPasswordHash = await hashPassword(String(newPassword ?? ""));
+        await replacePasswordAndRevokeSessions(user.id, newPasswordHash);
         res.json({ ok: true, message: "Senha alterada com sucesso." });
     }
-    catch {
+    catch (error) {
+        reportError({
+            code: "PASSWORD_WRITE_FAILED",
+            category: "AUTH",
+            severity: "ERROR",
+            module: "auth.passwordWrite",
+            error,
+            req,
+        });
         res.status(500).json({ ok: false, message: "Erro ao alterar senha." });
     }
 }

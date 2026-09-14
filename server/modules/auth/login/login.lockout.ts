@@ -80,12 +80,15 @@ export async function getAuthLockStatus(p: { ip: string; userId?: number | null 
   return { locked: false };
 }
 
-/** Clears the failure counters for the given IP and (if present) user id. */
+/**
+ * Clears the failure counter for the authenticated user only.
+ * The IP spray counter stays — a successful login on one account must not
+ * reset attempts already recorded against other accounts from the same IP.
+ */
 export async function recordAuthLoginSuccess(p: { ip: string; userId?: number | null }): Promise<void> {
-  const hashes = [ipHashKey(p.ip)];
-  if (p.userId != null && Number.isFinite(p.userId)) hashes.push(userHashKey(p.userId));
+  if (p.userId == null || !Number.isFinite(p.userId)) return;
   await prisma.callbackQueue.deleteMany({
-    where: { callbackType: "SEC_LOCK", callbackHash: { in: hashes } },
+    where: { callbackType: "SEC_LOCK", callbackHash: userHashKey(p.userId) },
   });
 }
 

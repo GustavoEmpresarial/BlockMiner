@@ -12,6 +12,7 @@ type BlockminerEnv = {
   VITE_TURNSTILE_SITE_KEY?: string;
   VITE_TURNSTILE_SITE_KEY_LOGIN?: string;
   VITE_TURNSTILE_SITE_KEY_REGISTER?: string;
+  VITE_TURNSTILE_SITE_KEY_FORGOT?: string;
 };
 
 declare global {
@@ -58,6 +59,14 @@ export function resolveTurnstileSiteKeyRegister(): string {
     readVite('VITE_TURNSTILE_SITE_KEY_REGISTER') ||
     readVite('VITE_TURNSTILE_SITE_KEY') ||
     readRuntime('VITE_TURNSTILE_SITE_KEY_REGISTER', 'VITE_TURNSTILE_SITE_KEY', '__BM_TURNSTILE_SITE_KEY__')
+  );
+}
+
+export function resolveTurnstileSiteKeyForgot(): string {
+  return (
+    readVite('VITE_TURNSTILE_SITE_KEY_FORGOT') ||
+    readVite('VITE_TURNSTILE_SITE_KEY') ||
+    readRuntime('VITE_TURNSTILE_SITE_KEY_FORGOT', 'VITE_TURNSTILE_SITE_KEY', '__BM_TURNSTILE_SITE_KEY__')
   );
 }
 

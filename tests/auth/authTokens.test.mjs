@@ -25,6 +25,7 @@ test("verifyAccessToken round-trips a token signed by signAccessToken", () => {
   const token = authTokens.signAccessToken({ id: 7, name: "Bob", email: "bob@example.com" });
   const verified = authTokens.verifyAccessToken(token);
   assert.equal(verified.sub, "7");
+  assert.equal(verified.sv, 0, "missing sessionVersion must still emit sv so requireAuth can reject stale tokens");
 });
 
 test("verifyAccessToken returns null (never throws) for a garbage token", () => {

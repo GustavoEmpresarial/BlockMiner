@@ -242,6 +242,17 @@ describe('pendingPolAccrual', () => {
     expect(value).toBe(0);
   });
 
+  it('caps share at 1 when user hashrate exceeds network hashrate', () => {
+    const value = pendingPolAccrual({
+      networkHashRate: 100,
+      userHashRate: 250,
+      blockRewardPol: 50,
+      countdownSeconds: 0,
+      blockDurationSeconds: 600,
+    });
+    expect(value).toBeCloseTo(50, 6);
+  });
+
   it('clamps progress to [0,1] when countdown exceeds block duration (stale data)', () => {
     const value = pendingPolAccrual({
       networkHashRate: 100,

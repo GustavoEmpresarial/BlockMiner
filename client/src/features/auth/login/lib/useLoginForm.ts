@@ -2,10 +2,10 @@ import { useState, useEffect, useRef, type FormEvent } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { useAuthStore, api } from '../../../../shared/auth/auth.store';
+import { useAuthStore } from '../../../../shared/auth/auth.store';
 import { requestPartnerStorageAccess } from '../../../../shared/auth/csrfMemory';
 import { postAuthLogin } from './login.api';
-import { responseRequiresTwoFactorStep } from './login.twoFactorUi';
+import { responseRequiresPasswordStepRestart, responseRequiresTwoFactorStep } from './login.twoFactorUi';
 import { isAxiosTimeoutError } from '../../../../shared/utils/apiTimeout';
 import { readAuthErrorMessage } from '../../../../shared/auth/auth.errors';
 import { resolveApiErrorMessage } from '../../../../shared/utils/apiErrorI18n';
@@ -16,7 +16,6 @@ import {
   validateLoginIdentifierForSubmit,
   validateLoginPasswordForSubmit,
   validateTwoFactorForSubmit,
-  validateLegacyNewPassword,
   safeInlineMessage,
   LOGIN_PASSWORD_MAX_LEN,
 } from '../../../../shared/utils/authInputGuards';
@@ -36,10 +35,6 @@ export function useLoginForm() {
   const [requires2FA, setRequires2FA] = useState(false);
   const [twoFactorToken, setTwoFactorToken] = useState('');
   const [localError, setLocalError] = useState('');
-  const [showLegacyReset, setShowLegacyReset] = useState(false);
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [isResetting, setIsResetting] = useState(false);
   const [twoFactorChallengeToken, setTwoFactorChallengeToken] = useState('');
   const [twoFactorMethod, setTwoFactorMethod] = useState<'email' | 'other'>('email');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -193,8 +188,6 @@ export function useLoginForm() {
 
   const setIdentifierClamped = (raw: string) => setIdentifier(clampLoginIdentifier(raw));
   const setPasswordClamped = (raw: string) => setPassword(clampLoginPassword(raw));
-  const setNewPasswordClamped = (raw: string) => setNewPassword(clampLoginPassword(raw));
-  const setConfirmPasswordClamped = (raw: string) => setConfirmPassword(clampLoginPassword(raw));
   const setTwoFactorTokenNormalized = (raw: string) => setTwoFactorToken(normalizeTwoFactorInput(raw));
 
   const handleSubmit = async (e: FormEvent) => {
@@ -241,7 +234,6 @@ export function useLoginForm() {
         code?: string;
         twoFactorChallengeToken?: string;
         twoFactorMethod?: string;
-        needsLegacyReset?: boolean;
         ok?: boolean;
       };
 
@@ -251,12 +243,10 @@ export function useLoginForm() {
         setTwoFactorMethod(data.twoFactorMethod === 'email' ? 'email' : 'other');
         setRequires2FA(true);
         setLocalError('');
+        // Turnstile tokens are single-use; the 2FA follow-up is a new POST.
+        turnstileRef.current?.reset();
+        setTurnstileToken('');
         if (data.twoFactorMethod === 'email') toast.message(t('auth.login.two_factor_email_hint'));
-        return;
-      }
-
-      if (data.needsLegacyReset) {
-        setShowLegacyReset(true);
         return;
       }
 
@@ -291,17 +281,25 @@ export function useLoginForm() {
       }
       if (isAxiosLikeError(err)) {
         const body = err.response?.data as Record<string, unknown> | undefined;
+        if (body && responseRequiresPasswordStepRestart(body as { code?: string })) {
+          setRequires2FA(false);
+          setTwoFactorChallengeToken('');
+          setTwoFactorToken('');
+          setTwoFactorMethod('email');
+          setLocalError(t('auth.login.errors.two_factor_challenge_required'));
+          turnstileRef.current?.reset();
+          setTurnstileToken('');
+          return;
+        }
         if (body && responseRequiresTwoFactorStep(body as { require2FA?: boolean; code?: string })) {
           const ch = typeof body.twoFactorChallengeToken === 'string' ? body.twoFactorChallengeToken : '';
           setTwoFactorChallengeToken(ch);
           setTwoFactorMethod(body.twoFactorMethod === 'email' ? 'email' : 'other');
           setRequires2FA(true);
           setLocalError('');
+          turnstileRef.current?.reset();
+          setTurnstileToken('');
           if (body.twoFactorMethod === 'email') toast.message(t('auth.login.two_factor_email_hint'));
-          return;
-        }
-        if (body?.needsLegacyReset) {
-          setShowLegacyReset(true);
           return;
         }
         const fieldErrorRaw = Array.isArray(body?.errors)
@@ -314,6 +312,9 @@ export function useLoginForm() {
           INVALID_CREDENTIALS: t('auth.login.errors.invalid_credentials'),
           INVALID_2FA: t('auth.login.errors.invalid_2fa'),
           INVALID_TWO_FACTOR_CODE: t('auth.login.errors.invalid_2fa'),
+          TWO_FACTOR_EXPIRED: t('auth.login.errors.two_factor_expired'),
+          TWO_FACTOR_CODE_REQUIRED: t('auth.login.errors.two_factor_code_required'),
+          TWO_FACTOR_CHALLENGE_REQUIRED: t('auth.login.errors.two_factor_challenge_required'),
           INTERNAL_ERROR: t('auth.login.errors.internal_error'),
           SERVICE_UNAVAILABLE: t('auth.login.errors.service_unavailable'),
           EMAIL_2FA_UNAVAILABLE: t('auth.login.errors.email_2fa_unavailable'),
@@ -343,34 +344,6 @@ export function useLoginForm() {
     }
   };
 
-  const handleLegacyReset = async (e: FormEvent) => {
-    e.preventDefault();
-    const np = clampLoginPassword(newPassword);
-    const cp = clampLoginPassword(confirmPassword);
-    if (np !== cp) return toast.error(t('auth.register.errors.password_mismatch'));
-    const v = validateLegacyNewPassword(np);
-    if (v === 'empty' || v === 'too_short') return toast.error(t('auth.register.errors.password_min'));
-    if (v === 'too_long') return toast.error(t('auth.register.errors.password_max'));
-
-    try {
-      setIsResetting(true);
-      const res = await api.post('/auth/legacy-password-reset', {
-        identifier: clampLoginIdentifier(identifier),
-        newPassword: np,
-      });
-      const data = res.data as { ok?: boolean; message?: string };
-      if (data.ok) {
-        toast.success(t('accountSettings.password_changed'));
-        setShowLegacyReset(false);
-        setPassword(np);
-      }
-    } catch (err: unknown) {
-      toast.error(resolveApiErrorMessage(err, t('auth.login.errors.login_failed')));
-    } finally {
-      setIsResetting(false);
-    }
-  };
-
   const displayError = safeInlineMessage(localError || error || '', 500);
 
   return {
@@ -384,13 +357,6 @@ export function useLoginForm() {
     setRequires2FA,
     twoFactorToken,
     setTwoFactorToken: setTwoFactorTokenNormalized,
-    showLegacyReset,
-    setShowLegacyReset,
-    newPassword,
-    setNewPassword: setNewPasswordClamped,
-    confirmPassword,
-    setConfirmPassword: setConfirmPasswordClamped,
-    isResetting,
     twoFactorChallengeToken,
     setTwoFactorChallengeToken,
     twoFactorMethod,
@@ -402,7 +368,6 @@ export function useLoginForm() {
     setLocalError,
     displayError,
     handleSubmit,
-    handleLegacyReset,
     setTurnstileToken,
     turnstileRef,
   };

@@ -5,7 +5,7 @@
 | | |
 |---|---|
 | **Rota (client)** | `/login` |
-| **Componente** | `client/src/features/login/LoginPage.tsx` + `lib/useLoginForm.ts` |
+| **Componente** | `client/src/features/auth/login/LoginPage.tsx` + `lib/useLoginForm.ts` |
 | **Rota servidor** | `POST /auth/login` → `server/modules/auth/login/login.controller.ts` (`loginPost`) |
 | **Emissão de sessão** | `server/modules/auth/auth.sessionIssue.ts` (`issueAuthSessionForUser`) — compartilhada com registro e OAuth (Google/SatsPay) |
 | **Lockout** | `server/modules/auth/login/login.lockout.ts` — Postgres (`callbackQueue`, tipo `SEC_LOCK`) |
@@ -42,11 +42,11 @@ issueAuthSessionForUser() → cookies + sessão
 
 ## 2. Unificação de emissão de sessão (2026-09-11)
 
-Login, registro e OAuth (Google/SatsPay) precisam fazer exatamente a mesma coisa depois de validar as credenciais: atualizar `lastLoginAt`/IP/user-agent, incrementar `sessionVersion`, revogar refresh tokens antigos, invalidar cache, assinar access token, criar refresh token, setar os 3 cookies (access/refresh/csrf), e limpar o contador de tentativas falhas do IP.
+Login, registro e OAuth (Google/SatsPay) precisam fazer exatamente a mesma coisa depois de validar as credenciais: atualizar `lastLoginAt`/IP/user-agent, incrementar `sessionVersion`, revogar refresh tokens antigos, invalidar cache, assinar access token, criar refresh token, setar os 3 cookies (access/refresh/csrf), e limpar o contador de tentativas falhas **do usuário** (o contador de IP contra spray permanece — ver `login.lockout.ts`).
 
 Antes desta passada, essa lógica estava **copiada e colada 2 vezes** (`login.controller.ts` e `register.controller.ts`), enquanto Google/SatsPay OAuth já usavam a função compartilhada `auth.sessionIssue.ts`. Unificado: os três agora chamam `issueAuthSessionForUser`.
 
-**Mudança de comportamento observável, aprovada pelo usuário**: registro por e-mail/senha agora também limpa o contador de tentativas de login falhas do IP (`recordAuthLoginSuccess`) — antes só login e cadastro via Google faziam isso. Testes de caracterização (`tests/auth/session-issuance.characterization.test.mjs`) foram escritos ANTES da unificação pra provar o comportamento antigo, e usados DEPOIS pra confirmar que só essa diferença mudou (tudo mais idêntico).
+Registro, login e OAuth compartilham `issueAuthSessionForUser`. `recordAuthLoginSuccess` limpa só o lockout do usuário, não o spray por IP.
 
 ## 3. O que foi caracterizado mas não corrigido (decisão do usuário)
 

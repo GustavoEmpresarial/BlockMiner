@@ -117,7 +117,13 @@ export async function loginPost(req: Request, res: Response): Promise<void> {
           res.status(503).json(buildAuthFailureJson("EMAIL_2FA_UNAVAILABLE", AUTH_LOGIN_MESSAGES.EMAIL_2FA_UNAVAILABLE));
           return;
         }
-        const challenge = await issueEmailTwoFactorChallenge({ userId: user.id, email: user.email, name: user.name });
+        let challenge;
+        try {
+          challenge = await issueEmailTwoFactorChallenge({ userId: user.id, email: user.email, name: user.name });
+        } catch {
+          res.status(503).json(buildAuthFailureJson("EMAIL_2FA_UNAVAILABLE", AUTH_LOGIN_MESSAGES.EMAIL_2FA_UNAVAILABLE));
+          return;
+        }
         loginSecurity("AUTH_LOGIN_2FA_REQUIRED", req, { userId: user.id }, identifier);
         res.status(200).json({
           ok: false,

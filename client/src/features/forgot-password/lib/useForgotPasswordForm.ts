@@ -1,10 +1,10 @@
-import { useState, type FormEvent } from 'react';
+import { useState, useRef, type FormEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import type { AxiosError } from 'axios';
 import { api } from '../../../shared/auth/auth.store';
 import { resolveApiErrorMessage } from '../../../shared/utils/apiErrorI18n';
+import type { TurnstileFieldHandle } from '../../../shared/components/auth/TurnstileField';
 
 /** All state and submit handlers for ForgotPasswordPage — kept out of the component so it stays JSX-only. */
 export function useForgotPasswordForm() {
@@ -19,19 +19,23 @@ export function useForgotPasswordForm() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
+  const [turnstileToken, setTurnstileToken] = useState('');
+  const turnstileRef = useRef<TurnstileFieldHandle | null>(null);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
     try {
       setIsSubmitting(true);
-      await api.post('/auth/forgot-password', { email });
+      await api.post('/auth/forgot-password', { email, cfTurnstileToken: turnstileToken || undefined });
       setDone(true);
       toast.success(t('auth.forgot.email_sent'));
     } catch (err: unknown) {
       const message = resolveApiErrorMessage(err, t('auth.forgot.process_failed'));
       setError(message);
       toast.error(message);
+      turnstileRef.current?.reset();
+      setTurnstileToken('');
     } finally {
       setIsSubmitting(false);
     }
@@ -80,5 +84,7 @@ export function useForgotPasswordForm() {
     error,
     handleSubmit,
     handleResetPassword,
+    setTurnstileToken,
+    turnstileRef,
   };
 }

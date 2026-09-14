@@ -12,7 +12,7 @@ import crypto from "node:crypto";
 // generates, call issueEmailTwoFactorChallenge (swallowing the expected mail-send rejection),
 // and then exercise verifyEmailTwoFactorChallenge (pure, no I/O) against the real stored entry.
 
-const { issueEmailTwoFactorChallenge, verifyEmailTwoFactorChallenge } = await import(
+const { issueEmailTwoFactorChallenge, verifyEmailTwoFactorChallenge, EMAIL_TWO_FACTOR_MAX_FAILED_ATTEMPTS } = await import(
   "../../server/modules/auth/login/login.twoFactorChallenge.ts"
 );
 
@@ -77,6 +77,26 @@ test("verifyEmailTwoFactorChallenge: an unknown/never-issued token is INVALID", 
 test("verifyEmailTwoFactorChallenge: missing challengeToken is INVALID, never throws", () => {
   const result = verifyEmailTwoFactorChallenge({ code: "123456", userId: 1 });
   assert.deepEqual(result, { ok: false, reason: "INVALID" });
+});
+
+test("verifyEmailTwoFactorChallenge: EMAIL_TWO_FACTOR_MAX_FAILED_ATTEMPTS wrong codes consume the challenge", async () => {
+  const userId = 1005;
+  const { challengeToken, code } = await issueDeterministic(userId, { fixedTokenByte: 11, fixedCode: 555555 });
+
+  for (let i = 0; i < EMAIL_TWO_FACTOR_MAX_FAILED_ATTEMPTS - 1; i += 1) {
+    const wrong = verifyEmailTwoFactorChallenge({ challengeToken, code: "000000", userId });
+    assert.deepEqual(wrong, { ok: false, reason: "INVALID" });
+  }
+
+  const lastWrong = verifyEmailTwoFactorChallenge({ challengeToken, code: "000000", userId });
+  assert.deepEqual(lastWrong, { ok: false, reason: "INVALID" });
+
+  const afterLock = verifyEmailTwoFactorChallenge({ challengeToken, code, userId });
+  assert.deepEqual(
+    afterLock,
+    { ok: false, reason: "INVALID" },
+    "the real code must not work after the failed-attempt cap deletes the challenge",
+  );
 });
 
 test("verifyEmailTwoFactorChallenge: an expired challenge reports EXPIRED and is consumed (retrying gives INVALID, not EXPIRED again)", async () => {

@@ -13,8 +13,8 @@
  * hoje, então portar isto não muda nada em produção até alguém decidir ligar. Para ligar
  * de verdade é preciso o par completo (secret no servidor + site key no cliente), senão
  * logins passariam a falhar com CAPTCHA_REQUIRED por falta de token:
- *   - servidor: TURNSTILE_SECRET_KEY (ou TURNSTILE_SECRET_KEY_LOGIN / _REGISTER)
- *   - cliente:  VITE_TURNSTILE_SITE_KEY (ou VITE_TURNSTILE_SITE_KEY_LOGIN / _REGISTER)
+ *   - servidor: TURNSTILE_SECRET_KEY (ou TURNSTILE_SECRET_KEY_LOGIN / _REGISTER / _FORGOT)
+ *   - cliente:  VITE_TURNSTILE_SITE_KEY (ou VITE_TURNSTILE_SITE_KEY_LOGIN / _REGISTER / _FORGOT)
  *
  * Diferenças deliberadas em relação ao legacy:
  *  - `TURNSTILE_USE_CLOUDFLARE_DUMMY_KEYS` / `ALLOW_TURNSTILE_DUMMY_IN_PRODUCTION` /
@@ -37,7 +37,7 @@ const SITEVERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverif
 /** Nunca deixar uma chamada externa segurar um login indefinidamente. */
 const SITEVERIFY_TIMEOUT_MS = 10_000;
 
-export type TurnstilePurpose = "login" | "register" | undefined;
+export type TurnstilePurpose = "login" | "register" | "forgot" | undefined;
 
 function envFlag(name: string): boolean {
   const raw = String(process.env[name] ?? "").trim().toLowerCase();
@@ -53,6 +53,9 @@ export function resolveTurnstileSecret(purpose?: TurnstilePurpose): string {
   if (purpose === "register") {
     return String(process.env.TURNSTILE_SECRET_KEY_REGISTER || "").trim() || fallback;
   }
+  if (purpose === "forgot") {
+    return String(process.env.TURNSTILE_SECRET_KEY_FORGOT || "").trim() || fallback;
+  }
   return fallback;
 }
 
@@ -61,7 +64,8 @@ export function isTurnstileEnforced(): boolean {
   return (
     resolveTurnstileSecret(undefined).length > 0 ||
     resolveTurnstileSecret("login").length > 0 ||
-    resolveTurnstileSecret("register").length > 0
+    resolveTurnstileSecret("register").length > 0 ||
+    resolveTurnstileSecret("forgot").length > 0
   );
 }
 
@@ -128,18 +132,19 @@ export async function verifyTurnstileToken(
 }
 
 function normalizePurpose(arg: unknown): TurnstilePurpose {
-  if (arg === "login" || arg === "register") return arg;
+  if (arg === "login" || arg === "register" || arg === "forgot") return arg;
   if (arg && typeof arg === "object") {
     const p = (arg as { purpose?: unknown }).purpose;
-    if (p === "login" || p === "register") return p;
+    if (p === "login" || p === "register" || p === "forgot") return p;
   }
   return undefined;
 }
 
 type RequireTurnstileArg =
-  | { purpose?: "login" | "register"; fetchImpl?: FetchLike }
+  | { purpose?: "login" | "register" | "forgot"; fetchImpl?: FetchLike }
   | "login"
   | "register"
+  | "forgot"
   | undefined;
 
 /** Middleware: no-op sem secret; com secret, exige token válido de verdade. */

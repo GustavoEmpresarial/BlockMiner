@@ -6,13 +6,8 @@ import crypto from "node:crypto";
 // interaction) BEFORE and AFTER consolidating both onto auth.sessionIssue.ts's
 // issueAuthSessionForUser (already used, unmodified, by the Google/SatsPay OAuth controllers).
 //
-// One assertion here (test 2) intentionally encodes the NEW, user-approved behavior rather
-// than the pre-refactor one: today registerPost does NOT clear a prior IP failed-login counter
-// (unlike loginPost and Google-OAuth-signup, which already do, via issueAuthSessionForUser).
-// Run before the refactor, that assertion fails — that failure IS the characterization of the
-// gap. After unifying registerPost onto issueAuthSessionForUser, it must pass, matching the
-// already-established OAuth precedent. Every other assertion here must hold both before and
-// after (same fake req/res + real dev Postgres convention as login.lockout.test.mjs).
+// Session issuance is shared via issueAuthSessionForUser. A successful login/register
+// clears the *user* lockout counter only — the IP spray counter stays (see login.lockout.ts).
 
 const prisma = (await import("../../server/core/database/prisma.ts")).default;
 const { registerPost } = await import("../../server/modules/auth/register/register.controller.ts");
@@ -124,7 +119,7 @@ test("loginPost bumps sessionVersion on every successful login", async () => {
   assert.equal(afterLogin.sessionVersion, afterRegister.sessionVersion + 1);
 });
 
-test("loginPost clears a prior IP failed-login counter on success (already-established behavior)", async () => {
+test("loginPost does not clear a prior IP failed-login counter on success", async () => {
   const suffix = Date.now().toString(36) + crypto.randomBytes(2).toString("hex");
   const email = `sessiss_${suffix}@gmail.com`;
   const password = "supersecret1";
@@ -144,10 +139,10 @@ test("loginPost clears a prior IP failed-login counter on success (already-estab
   await loginPost(fakeReq({ identifier: email, password }, ip), loginRes);
   assert.equal(loginRes.calls.json.ok, true, JSON.stringify(loginRes.calls.json));
 
-  assert.equal(await ipFailCount(ip), 0, "a successful login must clear the IP's failed-attempt counter");
+  assert.equal(await ipFailCount(ip), 2, "a successful login must leave the IP spray counter in place");
 });
 
-test("registerPost also clears a prior IP failed-login counter on success — matches the Google-OAuth-signup precedent (issueAuthSessionForUser)", async () => {
+test("registerPost does not clear a prior IP failed-login counter on success", async () => {
   const suffix = Date.now().toString(36) + crypto.randomBytes(2).toString("hex");
   const ip = randomIp();
 
@@ -159,9 +154,5 @@ test("registerPost also clears a prior IP failed-login counter on success — ma
   await registerPost(fakeReq(newRegBody(suffix), ip), res);
   assert.equal(res.calls.status, 201, JSON.stringify(res.calls.json));
 
-  assert.equal(
-    await ipFailCount(ip),
-    0,
-    "registering from an IP with prior failed logins must clear that counter too, same as a normal login or a Google sign-up",
-  );
+  assert.equal(await ipFailCount(ip), 2, "registering must not wipe IP spray attempts from the same address");
 });

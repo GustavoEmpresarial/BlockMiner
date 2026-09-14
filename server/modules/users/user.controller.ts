@@ -9,6 +9,7 @@ import * as userRepo from "./user.repository.js";
 import { getUserReferralStats } from "../referrals/index.js";
 import { isSmtpConfigured } from "../../shared/security/mailer.js";
 import { requireSessionUser } from "../../shared/errors/httpStatusError.js";
+import { reportError } from "../../core/errors/index.js";
 function clientIp(req) {
     const xReal = req.headers["x-real-ip"];
     const xff = req.headers["x-forwarded-for"];
@@ -237,7 +238,15 @@ export async function linkReferral(req, res) {
         await userRepo.createReferralAndLinkTx(referrer.id, userId);
         res.json({ ok: true, message: "Indicador vinculado com sucesso!" });
     }
-    catch {
+    catch (error) {
+        reportError({
+            code: "LINK_REFERRAL_FAILED",
+            category: "BUSINESS",
+            severity: "ERROR",
+            module: "users.linkReferral",
+            error,
+            req,
+        });
         res.status(500).json({ ok: false, message: "Erro ao vincular indicador." });
     }
 }

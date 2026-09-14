@@ -43,8 +43,12 @@ function requireJwtSecret(): string {
   return secret;
 }
 
-export function signPasswordResetToken(userId: number): string {
-  const payload: JwtPayload & { typ: string } = { sub: String(userId), typ: "pwd_reset" };
+export function signPasswordResetToken(userId: number, passwordResetVersion: number): string {
+  const payload: JwtPayload & { typ: string; prv: number } = {
+    sub: String(userId),
+    typ: "pwd_reset",
+    prv: passwordResetVersion,
+  };
   const signOptions: SignOptions = {
     expiresIn: PASSWORD_RESET_TOKEN_TTL as SignOptions["expiresIn"],
     issuer: JWT_ISSUER,
@@ -53,12 +57,14 @@ export function signPasswordResetToken(userId: number): string {
   return jwt.sign(payload, requireJwtSecret(), signOptions);
 }
 
-export function verifyPasswordResetToken(token: unknown): (JwtPayload & { typ?: string }) | null {
+export function verifyPasswordResetToken(
+  token: unknown,
+): (JwtPayload & { typ?: string; prv?: number }) | null {
   try {
     if (!process.env.JWT_SECRET) return null;
     const raw = jwt.verify(String(token), process.env.JWT_SECRET, { issuer: JWT_ISSUER, audience: JWT_AUDIENCE });
     if (typeof raw === "string") return null;
-    const payload = raw as JwtPayload & { typ?: string };
+    const payload = raw as JwtPayload & { typ?: string; prv?: number };
     if (payload.typ !== "pwd_reset") return null;
     return payload;
   } catch {

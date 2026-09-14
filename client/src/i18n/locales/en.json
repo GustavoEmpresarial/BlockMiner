@@ -741,6 +741,7 @@
         "email_2fa_unavailable": "Email verification is unavailable right now.",
         "two_factor_challenge_required": "Two-step session is incomplete. Go back and request a new code.",
         "two_factor_code_required": "Enter the verification code sent to your email.",
+        "two_factor_expired": "This verification code has expired. Sign in again to request a new one.",
         "account_disabled": "This account is disabled."
       },
       "validation": {

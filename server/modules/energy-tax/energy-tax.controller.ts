@@ -10,6 +10,11 @@ import {
 } from "./energy-tax.errors.js";
 import { logger } from "../../core/logger/index.js";
 import { parseTaxPayCurrency } from "../../shared/taxPaymentCurrency.js";
+import {
+  resolveCriticalMutation,
+  finalizeCriticalMutationSuccess,
+  cancelCriticalMutation,
+} from "../../core/http/middleware/idempotency.js";
 
 const log = logger.child("energy-tax.controller");
 
@@ -50,12 +55,17 @@ export async function getSummary(req: Request, res: Response): Promise<void> {
 export async function postPayDaily(req: Request, res: Response): Promise<void> {
   const user = requireSessionUser(req, res);
   if (!user) return;
+  const idem = await resolveCriticalMutation(req, res);
+  if (!idem) return;
   try {
     const currency = parseTaxPayCurrency(req.body?.currency);
     const charge = await energyTaxService.payDailyTax(user.id, currency);
     invalidateSummary(user.id);
-    res.json({ ok: true, charge, currency });
+    const payload = { ok: true, charge, currency };
+    await finalizeCriticalMutationSuccess(idem.lease, { requestHash: idem.ci.requestHash, responseJson: payload });
+    res.json(payload);
   } catch (err) {
+    await cancelCriticalMutation(idem.lease);
     if (err instanceof EnergyTaxNotStarted) {
       res.status(403).json({ ok: false, code: "NOT_STARTED", message: err.message, startsAt: err.startsAt.toISOString() });
       return;

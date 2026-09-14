@@ -86,7 +86,7 @@ test("signEmailVerificationToken / verifyEmailVerificationToken: round-trip vál
 });
 
 test("verifyEmailVerificationToken rejeita token de OUTRO tipo (ex: reset de senha)", () => {
-  const resetToken = authService.signPasswordResetToken(42);
+  const resetToken = authService.signPasswordResetToken(42, 0);
   const payload = authService.verifyEmailVerificationToken(resetToken);
   assert.equal(payload, null, "token de reset de senha não pode passar como verificação de email");
 });

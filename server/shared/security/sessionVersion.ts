@@ -15,6 +15,6 @@ export function readTokenSessionVersion(payload: JwtPayload | string | null): nu
 /** True when the token's embedded session version (if any) still matches the user's current one. */
 export function isTokenSessionCurrent(payload: JwtPayload | string | null, userSessionVersion: number | null | undefined): boolean {
   const tokenSv = readTokenSessionVersion(payload);
-  if (tokenSv === undefined) return true; // token predates this feature — allow through
+  if (tokenSv === undefined) return false;
   return tokenSv === userSessionVersion;
 }

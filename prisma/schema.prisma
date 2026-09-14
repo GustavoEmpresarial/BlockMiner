@@ -23,6 +23,12 @@ model User {
    * revoked on login (session.tokens.ts revokeRefreshTokensForUser).
    */
   sessionVersion  Int       @default(0) @map("session_version")
+  /**
+   * Bumped on every forgot-password issue and every password write.
+   * Embedded as `prv` in password-reset JWTs so a used or superseded link
+   * cannot reset the account again.
+   */
+  passwordResetVersion Int @default(0) @map("password_reset_version")
   createdAt       DateTime  @default(now()) @map("created_at")
   /**
    * item 95 Parte B: null = email não verificado. Migration faz backfill

@@ -76,7 +76,23 @@ test("login.lockout: getAuthLockStatus/recordAuthLoginFailure — locks after 5 
   assert.ok(status.until > Date.now());
 });
 
-test("login.lockout: recordAuthLoginSuccess clears the counter", async () => {
+test("login.lockout: recordAuthLoginSuccess clears only the user counter, not the IP spray counter", async () => {
+  const ipA = randomIp();
+  const ipB = randomIp();
+  const userId = 9_100_001;
+
+  for (let i = 0; i < 5; i += 1) {
+    await recordAuthLoginFailure({ ip: ipA, userId });
+  }
+  assert.equal((await getAuthLockStatus({ ip: ipB, userId })).locked, true, "user lock visible from another IP");
+  assert.equal((await getAuthLockStatus({ ip: ipA, userId: null })).locked, true, "IP A is locked from spray");
+
+  await recordAuthLoginSuccess({ ip: ipB, userId });
+  assert.equal((await getAuthLockStatus({ ip: ipB, userId })).locked, false, "user lock must clear on success");
+  assert.equal((await getAuthLockStatus({ ip: ipA, userId: null })).locked, true, "IP spray counter must survive a successful login");
+});
+
+test("login.lockout: recordAuthLoginSuccess with no userId leaves the IP counter untouched", async () => {
   const ip = randomIp();
   for (let i = 0; i < 5; i += 1) {
     await recordAuthLoginFailure({ ip, userId: null });
@@ -84,7 +100,7 @@ test("login.lockout: recordAuthLoginSuccess clears the counter", async () => {
   assert.equal((await getAuthLockStatus({ ip, userId: null })).locked, true);
 
   await recordAuthLoginSuccess({ ip, userId: null });
-  assert.equal((await getAuthLockStatus({ ip, userId: null })).locked, false);
+  assert.equal((await getAuthLockStatus({ ip, userId: null })).locked, true);
 });
 
 test("login.lockout: lock releases once the window (lockUntilMs) has expired", async () => {

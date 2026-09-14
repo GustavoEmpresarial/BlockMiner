@@ -13,8 +13,9 @@
  *    many accounts in a short window is rejected with 429 before the
  *    duplicate-email/username 409 check even runs. `userIpLog` rows are
  *    recorded in the same provisioning transaction so the next attempt sees
- *    this one. IP intelligence (provider type / ASN) is read via the
- *    `ip-intelligence` module boundary's `getCachedIpIntelligence`.
+ *    this one. IP intelligence (provider type / ASN) is read via
+ *    `getCachedIpIntelligence` *before* scoring, so a first-seen hosting/VPN
+ *    IP can still trip the high-risk rule.
  */
 import type { Request, Response } from "express";
 import prisma from "../../../core/database/prisma.js";
@@ -74,7 +75,15 @@ export async function registerPost(req: Request, res: Response): Promise<void> {
     const normalizedEmail = normalizeEmail(email);
     const clientIp = loginClientIp(req);
     const deviceFingerprint = buildDeviceFingerprint(req);
-    const ipContext = await getAuthIpContext(prisma, clientIp);
+    const freshIpIntel = await getCachedIpIntelligence(prisma, String(clientIp ?? "")).catch(() => null);
+    const ipContext = freshIpIntel
+      ? {
+          normalizedIp: freshIpIntel.normalizedIp,
+          networkCidr: freshIpIntel.networkCidr,
+          asn: Number.isInteger(freshIpIntel.asn) ? freshIpIntel.asn : null,
+          providerType: String(freshIpIntel.providerType || "unknown"),
+        }
+      : await getAuthIpContext(prisma, clientIp);
 
     const registrationAttempt = await evaluateRegistrationAttempt(prisma, {
       ip: clientIp,
@@ -108,7 +117,6 @@ export async function registerPost(req: Request, res: Response): Promise<void> {
         OR: [
           { email: { equals: normalizedEmail, mode: "insensitive" } },
           { username: { equals: normalizedUsername, mode: "insensitive" } },
-          { name: { equals: normalizedUsername, mode: "insensitive" } },
         ],
       },
     });
@@ -124,7 +132,6 @@ export async function registerPost(req: Request, res: Response): Promise<void> {
     const refCode = await generateUniqueRefCode();
     let referrerId: number | null = null;
 
-    const freshIpIntel = await getCachedIpIntelligence(prisma, String(clientIp ?? "")).catch(() => null);
     if (authBlockVpnProxy()) {
       const anonymous = evaluateAnonymousIp(freshIpIntel);
       if (anonymous.blocked) {
@@ -219,10 +226,8 @@ export async function registerPost(req: Request, res: Response): Promise<void> {
     // here separately, and unlike login/OAuth did NOT call revokeRefreshTokensForUser /
     // invalidateAuthUserCache / recordAuthLoginSuccess for a fresh account. Those are all
     // harmless no-ops on a brand-new user (no prior tokens/cache/lockout state to touch)
-    // except recordAuthLoginSuccess, which now also clears any failed-login counter already
-    // built up against this IP — the same thing a Google sign-up from that IP already does.
-    // User-approved behavior change (2026-09-11): verified before/after by
-    // tests/auth/session-issuance.characterization.test.mjs.
+    // except recordAuthLoginSuccess, which clears this user's lockout counter (not the
+    // IP spray counter — see login.lockout.ts).
     const session = await issueAuthSessionForUser({ req, res, user: result });
     log.security("AUTH_REGISTER_SUCCESS", { userId: result.id }, req);
 

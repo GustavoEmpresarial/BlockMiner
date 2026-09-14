@@ -50,7 +50,7 @@ dispara e-mail de verificação em paralelo (não bloqueia a resposta)
 
 ## 3. Unificação de sessão (mudança de comportamento aprovada)
 
-Registro passou a usar a mesma `issueAuthSessionForUser` do login/OAuth (ver `docs/paginas/publico/login/`). Isso significa que registro **agora também limpa o contador de tentativas de login falhas do IP** — antes só login e cadastro via Google faziam isso. Comportamento aprovado pelo usuário, caracterizado em teste antes/depois da mudança.
+Registro usa a mesma `issueAuthSessionForUser` do login/OAuth (ver `docs/paginas/publico/login/`). `recordAuthLoginSuccess` limpa o lockout do usuário novo (no-op) e **não** zera o contador de spray por IP.
 
 ## 4. Achados caracterizados, não corrigidos (decisão do usuário)
 

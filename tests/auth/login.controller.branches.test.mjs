@@ -128,16 +128,7 @@ test("loginPost: email 2FA required (env-forced) with no token/challenge issues 
       assert.equal(res.calls.json.code, "TWO_FACTOR_REQUIRED");
       assert.equal(typeof res.calls.json.twoFactorChallengeToken, "string");
     } else {
-      // Real gap found while writing this test, not fixed here (out of scope — same
-      // "characterize, don't fix 2FA storage/behavior" boundary as login.twoFactorChallenge.ts):
-      // issueEmailTwoFactorChallenge's `await sendLoginTwoFactorCodeEmail(...)` has no catch, so
-      // when SMTP IS configured but the send itself rejects (as it does in this sandbox — real
-      // account, outbound disabled), the rejection propagates all the way up through loginPost's
-      // try/catch into a generic 500 INTERNAL_ERROR instead of degrading to 503/a retry. Pinning
-      // this as the current, imperfect-but-real behavior rather than asserting a nicer outcome
-      // this code doesn't actually provide.
-      assert.equal(res.calls.status, 500);
-      assert.equal(res.calls.json.code, "INTERNAL_ERROR");
+      assert.fail(`expected 200 TWO_FACTOR_REQUIRED or 503 EMAIL_2FA_UNAVAILABLE, got ${res.calls.status} ${JSON.stringify(res.calls.json)}`);
     }
   } finally {
     if (prevEnabled === undefined) delete process.env.AUTH_EMAIL_2FA_ENABLED;

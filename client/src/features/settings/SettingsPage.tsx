@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { FormEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { isAxiosError } from 'axios';
@@ -22,6 +23,7 @@ import { useWalletLink } from '../wallet/lib/useWalletLink';
 
 export default function Settings() {
     const { t } = useTranslation();
+    const navigate = useNavigate();
     const { user, setUser } = useAuthStore();
     const { fetchAll } = useGameStore();
     
@@ -180,16 +182,10 @@ export default function Settings() {
             if (res.data.ok) {
                 toast.success(t('accountSettings.password_changed'));
                 setPasswords({ current: '', new: '', confirm: '' });
+                await useAuthStore.getState().logout();
+                navigate('/login');
             }
         } catch (err: unknown) {
-            const msg = isAxiosError(err)
-                ? (typeof err.response?.data === 'object' &&
-                      err.response?.data !== null &&
-                      'message' in err.response.data &&
-                      typeof (err.response.data as { message?: unknown }).message === 'string'
-                      ? (err.response.data as { message: string }).message
-                      : null)
-                : null;
             toast.error(resolveApiErrorMessage(err, t('common.error')));
         } finally {
             setIsChangingPassword(false);
