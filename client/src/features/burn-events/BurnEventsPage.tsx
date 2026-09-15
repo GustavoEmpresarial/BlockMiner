@@ -19,24 +19,33 @@ import {
 import { toast } from 'sonner';
 import { isAxiosError } from 'axios';
 import { api } from '../../shared/auth/auth.store';
-import { resolveApiErrorMessage } from '../../shared/utils/apiErrorI18n';
+import { resolveBurnApiError } from './lib/burnApiError';
 import { MachineImage } from '../machines/components/MachineImage';
 import { BurnMachineGroupCard } from './components/BurnMachineGroupCard';
 import { BurnFeeSelector } from './components/BurnFeeSelector';
 import {
   type BurnFeeCurrency,
-  BURN_FEE_RATES,
   hasSufficientFeeBalance,
 } from './lib/burnFee.config';
 import {
   groupAndSortMachines,
   addOneFromGroup,
   removeOneFromGroup,
-  setGroupQuantity,
   autoSelectLowestPower,
+  toggleMaxForRequirement,
+  countToMeetRequirement,
+  hashRateOutsideGroup,
+  burnableLocationI18nKey,
   type BurnMachineGroup,
 } from './lib/burnGroup.helpers';
 import type { WalletBalanceResponse } from '../wallet/lib/wallet.types';
+
+function burnLocationLabel(
+  location: string,
+  t: (key: string, opts?: Record<string, unknown>) => string,
+): string {
+  return t(burnableLocationI18nKey(location), { defaultValue: location });
+}
 
 function tr(t: (key: string, opts?: Record<string, unknown>) => string, key: string, fallback: string) {
   const v = t(key);
@@ -123,6 +132,15 @@ interface RewardMiner {
   tier?: string;
 }
 
+interface BurnPendingSession {
+  sessionId: number;
+  eventId?: number;
+  startedAt?: string;
+  completesAt: string;
+  burnDurationSeconds: number;
+  ready: boolean;
+}
+
 interface BurnEvent {
   id: number;
   title: string;
@@ -140,6 +158,8 @@ interface BurnEvent {
   userClaimsCount: number;
   userCanClaim: boolean;
   isOpen?: boolean;
+  /** Server-side burn clock still running / ready to collect. */
+  pendingSession?: BurnPendingSession | null;
 }
 
 function formatDurationClock(totalSeconds: number): string {
@@ -235,6 +255,17 @@ function StatusBadge({ status }: { status: EventStatus }) {
 function EventCard({ event, onOpen }: { event: BurnEvent; onOpen: () => void }) {
   const { t, i18n } = useTranslation();
   const status = getEventStatus(event);
+  const pending = event.pendingSession ?? null;
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    if (!pending || pending.ready) return;
+    const id = window.setInterval(() => setNowMs(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [pending]);
+  const pendingRemainingMs = pending
+    ? Math.max(0, new Date(pending.completesAt).getTime() - nowMs)
+    : 0;
+  const pendingReady = Boolean(pending && (pending.ready || pendingRemainingMs <= 0));
   const stockLabel =
     event.stockTotal == null
       ? t('burnEvents.stock_unlimited')
@@ -243,7 +274,7 @@ function EventCard({ event, onOpen }: { event: BurnEvent; onOpen: () => void }) 
         });
   const img = resolveAssetUrl(event.rewardMiner.imageUrl || event.imageUrl);
   const range = formatDateRange(event.startsAt, event.endsAt, i18n.language || 'pt-BR');
-  const canOpen = status !== 'limit';
+  const canOpen = true;
   const burnMinutes =
     event.burnDurationSeconds != null && event.burnDurationSeconds > 0
       ? Math.max(1, Math.round(event.burnDurationSeconds / 60))
@@ -271,6 +302,20 @@ function EventCard({ event, onOpen }: { event: BurnEvent; onOpen: () => void }) 
         <div className="min-w-0 flex-1 space-y-3">
           <div className="flex flex-wrap items-center gap-2">
             <StatusBadge status={status} />
+            {pending ? (
+              <span
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[9px] font-black uppercase tracking-widest ${
+                  pendingReady
+                    ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-300'
+                    : 'border-orange-400/30 bg-orange-500/10 text-orange-300'
+                }`}
+              >
+                <Flame className="h-3 w-3" />
+                {pendingReady
+                  ? t('burnEvents.ready_title', { defaultValue: 'Queima pronta' })
+                  : `${t('burnEvents.burning_title')} ${formatDurationClock(pendingRemainingMs / 1000)}`}
+              </span>
+            ) : null}
             {range ? (
               <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-400">
                 <Calendar className="h-3.5 w-3.5 text-slate-500" />
@@ -311,7 +356,13 @@ function EventCard({ event, onOpen }: { event: BurnEvent; onOpen: () => void }) 
             ) : null}
           </div>
 
-          {status === 'limit' ? (
+          {pending ? (
+            <p className="text-[11px] font-black uppercase tracking-widest text-orange-400">
+              {pendingReady
+                ? t('burnEvents.enter_to_collect', { defaultValue: 'Entrar para coletar →' })
+                : t('burnEvents.enter_pending', { defaultValue: 'Queima no servidor — entrar →' })}
+            </p>
+          ) : status === 'limit' ? (
             <p className="flex items-center gap-1.5 text-[11px] font-bold text-amber-300/90">
               <Lock className="h-3.5 w-3.5" />
               {t('burnEvents.limit_reached', { limit: event.claimLimitPerUser })}
@@ -364,8 +415,17 @@ function EventDetail({
     sessionId: number;
     completesAtMs: number;
     durationSeconds: number;
-  } | null>(null);
+  } | null>(() => {
+    const p = event.pendingSession;
+    if (!p) return null;
+    return {
+      sessionId: p.sessionId,
+      completesAtMs: new Date(p.completesAt).getTime(),
+      durationSeconds: Math.max(0, p.burnDurationSeconds),
+    };
+  });
   const [burnNowMs, setBurnNowMs] = useState(() => Date.now());
+  const [sessionLoading, setSessionLoading] = useState(!event.pendingSession);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -376,11 +436,41 @@ function EventDetail({
       if (!res.data.ok) throw new Error(res.data.message);
       setMachines(res.data.machines ?? []);
     } catch (e) {
-      toast.error(resolveApiErrorMessage(e, t('burnEvents.load_machines_error')));
+      toast.error(resolveBurnApiError(e, t, t('burnEvents.load_machines_error')));
     } finally {
       setLoading(false);
     }
   }, [t]);
+
+  const loadPendingSession = useCallback(async () => {
+    setSessionLoading(true);
+    try {
+      const res = await api.get<{
+        ok: boolean;
+        session?: {
+          sessionId: number;
+          completesAt: string;
+          burnDurationSeconds: number;
+          ready: boolean;
+        } | null;
+      }>(`/burn-events/${event.id}/session`);
+      if (!res.data.ok) return;
+      const s = res.data.session;
+      if (!s) {
+        setBurning(null);
+        return;
+      }
+      setBurning({
+        sessionId: s.sessionId,
+        completesAtMs: new Date(s.completesAt).getTime(),
+        durationSeconds: Math.max(0, s.burnDurationSeconds),
+      });
+    } catch {
+      // Non-fatal — user can still start a new burn if none pending
+    } finally {
+      setSessionLoading(false);
+    }
+  }, [event.id]);
 
   const loadBalances = useCallback(async () => {
     setLoadingBalances(true);
@@ -402,12 +492,13 @@ function EventDetail({
   useEffect(() => {
     void load();
     void loadBalances();
-  }, [load, loadBalances]);
+    void loadPendingSession();
+  }, [load, loadBalances, loadPendingSession]);
 
   useEffect(() => {
     if (!burning) return;
     setBurnNowMs(Date.now());
-    const id = window.setInterval(() => setBurnNowMs(Date.now()), 250);
+    const id = window.setInterval(() => setBurnNowMs(Date.now()), 1000);
     return () => window.clearInterval(id);
   }, [burning]);
 
@@ -431,11 +522,7 @@ function EventDetail({
 
   const handleToggleMax = (group: BurnMachineGroup) => {
     setSelected((prev) =>
-      setGroupQuantity(
-        group,
-        prev,
-        group.selectedCount === group.availableCount ? 0 : group.availableCount,
-      ),
+      toggleMaxForRequirement(group, prev, machines, event.requiredHashRate),
     );
   };
 
@@ -494,21 +581,18 @@ function EventDetail({
         if (!res.data.ok) throw new Error(res.data.message);
         toast.success(t('burnEvents.claim_success', { miner: event.rewardMiner.name }));
         setBurning(null);
+        setSelected(new Set());
         void loadBalances();
+        void load();
         onClaimed();
       } catch (e) {
-        toast.error(resolveApiErrorMessage(e, t('burnEvents.claim_error')));
+        toast.error(resolveBurnApiError(e, t, t('burnEvents.claim_error')));
       } finally {
         setSubmitting(false);
       }
     },
-    [event.id, event.rewardMiner.name, onClaimed, loadBalances, t],
+    [event.id, event.rewardMiner.name, onClaimed, loadBalances, load, t],
   );
-
-  useEffect(() => {
-    if (!burning || !burnReady || submitting) return;
-    void finishClaim(burning.sessionId);
-  }, [burning, burnReady, submitting, finishClaim]);
 
   const submit = async () => {
     setSubmitting(true);
@@ -518,6 +602,7 @@ function EventDetail({
         sessionId?: number;
         completesAt?: string;
         burnDurationSeconds?: number;
+        feePaid?: { currency: string; amount: number };
         message?: string;
         code?: string;
       }>(`/burn-events/${event.id}/start`, {
@@ -532,14 +617,32 @@ function EventDetail({
         event.burnDurationSeconds ??
         Math.max(0, Math.round((new Date(res.data.completesAt).getTime() - Date.now()) / 1000));
       setConfirming(false);
+      setSelected(new Set());
       void loadBalances();
+      void load();
       setBurning({
         sessionId: res.data.sessionId,
         completesAtMs: new Date(res.data.completesAt).getTime(),
         durationSeconds: Math.max(0, durationSeconds),
       });
+      const feePaid = res.data.feePaid;
+      const feeLabel =
+        feePaid && feePaid.amount != null && feePaid.currency
+          ? `${feePaid.amount} ${feePaid.currency}`
+          : null;
+      toast.success(
+        feeLabel
+          ? t('burnEvents.start_success_fee', {
+              fee: feeLabel,
+              defaultValue: `Máquinas queimadas. Taxa debitada: ${feeLabel}. Pode sair — o prêmio vai para a caixa de entrada.`,
+            })
+          : t('burnEvents.start_success', {
+              defaultValue:
+                'Máquinas queimadas. Pode sair e voltar depois — o prêmio vai para a caixa de entrada.',
+            }),
+      );
     } catch (e) {
-      toast.error(resolveApiErrorMessage(e, t('burnEvents.start_error')));
+      toast.error(resolveBurnApiError(e, t, t('burnEvents.start_error')));
       setConfirming(false);
     } finally {
       setSubmitting(false);
@@ -613,6 +716,61 @@ function EventDetail({
         </div>
       </div>
 
+      {burning ? (
+        <div className="rounded-[1.75rem] border border-orange-500/25 bg-gradient-to-br from-orange-950/40 via-slate-950 to-slate-950 p-4 sm:p-5">
+          <div className="flex items-start gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-orange-500/20">
+              <Flame className={`h-5 w-5 text-orange-400 ${burnReady ? '' : 'animate-pulse'}`} />
+            </div>
+            <div className="min-w-0 flex-1 space-y-2">
+              <p className="text-sm font-black text-white">
+                {burnReady
+                  ? t('burnEvents.ready_title', { defaultValue: 'Queima pronta' })
+                  : t('burnEvents.burning_title')}
+              </p>
+              <p className="text-xs text-slate-400">
+                {burnReady
+                  ? t('burnEvents.ready_body', {
+                      defaultValue:
+                        'O processo no servidor terminou. Colete o prêmio — ele vai para a caixa de entrada.',
+                    })
+                  : t('burnEvents.burning_body_server', {
+                      defaultValue:
+                        'As máquinas já foram destruídas. A queima roda no servidor — pode sair e voltar depois para coletar.',
+                    })}
+              </p>
+              {!burnReady ? (
+                <div className="space-y-2 pt-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-400">{t('burnEvents.burning_wait')}</span>
+                    <span className="font-mono font-black text-orange-300">
+                      {formatDurationClock(burnRemainingMs / 1000)}
+                    </span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-slate-800">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-400 transition-all"
+                      style={{ width: `${burnProgressPct}%` }}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  disabled={submitting}
+                  onClick={() => void finishClaim(burning.sessionId)}
+                  className="mt-1 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-400 py-3 text-sm font-black text-white shadow-lg shadow-emerald-500/20 transition-all hover:brightness-110 disabled:opacity-50"
+                >
+                  {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Gift className="h-4 w-4" />}
+                  {t('burnEvents.collect_reward', { defaultValue: 'Coletar prêmio na caixa de entrada' })}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {!burning ? (
       <div className="sticky top-0 z-10 space-y-3 rounded-[1.75rem] border border-orange-500/20 bg-slate-950/95 p-4 shadow-lg shadow-black/40 backdrop-blur-md">
         <div className="flex items-center justify-between gap-3">
           <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
@@ -650,14 +808,16 @@ function EventDetail({
         <button
           type="button"
           onClick={() => setConfirming(true)}
-          disabled={!canClaim || submitting}
+          disabled={!canClaim || submitting || sessionLoading}
           className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-400 py-3.5 text-sm font-black text-white shadow-lg shadow-orange-500/20 transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
         >
           <Flame className="h-4 w-4" />
           {t('burnEvents.burn_and_claim', { count: selected.size })}
         </button>
       </div>
+      ) : null}
 
+      {!burning ? (
       <div>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-2">
@@ -719,54 +879,25 @@ function EventDetail({
           </div>
         ) : (
           <div className="space-y-2.5">
-            {machineGroups.map((group) => (
+            {machineGroups.map((group) => {
+              const otherHash = hashRateOutsideGroup(group, machines, selected);
+              const needed = countToMeetRequirement(group, event.requiredHashRate, otherHash);
+              const isFilledToRequirement =
+                group.selectedCount > 0 && group.selectedCount >= needed;
+              return (
               <BurnMachineGroupCard
                 key={group.groupKey}
                 group={group}
+                isFilledToRequirement={isFilledToRequirement}
                 onAdd={() => handleAdd(group)}
                 onRemove={() => handleRemove(group)}
                 onToggleMax={() => handleToggleMax(group)}
               />
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
-
-      {burning ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
-          <div className="relative w-full max-w-md overflow-hidden rounded-[2rem] border border-orange-500/30 bg-slate-950 p-6 shadow-2xl">
-            <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-orange-500/20 blur-3xl" />
-            <div className="relative space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-500/20">
-                  <Flame className="h-6 w-6 animate-pulse text-orange-400" />
-                </div>
-                <p className="text-lg font-black text-white">{t('burnEvents.burning_title')}</p>
-              </div>
-              <p className="text-sm text-slate-300">{t('burnEvents.burning_body')}</p>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-400">{t('burnEvents.burning_wait')}</span>
-                  <span className="font-mono font-black text-orange-300">
-                    {formatDurationClock(burnRemainingMs / 1000)}
-                  </span>
-                </div>
-                <div className="h-2.5 overflow-hidden rounded-full bg-slate-800">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-400 transition-all"
-                    style={{ width: `${burnProgressPct}%` }}
-                  />
-                </div>
-              </div>
-              {submitting || burnReady ? (
-                <div className="flex items-center justify-center gap-2 text-sm text-slate-400">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  {t('burnEvents.burning_finishing')}
-                </div>
-              ) : null}
-            </div>
-          </div>
-        </div>
       ) : null}
 
       {confirming && !burning ? (
@@ -813,7 +944,7 @@ function EventDetail({
                     <span className="mr-2 truncate text-slate-300">
                       <strong className="text-white">{g.selectedCount}x</strong> {g.minerName}{' '}
                       <span className="text-[10px] text-slate-500">
-                        ({g.location === 'RACK' ? t('burnEvents.loc_rack') : t('burnEvents.loc_inventory')})
+                        ({burnLocationLabel(g.location, t)})
                       </span>
                     </span>
                     <span className="shrink-0 font-mono font-bold text-slate-400">
@@ -861,7 +992,7 @@ function formatBurnEventsLoadError(
   e: unknown,
   t: (key: string, opts?: Record<string, unknown>) => string,
 ): string {
-  const base = resolveApiErrorMessage(e, t('burnEvents.load_error'));
+  const base = resolveBurnApiError(e, t, t('burnEvents.load_error'));
   if (!isAxiosError(e)) return base;
   const status = e.response?.status;
   const code =

@@ -57,7 +57,7 @@ function CreateForm({ miners, onCreated }: { miners: Miner[]; onCreated: () => v
   const [imageUrl, setImageUrl] = useState('');
   const [requiredHashRate, setRequiredHashRate] = useState<number>(100);
   const [rewardMinerId, setRewardMinerId] = useState<number | ''>('');
-  const [claimLimitPerUser, setClaimLimitPerUser] = useState<number>(1);
+  const [claimLimitPerUser, setClaimLimitPerUser] = useState<number>(10);
   const [stockTotal, setStockTotal] = useState<string>('');
   const [startsAt, setStartsAt] = useState('');
   const [endsAt, setEndsAt] = useState('');
@@ -81,7 +81,7 @@ function CreateForm({ miners, onCreated }: { miners: Miner[]; onCreated: () => v
       });
       setOpen(false);
       setTitle(''); setDescription(''); setImageUrl('');
-      setRequiredHashRate(100); setRewardMinerId(''); setClaimLimitPerUser(1);
+      setRequiredHashRate(100); setRewardMinerId(''); setClaimLimitPerUser(10);
       setStockTotal(''); setStartsAt(''); setEndsAt('');
       onCreated();
     } catch (e: unknown) {
@@ -164,22 +164,23 @@ function CreateForm({ miners, onCreated }: { miners: Miner[]; onCreated: () => v
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="block text-xs text-slate-400 mb-1.5">Limite por usuário</label>
+              <label className="block text-xs text-slate-400 mb-1.5">Limite de queimas por usuário</label>
               <input
                 type="number" min={1} value={claimLimitPerUser}
-                onChange={(e) => setClaimLimitPerUser(parseInt(e.target.value, 10) || 1)}
+                onChange={(e) => setClaimLimitPerUser(parseInt(e.target.value, 10) || 10)}
                 className="w-full rounded-xl border border-white/10 bg-slate-800/60 px-3 py-2 text-sm text-white focus:border-orange-500/50 focus:outline-none"
               />
-              <p className="text-[10px] text-slate-500 mt-1">Quantas vezes cada user pode resgatar.</p>
+              <p className="text-[10px] text-slate-500 mt-1">Quantas vezes CADA jogador pode completar a queima. Padrão: 10. Não é estoque global.</p>
             </div>
             <div>
-              <label className="block text-xs text-slate-400 mb-1.5">Estoque total (deixe vazio = ilimitado)</label>
+              <label className="block text-xs text-slate-400 mb-1.5">Estoque global (todas as contas)</label>
               <input
                 type="number" min={1} value={stockTotal}
                 onChange={(e) => setStockTotal(e.target.value)}
                 placeholder="ilimitado"
                 className="w-full rounded-xl border border-white/10 bg-slate-800/60 px-3 py-2 text-sm text-white focus:border-orange-500/50 focus:outline-none"
               />
+              <p className="text-[10px] text-slate-500 mt-1">Deixe vazio = ilimitado. NÃO use este campo como limite por jogador.</p>
             </div>
           </div>
 
@@ -218,11 +219,24 @@ function CreateForm({ miners, onCreated }: { miners: Miner[]; onCreated: () => v
 
 function EventRow({ event, onChanged }: { event: BurnEvent; onChanged: () => void }) {
   const [busy, setBusy] = useState(false);
+  const [claimLimit, setClaimLimit] = useState(String(event.claimLimitPerUser));
+  const [stock, setStock] = useState(event.stockTotal == null ? '' : String(event.stockTotal));
 
   const toggle = async () => {
     setBusy(true);
     try {
       await api.put(`/api/admin/burn-events/${event.id}`, { isActive: !event.isActive });
+      onChanged();
+    } finally { setBusy(false); }
+  };
+
+  const saveLimits = async () => {
+    setBusy(true);
+    try {
+      await api.put(`/api/admin/burn-events/${event.id}`, {
+        claimLimitPerUser: parseInt(claimLimit, 10) || 10,
+        stockTotal: stock.trim() === '' ? null : parseInt(stock, 10),
+      });
       onChanged();
     } finally { setBusy(false); }
   };
@@ -237,8 +251,8 @@ function EventRow({ event, onChanged }: { event: BurnEvent; onChanged: () => voi
   };
 
   const stockLabel = event.stockTotal == null
-    ? `${event.stockClaimed} reclamados (sem limite)`
-    : `${event.stockClaimed} / ${event.stockTotal}`;
+    ? `${event.stockClaimed} reclamados (estoque global ilimitado)`
+    : `${event.stockClaimed} / ${event.stockTotal} (estoque global)`;
 
   return (
     <div className="rounded-2xl border border-white/8 bg-slate-900/50 p-4 flex flex-wrap items-center gap-3">
@@ -257,21 +271,52 @@ function EventRow({ event, onChanged }: { event: BurnEvent; onChanged: () => voi
           {' → '}
           ganha <span className="text-emerald-400 font-bold">{event.rewardMiner.name}</span>
           {' · '}
-          limite {event.claimLimitPerUser}/user
+          {event.claimLimitPerUser} queimas/user
           {' · '}
-          estoque {stockLabel}
+          {stockLabel}
         </p>
+        <div className="mt-2 flex flex-wrap items-end gap-2">
+          <label className="text-[10px] text-slate-500">
+            Queimas / usuário
+            <input
+              type="number"
+              min={1}
+              value={claimLimit}
+              onChange={(e) => setClaimLimit(e.target.value)}
+              className="mt-0.5 w-24 rounded-lg border border-white/10 bg-slate-800/60 px-2 py-1 text-xs text-white"
+            />
+          </label>
+          <label className="text-[10px] text-slate-500">
+            Estoque global
+            <input
+              type="number"
+              min={1}
+              value={stock}
+              onChange={(e) => setStock(e.target.value)}
+              placeholder="ilimitado"
+              className="mt-0.5 w-24 rounded-lg border border-white/10 bg-slate-800/60 px-2 py-1 text-xs text-white placeholder:text-slate-600"
+            />
+          </label>
+          <button
+            type="button"
+            onClick={() => void saveLimits()}
+            disabled={busy}
+            className="rounded-lg border border-orange-500/30 bg-orange-500/10 px-2 py-1 text-[10px] font-bold text-orange-300 hover:bg-orange-500/20 disabled:opacity-50"
+          >
+            Salvar limites
+          </button>
+        </div>
       </div>
       <div className="flex items-center gap-1.5 text-xs text-slate-400">
         <Users className="h-3.5 w-3.5" />
         {event._count.claims}
       </div>
-      <button onClick={toggle} disabled={busy}
+      <button onClick={() => void toggle()} disabled={busy}
         title={event.isActive ? 'Pausar' : 'Ativar'}
         className={`p-2 rounded-xl transition-colors ${event.isActive ? 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-400' : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400'}`}>
         <Power className="h-3.5 w-3.5" />
       </button>
-      <button onClick={remove} disabled={busy}
+      <button onClick={() => void remove()} disabled={busy}
         className="p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors">
         <Trash2 className="h-3.5 w-3.5" />
       </button>
@@ -333,7 +378,13 @@ export default function AdminBurnEvents() {
         </div>
       ) : (
         <div className="space-y-2">
-          {events.map((e) => <EventRow key={e.id} event={e} onChanged={() => void load()} />)}
+          {events.map((e) => (
+            <EventRow
+              key={`${e.id}-${e.claimLimitPerUser}-${e.stockTotal ?? "inf"}`}
+              event={e}
+              onChanged={() => void load()}
+            />
+          ))}
         </div>
       )}
     </div>

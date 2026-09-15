@@ -2931,7 +2931,7 @@ model BurnEvent {
   imageUrl          String?   @map("image_url")
   requiredHashRate  Float     @map("required_hash_rate")
   rewardMinerId     Int       @map("reward_miner_id")
-  claimLimitPerUser Int       @default(1) @map("claim_limit_per_user")
+  claimLimitPerUser Int       @default(10) @map("claim_limit_per_user")
   stockTotal        Int?      @map("stock_total")
   stockClaimed      Int       @default(0) @map("stock_claimed")
   startsAt          DateTime? @map("starts_at")

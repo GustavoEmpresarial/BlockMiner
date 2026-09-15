@@ -166,6 +166,7 @@ const IDEMPOTENCY_PATH_MARKERS = [
   '/offer-events/purchase',
   '/offer-events/purchase-fan',
   '/offer-events/purchase-rack',
+  '/burn-events/',
   '/rooms/rack/install',
   '/rooms/rack/uninstall',
   '/rooms/rack/uninstall-batch',

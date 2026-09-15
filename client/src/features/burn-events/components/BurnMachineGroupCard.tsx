@@ -1,10 +1,12 @@
 import { useTranslation } from 'react-i18next';
 import { Minus, Plus, Zap } from 'lucide-react';
-import type { BurnMachineGroup } from '../lib/burnGroup.helpers';
+import { burnableLocationI18nKey, type BurnMachineGroup } from '../lib/burnGroup.helpers';
 import { MachineImage } from '../../machines/components/MachineImage';
 
 interface BurnMachineGroupCardProps {
   group: BurnMachineGroup;
+  /** True when Max already filled enough H/s for the burn requirement. */
+  isFilledToRequirement?: boolean;
   onAdd: () => void;
   onRemove: () => void;
   onToggleMax: () => void;
@@ -23,8 +25,16 @@ function formatHashRate(v: number): string {
   return `${Number(v).toLocaleString(undefined, { maximumFractionDigits: 2 })} H/s`;
 }
 
+function locationLabel(
+  location: string,
+  t: (key: string, opts?: Record<string, unknown>) => string,
+): string {
+  return t(burnableLocationI18nKey(location), { defaultValue: location });
+}
+
 export function BurnMachineGroupCard({
   group,
+  isFilledToRequirement = false,
   onAdd,
   onRemove,
   onToggleMax,
@@ -32,6 +42,7 @@ export function BurnMachineGroupCard({
   const { t } = useTranslation();
   const isSelected = group.selectedCount > 0;
   const isFullySelected = group.selectedCount === group.availableCount;
+  const showClearMax = isFilledToRequirement || isFullySelected;
   const img = resolveAssetUrl(group.imageUrl);
 
   return (
@@ -60,12 +71,12 @@ export function BurnMachineGroupCard({
             <p className="truncate text-sm font-black text-white">{group.minerName}</p>
             <span
               className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
-                group.location === 'RACK'
-                  ? 'border border-amber-500/30 bg-amber-500/10 text-amber-300'
+                group.location === 'WAREHOUSE'
+                  ? 'border border-sky-500/30 bg-sky-500/10 text-sky-300'
                   : 'border border-slate-700 bg-slate-800 text-slate-300'
               }`}
             >
-              {group.location === 'RACK' ? t('burnEvents.loc_rack') : t('burnEvents.loc_inventory')}
+              {locationLabel(group.location, t)}
             </span>
           </div>
 
@@ -122,12 +133,12 @@ export function BurnMachineGroupCard({
           type="button"
           onClick={onToggleMax}
           className={`rounded-xl border px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider transition-all active:scale-95 ${
-            isFullySelected
+            showClearMax
               ? 'border-orange-500/40 bg-orange-500/20 text-orange-300 hover:bg-orange-500/30'
               : 'border-white/10 bg-slate-900/60 text-slate-400 hover:border-white/20 hover:text-white'
           }`}
         >
-          {isFullySelected ? 'Limpar' : 'Max'}
+          {showClearMax ? 'Limpar' : 'Max'}
         </button>
       </div>
     </div>

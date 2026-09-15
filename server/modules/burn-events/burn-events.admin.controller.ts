@@ -1,17 +1,31 @@
 import type { Request, Response } from "express";
-import { logger } from "../../core/logger/index.js";
+import { reportError } from "../../core/errors/error-reporter.js";
 import { parseOptionalDate } from "./burn-events.helpers.js";
 import * as svc from "./burn-events.service.js";
 
-const log = logger.child("burn-events.admin");
+function sendAdminFailure(req: Request, res: Response, err: unknown, code: string, status = 400): void {
+  reportError({
+    code,
+    category: status >= 500 ? "DATABASE" : "BUSINESS",
+    severity: status >= 500 ? "ERROR" : "WARNING",
+    module: "burn-events.admin",
+    error: err,
+    req,
+  });
+  const message = err instanceof Error ? err.message : String(err);
+  res.status(status).json({
+    ok: false,
+    code,
+    message: status >= 500 ? "Admin burn-events request failed." : message,
+  });
+}
 
-export async function listAll(_req: Request, res: Response): Promise<void> {
+export async function listAll(req: Request, res: Response): Promise<void> {
   try {
     const events = await svc.adminListEvents();
     res.json({ ok: true, events });
   } catch (err) {
-    log.error("listAll", { error: String(err) });
-    res.status(500).json({ ok: false, message: String(err) });
+    sendAdminFailure(req, res, err, "BURN_EVENTS_ADMIN_LIST_FAILED", 500);
   }
 }
 
@@ -24,22 +38,22 @@ export async function create(req: Request, res: Response): Promise<void> {
       imageUrl: b.imageUrl != null ? String(b.imageUrl) : null,
       requiredHashRate: Number(b.requiredHashRate),
       rewardMinerId: Number(b.rewardMinerId),
-      claimLimitPerUser: b.claimLimitPerUser != null ? Number(b.claimLimitPerUser) : 1,
-      stockTotal: b.stockTotal != null && b.stockTotal !== "" ? Number(b.stockTotal) : null,
+      claimLimitPerUser: b.claimLimitPerUser != null ? Number(b.claimLimitPerUser) : undefined,
+      stockTotal: b.stockTotal === undefined ? undefined : b.stockTotal == null ? null : Number(b.stockTotal),
       startsAt: parseOptionalDate(b.startsAt),
       endsAt: parseOptionalDate(b.endsAt),
       isActive: b.isActive !== false,
     });
     res.json({ ok: true, event });
   } catch (err) {
-    res.status(400).json({ ok: false, message: err instanceof Error ? err.message : String(err) });
+    sendAdminFailure(req, res, err, "BURN_EVENTS_ADMIN_CREATE_FAILED");
   }
 }
 
 export async function update(req: Request, res: Response): Promise<void> {
-  const id = parseInt(String(req.params.id), 10);
-  if (!id) {
-    res.status(400).json({ ok: false, message: "Invalid id" });
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) {
+    res.status(400).json({ ok: false, code: "VALIDATION_ERROR", message: "Invalid id" });
     return;
   }
   const b = req.body as Record<string, unknown>;
@@ -60,36 +74,35 @@ export async function update(req: Request, res: Response): Promise<void> {
     const event = await svc.adminUpdateEvent(id, patch);
     res.json({ ok: true, event });
   } catch (err) {
-    res.status(400).json({ ok: false, message: err instanceof Error ? err.message : String(err) });
+    sendAdminFailure(req, res, err, "BURN_EVENTS_ADMIN_UPDATE_FAILED");
   }
 }
 
 export async function remove(req: Request, res: Response): Promise<void> {
-  const id = parseInt(String(req.params.id), 10);
-  if (!id) {
-    res.status(400).json({ ok: false, message: "Invalid id" });
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) {
+    res.status(400).json({ ok: false, code: "VALIDATION_ERROR", message: "Invalid id" });
     return;
   }
   try {
     await svc.adminSoftDeleteEvent(id);
     res.json({ ok: true });
   } catch (err) {
-    res.status(400).json({ ok: false, message: err instanceof Error ? err.message : String(err) });
+    sendAdminFailure(req, res, err, "BURN_EVENTS_ADMIN_DELETE_FAILED");
   }
 }
 
 export async function claims(req: Request, res: Response): Promise<void> {
-  const id = parseInt(String(req.params.id), 10);
-  const page = parseInt(String(req.query.page ?? "1"), 10);
-  if (!id) {
-    res.status(400).json({ ok: false, message: "Invalid id" });
+  const id = Number(req.params.id);
+  const page = Number(req.query.page ?? "1");
+  if (!Number.isInteger(id) || id <= 0) {
+    res.status(400).json({ ok: false, code: "VALIDATION_ERROR", message: "Invalid id" });
     return;
   }
   try {
-    const data = await svc.adminListClaims(id, page);
+    const data = await svc.adminListClaims(id, Number.isInteger(page) && page > 0 ? page : 1);
     res.json({ ok: true, ...data });
   } catch (err) {
-    log.error("claims", { error: String(err) });
-    res.status(500).json({ ok: false, message: String(err) });
+    sendAdminFailure(req, res, err, "BURN_EVENTS_ADMIN_CLAIMS_FAILED", 500);
   }
 }

@@ -27,6 +27,20 @@ test("event is open inside the window", () => {
   assert.equal(isEventCurrentlyOpen(base, now), true);
 });
 
+test("out-of-stock stays visible on hub but is not open for claim", () => {
+  const now = new Date("2026-09-20T12:00:00.000Z");
+  const soldOut = { ...base, stockClaimed: 10 };
+  assert.equal(isEventVisibleOnHub(soldOut, now), true);
+  assert.equal(isEventCurrentlyOpen(soldOut, now), false);
+});
+
+test("unlimited stock (null) never closes for stock reasons", () => {
+  const now = new Date("2026-09-20T12:00:00.000Z");
+  const unlimited = { ...base, stockTotal: null, stockClaimed: 999 };
+  assert.equal(isEventVisibleOnHub(unlimited, now), true);
+  assert.equal(isEventCurrentlyOpen(unlimited, now), true);
+});
+
 test("event disappears after endsAt", () => {
   const now = new Date("2026-11-01T00:00:00.000Z");
   assert.equal(isEventVisibleOnHub(base, now), false);

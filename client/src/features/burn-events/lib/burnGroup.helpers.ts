@@ -1,6 +1,20 @@
+/** Burnable locations: off-rack only (inventory + vault/warehouse). */
+export const BURNABLE_LOCATIONS = ['INVENTORY', 'WAREHOUSE'] as const;
+export type BurnableLocation = (typeof BURNABLE_LOCATIONS)[number];
+
+export function isBurnableLocation(location: string): location is BurnableLocation {
+  return (BURNABLE_LOCATIONS as readonly string[]).includes(location);
+}
+
+export function burnableLocationI18nKey(location: string): string {
+  if (location === 'WAREHOUSE') return 'burnEvents.loc_warehouse';
+  if (location === 'RACK') return 'burnEvents.loc_rack';
+  return 'burnEvents.loc_inventory';
+}
+
 export interface RawBurnableMachine {
   id: number;
-  location: 'INVENTORY' | 'RACK' | string;
+  location: BurnableLocation | 'RACK' | string;
   minerName: string;
   hashRate: number;
   slotSize: number;
@@ -12,7 +26,7 @@ export interface BurnMachineGroup {
   groupKey: string;
   minerName: string;
   hashRate: number;
-  location: 'INVENTORY' | 'RACK' | string;
+  location: BurnableLocation | 'RACK' | string;
   level: number;
   imageUrl: string | null;
   machineIds: number[];
@@ -22,7 +36,7 @@ export interface BurnMachineGroup {
 
 /**
  * Builds unique group key for identical machine models.
- * Groups by name, hashRate, location (rack vs inventory), level, and image.
+ * Groups by name, hashRate, location (inventory vs warehouse), level, and image.
  */
 export function buildGroupKey(m: RawBurnableMachine): string {
   return `${m.minerName}:::${m.hashRate}:::${m.location}:::${m.level}:::${m.imageUrl || ''}`;
@@ -31,7 +45,8 @@ export function buildGroupKey(m: RawBurnableMachine): string {
 /**
  * Groups machines of the same model/type and sorts them strictly from
  * LOWEST power to HIGHEST power (hashRate ASC).
- * Tie-breakers: INVENTORY before RACK, then minerName alphabetically.
+ * Tie-breakers: INVENTORY before WAREHOUSE, then minerName alphabetically.
+ * RACK (and other non-burnable locations) are excluded.
  */
 export function groupAndSortMachines(
   machines: RawBurnableMachine[],
@@ -40,6 +55,7 @@ export function groupAndSortMachines(
   const map = new Map<string, BurnMachineGroup>();
 
   for (const m of machines) {
+    if (!isBurnableLocation(m.location)) continue;
     const key = buildGroupKey(m);
     let group = map.get(key);
     if (!group) {
@@ -71,7 +87,7 @@ export function groupAndSortMachines(
     if (a.hashRate !== b.hashRate) {
       return a.hashRate - b.hashRate;
     }
-    // Prefer INVENTORY over RACK for convenience
+    // Prefer INVENTORY over WAREHOUSE for convenience
     if (a.location !== b.location) {
       return a.location === 'INVENTORY' ? -1 : 1;
     }
@@ -79,6 +95,58 @@ export function groupAndSortMachines(
   });
 
   return groups;
+}
+
+/**
+ * How many units from this group are needed (on top of hash already selected
+ * outside the group) to reach `requiredHashRate`. Caps at availableCount.
+ * May slightly overshoot when the last unit is larger than the remaining gap.
+ */
+export function countToMeetRequirement(
+  group: Pick<BurnMachineGroup, 'hashRate' | 'availableCount'>,
+  requiredHashRate: number,
+  otherSelectedHashRate: number,
+): number {
+  const remaining = Math.max(0, Number(requiredHashRate) - Number(otherSelectedHashRate));
+  const unit = Number(group.hashRate) || 0;
+  if (remaining <= 0 || unit <= 0 || group.availableCount <= 0) return 0;
+  const needed = Math.ceil(remaining / unit);
+  return Math.min(group.availableCount, needed);
+}
+
+/**
+ * Hash rate currently selected excluding machines that belong to `group`.
+ */
+export function hashRateOutsideGroup(
+  group: Pick<BurnMachineGroup, 'machineIds'>,
+  machines: RawBurnableMachine[],
+  currentSelected: Set<number>,
+): number {
+  const inGroup = new Set(group.machineIds);
+  let total = 0;
+  for (const m of machines) {
+    if (!currentSelected.has(m.id) || inGroup.has(m.id)) continue;
+    total += Number(m.hashRate) || 0;
+  }
+  return total;
+}
+
+/**
+ * Max toggle target for a group: fill just enough to meet the burn requirement
+ * (or clear if already at/above that fill for this group).
+ */
+export function toggleMaxForRequirement(
+  group: BurnMachineGroup,
+  currentSelected: Set<number>,
+  machines: RawBurnableMachine[],
+  requiredHashRate: number,
+): Set<number> {
+  const otherHash = hashRateOutsideGroup(group, machines, currentSelected);
+  const target = countToMeetRequirement(group, requiredHashRate, otherHash);
+  if (group.selectedCount > 0 && group.selectedCount >= target) {
+    return setGroupQuantity(group, currentSelected, 0);
+  }
+  return setGroupQuantity(group, currentSelected, target);
 }
 
 /**

@@ -6,4 +6,10 @@ export {
   normalizeMinerIds,
   parseOptionalDate,
 } from "./burn-events.helpers.js";
-export { BURN_EVENTS_ERROR } from "./burn-events.errors.js";
+export { BURN_EVENTS_ERROR, httpStatusForBurnCode, publicMessageForBurnCode } from "./burn-events.errors.js";
+export {
+  DEFAULT_BURN_CLAIM_LIMIT_PER_USER,
+  DEFAULT_BURN_STOCK_TOTAL,
+  normalizeClaimLimitPerUser,
+  normalizeStockTotal,
+} from "./burn-events.config.js";

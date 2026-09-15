@@ -40,7 +40,12 @@ test("getBurnFeeAmount retrieves expected amount per currency", () => {
   assert.equal(getBurnFeeAmount("BLK"), 0.001);
 });
 
-test("burn fee errors map to HTTP 400", () => {
+test("burn fee errors map to HTTP 400; conflicts map to 409; missing maps to 404", () => {
   assert.equal(httpStatusForBurnCode(BURN_EVENTS_ERROR.INVALID_FEE_CURRENCY), 400);
   assert.equal(httpStatusForBurnCode(BURN_EVENTS_ERROR.INSUFFICIENT_FEE_BALANCE), 400);
+  assert.equal(httpStatusForBurnCode(BURN_EVENTS_ERROR.CLAIM_LIMIT_REACHED), 409);
+  assert.equal(httpStatusForBurnCode(BURN_EVENTS_ERROR.BURN_ALREADY_PENDING), 409);
+  assert.equal(httpStatusForBurnCode(BURN_EVENTS_ERROR.OUT_OF_STOCK), 409);
+  assert.equal(httpStatusForBurnCode(BURN_EVENTS_ERROR.EVENT_NOT_FOUND), 404);
+  assert.equal(httpStatusForBurnCode(BURN_EVENTS_ERROR.BURN_DESTROY_INCOMPLETE), 500);
 });
