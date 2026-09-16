@@ -23,4 +23,8 @@ tmp-*.txt
 # Relatórios de auditoria/carga e dumps de log gerados na raiz (k6, kali,
 # payout reports). Não são artefato do projeto e sujavam o git status.
 *-report-*.txt
+# Output do tsc nunca volta pra dentro do fonte. Havia 204 .js compilados
+# versionados em server/, e o tsx do `npm run dev` carregava ELES em vez do .ts
+# irmão (Node resolve o arquivo real quando ele existe), rodando código velho.
+server/**/*.js
 client/.env
