@@ -17,10 +17,17 @@ const POLYGON_NUM = 137;
 
 function readWalletErrorMeta(e: unknown): { code?: string | number; message: string } {
   if (typeof e !== 'object' || e === null) return { message: '' };
-  const o = e as { code?: unknown; message?: unknown };
+  const o = e as { code?: unknown; message?: unknown; response?: { data?: unknown } };
+  // Prefer the API's own explanation (e.g. 409 WALLET_ALREADY_LINKED) over axios'
+  // "Request failed with status code 409", which tells the user nothing.
+  const data = o.response?.data;
+  const apiBody =
+    typeof data === 'object' && data !== null ? (data as { message?: unknown; code?: unknown }) : null;
+  const apiMessage = typeof apiBody?.message === 'string' ? apiBody.message : '';
+  const apiCode = typeof apiBody?.code === 'string' ? apiBody.code : undefined;
   return {
-    code: typeof o.code === 'string' || typeof o.code === 'number' ? o.code : undefined,
-    message: typeof o.message === 'string' ? o.message : '',
+    code: apiCode ?? (typeof o.code === 'string' || typeof o.code === 'number' ? o.code : undefined),
+    message: apiMessage || (typeof o.message === 'string' ? o.message : ''),
   };
 }
 

@@ -4,6 +4,7 @@ import type {
   InjectedWalletProviderInfo,
 } from './injectedWallet.types';
 import { INJECTED_WALLET_ERROR_CODES, InjectedWalletError } from './injectedWallet.errors';
+import { safeFlag, safeGet, safeGetFunction } from '../../../shared/utils/safeObjectAccess';
 
 export type { Eip1193Provider, InjectedWalletConnection, InjectedWalletProviderInfo } from './injectedWallet.types';
 export { InjectedWalletError, INJECTED_WALLET_ERROR_CODES } from './injectedWallet.errors';
@@ -25,17 +26,21 @@ type InjectedEthereum = Eip1193Provider & {
   _isTrust?: boolean;
 };
 
+/**
+ * Every read below goes through safeGet* : injected providers are often wrapped in a Proxy
+ * by an extension / in-app browser, and a trap that breaks the ES invariant makes even a
+ * plain `p.request` read throw. See shared/utils/safeObjectAccess.
+ */
 function isEip1193(p: unknown): p is Eip1193Provider {
-  return Boolean(p && typeof (p as { request?: unknown }).request === 'function');
+  return Boolean(p && safeGetFunction(p, 'request'));
 }
 
 export function isLikelyPasswordManagerProvider(p: unknown): boolean {
   if (!p || typeof p !== 'object') return true;
-  const o = p as Record<string, unknown>;
-  if (typeof o.request !== 'function') return true;
-  if (o.isBitwarden === true || o.isBitwardenWallet === true) return true;
-  if (o.isLastPass === true || o.is1Password === true) return true;
-  const ctor = String((o.constructor as { name?: string } | undefined)?.name || '').toLowerCase();
+  if (!safeGetFunction(p, 'request')) return true;
+  if (safeFlag(p, 'isBitwarden') || safeFlag(p, 'isBitwardenWallet')) return true;
+  if (safeFlag(p, 'isLastPass') || safeFlag(p, 'is1Password')) return true;
+  const ctor = String(safeGet(safeGet(p, 'constructor'), 'name') || '').toLowerCase();
   if (
     ctor.includes('bitwarden') ||
     ctor.includes('lastpass') ||
@@ -54,11 +59,10 @@ function isPasswordManagerRdns(rdns: unknown): boolean {
 }
 
 function providerLabel(p: Eip1193Provider, fallback: string): string {
-  const o = p as InjectedEthereum;
-  if (o.isRabby) return 'Rabby';
-  if (o.isMetaMask) return 'MetaMask';
-  if (o.isBraveWallet) return 'Brave Wallet';
-  if (o.isCoinbaseWallet) return 'Coinbase Wallet';
+  if (safeFlag(p, 'isRabby')) return 'Rabby';
+  if (safeFlag(p, 'isMetaMask')) return 'MetaMask';
+  if (safeFlag(p, 'isBraveWallet')) return 'Brave Wallet';
+  if (safeFlag(p, 'isCoinbaseWallet')) return 'Coinbase Wallet';
   return fallback;
 }
 
@@ -67,12 +71,12 @@ export function rankInjectedProvider(provider: InjectedWalletProviderInfo): numb
   const rdns = provider.rdns?.toLowerCase() ?? '';
   const p = provider.provider;
 
-  if (p.isRabby === true || name.includes('rabby') || rdns.includes('rabby') || rdns === 'io.rabby') {
+  if (safeFlag(p, 'isRabby') || name.includes('rabby') || rdns.includes('rabby') || rdns === 'io.rabby') {
     return 100;
   }
-  if (p.isMetaMask === true || name.includes('metamask') || rdns.includes('metamask')) return 90;
-  if (p.isBraveWallet === true || name.includes('brave') || rdns.includes('brave')) return 80;
-  if (p.isCoinbaseWallet === true || name.includes('coinbase') || rdns.includes('coinbase')) return 70;
+  if (safeFlag(p, 'isMetaMask') || name.includes('metamask') || rdns.includes('metamask')) return 90;
+  if (safeFlag(p, 'isBraveWallet') || name.includes('brave') || rdns.includes('brave')) return 80;
+  if (safeFlag(p, 'isCoinbaseWallet') || name.includes('coinbase') || rdns.includes('coinbase')) return 70;
   if (name.includes('trust') || rdns.includes('trust')) return 60;
   return 10;
 }
@@ -94,11 +98,13 @@ export async function discoverEip6963Providers(timeoutMs = 500): Promise<Injecte
   const providers: InjectedWalletProviderInfo[] = [];
 
   const onAnnounce = (event: Event): void => {
-    const detail = (event as CustomEvent<unknown>).detail;
+    // Announced payloads come from third-party extensions — a throwing getter here would
+    // otherwise surface as an uncaught error inside the event dispatch.
+    const detail = safeGet(event, 'detail');
     if (typeof detail !== 'object' || detail === null) return;
 
-    const info = 'info' in detail ? (detail as { info?: unknown }).info : undefined;
-    const provider = 'provider' in detail ? (detail as { provider?: unknown }).provider : undefined;
+    const info = safeGet(detail, 'info');
+    const provider = safeGet(detail, 'provider');
     if (!isEip1193(provider) || isLikelyPasswordManagerProvider(provider)) return;
 
     const infoObj = typeof info === 'object' && info !== null ? (info as Record<string, unknown>) : {};
@@ -136,11 +142,6 @@ function collectWindowEthereumProviders(): InjectedWalletProviderInfo[] {
   if (typeof window === 'undefined') return [];
 
   const out: InjectedWalletProviderInfo[] = [];
-  const w = window as Window & {
-    ethereum?: InjectedEthereum;
-    trustwallet?: Eip1193Provider;
-    trustWallet?: Eip1193Provider;
-  };
 
   const pushProvider = (p: unknown, source: InjectedWalletProviderInfo['source'], idSuffix: string) => {
     if (!isEip1193(p) || isLikelyPasswordManagerProvider(p)) return;
@@ -152,11 +153,13 @@ function collectWindowEthereumProviders(): InjectedWalletProviderInfo[] {
     });
   };
 
-  if (w.trustwallet) pushProvider(w.trustwallet, 'window.ethereum', 'trust');
-  if (w.trustWallet) pushProvider(w.trustWallet, 'window.ethereum', 'trust-alt');
+  const trust = safeGet(window, 'trustwallet');
+  const trustAlt = safeGet(window, 'trustWallet');
+  if (trust) pushProvider(trust, 'window.ethereum', 'trust');
+  if (trustAlt) pushProvider(trustAlt, 'window.ethereum', 'trust-alt');
 
-  const eth = w.ethereum;
-  const multi = eth?.providers;
+  const eth = safeGet(window, 'ethereum') as InjectedEthereum | undefined;
+  const multi = safeGet(eth, 'providers');
   if (Array.isArray(multi) && multi.length > 0) {
     multi.forEach((p, index) => {
       if (!isEip1193(p) || isLikelyPasswordManagerProvider(p)) return;
@@ -175,9 +178,13 @@ function collectWindowEthereumProviders(): InjectedWalletProviderInfo[] {
 }
 
 export async function getInjectedWalletProviders(): Promise<InjectedWalletProviderInfo[]> {
-  const eip6963 = await discoverEip6963Providers(500);
-  const windowProviders = collectWindowEthereumProviders();
-  return dedupeProviders([...eip6963, ...windowProviders]);
+  try {
+    const eip6963 = await discoverEip6963Providers(500);
+    const windowProviders = collectWindowEthereumProviders();
+    return dedupeProviders([...eip6963, ...windowProviders]);
+  } catch {
+    return [];
+  }
 }
 
 export async function getPreferredInjectedWalletProvider(): Promise<InjectedWalletProviderInfo | null> {
@@ -347,7 +354,13 @@ export async function connectInjectedWallet(): Promise<InjectedWalletConnection>
 }
 
 export function collectInjectedWalletProvidersSync(): InjectedWalletProviderInfo[] {
-  return dedupeProviders(collectWindowEthereumProviders());
+  try {
+    return dedupeProviders(collectWindowEthereumProviders());
+  } catch {
+    // Last-resort guard: discovery is best-effort and runs on mount, it must never
+    // propagate into a React render/effect (root error boundary crash on /wallet).
+    return [];
+  }
 }
 
 export function hasInjectedWalletProvidersSync(): boolean {

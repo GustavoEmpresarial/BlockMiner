@@ -408,3 +408,73 @@ test("keeps generic Failed to fetch without WalletConnect stack", () => {
     false,
   );
 });
+
+// ── 15/09/2026 admin triage: what was actually in "Erros de cliente" ─────────────
+
+function crash(overrides = {}) {
+  return { ...apiFailure(overrides), category: "crash" };
+}
+
+test("drops browser/extension noise reported as a critical crash", () => {
+  // 8 of the 15 "critical" rows were this Chrome notification, with no stack at all.
+  assert.equal(
+    shouldDropClientError(
+      crash({
+        message: "ResizeObserver loop completed with undelivered notifications.",
+        url: "https://blockminer.space/dashboard",
+      }),
+      "Mozilla/5.0",
+    ),
+    true,
+  );
+  assert.equal(
+    shouldDropClientError(crash({ message: "The provider is disconnected from all chains." }), "Mozilla/5.0"),
+    true,
+  );
+  assert.equal(
+    shouldDropClientError(crash({ message: "Uncaught TypeError: Cannot redefine property: message" }), "Mozilla/5.0"),
+    true,
+  );
+});
+
+test("drops business rules the UI already explains (1554 of 1685 rows)", () => {
+  for (const code of [
+    "DAILY_LIMIT",
+    "ADJACENT_RACK_OCCUPIED",
+    "SESSION_NOT_ACTIVE",
+    "USER_ALREADY_EXISTS",
+    "EMAIL_PROVIDER_NOT_ALLOWED",
+    "NO_REWARDS",
+    "FAN_NEED_RACK",
+    "BURN_NOT_READY",
+    "SHORTLINK_NO_SESSION",
+    "WALLET_ALREADY_LINKED",
+  ]) {
+    assert.equal(
+      shouldDropClientError(apiFailure({ message: code, code, statusCode: 400 }), "Mozilla/5.0"),
+      true,
+      `expected ${code} to be dropped`,
+    );
+  }
+});
+
+test("keeps the real wallet-page crash and real 5xx", () => {
+  assert.equal(
+    shouldDropClientError(
+      crash({
+        message:
+          "'get' on proxy: property 'on' is a read-only and non-configurable data property on the proxy target",
+        url: "https://blockminer.space/wallet",
+      }),
+      "Mozilla/5.0",
+    ),
+    false,
+  );
+  assert.equal(
+    shouldDropClientError(
+      apiFailure({ message: "Erro ao obter estatísticas de indicações.", statusCode: 500 }),
+      "Mozilla/5.0",
+    ),
+    false,
+  );
+});

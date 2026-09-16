@@ -1,6 +1,6 @@
 /** Ported from legacy/server/modules/traffic/traffic.routes.ts (inline logic → service). */
 import { logger } from "../../core/logger/index.js";
-import { shouldDropClientError } from "./traffic.errors.js";
+import { isDuplicateClientErrorReport, shouldDropClientError } from "./traffic.errors.js";
 
 export { shouldDropClientError };
 import {
@@ -48,8 +48,13 @@ export async function reportClientError(args: ReportClientErrorArgs): Promise<Re
   if (shouldDropClientError(body, userAgent)) {
     return { dropped: true };
   }
+  if (isDuplicateClientErrorReport({ ...body, userId, ip }, Date.now())) {
+    return { dropped: true };
+  }
 
-  log.error(`[${action}]`, {
+  // Severity mirrors the stored row: an api_failure is a warning, a crash is an error.
+  const logAtLevel = category === "api_failure" ? log.warn.bind(log) : log.error.bind(log);
+  logAtLevel(`[${action}]`, {
     category,
     message,
     statusCode,

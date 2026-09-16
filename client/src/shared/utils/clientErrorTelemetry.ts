@@ -1,6 +1,6 @@
 /**
  * Client-side telemetry post + drop rules for /api/track/client-error.
- * Mirrors server/modules/traffic/traffic.errors.ts + collector-v4 (keep in sync).
+ * Mirrors server/modules/traffic/traffic.errors.ts + collector-v5 (keep in sync).
  * Uses fetch (not axios) so auth.store can install an interceptor without cycles.
  */
 
@@ -88,7 +88,30 @@ export const EXPECTED_CLIENT_UX_CODES = new Set([
   "IDEMPOTENT_REPLAY",
   "RACE_CONDITION_DETECTED",
   "BAD_PASSWORD",
+  // Observed flooding the admin panel (15/09/2026): every one of these is a rule the UI
+  // already explains to the user, not a defect.
+  "DAILY_LIMIT",
+  "ADJACENT_RACK_OCCUPIED",
+  "SESSION_NOT_ACTIVE",
+  "USER_ALREADY_EXISTS",
+  "EMAIL_PROVIDER_NOT_ALLOWED",
+  "NO_REWARDS",
+  "FAN_NEED_RACK",
+  "BURN_NOT_READY",
+  "SHORTLINK_NO_SESSION",
+  "WALLET_ALREADY_LINKED",
 ]);
+
+/**
+ * Browser/third-party noise that reaches window.onerror or unhandledrejection but is not a
+ * defect in this app:
+ * - "ResizeObserver loop …" is a spec-level notification Chrome surfaces as an error event;
+ *   it has no stack and no user impact (was 8 of the 15 "critical" crashes).
+ * - EIP-1193 disconnect + proxy-invariant TypeErrors come from injected wallet providers.
+ * - "Cannot redefine property" comes from extensions patching built-ins.
+ */
+const THIRD_PARTY_NOISE_TEXT =
+  /ResizeObserver loop (limit exceeded|completed with undelivered notifications)|provider is disconnected from all chains|Cannot redefine property|Extension context invalidated/i;
 
 const EXPECTED_BUSINESS_RULE_TEXT =
   /insufficient|insuficiente|already (claimed|active|purchased)|cooldown|limit reached|limite|not eligible|sold out|esgotad|não tem ventiladores|nao tem ventiladores|não tem racks|nao tem racks|ventiladores disponíveis|racks disponíveis/i;
@@ -109,8 +132,6 @@ export type ClientTelemetryPayload = {
   /** Internal: API URL for drop/dedupe (not always sent to server). */
   _apiUrl?: string;
 };
-
-const recent = new Map<string, number>();
 
 function readCsrfHeader(): Record<string, string> {
   if (typeof document === "undefined") return {};
@@ -157,6 +178,7 @@ export function shouldDropClientTelemetry(payload: ClientTelemetryPayload): bool
   }
   // Opaque cross-origin window.onerror (Zerads / ad iframes) — no stack.
   if (/^Script error\.?$/i.test(msg.trim())) return true;
+  if (THIRD_PARTY_NOISE_TEXT.test(msg)) return true;
   // Axios transport failure with no HTTP status (deploy blip / offline).
   if (/^Network Error$/i.test(msg.trim()) && status == null) return true;
   if (/site em manuten|site.?maintenance|sistemas em manuten/i.test(msg)) return true;
@@ -195,17 +217,39 @@ export function shouldDropClientTelemetry(payload: ClientTelemetryPayload): bool
   return false;
 }
 
+/**
+ * The same HTTP failure is seen twice — once by the axios interceptor and once by the XHR
+ * patch in client-error-collector-v5.js — so `operation` is deliberately NOT part of the key
+ * for api_failure, and the window is shared with the collector via a window-level map.
+ * Without this every API error was stored twice (axios_post + xhr_post).
+ */
 function dedupeKey(payload: ClientTelemetryPayload): string {
-  return [
-    payload.category,
-    payload.operation,
-    payload.message,
-    payload.code,
-    payload.statusCode,
-    payload._apiUrl,
-  ]
-    .join("|")
-    .slice(0, 400);
+  const parts =
+    payload.category === "api_failure"
+      ? [payload.category, payload.message, payload.code, payload.statusCode, payload._apiUrl]
+      : [payload.category, payload.operation, payload.message, payload.code, payload.statusCode];
+  return parts.join("|").slice(0, 400);
+}
+
+type TelemetryWindow = Window & { __BM_CLIENT_ERROR_RECENT__?: Map<string, number> };
+
+const fallbackRecent = new Map<string, number>();
+
+function recentMap(): Map<string, number> {
+  if (typeof window === "undefined") return fallbackRecent;
+  const w = window as TelemetryWindow;
+  if (!(w.__BM_CLIENT_ERROR_RECENT__ instanceof Map)) {
+    w.__BM_CLIENT_ERROR_RECENT__ = new Map<string, number>();
+  }
+  return w.__BM_CLIENT_ERROR_RECENT__;
+}
+
+/** Bounded: the map lives on `window` for the whole SPA session. */
+function pruneRecent(recent: Map<string, number>, now: number): void {
+  if (recent.size <= 500) return;
+  for (const [key, ts] of recent) {
+    if (now - ts >= CLIENT_ERROR_TELEMETRY_DEDUPE_MS) recent.delete(key);
+  }
 }
 
 /** Best-effort POST. Never throws. */
@@ -214,9 +258,11 @@ export function postClientErrorTelemetry(payload: ClientTelemetryPayload): void 
     if (shouldDropClientTelemetry(payload)) return;
     const key = dedupeKey(payload);
     const now = Date.now();
+    const recent = recentMap();
     const prev = recent.get(key);
     if (prev != null && now - prev < CLIENT_ERROR_TELEMETRY_DEDUPE_MS) return;
     recent.set(key, now);
+    pruneRecent(recent, now);
 
     const category = payload.category === "api_failure" ? "api_failure" : "crash";
     const body: Record<string, unknown> = {

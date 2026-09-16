@@ -50,6 +50,11 @@ model User {
   bannedByAdminId Int?      @map("banned_by_admin_id")
   refCode         String?   @unique @map("ref_code")
   referredBy      Int?      @map("referred_by")
+  /// Unique per account, enforced by the partial functional index
+  /// `users_wallet_address_key` on lower(wallet_address) — see
+  /// prisma/migrations/20260915230000_user_wallet_address_unique. Prisma cannot express a
+  /// functional partial unique index, so `@unique` here would be wrong (it would ignore
+  /// case and index NULL/'' rows). A violation must surface as 409 WALLET_ALREADY_LINKED.
   walletAddress   String?   @map("wallet_address")
 
   // Balances

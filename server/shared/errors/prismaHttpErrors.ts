@@ -54,6 +54,53 @@ export function isPrismaSchemaMismatch(error: unknown): boolean {
   return /does not exist in the current database/i.test(unknownErrorMessage(error));
 }
 
+/** Any DB/infra failure the caller can retry — never the user's fault, never a 4xx. */
+export function isPrismaInfrastructureError(error: unknown): boolean {
+  return isPrismaConnectionError(error) || isPrismaSchemaMismatch(error) || isPrismaTransactionRuntimeError(error);
+}
+
+/**
+ * A raw Prisma failure message embeds the client call and the query
+ * ("Invalid `prisma.autoMiningV2PowerGrant.create()` invocation: ... Transaction API
+ * error ..."). Those reached end users verbatim through modules that answer with
+ * `err.message` (observed in admin "Erros de cliente" on 15/09/2026): internal schema
+ * disclosure, and meaningless to the user. Use this before echoing any error message.
+ */
+const PRISMA_INTERNALS_RE =
+  /Invalid `?prisma\.|invocation:|Transaction API error|prisma-client|PrismaClient|\bP\d{4}\b/i;
+
+export function looksLikeInternalErrorMessage(message: string): boolean {
+  return PRISMA_INTERNALS_RE.test(message);
+}
+
+/** The message safe to return to a client: the original, or `fallback` when it leaks internals. */
+export function safeClientErrorMessage(error: unknown, fallback: string): string {
+  const message = unknownErrorMessage(error).trim();
+  if (!message) return fallback;
+  if (looksLikeInternalErrorMessage(message)) return fallback;
+  if (message.length > 300) return fallback;
+  return message;
+}
+
+/** 503 + stable code for a retryable DB/infra failure, or null when it is not one. */
+export function classifyInfrastructureError(
+  error: unknown,
+): { status: 503; code: string; message: string } | null {
+  if (!isPrismaInfrastructureError(error)) return null;
+  if (isPrismaSchemaMismatch(error)) {
+    return {
+      status: 503,
+      code: "SCHEMA_OUT_OF_DATE",
+      message: "O banco de dados está desatualizado. Execute as migrations pendentes.",
+    };
+  }
+  return {
+    status: 503,
+    code: "SERVICE_BUSY",
+    message: "O servidor está sobrecarregado no momento. Tente novamente em alguns segundos.",
+  };
+}
+
 export type PrismaAwareErrorBody = {
   ok: false;
   code: string;

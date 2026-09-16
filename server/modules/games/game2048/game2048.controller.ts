@@ -10,6 +10,7 @@ import { gameFinishDenyMessage } from "../games.finish-messages.js";
 import { assertGameTurnstileForReward } from "../games.turnstile-gate.js";
 import prisma from "../../../core/database/prisma.js";
 import * as game2048Service from "./game2048.service.js";
+import { classifyInfrastructureError } from "../../../shared/errors/prismaHttpErrors.js";
 
 const log = logger.child("game2048.controller");
 const moveBodySchema = z
@@ -105,7 +106,14 @@ export async function postMove(req: Request, res: Response) {
     res.json({ ok: true, moved: r.moved, session: r.session });
   } catch (e) {
     log.error("postMove failed", { error: String(e) });
-    res.status(500).json({ ok: false, code: "error" });
+    const infra = classifyInfrastructureError(e);
+    if (infra) {
+      // Under settlement load this is a transaction timeout, not a broken move:
+      // 503 + retryable lets the client retry instead of losing the move as a 500.
+      res.status(infra.status).json({ ok: false, code: infra.code, message: infra.message, retryable: true });
+      return;
+    }
+    res.status(500).json({ ok: false, code: "GAME_MOVE_FAILED" });
   }
 }
 

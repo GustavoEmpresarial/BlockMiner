@@ -52,6 +52,14 @@ export async function postWalletLinkVerify(req, res) {
             res.status(400).json({ ok: false, message: "Wallet link challenge expired. Request a new one." });
             return;
         }
+        if (msg === WALLET_ERROR.ALREADY_LINKED || http === 409) {
+            res.status(409).json({
+                ok: false,
+                code: WALLET_ERROR.ALREADY_LINKED,
+                message: "Esta carteira já está vinculada a outra conta.",
+            });
+            return;
+        }
         if (msg === WALLET_ERROR.INVALID_ADDRESS || http === 400) {
             res.status(400).json({ ok: false, message: "Invalid wallet address." });
             return;
@@ -89,6 +97,14 @@ export async function postUpdateAddress(req, res) {
         const http = readHttpStatus(error);
         if (msg === WALLET_ERROR.INVALID_SIGNATURE || http === 401) {
             res.status(401).json({ ok: false, message: "Invalid wallet signature. Ownership not verified." });
+            return;
+        }
+        if (msg === WALLET_ERROR.ALREADY_LINKED || http === 409) {
+            res.status(409).json({
+                ok: false,
+                code: WALLET_ERROR.ALREADY_LINKED,
+                message: "Esta carteira já está vinculada a outra conta.",
+            });
             return;
         }
         logger.error("postUpdateAddress error", { error: msg });

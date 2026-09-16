@@ -5,6 +5,9 @@
  */
 import crypto from "node:crypto";
 import prisma from "../../../core/database/prisma.js";
+import { HttpStatusError } from "../../../shared/errors/httpStatusError.js";
+import { prismaErrorCode } from "../../../shared/errors/prismaHttpErrors.js";
+import { WALLET_ERROR } from "../wallet.errors.js";
 import { WALLET_LINK_CALLBACK_TYPE } from "./link.types.js";
 
 function linkChallengeHash(userId: number, addressLower: string): string {
@@ -17,7 +20,17 @@ export async function getUserWalletAddress(userId: number): Promise<string | nul
 }
 
 export async function saveUserWallet(userId: number, address: string): Promise<void> {
-  await prisma.user.update({ where: { id: userId }, data: { walletAddress: address } });
+  try {
+    await prisma.user.update({ where: { id: userId }, data: { walletAddress: address } });
+  } catch (error: unknown) {
+    // `lower(wallet_address)` is unique on purpose (one wallet = one account, anti
+    // multi-accounting). Signature ownership was already proven at this point, so this is a
+    // conflict to explain — not a 500. It leaked the raw Prisma message before.
+    if (prismaErrorCode(error) === "P2002") {
+      throw new HttpStatusError(409, WALLET_ERROR.ALREADY_LINKED, { code: WALLET_ERROR.ALREADY_LINKED });
+    }
+    throw error;
+  }
 }
 
 export async function removeUserWallet(userId: number): Promise<void> {

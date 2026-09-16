@@ -9,6 +9,10 @@ import * as userRepo from "./user.repository.js";
 import { getUserReferralStats } from "../referrals/index.js";
 import { isSmtpConfigured } from "../../shared/security/mailer.js";
 import { requireSessionUser } from "../../shared/errors/httpStatusError.js";
+import { logger } from "../../core/logger/index.js";
+import { classifyInfrastructureError } from "../../shared/errors/prismaHttpErrors.js";
+
+const log = logger.child("users.controller");
 function clientIp(req) {
     const xReal = req.headers["x-real-ip"];
     const xff = req.headers["x-forwarded-for"];
@@ -180,8 +184,16 @@ export async function getReferrals(req, res) {
         const referrals = await userRepo.listReferralsForUser(sessionUser.id);
         res.json({ ok: true, referrals });
     }
-    catch {
-        res.status(500).json({ ok: false, message: "Erro ao obter referidos." });
+    catch (err) {
+        // Was a bare `catch {}`: the 500 reached the admin panel with no server-side trace
+        // to correlate it with (15/09/2026). Never swallow the cause of a 5xx.
+        log.error("getReferrals failed", { userId: sessionUser.id, error: String(err) });
+        const infra = classifyInfrastructureError(err);
+        if (infra) {
+            res.status(infra.status).json({ ok: false, code: infra.code, message: infra.message, retryable: true });
+            return;
+        }
+        res.status(500).json({ ok: false, code: "REFERRALS_LIST_FAILED", message: "Erro ao obter referidos." });
     }
 }
 export async function getReferralStats(req, res) {
@@ -194,10 +206,20 @@ export async function getReferralStats(req, res) {
     }
     catch (err) {
         if (err instanceof Error && err.message === "user_not_found") {
-            res.status(404).json({ ok: false, message: "Usuário não encontrado." });
+            res.status(404).json({ ok: false, code: "USER_NOT_FOUND", message: "Usuário não encontrado." });
             return;
         }
-        res.status(500).json({ ok: false, message: "Erro ao obter estatísticas de indicações." });
+        log.error("getReferralStats failed", { userId: sessionUser.id, error: String(err) });
+        const infra = classifyInfrastructureError(err);
+        if (infra) {
+            res.status(infra.status).json({ ok: false, code: infra.code, message: infra.message, retryable: true });
+            return;
+        }
+        res.status(500).json({
+            ok: false,
+            code: "REFERRAL_STATS_FAILED",
+            message: "Erro ao obter estatísticas de indicações.",
+        });
     }
 }
 export async function linkReferral(req, res) {

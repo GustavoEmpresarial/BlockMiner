@@ -1,6 +1,10 @@
 /** Ported from legacy/server/modules/ptc/ptc.controller.ts (user-facing endpoints only — admin split into ptc.admin.controller.ts). */
 import type { Request, Response } from "express";
 import { requireSessionUser } from "../../shared/errors/httpStatusError.js";
+import {
+  classifyInfrastructureError,
+  safeClientErrorMessage,
+} from "../../shared/errors/prismaHttpErrors.js";
 import { logger } from "../../core/logger/index.js";
 import * as svc from "./ptc.service.js";
 import {
@@ -18,7 +22,22 @@ function err(res: Response, status: number, msg: string): void {
 }
 
 function errorMessage(e: unknown): string {
-  return e instanceof Error ? e.message : "Server error";
+  return safeClientErrorMessage(e, "Server error");
+}
+
+/**
+ * Service failures answered to the user. A DB/pool/transaction failure is answered 503
+ * (retryable) instead of 400 with the raw Prisma text — `prisma.ptpSession.update()`
+ * invocation dumps reached real users on 15/09/2026.
+ */
+function sendServiceError(res: Response, e: unknown): void {
+  const infra = classifyInfrastructureError(e);
+  if (infra) {
+    log.warn("ptc infrastructure error", { code: infra.code, error: String(e) });
+    res.status(infra.status).json({ ok: false, code: infra.code, message: infra.message, retryable: true });
+    return;
+  }
+  err(res, 400, errorMessage(e));
 }
 
 // ── Settings / tiers (public) ─────────────────────────────────────────────────
@@ -55,7 +74,7 @@ export async function createCampaign(req: Request, res: Response): Promise<void>
     await svc.createCampaign(user.id, parsed.data);
     res.json({ ok: true, message: "Campaign submitted for approval" });
   } catch (e: unknown) {
-    err(res, 400, errorMessage(e));
+    sendServiceError(res, e);
   }
 }
 
@@ -82,7 +101,7 @@ export async function editCampaign(req: Request, res: Response): Promise<void> {
     await svc.editCampaign(user.id, adId, parsed.data);
     res.json({ ok: true });
   } catch (e: unknown) {
-    err(res, 400, errorMessage(e));
+    sendServiceError(res, e);
   }
 }
 
@@ -97,7 +116,7 @@ export async function addViews(req: Request, res: Response): Promise<void> {
     await svc.addViews(user.id, adId, parsed.data.views);
     res.json({ ok: true });
   } catch (e: unknown) {
-    err(res, 400, errorMessage(e));
+    sendServiceError(res, e);
   }
 }
 
@@ -112,7 +131,7 @@ export async function removeViews(req: Request, res: Response): Promise<void> {
     await svc.removeViews(user.id, adId, parsed.data.views);
     res.json({ ok: true });
   } catch (e: unknown) {
-    err(res, 400, errorMessage(e));
+    sendServiceError(res, e);
   }
 }
 
@@ -166,7 +185,7 @@ export async function startSession(req: Request, res: Response): Promise<void> {
     const session = await svc.startSession(user.id, parsed.data.adId);
     res.json({ ok: true, session });
   } catch (e: unknown) {
-    err(res, 400, errorMessage(e));
+    sendServiceError(res, e);
   }
 }
 
@@ -178,7 +197,7 @@ export async function heartbeat(req: Request, res: Response): Promise<void> {
     const session = await svc.heartbeat(sessionId, user.id);
     res.json({ ok: true, status: session.status, accumulatedMs: session.accumulatedMs });
   } catch (e: unknown) {
-    err(res, 400, errorMessage(e));
+    sendServiceError(res, e);
   }
 }
 
@@ -190,7 +209,7 @@ export async function pauseSession(req: Request, res: Response): Promise<void> {
     const session = await svc.pauseSession(sessionId, user.id);
     res.json({ ok: true, status: session.status, accumulatedMs: session.accumulatedMs });
   } catch (e: unknown) {
-    err(res, 400, errorMessage(e));
+    sendServiceError(res, e);
   }
 }
 
@@ -204,7 +223,7 @@ export async function cancelSession(req: Request, res: Response): Promise<void> 
     await svc.cancelSession(sessionId, user.id, reason);
     res.json({ ok: true });
   } catch (e: unknown) {
-    err(res, 400, errorMessage(e));
+    sendServiceError(res, e);
   }
 }
 
@@ -216,6 +235,6 @@ export async function claimSession(req: Request, res: Response): Promise<void> {
     await svc.claimSession(sessionId, user.id);
     res.json({ ok: true, message: "Recompensa creditada!" });
   } catch (e: unknown) {
-    err(res, 400, errorMessage(e));
+    sendServiceError(res, e);
   }
 }

@@ -24,7 +24,7 @@ import {
   mergeSettlementBalanceDeltas,
   buildReferralEarningsRows,
 } from "./mining.referral-settlement.js";
-import { enqueueEarningsPolCreditedTx } from "../events/index.js";
+import { buildEarningsPolCreditedOutboxRow, enqueueOutboxManyTx } from "../events/index.js";
 
 const SETTLEMENT_WRITE_CHUNK_SIZE = 500;
 
@@ -237,6 +237,31 @@ export async function persistBlockRewards(payload: PersistBlockRewardsPayload): 
     REFERRAL_MINING_COMMISSION_RATE,
   ).sort((a, b) => a.referrerId - b.referrerId || a.referredId - b.referredId);
 
+  // Envelopes are pure CPU work — built before the transaction opens so the tx window
+  // only ever covers real DB writes.
+  const outboxRows = [
+    ...sortedRewards.map((r) =>
+      buildEarningsPolCreditedOutboxRow({
+        userId: r.userId,
+        source: "mining",
+        amountPol: Number(r.rewardAmount),
+        occurredAt: timestamp,
+        eventId: `mining:${blockNumber}:${r.userId}`,
+        ref: `block:${blockNumber}`,
+      }),
+    ),
+    ...referralEarningsRows.map((row) =>
+      buildEarningsPolCreditedOutboxRow({
+        userId: row.referrerId,
+        source: "referrals",
+        amountPol: Number(row.amount),
+        occurredAt: timestamp,
+        eventId: `referral:${blockNumber}:${row.referrerId}:${row.referredId}`,
+        ref: `block:${blockNumber}`,
+      }),
+    ),
+  ].filter((row): row is NonNullable<typeof row> => row !== null);
+
   let blockWasAlreadyPersisted = false;
   try {
     await prisma.$transaction(async (tx) => {
@@ -317,32 +342,11 @@ export async function persistBlockRewards(payload: PersistBlockRewardsPayload): 
         }
       }
 
-      // Kafka outbox: mining + referral POL credits (stats materializer).
-      for (const r of sortedRewards) {
-        if (Number(r.rewardAmount) > 0) {
-          await enqueueEarningsPolCreditedTx(tx, {
-            userId: r.userId,
-            source: "mining",
-            amountPol: Number(r.rewardAmount),
-            occurredAt: timestamp,
-            eventId: `mining:${blockNumber}:${r.userId}`,
-            ref: `block:${blockNumber}`,
-          });
-        }
-      }
-      for (const row of referralEarningsRows) {
-        const amt = Number(row.amount);
-        if (amt > 0) {
-          await enqueueEarningsPolCreditedTx(tx, {
-            userId: row.referrerId,
-            source: "referrals",
-            amountPol: amt,
-            occurredAt: timestamp,
-            eventId: `referral:${blockNumber}:${row.referrerId}:${row.referredId}`,
-            ref: `block:${blockNumber}`,
-          });
-        }
-      }
+      // Kafka outbox: mining + referral POL credits (stats materializer). Bulk-inserted,
+      // chunked like every other write above — one `create()` per miner used to add
+      // hundreds of round-trips here and was what pushed this transaction past its 15s
+      // budget (P2028 "expired transaction", 15/09/2026 block 24628 retried 12x).
+      await enqueueOutboxManyTx(tx, outboxRows, SETTLEMENT_WRITE_CHUNK_SIZE);
     });
   } catch (error: unknown) {
     if (!isDuplicateBlockError(error)) throw error;

@@ -38,7 +38,7 @@ npm test
 | Site maintenance gate / bypass hosts / 503 HTML\|JSON | `siteMaintenance.ts` | `tests/core/siteMaintenance.test.mjs` |
 | Client-error drop (captcha, CF, stalls, maintenance) | `traffic.errors.ts` | `tests/traffic/traffic.client-error-drop.test.mjs` |
 | Client-error body parse (`runtime`→`crash`) | `traffic.schemas.ts` | `tests/traffic/traffic.client-error-parse.test.mjs` |
-| SPA collector client-side drop (v4) | `client-error-collector-v4.js` | `tests/traffic/client-error-collector-drop.test.mjs` |
+| SPA collector client-side drop (v5) | `client-error-collector-v5.js` | `tests/traffic/client-error-collector-drop.test.mjs` |
 | Client telemetry drop (TS mirror) | `clientErrorTelemetry.ts` | `tests/core/clientErrorTelemetry.test.mjs` |
 | Axios failure context extraction | `extractApiFailureContext.ts` | `tests/core/extractApiFailureContext.test.mjs` |
 

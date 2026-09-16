@@ -1,8 +1,12 @@
 /**
- * BlockMiner client-error collector v4 — v3 plus:
- * - XMLHttpRequest wrap (covers axios /api failures without SPA rebuild)
- * - EXPECTED_CLIENT_UX_CODES + business-rule text drops (avoid admin flood)
- * - window.__BM_REPORT_CLIENT_CRASH__ / __BM_REPORT_API_FAILURE__ for React boundaries
+ * BlockMiner client-error collector v5 — v4 plus (15/09/2026):
+ * - dedupe window shared with clientErrorTelemetry.ts, keyed without `operation`, so one
+ *   HTTP failure is no longer stored twice (axios_post + xhr_post)
+ * - third-party/browser noise drops (ResizeObserver loop, EIP-1193 disconnect, extensions)
+ * - business codes observed flooding the admin panel (DAILY_LIMIT & co.)
+ *
+ * Renamed v4 -> v5 on purpose: /assets/ is served `immutable, 1y`, so a content-only change
+ * would never reach a returning browser.
  */
 (function () {
   "use strict";
@@ -68,8 +72,29 @@
     IDEMPOTENT_REPLAY: 1,
     RACE_CONDITION_DETECTED: 1,
     BAD_PASSWORD: 1,
+    // Business rules the UI already explains — they were flooding the admin panel.
+    DAILY_LIMIT: 1,
+    ADJACENT_RACK_OCCUPIED: 1,
+    SESSION_NOT_ACTIVE: 1,
+    USER_ALREADY_EXISTS: 1,
+    EMAIL_PROVIDER_NOT_ALLOWED: 1,
+    NO_REWARDS: 1,
+    FAN_NEED_RACK: 1,
+    BURN_NOT_READY: 1,
+    SHORTLINK_NO_SESSION: 1,
+    WALLET_ALREADY_LINKED: 1,
   };
-  var recent = Object.create(null);
+  /**
+   * Shared with clientErrorTelemetry.ts so the axios interceptor and the XHR patch below
+   * do not store the same failure twice (axios_post + xhr_post duplicates).
+   */
+  if (!(window.__BM_CLIENT_ERROR_RECENT__ instanceof Map)) {
+    window.__BM_CLIENT_ERROR_RECENT__ = new Map();
+  }
+  var recent = window.__BM_CLIENT_ERROR_RECENT__;
+  /** Third-party / browser noise — see THIRD_PARTY_NOISE_TEXT in clientErrorTelemetry.ts */
+  var THIRD_PARTY_NOISE_TEXT =
+    /ResizeObserver loop (limit exceeded|completed with undelivered notifications)|provider is disconnected from all chains|Cannot redefine property|Extension context invalidated/i;
   /** Keep in sync with CLIENT_ERROR_TELEMETRY_DEDUPE_MS in clientErrorTelemetry.ts */
   var DEDUPE_MS = 15000;
   var BUSINESS_RULE_TEXT =
@@ -119,6 +144,7 @@
     if (/human verification|captchaRequired|captcha (required|failed)|captcha.?disabled/i.test(msg)) {
       return true;
     }
+    if (THIRD_PARTY_NOISE_TEXT.test(msg)) return true;
     if (/site em manuten|site.?maintenance|sistemas em manuten/i.test(msg)) return true;
     if (/session invalid|not authenticated|login required/i.test(msg)) return true;
     if (/timeout of \d+ms exceeded/i.test(msg)) return true;
@@ -151,9 +177,13 @@
   }
 
   function dedupeKey(payload) {
-    return [payload.category, payload.operation, payload.message, payload.code, payload.statusCode, payload._apiUrl]
-      .join("|")
-      .slice(0, 400);
+    // `operation` is intentionally excluded for api_failure: the same HTTP failure is seen
+    // by both the axios interceptor (axios_*) and the XHR patch (xhr_*).
+    var parts =
+      payload.category === "api_failure"
+        ? [payload.category, payload.message, payload.code, payload.statusCode, payload._apiUrl]
+        : [payload.category, payload.operation, payload.message, payload.code, payload.statusCode];
+    return parts.join("|").slice(0, 400);
   }
 
   function post(payload) {
@@ -161,8 +191,15 @@
       if (shouldDrop(payload)) return;
       var key = dedupeKey(payload);
       var now = Date.now();
-      if (recent[key] && now - recent[key] < DEDUPE_MS) return;
-      recent[key] = now;
+      var prev = recent.get(key);
+      if (prev != null && now - prev < DEDUPE_MS) return;
+      recent.set(key, now);
+      // Bounded: the map lives on `window` for the whole session.
+      if (recent.size > 500) {
+        recent.forEach(function (ts, k) {
+          if (now - ts >= DEDUPE_MS) recent.delete(k);
+        });
+      }
 
       var rawCategory = payload.category || "crash";
       var category = rawCategory === "api_failure" ? "api_failure" : "crash";
@@ -308,13 +345,17 @@
                 var parsed = parseApiBody(text);
                 var message =
                   parsed.businessMsg || parsed.code || "Request failed with status code " + status;
+                var headerRequestId = null;
+                try {
+                  headerRequestId = res.headers && res.headers.get ? res.headers.get("x-request-id") : null;
+                } catch (e) {}
                 post({
                   category: "api_failure",
                   operation: "fetch_" + method.toLowerCase(),
                   message: message,
                   statusCode: status,
                   code: parsed.code,
-                  requestId: parsed.requestId,
+                  requestId: parsed.requestId || headerRequestId,
                   _apiUrl: url,
                   stack: JSON.stringify({
                     method: method,
@@ -363,13 +404,20 @@
               var method = String(xhr.__bmMethod || "GET").toUpperCase();
               var message =
                 parsed.businessMsg || parsed.code || "Request failed with status code " + status;
+              // The server sends correlation via the X-Request-Id response header, not the
+              // body. Reading it here keeps the trace even when this collector wins the
+              // dedupe race against the SPA's axios interceptor.
+              var headerRequestId = null;
+              try {
+                headerRequestId = xhr.getResponseHeader("x-request-id") || null;
+              } catch (e) {}
               post({
                 category: "api_failure",
                 operation: "xhr_" + method.toLowerCase(),
                 message: message,
                 statusCode: status,
                 code: parsed.code,
-                requestId: parsed.requestId,
+                requestId: parsed.requestId || headerRequestId,
                 _apiUrl: url,
                 stack: JSON.stringify({
                   method: method,

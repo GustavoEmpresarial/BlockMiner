@@ -39,6 +39,16 @@ export const CLIENT_ERROR_NOISE: RegExp[] = [
   /** Reown / WalletConnect explorer fetch failures (third-party API, not BM). */
   /fetchWallets(ByPage)?/i,
   /@walletconnect|WalletConnect|reown\.com|explorer-api\.walletconnect/i,
+  /**
+   * Browser/extension noise surfaced through window.onerror with no stack (15/09/2026):
+   * the ResizeObserver notification is spec-level and harmless, and it accounted for 8 of
+   * the 15 "critical" crashes in the admin panel.
+   */
+  /ResizeObserver loop (limit exceeded|completed with undelivered notifications)/i,
+  /Cannot redefine property/i,
+  /Extension context invalidated/i,
+  /** EIP-1193 provider teardown (wallet app closed the session) — not a BM defect. */
+  /provider is disconnected from all chains/i,
 ];
 
 /**
@@ -149,6 +159,17 @@ export const EXPECTED_CLIENT_UX_CODES = new Set([
   "IDEMPOTENT_REPLAY",
   "RACE_CONDITION_DETECTED",
   "BAD_PASSWORD",
+  /** Observed flooding admin "Erros de cliente" on 15/09/2026 (1554 of 1685 rows). */
+  "DAILY_LIMIT",
+  "ADJACENT_RACK_OCCUPIED",
+  "SESSION_NOT_ACTIVE",
+  "USER_ALREADY_EXISTS",
+  "EMAIL_PROVIDER_NOT_ALLOWED",
+  "NO_REWARDS",
+  "FAN_NEED_RACK",
+  "BURN_NOT_READY",
+  "SHORTLINK_NO_SESSION",
+  "WALLET_ALREADY_LINKED",
 ]);
 
 /**
@@ -294,4 +315,64 @@ export function shouldDropClientError(body: ClientErrorDropInput, userAgent: str
     return true;
   }
   return false;
+}
+
+// ---------------------------------------------------------------------------
+// Duplicate collapse
+// ---------------------------------------------------------------------------
+
+/**
+ * Server-side collapse window for the *same* failure reported twice.
+ *
+ * Both the axios interceptor (`axios_*`) and the XHR patch in the SPA collector (`xhr_*`)
+ * observe one HTTP failure, so every API error was stored twice: of the 1685 rows on
+ * 15/09/2026, ~842 were real. The client now shares a dedupe map, but browsers still on a
+ * cached bundle do not — this is the backstop.
+ *
+ * `operation` is deliberately excluded (that is exactly what differs between the two
+ * collectors). In-process only (single app container); losing it on restart costs at most
+ * one duplicate row.
+ */
+export const CLIENT_ERROR_DEDUPE_MS = 15_000;
+
+const recentClientErrors = new Map<string, number>();
+
+export type ClientErrorDedupeInput = {
+  category: string;
+  message: string;
+  url?: string | null;
+  statusCode?: number | null;
+  code?: string | null;
+  userId?: number | null;
+  ip?: string | null;
+};
+
+export function clientErrorDedupeKey(input: ClientErrorDedupeInput): string {
+  return [
+    input.userId ?? `ip:${input.ip ?? ""}`,
+    input.category,
+    input.statusCode ?? "",
+    input.code ?? "",
+    input.url ?? "",
+    String(input.message ?? "").slice(0, 200),
+  ].join("|");
+}
+
+export function isDuplicateClientErrorReport(input: ClientErrorDedupeInput, now: number): boolean {
+  const key = clientErrorDedupeKey(input);
+  const prev = recentClientErrors.get(key);
+  if (prev != null && now - prev < CLIENT_ERROR_DEDUPE_MS) return true;
+  recentClientErrors.set(key, now);
+  // Bounded: prune expired entries once the map grows past a sane ceiling.
+  if (recentClientErrors.size > 5_000) {
+    for (const [k, ts] of recentClientErrors) {
+      if (now - ts >= CLIENT_ERROR_DEDUPE_MS) recentClientErrors.delete(k);
+    }
+  }
+  return false;
+}
+
+/** Test-only: drops the in-process window so cases do not leak into each other. */
+export function resetClientErrorDedupeForTests(): void {
+  recentClientErrors.clear();
 }

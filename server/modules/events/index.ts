@@ -20,6 +20,8 @@ export {
 } from "./events.config.js";
 export {
   enqueueOutboxTx,
+  enqueueOutboxManyTx,
+  buildEarningsPolCreditedOutboxRow,
   enqueueEarningsPolCreditedTx,
   enqueueEarningsPolCreditedBestEffort,
   listUnpublishedOutbox,

@@ -167,3 +167,42 @@ test("legacy one-step verify rejects an invalid signature", async () => {
     /WALLET_INVALID_SIGNATURE/,
   );
 });
+
+test("a wallet already linked to another account is a 409 conflict, never a 500", async () => {
+  // Production 15/09/2026: the unique index on lower(wallet_address) raised P2002 out of
+  // saveUserWallet, the controller had no branch for it and answered
+  // 500 "Unable to verify wallet address." — a dead end for the user and an unexplained
+  // 5xx in the admin panel. The index is the anti multi-account guard and stays; what
+  // changes is that the conflict is now reported as one.
+  const owner = await makeUser();
+  const intruder = await makeUser();
+  const testWallet = Wallet.createRandom();
+
+  const first = await linkService.createWalletLinkChallengeForUser(owner.id, testWallet.address, 137);
+  await linkService.verifyAndLinkWalletForUser(
+    owner.id,
+    testWallet.address,
+    137,
+    await testWallet.signMessage(first.message),
+  );
+
+  const second = await linkService.createWalletLinkChallengeForUser(intruder.id, testWallet.address, 137);
+  const signature = await testWallet.signMessage(second.message);
+
+  await assert.rejects(
+    () => linkService.verifyAndLinkWalletForUser(intruder.id, testWallet.address, 137, signature),
+    (err) => {
+      assert.equal(err.http, 409, "must be a conflict, not a 500");
+      assert.equal(err.code, "WALLET_ALREADY_LINKED");
+      assert.ok(!/prisma/i.test(String(err.message)), "must not leak the Prisma invocation text");
+      return true;
+    },
+  );
+
+  // The first account keeps the wallet — the conflict must not steal or clear the link.
+  assert.equal(
+    (await linkRepo.getUserWalletAddress(owner.id))?.toLowerCase(),
+    testWallet.address.toLowerCase(),
+  );
+  assert.equal(await linkRepo.getUserWalletAddress(intruder.id), null);
+});

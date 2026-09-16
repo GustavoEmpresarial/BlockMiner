@@ -13,6 +13,10 @@
  */
 import type { Request, Response } from "express";
 import { requireSessionUser } from "../../shared/errors/httpStatusError.js";
+import {
+  classifyInfrastructureError,
+  safeClientErrorMessage,
+} from "../../shared/errors/prismaHttpErrors.js";
 import { logger } from "../../core/logger/index.js";
 import {
   assertFeatureTurnstile,
@@ -51,6 +55,19 @@ const BENIGN_CLAIM_CODES = new Set(["CLAIM_NOT_DUE", "PRESENCE_INSUFFICIENT", "P
 
 function sendError(res: Response, err: unknown, defaultStatus = 400) {
   const e = err as ServiceError & { retryAfterMs?: number; secondsShort?: number };
+  // A DB/pool/transaction failure is not a client error: it used to leave here as a 400
+  // carrying the raw Prisma message ("Invalid `prisma.autoMiningV2PowerGrant.create()`
+  // invocation ... Transaction API error"), which both leaked internals and told the UI
+  // the user had done something wrong.
+  const infra = classifyInfrastructureError(err);
+  if (infra) {
+    log.warn("auto-mining v2 infrastructure error", {
+      code: infra.code,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    res.status(infra.status).json({ ok: false, code: infra.code, message: infra.message, retryable: true });
+    return;
+  }
   const code = e.code || "SERVER_ERROR";
   if (BENIGN_CLAIM_CODES.has(code)) {
     res.json({
@@ -68,7 +85,7 @@ function sendError(res: Response, err: unknown, defaultStatus = 400) {
     : code === "CONCURRENT_CLAIM" ? 409
     : code === "INVALID_MODE"     ? 400
     : defaultStatus;
-  res.status(status).json({ ok: false, message: e.message || "Request failed", code });
+  res.status(status).json({ ok: false, message: safeClientErrorMessage(err, "Request failed"), code });
 }
 
 /** POST /v2/session/start */

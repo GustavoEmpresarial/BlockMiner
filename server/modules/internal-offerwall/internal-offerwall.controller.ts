@@ -6,6 +6,7 @@ import { logger } from "../../core/logger/index.js";
 import * as service from "./internal-offerwall.service.js";
 import { isInternalOfferwallEnabled } from "./internal-offerwall.config.js";
 import { attemptIdParamSchema, offerIdParamSchema } from "./internal-offerwall.schemas.js";
+import { classifyInfrastructureError } from "../../shared/errors/prismaHttpErrors.js";
 
 const log = logger.child("internal-offerwall.controller");
 
@@ -163,7 +164,12 @@ export async function postSubmit(req: Request, res: Response): Promise<void> {
     } catch (inner: unknown) {
       await cancelCriticalMutation(lease);
       log.error("postSubmit failed", { error: String(inner) });
-      res.status(500).json({ ok: false, message: "Failed to submit attempt." });
+      const infra = classifyInfrastructureError(inner);
+      if (infra) {
+        res.status(infra.status).json({ ok: false, code: infra.code, message: infra.message, retryable: true });
+        return;
+      }
+      res.status(500).json({ ok: false, code: "OFFERWALL_SUBMIT_FAILED", message: "Failed to submit attempt." });
     }
   } catch (error: unknown) {
     log.error("postSubmit fatal error", { error: String(error) });

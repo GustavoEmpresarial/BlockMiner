@@ -21,8 +21,10 @@ export function validateBody(schema) {
         const result = schema.safeParse(req.body ?? {});
         if (!result.success) {
             const errors = formatZodError(result.error);
-            const code = deriveCodeFromZodFirstMessage(errors[0]?.message);
-            res.status(400).json({ ok: false, message: "Invalid request data.", errors, ...(code ? { code } : {}) });
+            // Every rejection carries a stable code: without one these reached the admin
+            // error panel as an uncategorised 400 "Invalid request data." (15/09/2026).
+            const code = deriveCodeFromZodFirstMessage(errors[0]?.message) || "INVALID_BODY";
+            res.status(400).json({ ok: false, message: "Invalid request data.", errors, code });
             return;
         }
         req.body = result.data;
@@ -33,7 +35,7 @@ export function validateQuery(schema) {
     return (req, res, next) => {
         const result = schema.safeParse(req.query || {});
         if (!result.success) {
-            res.status(400).json({ ok: false, message: "Invalid query data.", errors: formatZodError(result.error) });
+            res.status(400).json({ ok: false, code: "INVALID_QUERY", message: "Invalid query data.", errors: formatZodError(result.error) });
             return;
         }
         req.query = result.data;
@@ -44,7 +46,7 @@ export function validateParams(schema) {
     return (req, res, next) => {
         const result = schema.safeParse(req.params || {});
         if (!result.success) {
-            res.status(400).json({ ok: false, message: "Invalid route parameters.", errors: formatZodError(result.error) });
+            res.status(400).json({ ok: false, code: "INVALID_PARAMS", message: "Invalid route parameters.", errors: formatZodError(result.error) });
             return;
         }
         req.params = result.data;
