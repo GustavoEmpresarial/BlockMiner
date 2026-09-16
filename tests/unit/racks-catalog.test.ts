@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  DEFAULT_RACK_MAX_BULK_QUANTITY,
   isRackPurchaseLiveAt,
   readRackOfferPrice,
   readRackShopPrice,
@@ -28,6 +29,7 @@ describe("racks catalog", () => {
     const payload = buildActiveRackOffersPayload(before);
     expect(payload?.isPurchaseLive).toBe(false);
     expect(payload?.items.length).toBeGreaterThan(0);
+    expect(payload?.maxBulkQuantity).toBe(DEFAULT_RACK_MAX_BULK_QUANTITY);
   });
 
   it("allows purchase on and after unlock date", () => {

@@ -26,21 +26,26 @@ import {
   XCircle,
   Zap,
 } from 'lucide-react';
-import { api } from '../../../shared/auth/auth.store';
 import ImageUploader from '../../../shared/components/ImageUploader';
 import type {
   AdminOfferEventDetail,
-  AdminOfferEventGetResponse,
   AdminOfferEventManageFormState,
   AdminOfferEventManageTab,
   AdminOfferEventMinerFormState,
   AdminOfferEventMinerRow,
-  AdminOfferEventMinersListResponse,
-  AdminOfferEventMutationResponse,
   AdminOfferEventPurchaseRow,
-  AdminOfferEventPurchasesListResponse,
 } from '../lib/admin.types';
 import { readAxiosResponseMessage } from '../lib/admin.api';
+import {
+  createAdminOfferEvent,
+  createAdminOfferEventMiner,
+  deleteAdminOfferEventMiner,
+  getAdminOfferEvent,
+  listAdminOfferEventMiners,
+  listAdminOfferEventPurchases,
+  updateAdminOfferEvent,
+  updateAdminOfferEventMiner,
+} from './adminOfferEvents.api';
 import { resolveThumb } from './offerEvents.helpers';
 
 /* ── constants ───────────────────────────────────────────────────────── */
@@ -477,7 +482,7 @@ export default function AdminOfferEventManage() {
     if (isNew) return;
     try {
       setLoading(true);
-      const res = await api.get<AdminOfferEventGetResponse>(`/admin/offer-events/${routeId}`);
+      const res = await getAdminOfferEvent(routeId);
       if (res.data.ok && res.data.event) {
         const e = res.data.event;
         setEventData(e);
@@ -501,7 +506,7 @@ export default function AdminOfferEventManage() {
   const loadMiners = useCallback(async () => {
     if (isNew) return;
     try {
-      const res = await api.get<AdminOfferEventMinersListResponse>(`/admin/offer-events/${routeId}/miners`);
+      const res = await listAdminOfferEventMiners(routeId);
       if (res.data.ok) setMiners(res.data.miners || []);
     } catch {
       toast.error('Erro ao carregar miners');
@@ -511,10 +516,7 @@ export default function AdminOfferEventManage() {
   const loadPurchases = useCallback(async () => {
     if (isNew) return;
     try {
-      const res = await api.get<AdminOfferEventPurchasesListResponse>(
-        `/admin/offer-events/${routeId}/purchases`,
-        { params: { pageSize: 200 } },
-      );
+      const res = await listAdminOfferEventPurchases(routeId);
       if (res.data.ok) {
         setPurchases(res.data.purchases || []);
         if ('stats' in res.data && res.data.stats) setPurchaseStats(res.data.stats);
@@ -544,13 +546,13 @@ export default function AdminOfferEventManage() {
         isActive: eventForm.isActive,
       };
       if (isNew) {
-        const res = await api.post<AdminOfferEventMutationResponse>('/admin/offer-events', payload);
+        const res = await createAdminOfferEvent(payload);
         if (res.data.ok && res.data.event?.id != null) {
           toast.success('Evento criado!');
           navigate(`/admin/offer-events/${res.data.event.id}?tab=miners`);
         }
       } else {
-        await api.put<AdminOfferEventMutationResponse>(`/admin/offer-events/${routeId}`, payload);
+        await updateAdminOfferEvent(routeId, payload);
         toast.success('Evento atualizado');
         void loadEvent();
       }
@@ -606,10 +608,10 @@ export default function AdminOfferEventManage() {
         claimLimitPerUser: Number(minerForm.claimLimitPerUser),
       };
       if (editingMinerId) {
-        await api.put(`/admin/offer-events/${routeId}/miners/${editingMinerId}`, payload);
+        await updateAdminOfferEventMiner(routeId, editingMinerId, payload);
         toast.success('Miner atualizado');
       } else {
-        await api.post(`/admin/offer-events/${routeId}/miners`, payload);
+        await createAdminOfferEventMiner(routeId, payload);
         toast.success('Miner criado');
       }
       setShowMinerForm(false);
@@ -624,7 +626,7 @@ export default function AdminOfferEventManage() {
   const removeMiner = async (minerId: number) => {
     if (!window.confirm('Remover este miner do evento?')) return;
     try {
-      await api.delete(`/admin/offer-events/${routeId}/miners/${minerId}`);
+      await deleteAdminOfferEventMiner(routeId, minerId);
       toast.success('Miner removido');
       void loadMiners();
     } catch {

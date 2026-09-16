@@ -47,7 +47,7 @@ vi.mock('./lib/offers.api', async (importOriginal) => {
   };
 });
 
-const { clearActiveOffersCache } = await import('./lib/offers.api');
+const { clearActiveOffersCache, writeActiveOffersCache } = await import('./lib/offers.api');
 const { default: OffersPage } = await import('./OffersPage');
 
 const i18n = i18next.createInstance();
@@ -195,9 +195,18 @@ describe('OffersPage', () => {
   });
 
   it('resposta não-ok preserva a tela em vez de apagar as ofertas', async () => {
+    writeActiveOffersCache({
+      events: [],
+      roomOffers: null,
+      fanOffers: { isLive: true, isPurchaseLive: true, title: 'Ofertas de Ventilador', items: [FAN] },
+      rackOffers: { isLive: true, isPurchaseLive: true, title: 'Ofertas de Rack', items: [RACK] },
+    });
     getActive.mockResolvedValue({ data: { ok: false } });
     renderPage();
+    expect(screen.getByText('Ofertas de Ventilador')).toBeInTheDocument();
+    expect(screen.getByText('Ofertas de Rack')).toBeInTheDocument();
     await waitFor(() => expect(getActive).toHaveBeenCalled());
-    expect(screen.queryByText('Ofertas de Ventilador')).not.toBeInTheDocument();
+    expect(screen.getByText('Ofertas de Ventilador')).toBeInTheDocument();
+    expect(screen.getByText('Ofertas de Rack')).toBeInTheDocument();
   });
 });

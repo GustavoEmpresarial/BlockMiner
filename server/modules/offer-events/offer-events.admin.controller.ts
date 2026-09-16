@@ -7,7 +7,15 @@ import { z } from "zod";
 import prisma from "../../core/database/prisma.js";
 import { logger } from "../../core/logger/index.js";
 import { toDecimalPrice } from "./offer-events.helpers.js";
-import { DEFAULT_OFFER_CURRENCY } from "./offer-events.config.js";
+import {
+  ADMIN_OFFER_EVENT_PURCHASES_PAGE_SIZE_DEFAULT,
+  ADMIN_OFFER_EVENT_PURCHASES_PAGE_SIZE_MAX,
+  ADMIN_OFFER_EVENT_PURCHASES_PAGE_SIZE_MIN,
+  ADMIN_OFFER_EVENTS_LIST_PAGE_SIZE_DEFAULT,
+  ADMIN_OFFER_EVENTS_LIST_PAGE_SIZE_MAX,
+  ADMIN_OFFER_EVENTS_LIST_PAGE_SIZE_MIN,
+  DEFAULT_OFFER_CURRENCY,
+} from "./offer-events.config.js";
 import * as repo from "./offer-events.repository.js";
 import {
   eventCreateSchema,
@@ -28,7 +36,10 @@ export async function adminListOfferEvents(req: Request, res: Response): Promise
       return;
     }
     const page = Math.max(1, q.data.page ?? 1);
-    const pageSize = Math.min(100, Math.max(5, q.data.pageSize ?? 20));
+    const pageSize = Math.min(
+      ADMIN_OFFER_EVENTS_LIST_PAGE_SIZE_MAX,
+      Math.max(ADMIN_OFFER_EVENTS_LIST_PAGE_SIZE_MIN, q.data.pageSize ?? ADMIN_OFFER_EVENTS_LIST_PAGE_SIZE_DEFAULT),
+    );
     const skip = (page - 1) * pageSize;
     const includeDeleted = q.data.includeDeleted === "1";
     const where = includeDeleted ? {} : { deletedAt: null };
@@ -400,7 +411,13 @@ export async function adminListEventPurchases(req: Request, res: Response): Prom
       return;
     }
     const page = Math.max(1, q.data.page ?? 1);
-    const pageSize = Math.min(200, Math.max(5, q.data.pageSize ?? 100));
+    const pageSize = Math.min(
+      ADMIN_OFFER_EVENT_PURCHASES_PAGE_SIZE_MAX,
+      Math.max(
+        ADMIN_OFFER_EVENT_PURCHASES_PAGE_SIZE_MIN,
+        q.data.pageSize ?? ADMIN_OFFER_EVENT_PURCHASES_PAGE_SIZE_DEFAULT,
+      ),
+    );
     const skip = (page - 1) * pageSize;
     const filterUserId = q.data.userId;
 

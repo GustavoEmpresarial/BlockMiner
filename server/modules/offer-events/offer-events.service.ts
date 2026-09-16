@@ -29,6 +29,7 @@ import { buildActiveRoomOffersPayload } from "../rooms/rooms.offers.js";
 import { buildActiveFanOffersPayload } from "../fans/index.js";
 import { buildActiveRackOffersPayload } from "../racks/index.js";
 import { countUnlockedRoomsForUser } from "../rooms/rooms.service.js";
+import { OFFER_EVENT_PURCHASE_MAX_QUANTITY } from "./offer-events.config.js";
 import * as repo from "./offer-events.repository.js";
 
 const log = logger.child("offer-events.service");
@@ -150,7 +151,7 @@ export async function purchaseEventMinerForUser(
   quantity = 1,
 ): Promise<PurchaseResult> {
   const now = new Date();
-  const qty = Math.max(1, Math.min(25, Math.floor(Number(quantity) || 1)));
+  const qty = Math.max(1, Math.min(OFFER_EVENT_PURCHASE_MAX_QUANTITY, Math.floor(Number(quantity) || 1)));
 
   try {
     const result = await prisma.$transaction(async (tx) => {

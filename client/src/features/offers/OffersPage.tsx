@@ -3,15 +3,14 @@ import { createPortal } from 'react-dom';
 import { toast } from 'sonner';
 import { useAuthStore } from '../../shared/auth/auth.store';
 import { Loader2, Zap, TrendingUp, CheckCircle2, AlertTriangle, X, Sparkles, Calendar, Clock, Minus, Plus, Package, DoorOpen, Wind, Boxes } from 'lucide-react';
-import { getActiveOfferEvents, postOfferEventPurchase, postOfferFanPurchase, postOfferRackPurchase, readActiveOffersCache, writeActiveOffersCache, clearActiveOffersCache } from './lib/offers.api';
-import type { OfferEventDTO, OfferEventMinerDTO, RoomOffersDTO, FanOffersDTO, FanOfferItemDTO, RackOffersDTO, RackOfferItemDTO } from './lib/offers.api';
+import { getActiveOfferEvents, postOfferEventPurchase, postOfferFanPurchase, postOfferRackPurchase, readActiveOffersCache, writeActiveOffersCache, clearActiveOffersCache, hasLiveRoomOffers, hasLiveGearOffers, OFFER_PURCHASE_MAX_QUANTITY, readGearMaxBulkQuantity, readOfferPurchaseError } from './lib/offers.api';
+import type { OfferEventDTO, OfferEventMinerDTO, RoomOffersDTO, FanOffersDTO, FanOfferItemDTO, RackOffersDTO } from './lib/offers.api';
 import { CoolingFanUnit } from '../inventory2/components/CoolingFanUnit';
 import { MiningRackShelf } from '../inventory2/components/MiningRackShelf';
 import { postBuyRoom } from '../machines/lib/machines.api';
 import { useGameStore } from '../shell/lib/game.store';
 import { formatHashrate, apiErrorMessage } from '../machines/lib/machines.shared';
 import { formatPrice } from '../../shared/utils/formatPrice';
-import { isAxiosError } from 'axios';
 import { useTranslation } from 'react-i18next';
 
 const OFFER_DATE_LOCALE = 'pt-BR';
@@ -35,14 +34,6 @@ function getEventState(now: Date, event: OfferEventDTO) {
     const startsAt = event?.startsAt ? new Date(event.startsAt) : null;
     if (!startsAt) return event?.isLive ? 'live' : 'upcoming';
     return startsAt.getTime() > now.getTime() ? 'upcoming' : event?.isLive ? 'live' : 'ended';
-}
-
-function hasLiveRoomOffers(roomOffers: RoomOffersDTO | null | undefined): boolean {
-    return Boolean(roomOffers?.isLive && (roomOffers.rooms?.length ?? 0) > 0);
-}
-
-function hasGearOffers(offers: FanOffersDTO | null | undefined): boolean {
-    return Boolean(offers?.isLive && (offers.items?.length ?? 0) > 0);
 }
 
 type GearKind = 'fan' | 'rack';
@@ -85,7 +76,7 @@ function GearOffersSection({ kind, offers, locale, buying, onBuy }: {
     onBuy: (kind: GearKind, item: FanOfferItemDTO) => void;
 }) {
     const { t } = useTranslation();
-    if (!hasGearOffers(offers)) return null;
+    if (!hasLiveGearOffers(offers)) return null;
     const style = GEAR[kind];
     const Art = style.Art;
     const Icon = style.Icon;
@@ -197,7 +188,7 @@ export default function OffersPage() {
     const [quantity, setQuantity] = useState(1);
     const [buying, setBuying] = useState(false);
     const [buyingRoom, setBuyingRoom] = useState(false);
-    const MAX_QTY = 25;
+    const MAX_QTY = OFFER_PURCHASE_MAX_QUANTITY;
     const now = new Date();
     const requestIdRef = useRef(0);
     const hasLoadedRef = useRef(cached != null);
@@ -294,16 +285,7 @@ export default function OffersPage() {
                 load();
             }
         } catch (err: unknown) {
-            const msg =
-                isAxiosError(err) &&
-                err.response?.data &&
-                typeof err.response.data === 'object' &&
-                err.response.data !== null &&
-                'message' in err.response.data &&
-                typeof (err.response.data as { message?: unknown }).message === 'string'
-                    ? (err.response.data as { message: string }).message
-                    : t('common.error');
-            toast.error(msg);
+            toast.error(readOfferPurchaseError(err, t('common.error'), t));
         } finally {
             setBuying(false);
         }
@@ -333,13 +315,16 @@ export default function OffersPage() {
                 load();
             }
         } catch (err: unknown) {
-            toast.error(apiErrorMessage(err, t('common.error')));
+            toast.error(readOfferPurchaseError(err, t('common.error'), t));
         } finally {
             setBuying(false);
         }
     };
 
     const GearArt = gearModal ? GEAR[gearModal.kind].Art : FanOfferArt;
+    const gearMaxQty = gearModal
+        ? readGearMaxBulkQuantity(gearModal.kind === 'fan' ? fanOffers : rackOffers)
+        : OFFER_PURCHASE_MAX_QUANTITY;
 
     if (loading) {
         return (
@@ -640,7 +625,7 @@ export default function OffersPage() {
                 </div>
             ))}
 
-            {events.length === 0 && !hasLiveRoomOffers(roomOffers) && !hasGearOffers(fanOffers) && !hasGearOffers(rackOffers) && (
+            {events.length === 0 && !hasLiveRoomOffers(roomOffers) && !hasLiveGearOffers(fanOffers) && !hasLiveGearOffers(rackOffers) && (
                 <div className="rounded-3xl border border-dashed border-gray-800 p-16 text-center text-gray-500">
                     {t('offers.empty')}
                 </div>
@@ -810,7 +795,7 @@ export default function OffersPage() {
                                         <Minus className="w-4 h-4" />
                                     </button>
                                     <span className="text-lg font-black text-white min-w-[2rem]">{quantity}</span>
-                                    <button type="button" disabled={buying || quantity >= MAX_QTY} onClick={() => setQuantity((q) => Math.min(MAX_QTY, q + 1))} className="p-2 rounded-xl border border-gray-700 text-gray-400 hover:text-white disabled:opacity-40">
+                                    <button type="button" disabled={buying || quantity >= gearMaxQty} onClick={() => setQuantity((q) => Math.min(gearMaxQty, q + 1))} className="p-2 rounded-xl border border-gray-700 text-gray-400 hover:text-white disabled:opacity-40">
                                         <Plus className="w-4 h-4" />
                                     </button>
                                 </div>

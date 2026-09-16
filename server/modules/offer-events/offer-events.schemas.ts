@@ -1,9 +1,32 @@
 import { z } from "zod";
+import {
+  ADMIN_OFFER_EVENT_PURCHASES_PAGE_SIZE_MAX,
+  ADMIN_OFFER_EVENT_PURCHASES_PAGE_SIZE_MIN,
+  ADMIN_OFFER_EVENTS_LIST_PAGE_SIZE_MAX,
+  ADMIN_OFFER_EVENTS_LIST_PAGE_SIZE_MIN,
+  OFFER_EVENT_PURCHASE_MAX_QUANTITY,
+} from "./offer-events.config.js";
 
 export const purchaseSchema = z
   .object({
     eventMinerId: z.coerce.number().int().positive(),
-    quantity: z.coerce.number().int().min(1).max(25).optional().default(1),
+    quantity: z.coerce.number().int().min(1).max(OFFER_EVENT_PURCHASE_MAX_QUANTITY).optional().default(1),
+  })
+  .strict();
+
+/** Shape only — env `FAN_MAX_BULK_QUANTITY` is enforced in the controller. */
+export const purchaseFanSchema = z
+  .object({
+    sku: z.string().trim().min(1).max(80),
+    quantity: z.coerce.number().int().min(1),
+  })
+  .strict();
+
+/** Shape only — env `RACK_MAX_BULK_QUANTITY` is enforced in the controller. */
+export const purchaseRackSchema = z
+  .object({
+    sku: z.string().trim().min(1).max(80),
+    quantity: z.coerce.number().int().min(1),
   })
   .strict();
 
@@ -60,7 +83,12 @@ export const minerUpdateSchema = z
 export const listEventsQuerySchema = z
   .object({
     page: z.coerce.number().int().min(1).optional(),
-    pageSize: z.coerce.number().int().min(5).max(100).optional(),
+    pageSize: z.coerce
+      .number()
+      .int()
+      .min(ADMIN_OFFER_EVENTS_LIST_PAGE_SIZE_MIN)
+      .max(ADMIN_OFFER_EVENTS_LIST_PAGE_SIZE_MAX)
+      .optional(),
     includeDeleted: z.enum(["0", "1"]).optional(),
   })
   .strict();
@@ -68,7 +96,12 @@ export const listEventsQuerySchema = z
 export const listPurchasesQuerySchema = z
   .object({
     page: z.coerce.number().int().min(1).optional(),
-    pageSize: z.coerce.number().int().min(5).max(200).optional(),
+    pageSize: z.coerce
+      .number()
+      .int()
+      .min(ADMIN_OFFER_EVENT_PURCHASES_PAGE_SIZE_MIN)
+      .max(ADMIN_OFFER_EVENT_PURCHASES_PAGE_SIZE_MAX)
+      .optional(),
     userId: z.coerce.number().int().min(1).optional(),
   })
   .strict();

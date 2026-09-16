@@ -4,6 +4,7 @@ import {
   readRackOfferDescription,
   readRackOfferEndsAt,
   readRackSalesAvailableAt,
+  readRackMaxBulkQuantity,
   readRackOfferTitle,
 } from "./racks.config.js";
 import { listRackCatalogForOffer, type RackCatalogItemPublic } from "./racks.catalog.js";
@@ -17,6 +18,8 @@ export type RackOffersPublic = {
   isLive: boolean;
   isPurchaseLive: boolean;
   currency: typeof RACK_CURRENCY;
+  /** Echo of `readRackMaxBulkQuantity()` — client stepper must not invent a second cap. */
+  maxBulkQuantity: number;
   items: RackCatalogItemPublic[];
 };
 
@@ -37,6 +40,7 @@ export function buildActiveRackOffersPayload(now: Date = new Date()): RackOffers
     isLive: true,
     isPurchaseLive: isRackPurchaseLiveAt(now),
     currency: RACK_CURRENCY,
+    maxBulkQuantity: readRackMaxBulkQuantity(),
     items,
   };
 }

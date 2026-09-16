@@ -5,6 +5,7 @@ import {
   readFanOfferDescription,
   readFanOfferEndsAt,
   readFanSalesAvailableAt,
+  readFanMaxBulkQuantity,
   readFanOfferTitle,
 } from "./fans.config.js";
 import { listFanCatalogForOffer, type FanCatalogItemPublic } from "./fans.catalog.js";
@@ -18,6 +19,8 @@ export type FanOffersPublic = {
   isLive: boolean;
   isPurchaseLive: boolean;
   currency: typeof FAN_CURRENCY;
+  /** Echo of `readFanMaxBulkQuantity()` — client stepper must not invent a second cap. */
+  maxBulkQuantity: number;
   items: FanCatalogItemPublic[];
 };
 
@@ -39,6 +42,7 @@ export function buildActiveFanOffersPayload(now: Date = new Date()): FanOffersPu
     isLive: true,
     isPurchaseLive: isFanPurchaseLiveAt(now),
     currency: FAN_CURRENCY,
+    maxBulkQuantity: readFanMaxBulkQuantity(),
     items,
   };
 }

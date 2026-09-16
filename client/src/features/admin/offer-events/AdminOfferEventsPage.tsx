@@ -17,10 +17,15 @@ import {
   Zap,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { api } from '../../../shared/auth/auth.store';
 import ImageUploader from '../../../shared/components/ImageUploader';
 import { readAxiosResponseMessage } from '../lib/admin.api';
 import type { AdminOfferEventListRow } from '../lib/admin.types';
+import {
+  createAdminOfferEvent,
+  deleteAdminOfferEvent,
+  listAdminOfferEvents,
+  updateAdminOfferEvent,
+} from './adminOfferEvents.api';
 import { resolveThumb } from './offerEvents.helpers';
 
 /* ── helpers ──────────────────────────────────────────────────────────── */
@@ -237,7 +242,7 @@ function CreateSlideOver({
         endsAt: new Date(form.endsAt).toISOString(),
         isActive: form.isActive,
       };
-      const res = await api.post<{ ok: boolean; event?: { id: number } }>('/admin/offer-events', payload);
+      const res = await createAdminOfferEvent(payload);
       if (res.data.ok && res.data.event?.id) {
         toast.success('Evento criado! Adicione os miners agora.');
         onCreated(res.data.event.id);
@@ -402,7 +407,7 @@ export default function AdminOfferEventsPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get<{ ok: boolean; events?: EventRow[] }>('/admin/offer-events');
+      const res = await listAdminOfferEvents();
       setRows(res.data.events ?? []);
     } catch (err) {
       toast.error(readAxiosResponseMessage(err) ?? 'Erro ao listar eventos');
@@ -419,7 +424,7 @@ export default function AdminOfferEventsPage() {
     const prev = rows;
     setRows((r) => r.map((e) => (e.id === id ? { ...e, isActive: active } : e)));
     try {
-      await api.put(`/admin/offer-events/${id}`, { isActive: active });
+      await updateAdminOfferEvent(id, { isActive: active });
       toast.success(active ? 'Evento ativado' : 'Evento desativado');
     } catch (err) {
       setRows(prev);
@@ -430,7 +435,7 @@ export default function AdminOfferEventsPage() {
   const handleDelete = async (id: number) => {
     if (!window.confirm('Deletar este evento? (soft delete — reversível via banco)')) return;
     try {
-      await api.delete(`/admin/offer-events/${id}`);
+      await deleteAdminOfferEvent(id);
       toast.success('Evento deletado');
       void load();
     } catch (err) {

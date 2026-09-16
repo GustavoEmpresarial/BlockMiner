@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  DEFAULT_FAN_MAX_BULK_QUANTITY,
   FANS_FEATURE_ENABLED_ENV_KEY,
   isFanPurchaseLiveAt,
   readFanOfferPrice,
@@ -51,5 +52,6 @@ describe("fans catalog", () => {
     expect(listFanCatalogForShop(on)[0]?.isPurchaseLive).toBe(true);
     const payload = buildActiveFanOffersPayload(on);
     expect(payload?.isPurchaseLive).toBe(true);
+    expect(payload?.maxBulkQuantity).toBe(DEFAULT_FAN_MAX_BULK_QUANTITY);
   });
 });

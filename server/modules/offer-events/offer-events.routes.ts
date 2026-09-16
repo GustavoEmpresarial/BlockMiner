@@ -5,7 +5,7 @@ import { requireCriticalIdempotency } from "../../core/http/middleware/idempoten
 import { validateBody } from "../../core/http/middleware/validate.js";
 import { getClientIp } from "../../shared/http/clientIp.js";
 import * as ctrl from "./offer-events.controller.js";
-import { purchaseSchema } from "./offer-events.schemas.js";
+import { purchaseFanSchema, purchaseRackSchema, purchaseSchema } from "./offer-events.schemas.js";
 
 export const offerEventsRouter = Router();
 
@@ -35,6 +35,7 @@ offerEventsRouter.post(
   "/purchase-fan",
   requireAuth,
   purchaseLimiter,
+  validateBody(purchaseFanSchema),
   requireCriticalIdempotency({ scope: "offer_event_purchase_fan" }),
   ctrl.purchaseFanOffer,
 );
@@ -42,6 +43,7 @@ offerEventsRouter.post(
   "/purchase-rack",
   requireAuth,
   purchaseLimiter,
+  validateBody(purchaseRackSchema),
   requireCriticalIdempotency({ scope: "offer_event_purchase_rack" }),
   ctrl.purchaseRackOffer,
 );

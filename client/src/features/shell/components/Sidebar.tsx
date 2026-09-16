@@ -12,6 +12,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { api, useAuthStore } from '../../../shared/auth/auth.store';
+import { getActiveOfferEvents, isActiveOffersPayloadLive } from '../../offers/lib/offers.api';
 import BrandLogo from '../../../shared/components/BrandLogo';
 import { useGameStore } from '../lib/game.store';
 import { USER_DASHBOARD_NAV_FALLBACK } from '../nav/userDashboardNav.config';
@@ -160,11 +161,9 @@ export default function Sidebar({ mobileOpen: mobileOpenProp, onNavigate }: Side
 
     const pollOffers = async () => {
       try {
-        const res = await api.get('/offer-events/active');
+        const res = await getActiveOfferEvents();
         if (cancelled) return;
-        const events = Array.isArray(res.data?.events) ? res.data.events : [];
-        const rooms = res.data?.roomOffers?.rooms?.length ?? 0;
-        setOffersLive(events.length > 0 || !!(res.data?.roomOffers?.isLive && rooms > 0));
+        setOffersLive(isActiveOffersPayloadLive(res.data));
       } catch {
         /* ignore */
       }

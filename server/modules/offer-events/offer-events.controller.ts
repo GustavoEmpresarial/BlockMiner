@@ -7,6 +7,7 @@ import { logger } from "../../core/logger/index.js";
 import { readErrorCode, requireSessionUser } from "../../shared/errors/httpStatusError.js";
 import { purchaseFansForUser, FAN_ERROR_MESSAGE, readFanMaxBulkQuantity } from "../fans/index.js";
 import { purchaseRacksForUser, RACK_ERROR_MESSAGE, readRackMaxBulkQuantity } from "../racks/index.js";
+import { OFFER_EVENT_PURCHASE_MAX_QUANTITY } from "./offer-events.config.js";
 import * as svc from "./offer-events.service.js";
 
 const log = logger.child("offer-events.controller");
@@ -33,7 +34,10 @@ export async function purchaseOfferMiner(req: import("express").Request, res: im
       return;
     }
     const bodyQty = req.body?.quantity;
-    const quantity = Math.max(1, Math.min(25, parseInt(String(bodyQty ?? 1), 10) || 1));
+    const quantity = Math.max(
+      1,
+      Math.min(OFFER_EVENT_PURCHASE_MAX_QUANTITY, parseInt(String(bodyQty ?? 1), 10) || 1),
+    );
     const idem = await resolveCriticalMutation(req, res);
     if (!idem) return;
     const { lease, ci } = idem;
@@ -158,7 +162,7 @@ export async function purchaseFanOffer(req: import("express").Request, res: impo
     const quantity = Number(req.body?.quantity || 1);
     const maxBulk = readFanMaxBulkQuantity();
     if (!sku) {
-      res.status(400).json({ ok: false, message: "Invalid fan product." });
+      res.status(400).json({ ok: false, code: "FAN_INVALID_SKU", message: "Invalid fan product." });
       return;
     }
     if (!Number.isInteger(quantity) || quantity < 1 || quantity > maxBulk) {
@@ -211,7 +215,7 @@ export async function purchaseRackOffer(req: import("express").Request, res: imp
     const quantity = Number(req.body?.quantity || 1);
     const maxBulk = readRackMaxBulkQuantity();
     if (!sku) {
-      res.status(400).json({ ok: false, message: "Invalid rack product." });
+      res.status(400).json({ ok: false, code: "RACK_INVALID_SKU", message: "Invalid rack product." });
       return;
     }
     if (!Number.isInteger(quantity) || quantity < 1 || quantity > maxBulk) {
