@@ -45,4 +45,3 @@ offerEventsRouter.post(
   requireCriticalIdempotency({ scope: "offer_event_purchase_rack" }),
   ctrl.purchaseRackOffer,
 );
-offerEventsRouter.get("/:id", requireAuth, listLimiter, ctrl.getOfferEventDetail);

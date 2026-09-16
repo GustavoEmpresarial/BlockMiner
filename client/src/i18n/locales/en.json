@@ -3077,9 +3077,6 @@
     "video_error_embed": "This video has disabled embedding. Click \"Open on YouTube\" below the player."
   },
   "offers": {
-    "badge": "Limited time",
-    "title": "Popular Offers",
-    "subtitle": "Exclusive event miners. Pay with your in-game balance — items go to your inventory.",
     "empty": "No active offers right now. Check back soon.",
     "live": "Live",
     "coming_soon": "Coming soon",
@@ -3113,10 +3110,6 @@
     "room_unlock": "Unlock",
     "room_unlock_ok": "Room unlocked successfully!",
     "confirm_title": "Confirm purchase",
-    "miner": "Miner",
-    "price": "Price",
-    "hash": "Hashrate gain",
-    "confirm_note": "The amount will be debited from your balance. The miner appears in Inventory for installation.",
     "purchase_ok": "Purchase successful!",
     "ended": "Ended"
   },

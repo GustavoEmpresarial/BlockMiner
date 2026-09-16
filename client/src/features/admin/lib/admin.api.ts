@@ -183,25 +183,6 @@ export function fetchAdminServerMetrics() {
   return api.get('/admin/ops/server-metrics');
 }
 
-export const adminOfferEventsApi = {
-  list: () => api.get('/admin/offer-events'),
-  get: (id: number) => api.get(`/admin/offer-events/${id}`),
-  create: (body: unknown) => api.post('/admin/offer-events', body),
-  update: (id: number, body: unknown) => api.put(`/admin/offer-events/${id}`, body),
-  toggleActive: (id: number, isActive: boolean) =>
-    api.put(`/admin/offer-events/${id}`, { isActive }),
-  remove: (id: number) => api.delete(`/admin/offer-events/${id}`),
-  listMiners: (eventId: number) => api.get(`/admin/offer-events/${eventId}/miners`),
-  createMiner: (eventId: number, body: unknown) =>
-    api.post(`/admin/offer-events/${eventId}/miners`, body),
-  updateMiner: (eventId: number, minerId: number, body: unknown) =>
-    api.put(`/admin/offer-events/${eventId}/miners/${minerId}`, body),
-  removeMiner: (eventId: number, minerId: number) =>
-    api.delete(`/admin/offer-events/${eventId}/miners/${minerId}`),
-  listPurchases: (eventId: number, params?: { pageSize?: number; userId?: number }) =>
-    api.get(`/admin/offer-events/${eventId}/purchases`, { params }),
-};
-
 export const adminInternalOfferwallApi = {
   offers: () => api.get('/admin/internal-offerwall/offers'),
   attempts: (params?: { status?: string; offerId?: string; limit?: number }) =>

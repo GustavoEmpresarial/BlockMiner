@@ -23,24 +23,6 @@ export async function groupEventPurchaseClaimCounts(userId: number, eventMinerId
   });
 }
 
-export async function findOfferEventDetail(id: number, now: Date) {
-  return prisma.offerEvent.findFirst({
-    where: {
-      id,
-      deletedAt: null,
-      isActive: true,
-      startsAt: { lte: now },
-      endsAt: { gte: now },
-    },
-    include: {
-      miners: {
-        where: { isActive: true },
-        orderBy: { id: "asc" },
-      },
-    },
-  });
-}
-
 /** Ported from legacy offerEventsExpireCron.ts's deactivateExpiredOfferEvents. */
 export async function deactivateExpiredOfferEventsWhere(now: Date) {
   return prisma.offerEvent.updateMany({

@@ -3084,9 +3084,6 @@
     "video_error_embed": "Este vídeo bloqueou o embed. Clique em \"Abrir no YouTube\" abaixo do player."
   },
   "offers": {
-    "badge": "Tempo limitado",
-    "title": "Ofertas populares",
-    "subtitle": "Miners exclusivos de evento. Pague com o saldo do jogo — o equipamento vai para o inventário.",
     "empty": "Nenhuma oferta ativa no momento. Volte em breve.",
     "live": "Ao vivo",
     "coming_soon": "Em breve",
@@ -3120,10 +3117,6 @@
     "room_unlock": "Desbloquear",
     "room_unlock_ok": "Sala desbloqueada com sucesso!",
     "confirm_title": "Confirmar compra",
-    "miner": "Miner",
-    "price": "Preço",
-    "hash": "Ganho de hashrate",
-    "confirm_note": "O valor será debitado do seu saldo. O miner aparece no Inventário para instalação.",
     "purchase_ok": "Compra realizada!",
     "ended": "Encerrado"
   },

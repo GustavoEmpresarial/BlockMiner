@@ -23,27 +23,6 @@ export async function listActiveOfferEvents(req: import("express").Request, res:
   }
 }
 
-export async function getOfferEventDetail(req: import("express").Request, res: import("express").Response): Promise<void> {
-  try {
-    const user = requireSessionUser(req, res);
-    if (!user) return;
-    const id = Number(req.params.id);
-    if (!Number.isInteger(id) || id <= 0) {
-      res.status(400).json({ ok: false, message: "Invalid event id." });
-      return;
-    }
-    const data = await svc.getOfferEventDetail(id);
-    if (!data) {
-      res.status(404).json({ ok: false, message: "Event not found or not available." });
-      return;
-    }
-    res.json({ ok: true, ...data });
-  } catch (e) {
-    log.error("getOfferEventDetail", { error: String(e) });
-    res.status(500).json({ ok: false, message: "Unable to load event." });
-  }
-}
-
 export async function purchaseOfferMiner(req: import("express").Request, res: import("express").Response): Promise<void> {
   try {
     const user = requireSessionUser(req, res);

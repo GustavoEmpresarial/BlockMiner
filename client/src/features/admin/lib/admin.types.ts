@@ -657,16 +657,6 @@ export type AdminOfferEventListRow = {
   revenuePol?: number;
 };
 
-export type AdminOfferEventsListSuccess = {
-  ok: true;
-  page: number;
-  pageSize: number;
-  total: number;
-  events: AdminOfferEventListRow[];
-};
-
-export type AdminOfferEventsListResponse = AdminOfferEventsListSuccess | { ok: false; message?: string };
-
 /** Tabs on `/admin/offer-events/:id?tab=`. */
 export type AdminOfferEventManageTab = "event" | "miners" | "sales";
 

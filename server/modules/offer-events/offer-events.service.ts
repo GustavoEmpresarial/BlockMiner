@@ -140,16 +140,6 @@ export async function listActiveOfferEventsForUser(userId?: number) {
   };
 }
 
-export async function getOfferEventDetail(id: number) {
-  const now = new Date();
-  const event = await repo.findOfferEventDetail(id, now);
-  if (!event) return null;
-  return {
-    event: serializeEventPublic(event, now),
-    serverTime: now.toISOString(),
-  };
-}
-
 export type PurchaseResult =
   | { ok: true; message: string; balances: Record<string, number> }
   | { ok: false; code: string; message: string; status: number };
