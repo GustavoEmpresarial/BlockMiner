@@ -41,12 +41,142 @@ function hasLiveRoomOffers(roomOffers: RoomOffersDTO | null | undefined): boolea
     return Boolean(roomOffers?.isLive && (roomOffers.rooms?.length ?? 0) > 0);
 }
 
-function hasFanOffers(fanOffers: FanOffersDTO | null | undefined): boolean {
-    return Boolean(fanOffers?.isLive && (fanOffers.items?.length ?? 0) > 0);
+function hasGearOffers(offers: FanOffersDTO | null | undefined): boolean {
+    return Boolean(offers?.isLive && (offers.items?.length ?? 0) > 0);
 }
 
-function hasRackOffers(rackOffers: RackOffersDTO | null | undefined): boolean {
-    return Boolean(rackOffers?.isLive && (rackOffers.items?.length ?? 0) > 0);
+type GearKind = 'fan' | 'rack';
+
+/**
+ * Ventilador e rack são a MESMA oferta com outra arte — `RackOffersDTO` e
+ * `RackOfferItemDTO` já são aliases puros de fan (offers.api.ts). Antes daqui, as
+ * duas seções e os dois modais eram blocos copiados byte-a-byte, e trocar um pelo
+ * outro numa edição não quebrava nada visível.
+ *
+ * As classes ficam literais de propósito: o Tailwind não resolve nome de classe
+ * montado em runtime, então `border-${accent}-500/20` sairia sem estilo.
+ */
+const GEAR = {
+    fan: {
+        Art: FanOfferArt,
+        Icon: Wind,
+        badgeKey: 'shop.fan_badge',
+        purchase: postOfferFanPurchase,
+        card: 'bg-surface border border-cyan-500/20 hover:border-cyan-400/40 rounded-[2.5rem] p-8 shadow-xl transition-all duration-500 group relative overflow-hidden',
+        badge: 'px-3 py-1 rounded-full border bg-cyan-500/10 border-cyan-500/30 text-[9px] font-black uppercase tracking-widest text-cyan-300',
+        icon: 'w-5 h-5 text-cyan-400',
+    },
+    rack: {
+        Art: RackOfferArt,
+        Icon: Boxes,
+        badgeKey: 'shop.rack_badge',
+        purchase: postOfferRackPurchase,
+        card: 'bg-surface border border-amber-500/20 hover:border-amber-400/40 rounded-[2.5rem] p-8 shadow-xl transition-all duration-500 group relative overflow-hidden',
+        badge: 'px-3 py-1 rounded-full border bg-amber-500/10 border-amber-500/30 text-[9px] font-black uppercase tracking-widest text-amber-300',
+        icon: 'w-5 h-5 text-amber-400',
+    },
+} as const;
+
+function GearOffersSection({ kind, offers, locale, buying, onBuy }: {
+    kind: GearKind;
+    offers: FanOffersDTO | null;
+    locale: string;
+    buying: boolean;
+    onBuy: (kind: GearKind, item: FanOfferItemDTO) => void;
+}) {
+    const { t } = useTranslation();
+    if (!hasGearOffers(offers)) return null;
+    const style = GEAR[kind];
+    const Art = style.Art;
+    const Icon = style.Icon;
+    return (
+            <div className="space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-800">
+                    <div className="flex items-center gap-3">
+                        {offers?.isPurchaseLive ? (
+                            <span className="flex items-center gap-1.5 px-3 py-1 bg-green-500/10 border border-green-500/30 rounded-full text-[9px] font-black text-green-400 uppercase tracking-widest">
+                                <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
+                                {t('offers.live')}
+                            </span>
+                        ) : (
+                            <span className="flex items-center gap-1.5 px-3 py-1 bg-amber-500/10 border border-amber-500/30 rounded-full text-[9px] font-black text-amber-400 uppercase tracking-widest">
+                                <Clock className="w-3 h-3" />
+                                {t('offers.coming_soon')}
+                            </span>
+                        )}
+                        <h2 className="text-xl font-black text-white uppercase italic tracking-tight">{offers?.title}</h2>
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-3 text-xs text-gray-500">
+                        {offers?.salesAvailableAt && (
+                            <div className="flex items-center gap-1.5">
+                                <Calendar className="w-3.5 h-3.5 text-gray-600" />
+                                <span className="font-semibold">{t('shop.sales_opens_at')}:</span>
+                                <span>{fmtDate(offers.salesAvailableAt, locale)}</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+                {offers?.description && (
+                    <p className="text-sm text-gray-500 max-w-3xl">{offers.description}</p>
+                )}
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                    {(offers?.items || []).map((item) => {
+                        const purchaseLive = item.isPurchaseLive !== false && offers?.isPurchaseLive !== false;
+                        const discountPercent = item.listPrice > 0
+                            ? Math.round((1 - item.price / item.listPrice) * 100)
+                            : 0;
+                        return (
+                            <div
+                                key={item.sku}
+                                className={style.card}
+                            >
+                                <div className="relative z-10 space-y-6">
+                                    <div className="flex justify-between items-start">
+                                        <div className={style.badge}>
+                                            {discountPercent > 0
+                                                ? t('offers.room_offer_badge', { percent: discountPercent })
+                                                : t(style.badgeKey)}
+                                        </div>
+                                        <Icon className={style.icon} />
+                                    </div>
+                                    <div className="aspect-square bg-gray-900/50 rounded-3xl p-4 border border-gray-800 flex items-center justify-center overflow-hidden group-hover:scale-[1.02] transition-transform duration-500">
+                                        <Art />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <h3 className="text-xl font-black text-white">{t(item.nameKey)}</h3>
+                                        <p className="text-xs text-gray-500">{t(item.descriptionKey)}</p>
+                                    </div>
+                                    <div className="pt-4 border-t border-gray-800/50 flex items-center justify-between gap-4">
+                                        <div className="flex flex-col">
+                                            <span className="text-[9px] font-bold text-gray-600 uppercase tracking-widest">{t('shop.price')}</span>
+                                            <div className="flex items-baseline gap-2">
+                                                {item.listPrice > item.price && (
+                                                    <span className="text-sm font-bold text-gray-500 line-through">
+                                                        {formatPrice(item.listPrice)} {item.currency}
+                                                    </span>
+                                                )}
+                                                <span className="text-lg font-black text-white italic">
+                                                    {formatPrice(item.price)}{' '}
+                                                    <span className="text-xs font-bold text-gray-500 not-italic uppercase">{item.currency}</span>
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            disabled={!purchaseLive || buying}
+                                            onClick={() => onBuy(kind, item)}
+                                            className="px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-lg active:scale-95 disabled:opacity-40 bg-primary hover:bg-primary-hover text-white shadow-primary/20"
+                                        >
+                                            {purchaseLive ? t('offers.buy') : t('offers.coming_soon')}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+    );
 }
 
 export default function OffersPage() {
@@ -63,8 +193,7 @@ export default function OffersPage() {
     // Never blank the page on sidebar remount when we already have a successful cache.
     const [loading, setLoading] = useState(() => cached == null);
     const [modal, setModal] = useState<{ event: OfferEventDTO; miner: OfferEventMinerDTO } | null>(null);
-    const [fanModal, setFanModal] = useState<FanOfferItemDTO | null>(null);
-    const [rackModal, setRackModal] = useState<RackOfferItemDTO | null>(null);
+    const [gearModal, setGearModal] = useState<{ kind: GearKind; item: FanOfferItemDTO } | null>(null);
     const [quantity, setQuantity] = useState(1);
     const [buying, setBuying] = useState(false);
     const [buyingRoom, setBuyingRoom] = useState(false);
@@ -180,11 +309,17 @@ export default function OffersPage() {
         }
     };
 
-    const confirmFanBuy = async () => {
-        if (!fanModal || buying) return;
+    const openGearModal = (kind: GearKind, item: FanOfferItemDTO) => {
+        setQuantity(1);
+        setGearModal({ kind, item });
+    };
+
+    /** Fan e rack só diferem na função de API — antes eram dois handlers idênticos. */
+    const confirmGearBuy = async () => {
+        if (!gearModal || buying) return;
         try {
             setBuying(true);
-            const res = await postOfferFanPurchase({ sku: fanModal.sku, quantity });
+            const res = await GEAR[gearModal.kind].purchase({ sku: gearModal.item.sku, quantity });
             if (res.data.ok) {
                 const messageKey = res.data.messageKey;
                 const params = res.data.messageParams;
@@ -194,7 +329,7 @@ export default function OffersPage() {
                         : res.data.message || t('offers.purchase_ok'),
                 );
                 fetchAll();
-                setFanModal(null);
+                setGearModal(null);
                 load();
             }
         } catch (err: unknown) {
@@ -204,29 +339,7 @@ export default function OffersPage() {
         }
     };
 
-    const confirmRackBuy = async () => {
-        if (!rackModal || buying) return;
-        try {
-            setBuying(true);
-            const res = await postOfferRackPurchase({ sku: rackModal.sku, quantity });
-            if (res.data.ok) {
-                const messageKey = res.data.messageKey;
-                const params = res.data.messageParams;
-                toast.success(
-                    typeof messageKey === 'string' && messageKey
-                        ? t(messageKey, params as Record<string, unknown>)
-                        : res.data.message || t('offers.purchase_ok'),
-                );
-                fetchAll();
-                setRackModal(null);
-                load();
-            }
-        } catch (err: unknown) {
-            toast.error(apiErrorMessage(err, t('common.error')));
-        } finally {
-            setBuying(false);
-        }
-    };
+    const GearArt = gearModal ? GEAR[gearModal.kind].Art : FanOfferArt;
 
     if (loading) {
         return (
@@ -240,183 +353,9 @@ export default function OffersPage() {
     return (
         <div className="space-y-14 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-700">
 
-            {hasFanOffers(fanOffers) && (
-                <div className="space-y-6">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-800">
-                        <div className="flex items-center gap-3">
-                            {fanOffers?.isPurchaseLive ? (
-                                <span className="flex items-center gap-1.5 px-3 py-1 bg-green-500/10 border border-green-500/30 rounded-full text-[9px] font-black text-green-400 uppercase tracking-widest">
-                                    <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
-                                    {t('offers.live')}
-                                </span>
-                            ) : (
-                                <span className="flex items-center gap-1.5 px-3 py-1 bg-amber-500/10 border border-amber-500/30 rounded-full text-[9px] font-black text-amber-400 uppercase tracking-widest">
-                                    <Clock className="w-3 h-3" />
-                                    {t('offers.coming_soon')}
-                                </span>
-                            )}
-                            <h2 className="text-xl font-black text-white uppercase italic tracking-tight">{fanOffers?.title}</h2>
-                        </div>
-                        <div className="flex flex-col sm:flex-row gap-3 text-xs text-gray-500">
-                            {fanOffers?.salesAvailableAt && (
-                                <div className="flex items-center gap-1.5">
-                                    <Calendar className="w-3.5 h-3.5 text-gray-600" />
-                                    <span className="font-semibold">{t('shop.sales_opens_at')}:</span>
-                                    <span>{fmtDate(fanOffers.salesAvailableAt, offerDateLocale)}</span>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                    {fanOffers?.description && (
-                        <p className="text-sm text-gray-500 max-w-3xl">{fanOffers.description}</p>
-                    )}
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                        {(fanOffers?.items || []).map((item) => {
-                            const purchaseLive = item.isPurchaseLive !== false && fanOffers?.isPurchaseLive !== false;
-                            const discountPercent = item.listPrice > 0
-                                ? Math.round((1 - item.price / item.listPrice) * 100)
-                                : 0;
-                            return (
-                                <div
-                                    key={item.sku}
-                                    className="bg-surface border border-cyan-500/20 hover:border-cyan-400/40 rounded-[2.5rem] p-8 shadow-xl transition-all duration-500 group relative overflow-hidden"
-                                >
-                                    <div className="relative z-10 space-y-6">
-                                        <div className="flex justify-between items-start">
-                                            <div className="px-3 py-1 rounded-full border bg-cyan-500/10 border-cyan-500/30 text-[9px] font-black uppercase tracking-widest text-cyan-300">
-                                                {discountPercent > 0
-                                                    ? t('offers.room_offer_badge', { percent: discountPercent })
-                                                    : t('shop.fan_badge')}
-                                            </div>
-                                            <Wind className="w-5 h-5 text-cyan-400" />
-                                        </div>
-                                        <div className="aspect-square bg-gray-900/50 rounded-3xl p-4 border border-gray-800 flex items-center justify-center overflow-hidden group-hover:scale-[1.02] transition-transform duration-500">
-                                            <FanOfferArt />
-                                        </div>
-                                        <div className="space-y-1">
-                                            <h3 className="text-xl font-black text-white">{t(item.nameKey)}</h3>
-                                            <p className="text-xs text-gray-500">{t(item.descriptionKey)}</p>
-                                        </div>
-                                        <div className="pt-4 border-t border-gray-800/50 flex items-center justify-between gap-4">
-                                            <div className="flex flex-col">
-                                                <span className="text-[9px] font-bold text-gray-600 uppercase tracking-widest">{t('shop.price')}</span>
-                                                <div className="flex items-baseline gap-2">
-                                                    {item.listPrice > item.price && (
-                                                        <span className="text-sm font-bold text-gray-500 line-through">
-                                                            {formatPrice(item.listPrice)} {item.currency}
-                                                        </span>
-                                                    )}
-                                                    <span className="text-lg font-black text-white italic">
-                                                        {formatPrice(item.price)}{' '}
-                                                        <span className="text-xs font-bold text-gray-500 not-italic uppercase">{item.currency}</span>
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <button
-                                                type="button"
-                                                disabled={!purchaseLive || buying}
-                                                onClick={() => { setQuantity(1); setFanModal(item); }}
-                                                className="px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-lg active:scale-95 disabled:opacity-40 bg-primary hover:bg-primary-hover text-white shadow-primary/20"
-                                            >
-                                                {purchaseLive ? t('offers.buy') : t('offers.coming_soon')}
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
-            )}
+            <GearOffersSection kind="fan" offers={fanOffers} locale={offerDateLocale} buying={buying} onBuy={openGearModal} />
 
-            {hasRackOffers(rackOffers) && (
-                <div className="space-y-6">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-800">
-                        <div className="flex items-center gap-3">
-                            {rackOffers?.isPurchaseLive ? (
-                                <span className="flex items-center gap-1.5 px-3 py-1 bg-green-500/10 border border-green-500/30 rounded-full text-[9px] font-black text-green-400 uppercase tracking-widest">
-                                    <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
-                                    {t('offers.live')}
-                                </span>
-                            ) : (
-                                <span className="flex items-center gap-1.5 px-3 py-1 bg-amber-500/10 border border-amber-500/30 rounded-full text-[9px] font-black text-amber-400 uppercase tracking-widest">
-                                    <Clock className="w-3 h-3" />
-                                    {t('offers.coming_soon')}
-                                </span>
-                            )}
-                            <h2 className="text-xl font-black text-white uppercase italic tracking-tight">{rackOffers?.title}</h2>
-                        </div>
-                        <div className="flex flex-col sm:flex-row gap-3 text-xs text-gray-500">
-                            {rackOffers?.salesAvailableAt && (
-                                <div className="flex items-center gap-1.5">
-                                    <Calendar className="w-3.5 h-3.5 text-gray-600" />
-                                    <span className="font-semibold">{t('shop.sales_opens_at')}:</span>
-                                    <span>{fmtDate(rackOffers.salesAvailableAt, offerDateLocale)}</span>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                    {rackOffers?.description && (
-                        <p className="text-sm text-gray-500 max-w-3xl">{rackOffers.description}</p>
-                    )}
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                        {(rackOffers?.items || []).map((item) => {
-                            const purchaseLive = item.isPurchaseLive !== false && rackOffers?.isPurchaseLive !== false;
-                            const discountPercent = item.listPrice > 0
-                                ? Math.round((1 - item.price / item.listPrice) * 100)
-                                : 0;
-                            return (
-                                <div
-                                    key={item.sku}
-                                    className="bg-surface border border-amber-500/20 hover:border-amber-400/40 rounded-[2.5rem] p-8 shadow-xl transition-all duration-500 group relative overflow-hidden"
-                                >
-                                    <div className="relative z-10 space-y-6">
-                                        <div className="flex justify-between items-start">
-                                            <div className="px-3 py-1 rounded-full border bg-amber-500/10 border-amber-500/30 text-[9px] font-black uppercase tracking-widest text-amber-300">
-                                                {discountPercent > 0
-                                                    ? t('offers.room_offer_badge', { percent: discountPercent })
-                                                    : t('shop.rack_badge')}
-                                            </div>
-                                            <Boxes className="w-5 h-5 text-amber-400" />
-                                        </div>
-                                        <div className="aspect-square bg-gray-900/50 rounded-3xl p-4 border border-gray-800 flex items-center justify-center overflow-hidden group-hover:scale-[1.02] transition-transform duration-500">
-                                            <RackOfferArt />
-                                        </div>
-                                        <div className="space-y-1">
-                                            <h3 className="text-xl font-black text-white">{t(item.nameKey)}</h3>
-                                            <p className="text-xs text-gray-500">{t(item.descriptionKey)}</p>
-                                        </div>
-                                        <div className="pt-4 border-t border-gray-800/50 flex items-center justify-between gap-4">
-                                            <div className="flex flex-col">
-                                                <span className="text-[9px] font-bold text-gray-600 uppercase tracking-widest">{t('shop.price')}</span>
-                                                <div className="flex items-baseline gap-2">
-                                                    {item.listPrice > item.price && (
-                                                        <span className="text-sm font-bold text-gray-500 line-through">
-                                                            {formatPrice(item.listPrice)} {item.currency}
-                                                        </span>
-                                                    )}
-                                                    <span className="text-lg font-black text-white italic">
-                                                        {formatPrice(item.price)}{' '}
-                                                        <span className="text-xs font-bold text-gray-500 not-italic uppercase">{item.currency}</span>
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <button
-                                                type="button"
-                                                disabled={!purchaseLive || buying}
-                                                onClick={() => { setQuantity(1); setRackModal(item); }}
-                                                className="px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-lg active:scale-95 disabled:opacity-40 bg-primary hover:bg-primary-hover text-white shadow-primary/20"
-                                            >
-                                                {purchaseLive ? t('offers.buy') : t('offers.coming_soon')}
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
-            )}
+            <GearOffersSection kind="rack" offers={rackOffers} locale={offerDateLocale} buying={buying} onBuy={openGearModal} />
 
             {hasLiveRoomOffers(roomOffers) && (
                 <div className="space-y-6">
@@ -701,7 +640,7 @@ export default function OffersPage() {
                 </div>
             ))}
 
-            {events.length === 0 && !hasLiveRoomOffers(roomOffers) && !hasFanOffers(fanOffers) && !hasRackOffers(rackOffers) && (
+            {events.length === 0 && !hasLiveRoomOffers(roomOffers) && !hasGearOffers(fanOffers) && !hasGearOffers(rackOffers) && (
                 <div className="rounded-3xl border border-dashed border-gray-800 p-16 text-center text-gray-500">
                     {t('offers.empty')}
                 </div>
@@ -836,10 +775,10 @@ export default function OffersPage() {
                 document.body
             )}
 
-            {fanModal && createPortal(
+            {gearModal && createPortal(
                 <div
                     className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/80 backdrop-blur-md animate-in fade-in duration-300"
-                    onClick={() => { if (!buying) setFanModal(null); }}
+                    onClick={() => { if (!buying) setGearModal(null); }}
                 >
                     <div
                         className="bg-surface border border-gray-800 rounded-[3rem] w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 relative"
@@ -848,7 +787,7 @@ export default function OffersPage() {
                         <div className="absolute top-0 right-0 p-6 z-10">
                             <button
                                 type="button"
-                                onClick={() => setFanModal(null)}
+                                onClick={() => setGearModal(null)}
                                 disabled={buying}
                                 aria-label={t('common.cancel')}
                                 className="p-2 rounded-xl text-gray-400 hover:text-white hover:bg-gray-800 transition-colors disabled:opacity-40"
@@ -858,11 +797,11 @@ export default function OffersPage() {
                         </div>
                         <div className="p-10 text-center space-y-8">
                             <div className="aspect-square max-h-40 mx-auto bg-gray-900/50 rounded-3xl p-4 border border-gray-800 flex items-center justify-center overflow-hidden">
-                                <FanOfferArt />
+                                <GearArt />
                             </div>
                             <div className="space-y-2">
                                 <h3 className="text-2xl font-black text-white uppercase italic tracking-tighter">{t('offers.confirm_title')}</h3>
-                                <p className="text-gray-500 font-medium">{t(fanModal.nameKey)}</p>
+                                <p className="text-gray-500 font-medium">{t(gearModal.item.nameKey)}</p>
                             </div>
                             <div className="flex items-center justify-between bg-gray-900/50 rounded-2xl p-4 border border-gray-800">
                                 <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">{t('offers.quantity')}</span>
@@ -879,12 +818,12 @@ export default function OffersPage() {
                             <div className="flex justify-between items-center">
                                 <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">{t('offers.total')}</span>
                                 <span className="text-xl font-black text-white italic">
-                                    {formatPrice(fanModal.price * quantity)}{' '}
-                                    <span className="text-xs font-bold text-gray-500 not-italic uppercase">{fanModal.currency}</span>
+                                    {formatPrice(gearModal.item.price * quantity)}{' '}
+                                    <span className="text-xs font-bold text-gray-500 not-italic uppercase">{gearModal.item.currency}</span>
                                 </span>
                             </div>
                             <button
-                                onClick={() => void confirmFanBuy()}
+                                onClick={() => void confirmGearBuy()}
                                 disabled={buying}
                                 className="w-full py-5 bg-primary hover:bg-primary-hover text-white rounded-[2rem] font-black text-sm uppercase tracking-[0.2em] transition-all shadow-xl shadow-primary/20 flex items-center justify-center gap-3 active:scale-[0.98] disabled:opacity-50"
                             >
@@ -892,75 +831,7 @@ export default function OffersPage() {
                             </button>
                             <button
                                 type="button"
-                                onClick={() => setFanModal(null)}
-                                disabled={buying}
-                                className="w-full py-3 text-gray-500 hover:text-white font-bold text-xs uppercase tracking-widest disabled:opacity-40"
-                            >
-                                {t('common.cancel')}
-                            </button>
-                        </div>
-                    </div>
-                </div>,
-                document.body
-            )}
-
-            {rackModal && createPortal(
-                <div
-                    className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/80 backdrop-blur-md animate-in fade-in duration-300"
-                    onClick={() => { if (!buying) setRackModal(null); }}
-                >
-                    <div
-                        className="bg-surface border border-gray-800 rounded-[3rem] w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 relative"
-                        onClick={(ev) => ev.stopPropagation()}
-                    >
-                        <div className="absolute top-0 right-0 p-6 z-10">
-                            <button
-                                type="button"
-                                onClick={() => setRackModal(null)}
-                                disabled={buying}
-                                aria-label={t('common.cancel')}
-                                className="p-2 rounded-xl text-gray-400 hover:text-white hover:bg-gray-800 transition-colors disabled:opacity-40"
-                            >
-                                <X className="w-6 h-6" />
-                            </button>
-                        </div>
-                        <div className="p-10 text-center space-y-8">
-                            <div className="aspect-square max-h-40 mx-auto bg-gray-900/50 rounded-3xl p-4 border border-gray-800 flex items-center justify-center overflow-hidden">
-                                <RackOfferArt />
-                            </div>
-                            <div className="space-y-2">
-                                <h3 className="text-2xl font-black text-white uppercase italic tracking-tighter">{t('offers.confirm_title')}</h3>
-                                <p className="text-gray-500 font-medium">{t(rackModal.nameKey)}</p>
-                            </div>
-                            <div className="flex items-center justify-between bg-gray-900/50 rounded-2xl p-4 border border-gray-800">
-                                <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">{t('offers.quantity')}</span>
-                                <div className="flex items-center gap-3">
-                                    <button type="button" disabled={buying || quantity <= 1} onClick={() => setQuantity((q) => Math.max(1, q - 1))} className="p-2 rounded-xl border border-gray-700 text-gray-400 hover:text-white disabled:opacity-40">
-                                        <Minus className="w-4 h-4" />
-                                    </button>
-                                    <span className="text-lg font-black text-white min-w-[2rem]">{quantity}</span>
-                                    <button type="button" disabled={buying || quantity >= MAX_QTY} onClick={() => setQuantity((q) => Math.min(MAX_QTY, q + 1))} className="p-2 rounded-xl border border-gray-700 text-gray-400 hover:text-white disabled:opacity-40">
-                                        <Plus className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            </div>
-                            <div className="flex justify-between items-center">
-                                <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">{t('offers.total')}</span>
-                                <span className="text-xl font-black text-white italic">
-                                    {formatPrice(rackModal.price * quantity)}{' '}
-                                    <span className="text-xs font-bold text-gray-500 not-italic uppercase">{rackModal.currency}</span>
-                                </span>
-                            </div>
-                            <button
-                                onClick={() => void confirmRackBuy()}
-                                disabled={buying}
-                                className="w-full py-5 bg-primary hover:bg-primary-hover text-white rounded-[2rem] font-black text-sm uppercase tracking-[0.2em] transition-all shadow-xl shadow-primary/20 flex items-center justify-center gap-3 active:scale-[0.98] disabled:opacity-50"
-                            >
-                                {buying ? <Loader2 className="w-5 h-5 animate-spin" /> : t('offers.confirm_payment')}
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setRackModal(null)}
+                                onClick={() => setGearModal(null)}
                                 disabled={buying}
                                 className="w-full py-3 text-gray-500 hover:text-white font-bold text-xs uppercase tracking-widest disabled:opacity-40"
                             >

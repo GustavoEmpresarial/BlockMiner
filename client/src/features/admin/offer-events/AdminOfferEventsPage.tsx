@@ -21,6 +21,7 @@ import { api } from '../../../shared/auth/auth.store';
 import ImageUploader from '../../../shared/components/ImageUploader';
 import { readAxiosResponseMessage } from '../lib/admin.api';
 import type { AdminOfferEventListRow } from '../lib/admin.types';
+import { resolveThumb } from './offerEvents.helpers';
 
 /* ── helpers ──────────────────────────────────────────────────────────── */
 
@@ -32,14 +33,6 @@ function fmtUtcRange(startsAt: string | Date, endsAt: string | Date): string {
       timeZone: 'UTC',
     });
   return `${fmt(startsAt)} – ${fmt(endsAt)} UTC`;
-}
-
-function resolveThumb(url: string | null | undefined): string | null {
-  if (!url) return null;
-  if (/^https?:\/\//i.test(url)) return url;
-  if (typeof window !== 'undefined' && url.startsWith('/'))
-    return `${window.location.origin}${url}`;
-  return url;
 }
 
 /* ── types ────────────────────────────────────────────────────────────── */

@@ -40,6 +40,8 @@ import type {
   AdminOfferEventPurchaseRow,
   AdminOfferEventPurchasesListResponse,
 } from '../lib/admin.types';
+import { readAxiosResponseMessage } from '../lib/admin.api';
+import { resolveThumb } from './offerEvents.helpers';
 
 /* ── constants ───────────────────────────────────────────────────────── */
 
@@ -47,24 +49,6 @@ const CURRENCIES = ['POL', 'BTC', 'ETH', 'USDT', 'USDC', 'ZER', 'BLK'] as const;
 const TAB_KEYS: AdminOfferEventManageTab[] = ['event', 'miners', 'sales'];
 
 /* ── helpers ──────────────────────────────────────────────────────────── */
-
-function readAxiosMsg(err: unknown): string | undefined {
-  if (typeof err !== 'object' || err === null) return undefined;
-  const r = 'response' in err ? (err as { response?: unknown }).response : undefined;
-  if (typeof r !== 'object' || r === null) return undefined;
-  const d = 'data' in (r as object) ? (r as { data?: unknown }).data : undefined;
-  if (typeof d !== 'object' || d === null) return undefined;
-  const m = 'message' in (d as object) ? (d as { message?: unknown }).message : undefined;
-  return typeof m === 'string' ? m : undefined;
-}
-
-function resolveThumb(url: string | null | undefined): string | null {
-  if (!url) return null;
-  if (/^https?:\/\//i.test(url)) return url;
-  if (typeof window !== 'undefined' && url.startsWith('/'))
-    return `${window.location.origin}${url}`;
-  return url;
-}
 
 function fmtDate(d: string | Date): string {
   return new Date(d).toLocaleString('pt-BR', {
@@ -527,7 +511,7 @@ export default function AdminOfferEventManage() {
   const loadPurchases = useCallback(async () => {
     if (isNew) return;
     try {
-      const res = await api.get<AdminOfferEventPurchasesListResponse & { stats?: typeof purchaseStats }>(
+      const res = await api.get<AdminOfferEventPurchasesListResponse>(
         `/admin/offer-events/${routeId}/purchases`,
         { params: { pageSize: 200 } },
       );
@@ -571,7 +555,7 @@ export default function AdminOfferEventManage() {
         void loadEvent();
       }
     } catch (err) {
-      toast.error(readAxiosMsg(err) || 'Erro ao salvar');
+      toast.error(readAxiosResponseMessage(err) || 'Erro ao salvar');
     } finally {
       setSaving(false);
     }
@@ -631,7 +615,7 @@ export default function AdminOfferEventManage() {
       setShowMinerForm(false);
       void loadMiners();
     } catch (err) {
-      toast.error(readAxiosMsg(err) || 'Erro ao salvar miner');
+      toast.error(readAxiosResponseMessage(err) || 'Erro ao salvar miner');
     } finally {
       setSaving(false);
     }
