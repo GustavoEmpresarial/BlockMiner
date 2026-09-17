@@ -2,13 +2,12 @@
 """
 Deploy BlockMiner (current/) to the production VM over SSH (Paramiko).
 
-Default: pull from GitHub on the VM, then rebuild/restart Docker.
-Optional: upload a local zip (`--zip` / `./deploy.sh --zip`) for emergency
-offline deploys.
+Git only: the VM pulls from GitHub, then rebuilds/restarts Docker.
+Zip / local-tree upload is not supported.
 
+  git push origin HEAD
   python3 storage/scripts/deploy/deploy.py
   python3 storage/scripts/deploy/deploy.py --ref main
-  python3 storage/scripts/deploy/deploy.py --zip /tmp/blockminer-current-deploy-*.zip
 
 Credentials: `storage/scripts/deploy/vm_config_secret.py` or env VM_IP / VM_PASSWORD.
 
@@ -31,7 +30,6 @@ except ImportError as e:
     raise SystemExit(1) from e
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-REPO_ROOT = SCRIPT_DIR.parent.parent
 SECRET = SCRIPT_DIR / "vm_config_secret.py"
 
 DEFAULT_GIT_URL = "https://github.com/GustavoEmpresarial/BlockMiner.git"
@@ -76,13 +74,15 @@ def load_secret(host_override: str = "", password_override: str = "", user_overr
 
 
 def _parse_args(argv: list[str]) -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="Deploy BlockMiner to VM (git pull by default)")
-    p.add_argument(
-        "--zip",
-        metavar="PATH",
-        default=os.environ.get("BLOCKMINER_DEPLOY_ZIP", "").strip() or None,
-        help="Emergency: upload local .zip instead of git pull (or set BLOCKMINER_DEPLOY_ZIP)",
-    )
+    if any(a == "--zip" or a.startswith("--zip=") for a in argv):
+        raise SystemExit(
+            "error: zip deploy is removed. Push to GitHub, then: ./deploy.sh --ref <branch>"
+        )
+    if (os.environ.get("BLOCKMINER_DEPLOY_ZIP") or "").strip():
+        raise SystemExit(
+            "error: BLOCKMINER_DEPLOY_ZIP is ignored — zip deploy is removed. Use git push + ./deploy.sh"
+        )
+    p = argparse.ArgumentParser(description="Deploy BlockMiner to VM (git pull only)")
     p.add_argument(
         "--git-url",
         default=(os.environ.get("BLOCKMINER_GIT_URL") or DEFAULT_GIT_URL).strip(),
@@ -124,17 +124,6 @@ TARGET_DEFAULTS = {
         "health_port": 3001,
     },
 }
-
-
-def _resolve_zip_path(raw: str) -> Path:
-    z = Path(raw).expanduser()
-    if not z.is_absolute():
-        z = (REPO_ROOT / z).resolve()
-    if not z.is_file():
-        raise SystemExit(f"ZIP not found or not a file: {z}")
-    if z.suffix.lower() != ".zip":
-        raise SystemExit(f"Expected a .zip file, got: {z}")
-    return z
 
 
 def _docker_stack(compose_file: str, health_port: int) -> str:
@@ -367,54 +356,6 @@ echo "[vm] git sync OK @ $(cd "$APP_ROOT" && git rev-parse --short HEAD 2>/dev/n
 """
 
 
-def _remote_zip_script(app_root: str, *, archive_basename: str, compose_file: str, health_port: int) -> str:
-    no_cache = "export BLOCKMINER_DOCKER_BUILD_NO_CACHE=1\n" if _docker_no_cache_enabled() else ""
-    skip_reconcile = (
-        "export BLOCKMINER_SKIP_RECONCILE=1\n"
-        if os.environ.get("BLOCKMINER_SKIP_RECONCILE", "").strip().lower() in ("1", "true", "yes", "y", "on")
-        else ""
-    )
-    remote_arc = f"/tmp/{archive_basename}"
-    env_backup, env_restore = _env_backup_restore()
-    reconcile = """if [[ "${BLOCKMINER_SKIP_RECONCILE:-0}" != "1" && -s "$BM_MANIFEST" ]]; then
-  RECONCILE_ROOTS="server tests scripts prisma client nginx"
-  BM_VMLIST="$(mktemp /tmp/bm-vmlist-XXXXXX)"
-  BM_REMOVED=0
-  for root in $RECONCILE_ROOTS; do
-    [[ -d "$APP_ROOT/$root" ]] || continue
-    ( cd "$APP_ROOT" && find "$root" -type f 2>/dev/null | sort ) > "$BM_VMLIST"
-    while IFS= read -r stale; do
-      [[ -n "$stale" ]] || continue
-      rm -f "$APP_ROOT/$stale" && BM_REMOVED=$((BM_REMOVED+1))
-    done < <(comm -23 "$BM_VMLIST" "$BM_MANIFEST")
-  done
-  rm -f "$BM_VMLIST"
-  echo "[vm] reconcile: removed $BM_REMOVED stale source file(s) not in archive"
-else
-  echo "[vm] reconcile skipped (no manifest or BLOCKMINER_SKIP_RECONCILE=1)"
-fi
-rm -f "$BM_MANIFEST"
-"""
-    extract = f'''command -v unzip >/dev/null 2>&1 || {{ apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq unzip; }}
-mkdir -p "$APP_ROOT"
-{env_backup}
-BM_MANIFEST="$(mktemp /tmp/bm-manifest-XXXXXX)"
-unzip -Z1 "{remote_arc}" | sed 's#/$##' | sort -u > "$BM_MANIFEST"
-unzip -o -q "{remote_arc}" -d "$APP_ROOT"
-rm -f "{remote_arc}"
-{reconcile}{env_restore}
-'''
-    if _skip_docker():
-        return f"""set -euo pipefail
-{no_cache}{skip_reconcile}APP_ROOT={shlex.quote(app_root)}
-{extract}echo "[vm] extract OK (SKIP_DOCKER=1)"
-"""
-    return f"""set -euo pipefail
-{no_cache}{skip_reconcile}APP_ROOT={shlex.quote(app_root)}
-{extract}{_docker_stack(compose_file, health_port)}
-"""
-
-
 def _run_remote(client: paramiko.SSHClient, script: str) -> int:
     stdin, stdout, stderr = client.exec_command("bash -s", get_pty=False)
     stdin.write(script)
@@ -461,41 +402,13 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     try:
-        if args.zip:
-            archive = _resolve_zip_path(args.zip)
-            remote_name = "blockminer_current_deploy.zip"
-            remote_path = f"/tmp/{remote_name}"
-            print(f"[local] zip fallback {archive.stat().st_size} bytes -> {archive}", flush=True)
-            size = archive.stat().st_size
-            t0 = time.monotonic()
-            sftp = client.open_sftp()
-            print(f"[sftp] {archive.name} -> {user}@{host}:{remote_path} ({size} bytes)", flush=True)
-            last = [0]
-
-            def progress(done: int, total: int) -> None:
-                if total <= 0:
-                    return
-                step = 5 * 1024 * 1024
-                if done == total or done - last[0] >= step:
-                    last[0] = done
-                    pct = 100.0 * done / total
-                    print(f"[sftp] {done / (1024 * 1024):.1f} / {total / (1024 * 1024):.1f} MiB ({pct:.0f}%)", flush=True)
-
-            sftp.put(str(archive), remote_path, callback=progress)
-            sftp.close()
-            print(f"[sftp] upload done in {time.monotonic() - t0:.1f}s", flush=True)
-            code = _run_remote(
-                client,
-                _remote_zip_script(app_root, archive_basename=remote_name, compose_file=compose_file, health_port=health_port),
-            )
-        else:
-            print(f"[deploy] git pull {args.git_url} @ {args.ref}", flush=True)
-            code = _run_remote(
-                client,
-                _remote_git_script(
-                    app_root, args.git_url, args.ref, compose_file=compose_file, container_app=container_app, health_port=health_port
-                ),
-            )
+        print(f"[deploy] git pull {args.git_url} @ {args.ref}", flush=True)
+        code = _run_remote(
+            client,
+            _remote_git_script(
+                app_root, args.git_url, args.ref, compose_file=compose_file, container_app=container_app, health_port=health_port
+            ),
+        )
     finally:
         client.close()
     return code
