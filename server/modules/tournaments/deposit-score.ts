@@ -30,8 +30,7 @@ type DepositRow = {
   amount: unknown;
   completedAt?: Date | null;
   createdAt?: Date;
-  txHash?: string | null;
-  rawTx?: string | null;
+  txHash?: string | null; rawTx?: string | null;
   confirmedEventAt?: Date | null;
   usdValueAtConfirmation?: unknown;
   usdRateAtConfirmation?: unknown;

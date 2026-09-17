@@ -163,3 +163,7 @@ test("admin finalize route is rate-limited separately", () => {
   assert.ok(finalize, "finalize route must exist");
   assert.ok((finalize.route.stack?.length ?? 0) >= 2);
 });
+
+test("restore module mocks after admin controller suite", () => {
+  mock.restoreAll();
+});

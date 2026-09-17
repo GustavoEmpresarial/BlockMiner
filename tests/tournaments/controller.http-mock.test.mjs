@@ -319,3 +319,9 @@ test("a rejected promise is handled the same as a synchronous throw", async () =
   assert.equal(res.statusCode, 500);
   assert.match(res.body.errorId, /^err_/);
 });
+
+// Release module mocks so later files in --test-concurrency=1 see the real
+// tournaments.service (otherwise coverage for that file collapses to ~0%).
+test("restore module mocks after controller suite", () => {
+  mock.restoreAll();
+});

@@ -44,13 +44,8 @@ const INTERNAL_OFFER_COMPLETED = "COMPLETED";
 
 function emptyBreakdown(): OfferwallScoreBreakdown {
   return {
-    internal: 0,
-    offerwallMe: 0,
-    moneyRain: 0,
-    zeradsRaw: 0,
-    zeradsCredited: 0,
-    zeradsCapped: 0,
-    total: 0,
+    internal: 0, offerwallMe: 0, moneyRain: 0, zeradsRaw: 0,
+    zeradsCredited: 0, zeradsCapped: 0, total: 0,
   };
 }
 

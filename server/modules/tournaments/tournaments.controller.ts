@@ -40,12 +40,10 @@ function failed(
   context: Record<string, unknown>,
   message: string,
 ): void {
-  const { errorId } = reportError({
+  const report = reportError({
     code,
     category: "UNKNOWN",
     severity: "ERROR",
-    // A read endpoint being down breaks a feature for whoever hits it, but
-    // nothing is lost or corrupted — that is MEDIUM, not HIGH.
     impact: "MEDIUM",
     module: "tournaments",
     operation,
@@ -53,6 +51,7 @@ function failed(
     context,
     req,
   });
+  const { errorId } = report;
   res.status(500).json({ ok: false, message, errorId });
 }
 
