@@ -17,7 +17,6 @@ const roomListSelect = {
             position: true,
             installedAt: true,
             blockedByMinerId: true,
-            userMinerId: true,
             userMiner: {
                 select: {
                     id: true,

@@ -267,20 +267,27 @@ export type ProbeUserscriptManagersOptions = {
    * Default off — use only for soft telemetry, never for kick / login block.
    */
   includeTiming?: boolean;
+  /**
+   * WAR / package image probes hit chrome-extension:// URLs. On modern MV3
+   * managers they always fail and spam DevTools with net::ERR_FAILED.
+   * Default off — sync markers only (same as site-integrity-v22).
+   */
+  includeWar?: boolean;
 };
 
 /**
- * Async presence probe. Resolves with manager ids found via markers + WAR
- * (+ optional timing). Safe to call once at boot; never throws.
+ * Async presence probe. Default: sync markers only (no chrome-extension Image
+ * spam). Opt into WAR / timing for soft telemetry only — never for kicks.
  */
 export async function probeUserscriptManagersInstalled(
   timeoutMs = 1_500,
   options?: ProbeUserscriptManagersOptions,
 ): Promise<UserscriptManagerId[]> {
   const includeTiming = options?.includeTiming === true;
+  const includeWar = options?.includeWar === true;
   const found = new Set<UserscriptManagerId>(probeUserscriptManagerMarkers());
 
-  if (typeof window === "undefined") return [...found];
+  if (typeof window === "undefined" || !includeWar) return [...found];
 
   for (const { id, extensionId, paths } of USERSCRIPT_MANAGER_WAR_PROBES) {
     if (found.has(id)) continue;

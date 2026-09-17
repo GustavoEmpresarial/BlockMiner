@@ -153,7 +153,7 @@ export async function getCycleSnapshotForUser(userId) {
         const miner = await getOrCreateEngineMinerForUser(userId);
         minerId = miner.id;
     }
-    return engine.getPublicState(minerId, { includeLeaderboard: true });
+    return engine.getPublicState(minerId, { includeLeaderboard: false });
 }
 /** GET /mining/reward-rate — authenticated user's current hashrate + estimated reward. */
 export async function getRewardRateForUser(userId) {

@@ -8,10 +8,7 @@ import {
   backfillMinigameTournamentFromLogs,
   resolveTournamentStatusForWindow,
 } from "./tournaments.minigame-backfill.js";
-import {
-  isTournamentSkipGetRecomputeEnabled,
-  isTournamentIncrementalScoringEnabled,
-} from "./tournaments.flags.js";
+import { isTournamentIncrementalScoringEnabled } from "./tournaments.flags.js";
 import { OFFERS_INCREMENTAL_METRICS, MINIGAME_INCREMENTAL_METRICS } from "./tournaments.providers.js";
 import { registerTournamentMetricScorers, getMetricScorer } from "./tournaments.scorers.js";
 import {
@@ -568,7 +565,7 @@ async function enrichDepositLeaderboardWithPolTotals<T extends { userId: number 
 }
 
 export async function getTournamentWithLeaderboard(tournamentId: number, userId?: number) {
-  let tournament = await prisma.tournament.findUnique({
+  const tournament = await prisma.tournament.findUnique({
     where: { id: tournamentId },
     include: {
       prizes: {
@@ -580,26 +577,12 @@ export async function getTournamentWithLeaderboard(tournamentId: number, userId?
   });
   if (!tournament) return null;
 
-  let scoresComputedAt: string | null = null;
-  const skipRecompute = isTournamentSkipGetRecomputeEnabled();
-  const blockScoreIsOutboxOwned = tournament.metric === "BLOCKS_MINED";
-  if (tournament.status === "ACTIVE" && !skipRecompute && !blockScoreIsOutboxOwned) {
-    await computeScoresForTournament(tournament);
-    scoresComputedAt = new Date().toISOString();
-    tournament = await prisma.tournament.findUnique({
-      where: { id: tournamentId },
-      include: {
-        prizes: {
-          orderBy: { rankFrom: "asc" },
-          include: { miner: { select: { id: true, name: true, imageUrl: true, baseHashRate: true } } },
-        },
-        _count: { select: { entries: true } },
-      },
-    });
-    if (!tournament) return null;
-  } else if (tournament.status === "ACTIVE") {
-    scoresComputedAt = tournament.scoresReconciledAt?.toISOString() ?? null;
-  }
+  // Public GET never recomputes scores — that path is anonymous and was an
+  // amplification vector. Ranking freshness is owned by the cron / reconcile.
+  const scoresComputedAt =
+    tournament.status === "ACTIVE"
+      ? (tournament.scoresReconciledAt?.toISOString() ?? null)
+      : null;
 
   type TopEntry = Awaited<ReturnType<typeof prisma.tournamentEntry.findMany>>[number];
   const upperBound = tournament.endsAt < new Date() ? tournament.endsAt : new Date();
@@ -610,12 +593,23 @@ export async function getTournamentWithLeaderboard(tournamentId: number, userId?
       orderBy: [{ score: "desc" }, { firstContributionAt: "asc" }],
       take: LEADERBOARD_LIMIT,
       include: {
+        // Public payload: id + username only — never real name.
         user: {
-          select: { id: true, username: true, name: true },
+          select: { id: true, username: true },
         },
       },
     });
     await setCachedLeaderboard(tournamentId, top);
+  } else {
+    // Strip legacy cached `name` if present from older cache entries.
+    top = top.map((entry) => {
+      const user = (entry as { user?: { id: number; username: string; name?: string } }).user;
+      if (!user) return entry;
+      return {
+        ...entry,
+        user: { id: user.id, username: user.username },
+      } as TopEntry;
+    });
   }
   if (tournament.metric === "DEPOSITS_USD" && top && top.length > 0) {
     top = await enrichDepositLeaderboardWithPolTotals(top, tournament.startsAt, upperBound);
@@ -827,9 +821,34 @@ export async function adminUpdateTournament(
   assertPrizesArePayable(data.prizes);
 
   const existing = await prisma.tournament.findUnique({ where: { id: tournamentId } });
-  if (!existing) throw new Error("Tournament not found");
+  if (!existing) {
+    throw Object.assign(new Error("Tournament not found"), {
+      code: TOURNAMENT_ERROR.ADMIN_NOT_FOUND,
+      status: 404,
+    });
+  }
   if (existing.status === "ENDED" || existing.status === "CANCELLED") {
-    throw new Error("Cannot edit an ended or cancelled tournament");
+    throw Object.assign(new Error("Cannot edit an ended or cancelled tournament"), {
+      code: TOURNAMENT_ERROR.ADMIN_NOT_EDITABLE,
+      status: 400,
+    });
+  }
+
+  // ACTIVE tournaments: cosmetic fields only. Changing metric / window / prizes
+  // mid-flight rewrites who wins and what they are paid.
+  if (existing.status === "ACTIVE") {
+    const blocked =
+      data.metric !== undefined ||
+      data.startsAt !== undefined ||
+      data.endsAt !== undefined ||
+      data.prizes !== undefined ||
+      data.type !== undefined;
+    if (blocked) {
+      throw Object.assign(
+        new Error("Cannot change metric, dates, type, or prizes on an ACTIVE tournament"),
+        { code: TOURNAMENT_ERROR.ACTIVE_IMMUTABLE_FIELDS, status: 400 },
+      );
+    }
   }
 
   return prisma

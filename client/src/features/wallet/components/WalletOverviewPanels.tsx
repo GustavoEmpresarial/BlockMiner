@@ -244,7 +244,9 @@ export function WalletLedgerPanel({
             <p className="text-[10px] font-black uppercase tracking-widest">{t("wallet.ledger_empty")}</p>
           </div>
         ) : (
-          transactions.map((tx, i) => {
+          transactions
+            .filter((tx) => tx.type !== "burn_fee" && tx.type !== "energy_tax")
+            .map((tx, i) => {
             const txKey =
               (typeof tx.txHash === "string" && tx.txHash.trim() !== "" ? tx.txHash : null) ??
               (typeof tx.createdAt === "string" && tx.createdAt

@@ -29,3 +29,4 @@ tmp-*.txt
 # JS escrito à mão em server/ precisa de exceção `!` explícita neste arquivo.
 server/**/*.js
 client/.env
+.tmp/

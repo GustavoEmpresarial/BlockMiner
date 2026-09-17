@@ -266,8 +266,20 @@ elif command -v npm >/dev/null 2>&1; then
   else
     echo "[vm] ERROR: server build did not produce dist/server/bootstrap/server.js — keeping previous dist (server-side changes in this deploy were NOT applied)"
   fi
+elif command -v docker >/dev/null 2>&1; then
+  echo "[vm] building server via node container (host has no npm)"
+  docker run --rm \
+    -v "$APP_ROOT:/app" \
+    -w /app \
+    node:22-bookworm-slim \
+    bash -lc 'npm ci --no-audit --no-fund && npm run build; true'
+  if [[ -f "$APP_ROOT/dist/server/bootstrap/server.js" ]]; then
+    echo "[vm] server build OK (dist/server/bootstrap/server.js present)"
+  else
+    echo "[vm] ERROR: server container build did not produce dist/server/bootstrap/server.js — keeping previous dist"
+  fi
 else
-  echo "[vm] WARN: no npm to rebuild server — keeping previous dist (server-side changes in this deploy were NOT applied)"
+  echo "[vm] WARN: no npm/docker to rebuild server — keeping previous dist (server-side changes in this deploy were NOT applied)"
 fi
 '''
 
@@ -332,7 +344,9 @@ else
   cd "$APP_ROOT"
   git remote set-url origin {shlex.quote(git_url)} || git remote add origin {shlex.quote(git_url)}
   git fetch --depth 1 origin {shlex.quote(git_ref)}
-  git checkout -B {shlex.quote(git_ref)} FETCH_HEAD
+  git reset --hard HEAD || true
+  git clean -fd --exclude=dist --exclude=client/dist --exclude=storage --exclude=.env --exclude=.env.production
+  git checkout -f -B {shlex.quote(git_ref)} FETCH_HEAD
   git reset --hard FETCH_HEAD
   git clean -fd --exclude=dist --exclude=client/dist --exclude=storage --exclude=.env --exclude=.env.production
 fi

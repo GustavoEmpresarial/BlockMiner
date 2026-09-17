@@ -47,8 +47,10 @@ export async function issueAuthSessionForUser(args: {
   invalidateAuthUserCache(user.id);
   const accessToken = signAccessToken({ ...user, sessionVersion: updatedUser.sessionVersion });
   const refreshToken = createRefreshToken();
-  await createRefreshTokenRecord({ userId: user.id, ...refreshToken, createdAt: Date.now() });
-  await recordAuthLoginSuccess({ ip: clientIp, userId: user.id });
+  await Promise.all([
+    createRefreshTokenRecord({ userId: user.id, ...refreshToken, createdAt: Date.now() }),
+    recordAuthLoginSuccess({ ip: clientIp, userId: user.id }),
+  ]);
   const activeCsrf = String(res.locals.csrfToken || crypto.randomBytes(24).toString("base64url"));
   res.setHeader("Set-Cookie", [
     buildAccessCookie(accessToken),

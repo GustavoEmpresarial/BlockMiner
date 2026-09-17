@@ -4,6 +4,14 @@
 // Reconstructed verbatim from the last known-good compiled output on 2026-09-11.
 // TODO: remove @ts-nocheck once someone re-adds proper types for this file.
 import prisma from "../../../core/database/prisma.js";
+
+/** Internal fee ledger rows — must not appear as fake POL "deposits" in the wallet UI. */
+const WALLET_HISTORY_EXCLUDED_TYPES = ["burn_fee", "energy_tax"];
+
 export async function listTransactionsForUser(userId) {
-    return prisma.transaction.findMany({ where: { userId }, orderBy: { createdAt: "desc" }, take: 200 });
+    return prisma.transaction.findMany({
+        where: { userId, type: { notIn: WALLET_HISTORY_EXCLUDED_TYPES } },
+        orderBy: { createdAt: "desc" },
+        take: 200,
+    });
 }

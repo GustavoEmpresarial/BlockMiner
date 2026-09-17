@@ -1,2 +1,7 @@
-export { reportError, redactContext, fingerprintError } from "./error-reporter.js";
-export type { ErrorSeverity, ErrorCategory, ReportErrorInput } from "./error-reporter.js";
+export { reportError, redactContext, fingerprintError, newErrorId } from "./error-reporter.js";
+export type {
+  ErrorSeverity,
+  ErrorCategory,
+  ErrorImpact,
+  ReportErrorInput,
+} from "./error-reporter.js";

@@ -31,6 +31,7 @@ import {
   rackSlotIndex,
 } from "./rooms.placement.js";
 import { resolveOwnedMachineDisplay } from "../machines/ownedMachineDisplay.js";
+import { getMachinesListCache, invalidateMachinesListCache, setMachinesListCache } from "../machines/machinesList.cache.js";
 import * as roomsRepo from "./rooms.repository.js";
 import { RACKS_PER_ROOM, ROOM_MAX, starterRackSlotCount, type MinerWithMinerRel, type RackMoveBackRow } from "./rooms.types.js";
 
@@ -114,11 +115,23 @@ export async function provisionFirstRoomTx(
 }
 
 export async function listRoomsForUser(userId: number) {
+  type RoomsPayload = {
+    ok: true;
+    rooms: ReturnType<typeof buildListedRoomsPayload>;
+    totalRacks: number;
+    occupiedRacks: number;
+    freeRacks: number;
+  };
+  const cached = getMachinesListCache<RoomsPayload>("rooms", userId);
+  if (cached) return cached;
+
   const now = new Date();
   const rooms = await roomsRepo.findRoomsWithRacksForUser(userId);
   const result = buildListedRoomsPayload(rooms, undefined, now);
   const { totalRacks, occupiedRacks, freeRacks } = countRackTotals(rooms);
-  return { ok: true as const, rooms: result, totalRacks, occupiedRacks, freeRacks };
+  const payload: RoomsPayload = { ok: true as const, rooms: result, totalRacks, occupiedRacks, freeRacks };
+  setMachinesListCache("rooms", userId, payload);
+  return payload;
 }
 
 export async function countUnlockedRoomsForUser(userId: number): Promise<number> {
@@ -196,6 +209,8 @@ export async function buyRoomForUser(userId: number): Promise<BuyRoomResult> {
     message: `Sala ${nextRoom} desbloqueada com sucesso! ${RACKS_PER_ROOM} racks disponíveis.`,
     type: "success",
   });
+
+  invalidateMachinesListCache(userId);
 
   return {
     ok: true,
@@ -384,6 +399,8 @@ export async function installMinerForUser(
     /* engine cache resync is best-effort — DB is already the source of truth */
   }
 
+  invalidateMachinesListCache(userId);
+
   return { inventoryItem: { minerName: inventoryItem.minerName } };
 }
 
@@ -409,6 +426,8 @@ export async function uninstallMinerForUser(userId: number, rackId: number): Pro
   } catch {
     /* engine cache resync is best-effort — DB is already the source of truth */
   }
+
+  invalidateMachinesListCache(userId);
 }
 
 export async function uninstallMinerBatchForUser(userId: number, rackIds: number[]): Promise<void> {
@@ -435,20 +454,34 @@ export async function uninstallMinerBatchForUser(userId: number, rackIds: number
   } catch {
     /* engine cache resync is best-effort — DB is already the source of truth */
   }
+
+  invalidateMachinesListCache(userId);
 }
 
 export async function getSlotsSummaryForUser(userId: number) {
+  type SlotsPayload = {
+    ok: true;
+    totalRacks: number;
+    occupiedRacks: number;
+    freeRacks: number;
+    inventoryCount: number;
+  };
+  const cached = getMachinesListCache<SlotsPayload>("slots", userId);
+  if (cached) return cached;
+
   const [totalRacks, occupiedRacks, inventoryCount] = await Promise.all([
     roomsRepo.countUserRacks(userId),
     roomsRepo.countOccupiedUserRacks(userId),
     roomsRepo.countUserInventory(userId),
   ]);
 
-  return {
+  const payload: SlotsPayload = {
     ok: true as const,
     totalRacks,
     occupiedRacks,
     freeRacks: totalRacks - occupiedRacks,
     inventoryCount,
   };
+  setMachinesListCache("slots", userId, payload);
+  return payload;
 }

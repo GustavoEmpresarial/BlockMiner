@@ -91,18 +91,15 @@ test("engine V2 flag accepts 1/true/yes and nothing else", () => {
   }
 });
 
-test("engine V2 forces skip-get-recompute on, regardless of its own flag", () => {
+test("skip-get-recompute is always on (public GET never recomputes)", () => {
   withEnv({ TOURNAMENT_ENGINE_V2: "1", TOURNAMENT_SKIP_GET_RECOMPUTE: "false" }, () => {
     assert.equal(flags.isTournamentSkipGetRecomputeEnabled(), true);
   });
-});
-
-test("skip-get-recompute can be enabled on its own", () => {
-  withEnv({ TOURNAMENT_ENGINE_V2: "0", TOURNAMENT_SKIP_GET_RECOMPUTE: "yes" }, () => {
+  withEnv({ TOURNAMENT_ENGINE_V2: "0", TOURNAMENT_SKIP_GET_RECOMPUTE: "0" }, () => {
     assert.equal(flags.isTournamentSkipGetRecomputeEnabled(), true);
   });
-  withEnv({ TOURNAMENT_ENGINE_V2: "0", TOURNAMENT_SKIP_GET_RECOMPUTE: "0" }, () => {
-    assert.equal(flags.isTournamentSkipGetRecomputeEnabled(), false);
+  withEnv({ TOURNAMENT_ENGINE_V2: "0", TOURNAMENT_SKIP_GET_RECOMPUTE: undefined }, () => {
+    assert.equal(flags.isTournamentSkipGetRecomputeEnabled(), true);
   });
 });
 
@@ -387,16 +384,12 @@ test("tournamentActionOutboxPayload normalizes non-object metadata to null", () 
 
 // ─── Remaining branch edges ──────────────────────────────────────────────────
 
-test("skip-get-recompute accepts every truthy spelling on its own variable", () => {
-  // The || chain has three arms; engine-V2-off is the only path that reaches them.
-  for (const on of ["1", "true", "yes"]) {
+test("skip-get-recompute stays on regardless of env spelling", () => {
+  for (const on of ["1", "true", "yes", "0", "false", undefined]) {
     withEnv({ TOURNAMENT_ENGINE_V2: "0", TOURNAMENT_SKIP_GET_RECOMPUTE: on }, () => {
-      assert.equal(flags.isTournamentSkipGetRecomputeEnabled(), true, `${on} should enable`);
+      assert.equal(flags.isTournamentSkipGetRecomputeEnabled(), true, `${on} still skips`);
     });
   }
-  withEnv({ TOURNAMENT_ENGINE_V2: "0", TOURNAMENT_SKIP_GET_RECOMPUTE: undefined }, () => {
-    assert.equal(flags.isTournamentSkipGetRecomputeEnabled(), false);
-  });
 });
 
 test("offerwall autocorrect accepts every truthy spelling", () => {

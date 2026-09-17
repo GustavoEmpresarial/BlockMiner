@@ -18,10 +18,19 @@ export function normalizeEmail(value: unknown): string {
 
 export async function findUserByIdentifier(identifier: unknown) {
   const normalizedEmail = normalizeEmail(identifier);
+  if (!normalizedEmail) return null;
+
+  // Hot path: exact email match only. Legacy endsWith fallback is expensive and rare —
+  // opt in with AUTH_LEGACY_EMAIL_ENDSWITH=1 if still needed.
   const user = await prisma.user.findFirst({
     where: { email: { equals: normalizedEmail, mode: "insensitive" } },
   });
   if (user) return user;
+
+  const legacyEnabled = ["1", "true", "yes", "on"].includes(
+    String(process.env.AUTH_LEGACY_EMAIL_ENDSWITH || "").trim().toLowerCase(),
+  );
+  if (!legacyEnabled) return null;
 
   const legacyUser = await prisma.user.findFirst({
     where: { email: { endsWith: normalizedEmail, mode: "insensitive" } },

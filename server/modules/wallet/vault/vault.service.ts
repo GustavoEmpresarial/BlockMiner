@@ -42,9 +42,19 @@ import {
   placeIntoRackSlotTx,
 } from "../../machines/index.js";
 import { resolveOwnedMachineDisplay } from "../../machines/ownedMachineDisplay.js";
+import { getMachinesListCache, invalidateMachinesListCache, setMachinesListCache } from "../../machines/machinesList.cache.js";
 
 export async function listVaultForUser(userId: number) {
+  const cached = getMachinesListCache<ReturnType<typeof mapVaultRows>>("vault", userId);
+  if (cached) return cached;
+
   const rows = await vaultRepo.listVault(userId);
+  const mapped = mapVaultRows(rows);
+  setMachinesListCache("vault", userId, mapped);
+  return mapped;
+}
+
+function mapVaultRows(rows: Awaited<ReturnType<typeof vaultRepo.listVault>>) {
   return rows.map((r) => {
     const display = resolveOwnedMachineDisplay({
       minerId: r.minerId,
@@ -151,6 +161,7 @@ export async function moveToVaultForUser(userId: number, body: MoveToVaultInput)
     // continuava contando a máquina guardada (usuário minerava de graça com ela no armazém).
     await resyncEngine(userId);
     await notifyVaultMove(userId, "Miner stored", "Your miner was moved to the warehouse (vault).", "info");
+    invalidateMachinesListCache(userId);
     return { movedCount: 1 };
   }
 
@@ -168,6 +179,7 @@ export async function moveToVaultForUser(userId: number, body: MoveToVaultInput)
     if (err instanceof Error && err.message === "NOT_FOUND") throw new HttpStatusError(404, "NOT_FOUND");
     throw err;
   }
+  invalidateMachinesListCache(userId);
   return { movedCount: ids.length };
 }
 
@@ -221,6 +233,7 @@ export async function retrieveFromVaultForUser(userId: number, body: RetrieveFro
     // deslocado outra pro inventário). Sem isto ela não minerava até reiniciar o servidor.
     await resyncEngine(userId);
     await notifyVaultMove(userId, "Miner retrieved", "Your miner was removed from the warehouse (vault).", "success");
+    invalidateMachinesListCache(userId);
     return { movedCount: 1 };
   }
 
@@ -238,5 +251,6 @@ export async function retrieveFromVaultForUser(userId: number, body: RetrieveFro
     if (err instanceof Error && err.message === "NOT_FOUND") throw new HttpStatusError(404, "NOT_FOUND");
     throw err;
   }
+  invalidateMachinesListCache(userId);
   return { movedCount: ids.length };
 }

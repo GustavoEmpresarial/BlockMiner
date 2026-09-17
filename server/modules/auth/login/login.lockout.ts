@@ -71,12 +71,15 @@ async function checkRow(hash: string): Promise<LockStatus> {
 
 /** Checks whether the given IP and/or user id is currently locked out. */
 export async function getAuthLockStatus(p: { ip: string; userId?: number | null }): Promise<LockStatus> {
-  const ipStatus = await checkRow(ipHashKey(p.ip));
+  const wantUser = p.userId != null && Number.isFinite(p.userId);
+  if (!wantUser) return checkRow(ipHashKey(p.ip));
+
+  const [ipStatus, userStatus] = await Promise.all([
+    checkRow(ipHashKey(p.ip)),
+    checkRow(userHashKey(p.userId as number)),
+  ]);
   if (ipStatus.locked) return ipStatus;
-  if (p.userId != null && Number.isFinite(p.userId)) {
-    const userStatus = await checkRow(userHashKey(p.userId));
-    if (userStatus.locked) return userStatus;
-  }
+  if (userStatus.locked) return userStatus;
   return { locked: false };
 }
 

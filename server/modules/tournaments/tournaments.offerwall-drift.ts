@@ -140,7 +140,3 @@ export async function listRecentDriftAlerts(tournamentId: number, limit = 50) {
     return [];
   }
 }
-
-export async function listShadowValidationAlerts(_tournamentId: number, _limit = 50): Promise<unknown[]> {
-  return [];
-}

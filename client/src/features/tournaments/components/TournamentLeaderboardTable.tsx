@@ -16,7 +16,7 @@ function findPrizeForRank(prizes: TournamentPrize[], rank: number): TournamentPr
 }
 
 function AvatarInitial({ entry }: { entry: LeaderboardEntry }) {
-  const letter = (entry.user.name || entry.user.username).charAt(0).toUpperCase();
+  const letter = entry.user.username.charAt(0).toUpperCase();
   return (
     <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-slate-800 flex items-center justify-center text-[10px] font-bold text-white border border-slate-700 shrink-0">
       {letter}
@@ -25,7 +25,7 @@ function AvatarInitial({ entry }: { entry: LeaderboardEntry }) {
 }
 
 function displayName(entry: LeaderboardEntry): string {
-  return entry.user.name || entry.user.username;
+  return entry.user.username;
 }
 
 export function TournamentLeaderboardTable({ detail }: { detail: TournamentDetail }) {
@@ -128,7 +128,7 @@ export function TournamentLeaderboardTable({ detail }: { detail: TournamentDetai
                     {rank}
                   </span>
                   <div className="shrink-0 w-6 h-6 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-[9px] font-bold text-white">
-                    {(entry.user.name || entry.user.username).charAt(0).toUpperCase()}
+                    {(entry.user.username).charAt(0).toUpperCase()}
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-xs text-slate-300">

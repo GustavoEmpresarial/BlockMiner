@@ -8,7 +8,17 @@ import { resolveGrantEventMinerId } from "../../machines/eventMinerDisplayName.j
 export async function listVault(userId) {
     return prisma.userVault.findMany({
         where: { userId },
-        include: {
+        select: {
+            id: true,
+            userId: true,
+            minerId: true,
+            minerName: true,
+            level: true,
+            hashRate: true,
+            slotSize: true,
+            imageUrl: true,
+            storedAt: true,
+            ownedMachineId: true,
             miner: { select: { name: true, imageUrl: true } },
             ownedMachine: {
                 select: {

@@ -1,4 +1,11 @@
+/**
+ * Admin HTTP surface for tournaments.
+ *
+ * Failures go through `reportError` and return a generic message + `errorId`.
+ * Never send `String(err)` / Prisma text to the client.
+ */
 import type { Request, Response } from "express";
+import { reportError } from "../../core/errors/index.js";
 import {
   adminListTournaments,
   adminCreateTournament,
@@ -12,16 +19,19 @@ import {
   setTypeDisplayOrder,
 } from "./tournaments.service.js";
 import { getEngineStats } from "./tournaments.metrics.js";
-import {
-  listRecentDriftAlerts,
-  listShadowValidationAlerts,
-} from "./tournaments.offerwall-drift.js";
+import { listRecentDriftAlerts } from "./tournaments.offerwall-drift.js";
 import prisma from "../../core/database/prisma.js";
 import { isTournamentValidMetric } from "./tournaments.valid-metrics.js";
+import { TOURNAMENT_ERROR } from "./tournaments.errors.js";
 
 const MAX_TOURNAMENT_DURATION_MS = 90 * 24 * 60 * 60 * 1000;
 const MAX_TYPE_ORDER_LENGTH = 20;
 const MAX_PRIZE_NUMERIC = 1_000_000_000;
+
+/** Named defaults for admin entry pagination (no magic page/limit). */
+export const TOURNAMENT_ADMIN_ENTRIES_DEFAULT_PAGE = 1;
+export const TOURNAMENT_ADMIN_ENTRIES_DEFAULT_LIMIT = 50;
+export const TOURNAMENT_ADMIN_ENTRIES_MAX_LIMIT = 200;
 
 function validatePrizeAmount(value: unknown, label: string): string | null {
   if (value == null) return null;
@@ -57,12 +67,90 @@ function validatePrizes(prizes: unknown): string | null {
   return null;
 }
 
-export async function listAll(_req: Request, res: Response): Promise<void> {
+function parsePositiveInt(raw: unknown): number | null {
+  const n = Number(String(raw ?? "").trim());
+  return Number.isInteger(n) && n > 0 ? n : null;
+}
+
+/** Clamp page/limit so Prisma never sees a negative skip. */
+export function clampAdminEntriesPagination(
+  pageRaw: unknown,
+  limitRaw: unknown,
+): { page: number; limit: number } {
+  const pageParsed = parseInt(String(pageRaw ?? TOURNAMENT_ADMIN_ENTRIES_DEFAULT_PAGE), 10);
+  const limitParsed = parseInt(String(limitRaw ?? TOURNAMENT_ADMIN_ENTRIES_DEFAULT_LIMIT), 10);
+  const page =
+    Number.isFinite(pageParsed) && pageParsed >= 1
+      ? pageParsed
+      : TOURNAMENT_ADMIN_ENTRIES_DEFAULT_PAGE;
+  const limitUnclamped =
+    Number.isFinite(limitParsed) && limitParsed >= 1
+      ? limitParsed
+      : TOURNAMENT_ADMIN_ENTRIES_DEFAULT_LIMIT;
+  const limit = Math.min(TOURNAMENT_ADMIN_ENTRIES_MAX_LIMIT, limitUnclamped);
+  return { page, limit };
+}
+
+function failed(
+  res: Response,
+  req: Request,
+  operation: string,
+  error: unknown,
+  context: Record<string, unknown>,
+  status = 500,
+  code: string = TOURNAMENT_ERROR.ADMIN_OPERATION_FAILED,
+): void {
+  const { errorId } = reportError({
+    code,
+    category: "UNKNOWN",
+    severity: "ERROR",
+    impact: "MEDIUM",
+    module: "tournaments.admin",
+    operation,
+    error,
+    context,
+    req,
+  });
+  res.status(status).json({ ok: false, message: "Tournament admin operation failed", errorId });
+}
+
+function businessFailed(
+  res: Response,
+  req: Request,
+  operation: string,
+  error: unknown,
+  context: Record<string, unknown>,
+): void {
+  const errObj = error as { code?: string; status?: number; message?: string } | null;
+  const code =
+    typeof errObj?.code === "string" && errObj.code.startsWith("TOURNAMENT_")
+      ? errObj.code
+      : TOURNAMENT_ERROR.ADMIN_OPERATION_FAILED;
+  const status = typeof errObj?.status === "number" ? errObj.status : 400;
+  const { errorId } = reportError({
+    code,
+    category: "BUSINESS",
+    severity: "WARNING",
+    impact: "LOW",
+    module: "tournaments.admin",
+    operation,
+    error,
+    context,
+    req,
+  });
+  const message =
+    typeof errObj?.message === "string" && errObj.message && !/prisma|relation|column/i.test(errObj.message)
+      ? errObj.message
+      : "Tournament admin operation failed";
+  res.status(status).json({ ok: false, message, errorId, code });
+}
+
+export async function listAll(req: Request, res: Response): Promise<void> {
   try {
     const tournaments = await adminListTournaments();
     res.json({ ok: true, tournaments });
   } catch (err) {
-    res.status(500).json({ ok: false, message: String(err) });
+    failed(res, req, "listAll", err, {});
   }
 }
 
@@ -125,12 +213,12 @@ export async function create(req: Request, res: Response): Promise<void> {
     });
     res.json({ ok: true, tournament });
   } catch (err) {
-    res.status(500).json({ ok: false, message: String(err) });
+    businessFailed(res, req, "create", err, { name, type, metric });
   }
 }
 
 export async function update(req: Request, res: Response): Promise<void> {
-  const id = parseInt(String(req.params.id ?? ""), 10);
+  const id = parsePositiveInt(req.params.id);
   if (!id) {
     res.status(400).json({ ok: false, message: "Invalid id" });
     return;
@@ -199,12 +287,12 @@ export async function update(req: Request, res: Response): Promise<void> {
     const tournament = await adminUpdateTournament(id, patch);
     res.json({ ok: true, tournament });
   } catch (err) {
-    res.status(400).json({ ok: false, message: err instanceof Error ? err.message : String(err) });
+    businessFailed(res, req, "update", err, { tournamentId: id });
   }
 }
 
 export async function cancel(req: Request, res: Response): Promise<void> {
-  const id = parseInt(String(req.params.id ?? ""), 10);
+  const id = parsePositiveInt(req.params.id);
   if (!id) {
     res.status(400).json({ ok: false, message: "Invalid id" });
     return;
@@ -213,12 +301,12 @@ export async function cancel(req: Request, res: Response): Promise<void> {
     const tournament = await adminCancelTournament(id);
     res.json({ ok: true, tournament });
   } catch (err) {
-    res.status(400).json({ ok: false, message: String(err) });
+    businessFailed(res, req, "cancel", err, { tournamentId: id });
   }
 }
 
 export async function finalize(req: Request, res: Response): Promise<void> {
-  const id = parseInt(String(req.params.id ?? ""), 10);
+  const id = parsePositiveInt(req.params.id);
   if (!id) {
     res.status(400).json({ ok: false, message: "Invalid id" });
     return;
@@ -227,16 +315,16 @@ export async function finalize(req: Request, res: Response): Promise<void> {
     const result = await finalizeTournament(id);
     res.json({ ok: true, ...result });
   } catch (err) {
-    res.status(400).json({ ok: false, message: String(err) });
+    failed(res, req, "finalize", err, { tournamentId: id }, 400);
   }
 }
 
-export async function getDisplayOrder(_req: Request, res: Response): Promise<void> {
+export async function getDisplayOrder(req: Request, res: Response): Promise<void> {
   try {
     const typeOrder = await getTypeDisplayOrder();
     res.json({ ok: true, typeOrder });
   } catch (err) {
-    res.status(500).json({ ok: false, message: String(err) });
+    failed(res, req, "getDisplayOrder", err, {});
   }
 }
 
@@ -254,27 +342,27 @@ export async function updateDisplayOrder(req: Request, res: Response): Promise<v
     const typeOrder = await setTypeDisplayOrder(body.typeOrder);
     res.json({ ok: true, typeOrder });
   } catch (err) {
-    res.status(500).json({ ok: false, message: String(err) });
+    failed(res, req, "updateDisplayOrder", err, {});
   }
 }
 
 export async function entries(req: Request, res: Response): Promise<void> {
-  const id = parseInt(String(req.params.id ?? ""), 10);
-  const page = parseInt(String(req.query.page ?? "1"), 10);
+  const id = parsePositiveInt(req.params.id);
   if (!id) {
     res.status(400).json({ ok: false, message: "Invalid id" });
     return;
   }
+  const { page, limit } = clampAdminEntriesPagination(req.query.page, req.query.limit);
   try {
-    const data = await adminGetEntries(id, page);
+    const data = await adminGetEntries(id, page, limit);
     res.json({ ok: true, ...data });
   } catch (err) {
-    res.status(500).json({ ok: false, message: String(err) });
+    failed(res, req, "entries", err, { tournamentId: id, page, limit });
   }
 }
 
 export async function scoreAudit(req: Request, res: Response): Promise<void> {
-  const id = parseInt(String(req.params.id ?? ""), 10);
+  const id = parsePositiveInt(req.params.id);
   if (!id) {
     res.status(400).json({ ok: false, message: "Invalid id" });
     return;
@@ -287,13 +375,13 @@ export async function scoreAudit(req: Request, res: Response): Promise<void> {
     }
     res.json({ ok: true, ...data });
   } catch (err) {
-    res.status(400).json({ ok: false, message: err instanceof Error ? err.message : String(err) });
+    businessFailed(res, req, "scoreAudit", err, { tournamentId: id });
   }
 }
 
 export async function scoreAuditUser(req: Request, res: Response): Promise<void> {
-  const id = parseInt(String(req.params.id ?? ""), 10);
-  const userId = parseInt(String(req.params.userId ?? ""), 10);
+  const id = parsePositiveInt(req.params.id);
+  const userId = parsePositiveInt(req.params.userId);
   if (!id || !userId) {
     res.status(400).json({ ok: false, message: "Invalid id" });
     return;
@@ -306,12 +394,12 @@ export async function scoreAuditUser(req: Request, res: Response): Promise<void>
     }
     res.json({ ok: true, ...data });
   } catch (err) {
-    res.status(400).json({ ok: false, message: err instanceof Error ? err.message : String(err) });
+    businessFailed(res, req, "scoreAuditUser", err, { tournamentId: id, userId });
   }
 }
 
 export async function engineStats(req: Request, res: Response): Promise<void> {
-  const id = parseInt(String(req.params.id ?? ""), 10);
+  const id = parsePositiveInt(req.params.id);
   if (!id) {
     res.status(400).json({ ok: false, message: "Invalid id" });
     return;
@@ -324,12 +412,12 @@ export async function engineStats(req: Request, res: Response): Promise<void> {
     }
     res.json({ ok: true, engineStats: stats });
   } catch (err) {
-    res.status(500).json({ ok: false, message: err instanceof Error ? err.message : String(err) });
+    failed(res, req, "engineStats", err, { tournamentId: id });
   }
 }
 
 export async function driftAlerts(req: Request, res: Response): Promise<void> {
-  const id = parseInt(String(req.params.id ?? ""), 10);
+  const id = parsePositiveInt(req.params.id);
   if (!id) {
     res.status(400).json({ ok: false, message: "Invalid id" });
     return;
@@ -339,18 +427,17 @@ export async function driftAlerts(req: Request, res: Response): Promise<void> {
     const alerts = await listRecentDriftAlerts(id, limit);
     res.json({ ok: true, alerts });
   } catch (err) {
-    res.status(500).json({ ok: false, message: err instanceof Error ? err.message : String(err) });
+    failed(res, req, "driftAlerts", err, { tournamentId: id, limit });
   }
 }
 
 export async function offerwallMigration(req: Request, res: Response): Promise<void> {
-  const id = parseInt(String(req.params.id ?? ""), 10);
+  const id = parsePositiveInt(req.params.id);
   if (!id) {
     res.status(400).json({ ok: false, message: "Invalid id" });
     return;
   }
   try {
-    // Optional tables — may be absent depending on migration rollout.
     const db = prisma as typeof prisma & {
       tournamentOfferwallMigration?: { findUnique: (args: unknown) => Promise<unknown> };
       tournamentOfferwallMigrationGlobal?: { findUnique: (args: unknown) => Promise<unknown> };
@@ -361,21 +448,6 @@ export async function offerwallMigration(req: Request, res: Response): Promise<v
     ]);
     res.json({ ok: true, migration, globalBackfill: globalState });
   } catch (err) {
-    res.status(500).json({ ok: false, message: err instanceof Error ? err.message : String(err) });
-  }
-}
-
-export async function shadowAlerts(req: Request, res: Response): Promise<void> {
-  const id = parseInt(String(req.params.id ?? ""), 10);
-  if (!id) {
-    res.status(400).json({ ok: false, message: "Invalid id" });
-    return;
-  }
-  const limit = Math.min(200, Math.max(1, parseInt(String(req.query.limit ?? "50"), 10) || 50));
-  try {
-    const alerts = await listShadowValidationAlerts(id, limit);
-    res.json({ ok: true, alerts });
-  } catch (err) {
-    res.status(500).json({ ok: false, message: err instanceof Error ? err.message : String(err) });
+    failed(res, req, "offerwallMigration", err, { tournamentId: id });
   }
 }

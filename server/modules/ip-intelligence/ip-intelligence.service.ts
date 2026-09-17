@@ -45,6 +45,47 @@ const SUCCESS_TTL_DAYS = intelSuccessTtlDays();
 const ERROR_TTL_HOURS = intelErrorTtlHours();
 const DNS_TIMEOUT_MS = intelDnsTimeoutMs();
 
+/** Short in-process memo so requireAuth GETs skip repeated Prisma IP-intel reads. */
+const PROCESS_INTEL_TTL_MS = Math.max(
+  1_000,
+  Number(process.env.IP_INTEL_PROCESS_CACHE_TTL_MS ?? 30_000) || 30_000,
+);
+const PROCESS_INTEL_MAX_KEYS = Math.max(
+  100,
+  Number(process.env.IP_INTEL_PROCESS_CACHE_MAX_KEYS ?? 20_000) || 20_000,
+);
+const processIntelCache = new Map<string, { at: number; result: IpIntelligenceResult }>();
+
+function getProcessIntel(ip: string): IpIntelligenceResult | null {
+  const hit = processIntelCache.get(ip);
+  if (!hit) return null;
+  if (Date.now() - hit.at >= PROCESS_INTEL_TTL_MS) {
+    processIntelCache.delete(ip);
+    return null;
+  }
+  return hit.result;
+}
+
+function setProcessIntel(ip: string, result: IpIntelligenceResult): IpIntelligenceResult {
+  if (processIntelCache.has(ip)) processIntelCache.delete(ip);
+  processIntelCache.set(ip, { at: Date.now(), result });
+  while (processIntelCache.size > PROCESS_INTEL_MAX_KEYS) {
+    const oldest = processIntelCache.keys().next().value;
+    if (oldest == null) break;
+    processIntelCache.delete(oldest);
+  }
+  return result;
+}
+
+/** Test helper — clear process memo. */
+export function clearProcessIpIntelCacheForTests(): void {
+  processIntelCache.clear();
+}
+
+export function getProcessIpIntelCacheTtlMs(): number {
+  return PROCESS_INTEL_TTL_MS;
+}
+
 const HOSTING_TERMS = [
   "amazon", "aws", "google cloud", "google llc", "microsoft", "azure", "digitalocean", "hetzner",
   "ovh", "linode", "akamai", "vultr", "contabo", "hostinger", "hosting", "datacenter", "data center",
@@ -218,11 +259,22 @@ function emptyProxyFields(): Pick<
 export async function getCachedIpIntelligence(
   prisma: AppPrisma | null,
   ipInput: string,
-  { forceRefresh = false, deps = {} }: { forceRefresh?: boolean; deps?: IntelLookupDeps } = {},
+  {
+    forceRefresh = false,
+    /** Auth hot path: process/DB cache only — never ASN/DNS/provider HTTP. Miss → null (caller fail-open). */
+    cacheOnly = false,
+    deps = {},
+  }: { forceRefresh?: boolean; cacheOnly?: boolean; deps?: IntelLookupDeps } = {},
 ): Promise<IpIntelligenceResult | null> {
   const ip = normalizeIp(ipInput);
   if (!ip) return null;
-  if (isInfrastructureIp(ip) && !forceRefresh) return infrastructureIntel(ip, new Date());
+  if (isInfrastructureIp(ip) && !forceRefresh) {
+    return setProcessIntel(ip, infrastructureIntel(ip, new Date()));
+  }
+  if (!forceRefresh) {
+    const mem = getProcessIntel(ip);
+    if (mem) return mem;
+  }
   const now = new Date();
   const row = prisma ? await findCachedIp(prisma, ip) : null;
   const coreFresh = Boolean(row?.expiresAt && row.expiresAt > now);
@@ -232,7 +284,15 @@ export async function getCachedIpIntelligence(
   const missingProvider = enabled.some((p) => !cachedSources.includes(p.id));
   const needsCoreRefresh = forceRefresh || !row || !coreFresh;
   const needsProxyRefresh = enabled.length > 0 && (forceRefresh || !row || !proxyFresh || missingProvider);
-  if (!needsCoreRefresh && !needsProxyRefresh && row) return cacheRowToResult(row);
+  if (!needsCoreRefresh && !needsProxyRefresh && row) {
+    return setProcessIntel(ip, cacheRowToResult(row));
+  }
+
+  // Login/session must not wait on live intel — use whatever row we have, else null.
+  if (cacheOnly && !forceRefresh) {
+    if (row) return setProcessIntel(ip, cacheRowToResult(row));
+    return null;
+  }
 
   const base: IpIntelligenceResult = row
     ? cacheRowToResult(row)
@@ -350,7 +410,7 @@ export async function getCachedIpIntelligence(
   if (prisma) {
     await upsertCachedIp(prisma, ip, data).catch(() => undefined);
   }
-  return {
+  return setProcessIntel(ip, {
     ...core,
     ...proxy,
     source: core.source,
@@ -372,5 +432,5 @@ export async function getCachedIpIntelligence(
     normalizedIp: ip,
     checkedAt: data.checkedAt,
     expiresAt: data.expiresAt,
-  };
+  });
 }

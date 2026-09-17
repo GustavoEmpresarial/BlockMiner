@@ -248,169 +248,63 @@ O outbox era `processTournamentOutboxBatch().catch(() => {})` nos dois pontos de
 chamada — engolia a falha inteira. Ele é dono da pontuação de `BLOCKS_MINED`:
 uma falha persistente congelava esses leaderboards sem **nenhuma** linha de log.
 
-> Havia um quinto job, `runShadowValidation`, rodando de hora em hora. Ele
-> chamava `runOfferwallShadowValidation`, que retorna `[]` incondicionalmente —
-> era no-op puro. Removido.
->
-> A nota anterior aqui dizia que as funções de shadow validation ficavam "porque
-> podem ter outros chamadores". Varredura de 2026-09-17: `runOfferwallShadowValidation`
-> tinha **zero** chamadores em todo o repo, e foi removida.
-> `listShadowValidationAlerts` continua, mas também retorna `[]` sempre — e é
-> servida por `GET /admin/tournaments/:id/shadow-alerts`. Esse endpoint admin
-> responde lista vazia por construção; ou a feature volta, ou rota e função saem
-> juntas.
+> Shadow validation (job horário + `listShadowValidationAlerts` + rota
+> `GET /admin/tournaments/:id/shadow-alerts`) era no-op puro — **removido**.
 
 ## Testes
 
 ```
-tests/tournaments/prize-resolution.test.mjs        decisão de prêmio + ranking (puro)
-tests/tournaments/pure-modules.test.mjs            helpers, flags, presentation, janelas, providers, types (puro)
-tests/tournaments/tick-guard.test.mjs              reentrância do cron + single-flight (puro)
-tests/tournaments/utc-boundary.test.mjs            fronteira 00:00 UTC (puro)
-tests/tournaments/controller.test.mjs              rotas de leitura, service mockado (sem banco)
+tests/tournaments/prize-resolution.test.mjs
+tests/tournaments/pure-modules.test.mjs
+tests/tournaments/tick-guard.test.mjs
+tests/tournaments/utc-boundary.test.mjs
 tests/tournaments/tournament-window-align.test.mjs
-tests/tournaments/tournaments.finalize.smoke.test.mjs   finalize ponta a ponta (PRECISA de banco)
-tests/security/error-redaction.test.mjs            redação do contexto de erro
+tests/tournaments/controller.test.mjs              player HTTP (mock)
+tests/tournaments/admin.controller.test.mjs        admin HTTP + clamp + ACTIVE lock (mock)
+tests/tournaments/tournaments.finalize.smoke.test.mjs
+tests/tournaments/tournaments.mining-boost.direct.smoke.test.mjs
+tests/tournaments/tournaments.faucet.smoke.test.mjs
+tests/security/error-redaction.test.mjs
 ```
 
-`controller.test.mjs` usa `mock.module`, então o script `test` do projeto agora
-passa `--experimental-test-module-mocks`. Há também `npm run test:coverage`.
+`controller` / `admin.controller` usam `mock.module` → script `test` com
+`--experimental-test-module-mocks`. Também: `npm run test:coverage`.
 
-**Armadilha do node:test:** um `await import(...)` no meio do arquivo registra
-todo teste abaixo dele tarde demais — eles **não rodam e ainda são reportados
-como sucesso**. Todos os arquivos acima concentram os imports num único bloco no
-topo. Já custou 4 testes fantasmas aqui.
+**Armadilha do node:test:** `await import` no meio do arquivo faz testes abaixo
+parecerem sucesso sem rodar. Imports no topo.
 
-Ao medir cobertura, mockar e reimportar o módulo por teste com query de
-cache-busting (`?t=…`) cria um módulo novo por teste — o arquivo real aparece
-quase descoberto por mais que seja exercitado. Mock uma vez, importe uma vez,
-troque o comportamento por variável.
+### Cobertura
 
-### Cobertura (Node 22, `--experimental-test-coverage`)
+Módulos puros + rotas + prize-resolution/controller em ~100% função. Service /
+engine / repository dependem de Prisma — smokes cobrem o caminho de dinheiro.
 
-Em 100% de linha, ramo e função:
-
-```
-tournament-window.ts  tournaments.helpers.ts   tournaments.flags.ts
-deposit-presentation.ts  tournaments.providers.ts  tournaments.types.ts
-tournaments.errors.ts  tournaments.valid-metrics.ts  tournaments.tick-guard.ts
-tournaments.routes.ts  tournaments.admin.routes.ts
-```
-
-`tournaments.prize-resolution.ts` e `tournaments.controller.ts` estão em 100%
-de função e ~98% de linha. O resto que aparece descoberto neles são linhas de
-**declaração de tipo** e de **argumento de objeto literal**, que o source-map do
-tsx atribui a ramos inexistentes. Confirmado: adicionar caso que exercita a
-tabela-verdade inteira não move o número. Não persiga esses pontos.
-
-O restante do módulo (service, engine, repository, admin.controller,
-score-computation, audit, metrics, projection, outbox, realtime, scorers,
-scoring-config, socket, claim-scorers, minigame-backfill, actions, cache, cron,
-deposit-score e o grupo `ranking.*`) segue entre 35% e 75%. Todos dependem de
-Prisma: o `DATABASE_URL` do `.env` deve apontar para `blockminer-current-db`
-(`127.0.0.1:5442`). Por um tempo apontava para `blockminer-restore-test:5439`
-(container morto) e os smoke tests com banco pulavam em silêncio — inclusive
-os que já existiam antes desta passada.
-
-Convenção do projeto: teste `.mjs` com `node:test`, importando o `.ts` direto
-via `await import(...)`.
+`DATABASE_URL` → `blockminer-current-db` em `127.0.0.1:5442`. Com Engine V2, os
+smokes semeiam `TournamentAction` dentro da janela fechada.
 
 ### Lacunas conhecidas
 
-Os três cenários de finalize que faltavam estão em
-`tournaments.finalize.smoke.test.mjs` — cobrem:
+Finalize smokes: pay-once ✅, prize parcial F3 ✅, concurrent cycle ✅.
+Ainda sem: torneio com muitas entries fechando sem `P2028` (F1).
 
-1. finalizar duas vezes → `rewarded` é 0 na segunda, sem linha duplicada ✅
-2. um prêmio MACHINE quebrado não impede os demais vencedores (regressão F3) ✅
-3. cron e o botão admin finalizando juntos geram **um** próximo ciclo, não dois ✅
+## Segurança — corrigidos (2026-09-17)
 
-Com `TOURNAMENT_ENGINE_V2=1`, os smokes semeiam `TournamentAction` dentro da
-janela fechada (não `tournamentEntry.score` direto): o finalize reconcilia e
-apaga entries sem fonte real.
+| # | Achado | Correção |
+|---|---|---|
+| 1 | GET público devolvia `user.name` | Leaderboard: só `id` + `username`. Client mostra username. |
+| 2 | GET anônimo recomputava scores | GET nunca chama `computeScoresForTournament`; skip-recompute sempre on. |
+| 3 | `tournaments.routes.ts` `@ts-nocheck` | Removido; router tipado. |
+| 4 | `page` admin sem clamp | `clampAdminEntriesPagination` (`page >= 1`, limit ≤ 200). |
+| 5 | Edit ACTIVE mudava metric/dates/prizes | `TOURNAMENT_ACTIVE_IMMUTABLE_FIELDS` (400). Cosméticos ok. |
+| 6 | Admin devolvia `String(err)` | `reportError` + `errorId` + mensagem genérica. |
+| 7 | Admin sem rate limit | Read 60/min, write 20/min, finalize 10/min. |
 
-Ainda sem cobertura: torneio com muitas entries fechando sem `P2028` (regressão
-F1). Precisa de volume de dados, não só de um banco.
+### Authz admin
 
-## Segurança — achados em aberto
+`requireAdminAuth` via `.use()` antes de qualquer rota — preservar essa forma.
 
-Levantados em auditoria (2026-09-17) e **não corrigidos**: cada um muda contrato
-de API ou comportamento de produto, então é decisão de produto, não de refactor.
+### Arquivos mortos
 
-**1. `GET /api/tournaments/:id` é anônimo e devolve nome real.**
-A rota não tem `requireAuth` (`tournaments.routes.ts`), e
-`getTournamentWithLeaderboard` seleciona `user: { id, username, name }` para o
-top 100. Qualquer um sem login coleta `userId` interno + `username` + **nome
-real** de todo mundo no pódio. É exposição excessiva de dados (e material para
-enumeração de usuário).
-Correção mínima: tirar `name` do payload público. Não fiz porque não consegui
-verificar se o frontend renderiza esse campo.
-
-**2. A mesma rota anônima dispara recomputação de score.**
-Em `getTournamentWithLeaderboard`, torneio `ACTIVE` com
-`isTournamentSkipGetRecomputeEnabled()` desligado chama
-`computeScoresForTournament` **a cada GET**. Um endpoint sem autenticação que
-provoca varredura de pontuação é amplificação: o rate limit é 120 req/min e o
-custo por request é uma repontuação inteira.
-Correção: servir sempre do cache/reconcile no caminho anônimo e deixar a
-recomputação para o cron. Envolve decidir sobre `TOURNAMENT_SKIP_GET_RECOMPUTE`.
-
-**3. `tournaments.routes.ts` está com `@ts-nocheck`.**
-O cabeçalho do arquivo diz que ele nunca foi commitado e foi reconstruído do
-`dist/` compilado em 2026-09-11, com produção rodando de build cache velho.
-Enquanto o `@ts-nocheck` estiver lá, **toda a superfície de rotas está fora do
-typecheck** — inclusive a ordem de middleware. Por isso o controller confere
-`req.user` em vez de confiar no `!` do `requireAuth`.
-
-**4. `page` do admin não tem clamp.**
-`adminGetEntries(tournamentId, page = 1, limit = 50)`: o handler `entries`
-**não** repassa `limit` da query — então não há exaustão de memória por
-`?limit=`. Mas passa `page` cru (`parseInt(req.query.page)`), e `skip` é
-`(page - 1) * limit`. `?page=0` ou `?page=-5` produz `skip` negativo, que o
-Prisma rejeita: vira 500 com `String(err)` no corpo.
-
-**6. O controller admin devolve o erro cru e não reporta nada.**
-`tournaments.admin.controller.ts` responde `{ message: String(err) }` em catch
-(ex.: linhas 230, 239, 272), o que entrega texto de erro do Prisma — nome de
-tabela, de coluna — ao cliente. É atrás de `requireAdminAuth`, então o risco é
-menor, mas continua sendo detalhe interno cruzando a fronteira. E **nenhum**
-catch ali chama `reportError`: o caminho admin tem o mesmo buraco de
-observabilidade que o controller de jogador tinha. Não migrei junto para manter
-esta passada revisável; é o próximo lote óbvio.
-
-**7. Rotas admin não têm rate limit.**
-`tournaments.routes.ts` aplica `createRateLimiter({ windowMs: 60_000, max: 120 })`
-em toda rota de jogador. `tournaments.admin.routes.ts` não aplica nenhum. O
-`POST /:id/finalize` dispara uma finalização completa por request.
-
-**5. `adminUpdateTournament` aceita editar torneio em andamento.**
-`metric`, `startsAt` e `endsAt` são alteráveis enquanto o status é `ACTIVE`, e
-`data.prizes` faz `deleteMany` + recriar. Trocar a métrica no meio repontua o
-torneio inteiro por outra regra; trocar as faixas de prêmio depois do ranking
-muda quem ganha o quê. O guard existente só barra `ENDED`/`CANCELLED`.
-
-### Authz do caminho admin — verificado, está correto
-
-`tournaments.admin.routes.ts` aplica `requireAdminAuth` via `.use()` **antes**
-de declarar qualquer rota, então as 14 rotas admin estão cobertas por
-construção — não há como adicionar uma e esquecer o guard. Vale preservar essa
-forma; enumerar o middleware rota a rota é o que costuma vazar uma.
-
-### Varredura de arquivos mortos (2026-09-17)
-
-Contagem de importadores por arquivo dos 41 do módulo: **nenhum órfão**. Todo
-arquivo tem pelo menos um importador real.
-
-Morto encontrado no nível de função, não de arquivo:
-
-| Símbolo | Situação |
-|---|---|
-| `runOfferwallShadowValidation` | zero chamadores, retornava `[]` — **removido** |
-| `listShadowValidationAlerts` | retorna `[]` sempre, mas servida por rota admin — ver acima |
-
-O grupo `ranking.*` (`ranking.hashrate`, `ranking.repository`, `ranking.routes`,
-`ranking.service`) mora nesta pasta mas é uma feature própria, com router
-próprio. Não é morto; é vizinho. Só está anotado aqui para ninguém confundir com
-o leaderboard de torneio ao procurar ranking.
+Nenhum órfão. `ranking.*` é vizinho (hashrate global), não leaderboard de torneio.
 
 ## Fronteira 00:00 UTC
 
@@ -458,7 +352,7 @@ A correção é uniformizar em meio-aberto, alinhando com
 `resolveTournamentStatusForWindow`: `lte: upperBound` → `lt: upperBound` nos
 ~25 pontos, e `<= upper` → `< upper` em `windowContains`. Não foi feita nesta
 passada porque mexe na semântica de pontuação de dinheiro em 25 lugares e não
-há banco local para validar (ver abaixo). Corrigir os dois modelos **juntos** é
+há banco local para validar com smokes. Corrigir os dois modelos **juntos** é
 obrigatório: consertar só `windowContains` faria o caminho incremental
 divergir do batch, e o reconcile passaria a acusar drift permanente.
 

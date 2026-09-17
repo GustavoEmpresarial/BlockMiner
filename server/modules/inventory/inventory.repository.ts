@@ -14,7 +14,18 @@ import { resolveGrantEventMinerId } from "../machines/eventMinerDisplayName.js";
 export async function listInventory(userId: number) {
   return prisma.userInventory.findMany({
     where: { userId },
-    include: {
+    select: {
+      id: true,
+      userId: true,
+      minerId: true,
+      minerName: true,
+      level: true,
+      hashRate: true,
+      slotSize: true,
+      imageUrl: true,
+      acquiredAt: true,
+      expiresAt: true,
+      ownedMachineId: true,
       ownedMachine: {
         select: {
           id: true,

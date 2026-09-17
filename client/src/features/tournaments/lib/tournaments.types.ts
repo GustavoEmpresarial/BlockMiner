@@ -40,7 +40,7 @@ export interface LeaderboardEntry {
   /** POL deposited in window — informational when metric is DEPOSITS_USD */
   scorePol?: number | null;
   rank?: number;
-  user: { id: number; username: string; name?: string; avatarUrl?: string };
+  user: { id: number; username: string; avatarUrl?: string };
 }
 
 export interface TournamentDetail {

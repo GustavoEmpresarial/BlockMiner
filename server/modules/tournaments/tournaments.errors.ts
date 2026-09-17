@@ -50,6 +50,16 @@ export const TOURNAMENT_ERROR = {
   MY_HISTORY_FAILED: "TOURNAMENT_MY_HISTORY_FAILED",
   /** GET /api/tournaments/:id/my-score-breakdown — per-metric breakdown failed. */
   MY_SCORE_BREAKDOWN_FAILED: "TOURNAMENT_MY_SCORE_BREAKDOWN_FAILED",
+
+  // ── Admin path ────────────────────────────────────────────────────────────
+  /** Generic admin handler failure (redacted to the client). */
+  ADMIN_OPERATION_FAILED: "TOURNAMENT_ADMIN_OPERATION_FAILED",
+  /** ACTIVE tournament cannot change metric / window / prizes mid-flight. */
+  ACTIVE_IMMUTABLE_FIELDS: "TOURNAMENT_ACTIVE_IMMUTABLE_FIELDS",
+  /** Admin tried to edit an ENDED or CANCELLED tournament. */
+  ADMIN_NOT_EDITABLE: "TOURNAMENT_ADMIN_NOT_EDITABLE",
+  /** Admin asked for a tournament id that does not exist. */
+  ADMIN_NOT_FOUND: "TOURNAMENT_ADMIN_NOT_FOUND",
 } as const;
 
 export type TournamentErrorCode = (typeof TOURNAMENT_ERROR)[keyof typeof TOURNAMENT_ERROR];

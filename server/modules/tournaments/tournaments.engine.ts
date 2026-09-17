@@ -28,6 +28,8 @@ import {
 import { computeScoresForTournament } from "./tournaments.score-computation.js";
 import { notifyTournamentDirty } from "./tournaments.realtime.js";
 import prisma from "../../core/database/prisma.js";
+import { reportError } from "../../core/errors/index.js";
+import { TOURNAMENT_ERROR } from "./tournaments.errors.js";
 import { logger } from "../../core/logger/index.js";
 
 const log = logger.child("TournamentEngine");
@@ -286,6 +288,16 @@ export async function reconcileAllActive(): Promise<ReconcileReport[]> {
       log.error("tournament.reconcile.failed", {
         tournamentId: t.id,
         error: err instanceof Error ? err.message : String(err),
+      });
+      reportError({
+        code: TOURNAMENT_ERROR.RECONCILE_TICK_FAILED,
+        category: "BUSINESS",
+        severity: "ERROR",
+        impact: "HIGH",
+        module: "tournaments.engine",
+        operation: "reconcileAllActive",
+        error: err,
+        context: { tournamentId: t.id },
       });
     }
   }

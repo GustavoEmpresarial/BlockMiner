@@ -9,11 +9,15 @@
  */
 import * as inventoryRepo from "./inventory.repository.js";
 import { resolveOwnedMachineDisplay } from "../machines/ownedMachineDisplay.js";
+import { getMachinesListCache, invalidateMachinesListCache, setMachinesListCache } from "../machines/machinesList.cache.js";
 import { resolveOwnedMachineImageUrl } from "./inventory.types.js";
 
 export async function listInventoryForUser(userId) {
+    const cached = getMachinesListCache("inventory", userId);
+    if (cached) return cached;
+
     const rows = await inventoryRepo.listInventory(userId);
-    return rows.map((row) => {
+    const mapped = rows.map((row) => {
         const { ownedMachine, miner, ...rest } = row;
         const display = resolveOwnedMachineDisplay({
             minerId: row.minerId,
@@ -39,6 +43,8 @@ export async function listInventoryForUser(userId) {
             imageSource,
         };
     });
+    setMachinesListCache("inventory", userId, mapped);
+    return mapped;
 }
 
 /**
@@ -50,4 +56,5 @@ export async function listInventoryForUser(userId) {
  */
 export async function grantPurchasedInventoryItems(tx, userId, template, quantity, now) {
     await inventoryRepo.bulkCreateInventoryWithOwnedMachinesTx(tx, userId, template, quantity, now);
+    invalidateMachinesListCache(userId);
 }

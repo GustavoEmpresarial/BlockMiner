@@ -4,7 +4,7 @@ import type { LeaderboardEntry } from '../lib/tournaments.types';
 import { TournamentScore } from './TournamentScore';
 
 function displayName(entry: LeaderboardEntry): string {
-  return entry.user.name || entry.user.username;
+  return entry.user.username;
 }
 
 export function TournamentPodium({

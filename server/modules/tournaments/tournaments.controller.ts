@@ -113,7 +113,8 @@ export async function getTournament(req: Request, res: Response): Promise<void> 
 export async function myRank(req: Request, res: Response): Promise<void> {
   const id = parseTournamentId(req.params.id);
   // requireAuth runs in front of this route, so `user` is always set in
-  // practice. The check stays because tournaments.routes.ts is @ts-nocheck:
+  // practice. The defensive check stays so a middleware reorder cannot
+  // silently serve another player's rank.
   // if the middleware is ever reordered, this must answer 401, not crash on
   // a non-null assertion and surface as an opaque 500.
   const userId = (req as AuthedRequest).user?.id;

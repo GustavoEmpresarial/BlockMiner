@@ -4,9 +4,9 @@ export function isTournamentEngineV2Enabled(): boolean {
 }
 
 export function isTournamentSkipGetRecomputeEnabled(): boolean {
-  if (isTournamentEngineV2Enabled()) return true;
-  const v = String(process.env.TOURNAMENT_SKIP_GET_RECOMPUTE || "").trim().toLowerCase();
-  return v === "1" || v === "true" || v === "yes";
+  // Public GET never recomputes (amplification). Kept as always-on so older
+  // call sites / env docs stay meaningful; engine V2 also implies skip.
+  return true;
 }
 
 export function isTournamentIncrementalScoringEnabled(): boolean {

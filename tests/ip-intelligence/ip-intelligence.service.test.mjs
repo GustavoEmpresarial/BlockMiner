@@ -81,6 +81,68 @@ test("getCachedIpIntelligence: invalid IP returns null, never throws", async () 
   assert.equal(result, null);
 });
 
+test("getCachedIpIntelligence: cacheOnly skips live enrich and returns null on miss", async () => {
+  svc.clearProcessIpIntelCacheForTests();
+  let findCalls = 0;
+  const prisma = {
+    ipIntelligenceCache: {
+      findUnique: async () => {
+        findCalls += 1;
+        return null;
+      },
+    },
+  };
+  const result = await svc.getCachedIpIntelligence(prisma, "8.8.4.4", { cacheOnly: true });
+  assert.equal(result, null);
+  assert.equal(findCalls, 1);
+});
+
+test("getCachedIpIntelligence: process memo skips second prisma hit within TTL", async () => {
+  svc.clearProcessIpIntelCacheForTests();
+  let findCalls = 0;
+  const now = new Date();
+  const future = new Date(now.getTime() + 60 * 60 * 1000);
+  const prisma = {
+    ipIntelligenceCache: {
+      findUnique: async () => {
+        findCalls += 1;
+        return {
+          ip: "1.1.1.1",
+          ipVersion: 4,
+          expiresAt: future,
+          proxyExpiresAt: future,
+          proxySource: null,
+          checkedAt: now,
+          reverseDns: null,
+          reverseDnsForwardConfirmed: null,
+          asn: 13335,
+          asnOrg: "Cloudflare",
+          networkCidr: "1.1.1.0/24",
+          providerLabel: "cloudflare",
+          providerType: "cdn",
+          confidence: "medium",
+          source: "cache",
+          error: null,
+          proxyDetected: false,
+          proxyType: null,
+          proxyRiskScore: null,
+          proxyProvider: null,
+          proxyLastSeenAt: null,
+          proxyCheckedAt: now,
+          proxyError: null,
+        };
+      },
+    },
+  };
+  const first = await svc.getCachedIpIntelligence(prisma, "1.1.1.1");
+  const second = await svc.getCachedIpIntelligence(prisma, "1.1.1.1");
+  assert.ok(first);
+  assert.ok(second);
+  assert.equal(first.asn, 13335);
+  assert.equal(findCalls, 1, "second call should be served from process memo");
+  assert.ok(svc.getProcessIpIntelCacheTtlMs() >= 1000);
+});
+
 test("getCachedIpIntelligence: public IP with no prisma client and no external providers degrades to unknown/local-heuristic", async () => {
   const savedKey = process.env.PROXYCHECK_API_KEY;
   const savedEnabled = process.env.PROXYCHECK_ENABLED;

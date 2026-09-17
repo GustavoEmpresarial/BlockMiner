@@ -8,7 +8,7 @@ import type { Prisma, User } from "@prisma/client";
 import prisma from "../../core/database/prisma.js";
 import type { AuthSessionUser } from "../types/express.js";
 
-const AUTH_USER_TTL_MS = Math.max(1_000, Number(process.env.AUTH_USER_CACHE_TTL_MS ?? 10_000) || 10_000);
+const AUTH_USER_TTL_MS = Math.max(1_000, Number(process.env.AUTH_USER_CACHE_TTL_MS ?? 30_000) || 30_000);
 
 type CacheEntry = { at: number; user: AuthSessionUser | null };
 const authUserCache = new Map<number, CacheEntry>();

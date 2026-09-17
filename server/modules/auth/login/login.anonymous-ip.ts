@@ -28,7 +28,8 @@ export async function inspectAnonymousLoginIp(prisma: AppPrisma, ip: string): Pr
   if (!authBlockVpnProxy()) {
     return { blocked: false, reason: null, proxySource: null, asn: null, proxyDetected: null };
   }
-  const intel = await getCachedIpIntelligence(prisma, ip).catch(() => null);
+  // Auth hot path: never wait on live ASN/DNS/provider HTTP (cache/process only).
+  const intel = await getCachedIpIntelligence(prisma, ip, { cacheOnly: true }).catch(() => null);
   const verdict = evaluateAnonymousIp(intel);
   return {
     ...verdict,

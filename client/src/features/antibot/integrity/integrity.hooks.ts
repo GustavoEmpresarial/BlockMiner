@@ -218,7 +218,7 @@ export function installIntegrityHooks(hot?: HotHandler): void {
     observer.observe(document.documentElement, { childList: true, subtree: true });
   }
 
-  // Presence scan: sync markers now + async WAR (Violentmonkey / older TM builds).
+  // Presence scan: sync markers only. WAR image probes spam net::ERR_FAILED on MV3.
   mergeManagers(probeUserscriptManagerMarkers());
   void probeUserscriptManagersInstalled()
     .then((ids) => {
