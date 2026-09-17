@@ -144,7 +144,3 @@ export async function listRecentDriftAlerts(tournamentId: number, limit = 50) {
 export async function listShadowValidationAlerts(_tournamentId: number, _limit = 50): Promise<unknown[]> {
   return [];
 }
-
-export async function runOfferwallShadowValidation(): Promise<Array<{ driftCount: number }>> {
-  return [];
-}

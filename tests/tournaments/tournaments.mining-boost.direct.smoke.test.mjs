@@ -39,6 +39,7 @@ describe("tournament MINING_BOOST direct power (DB)", { skip: !hasDb }, () => {
   after(async () => {
     if (!prisma) return;
     if (userId) {
+      await prisma.tournamentAction.deleteMany({ where: { userId } }).catch(() => {});
       await prisma.userPowerGame.deleteMany({ where: { userId } }).catch(() => {});
       await prisma.userRewardInbox.deleteMany({ where: { userId } }).catch(() => {});
     }
@@ -85,8 +86,17 @@ describe("tournament MINING_BOOST direct power (DB)", { skip: !hasDb }, () => {
     });
     tournamentId = tournament.id;
 
-    await prisma.tournamentEntry.create({
-      data: { tournamentId, userId, score: 3 },
+    // Finalize reconciles FAUCET from TournamentAction (Engine V2) and wipes
+    // entries with no source score — seed a claim inside the closed window.
+    await prisma.tournamentAction.create({
+      data: {
+        userId,
+        provider: "faucet",
+        actionCount: 3,
+        executedAtUTC: new Date((startsAt.getTime() + endsAt.getTime()) / 2),
+        sourceId: `${tag}:faucet:${userId}`,
+        tournamentEligible: true,
+      },
     });
 
     const { finalizeTournament } = await import("../../server/modules/tournaments/tournaments.service.ts");

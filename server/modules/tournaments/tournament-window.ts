@@ -43,9 +43,12 @@ export function snapWindowForType(type, anchor) {
     }
     return null;
 }
-/** Align ACTIVE tournament to the current UTC cycle window. */
-export function snapWindowForActiveTournament(type, startsAt, _endsAt, now = new Date()) {
-    if (type === "DAILY")
-        return snapWindowForType("DAILY", now);
+
+/**
+ * Normalize an ACTIVE tournament to the canonical window of its own startsAt.
+ * NEVER snap DAILY (or any type) to `now` — that slides the window forward and
+ * skips finalize/payout for the previous cycle.
+ */
+export function snapWindowForActiveTournament(type, startsAt, _endsAt, _now = new Date()) {
     return snapWindowForType(type, startsAt);
 }

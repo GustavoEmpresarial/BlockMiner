@@ -25,6 +25,18 @@ import { invalidateTournamentCache } from "./tournaments.realtime.js";
 import { createRewardInboxEntry, grantTemporaryPowerInTx } from "../notifications/index.js";
 import { miningEngine, syncUserBaseHashRate } from "../mining/index.js";
 import { logger } from "../../core/logger/index.js";
+import { reportError } from "../../core/errors/index.js";
+import { TOURNAMENT_ERROR } from "./tournaments.errors.js";
+import { keyedSingleFlight } from "./tournaments.tick-guard.js";
+import {
+  assignRanks,
+  findPrizeForRank,
+  maxPrizeRank,
+  resolvePrizeGrant,
+  validatePrizeInput,
+  type PrizeGrant,
+  type PrizeRow,
+} from "./tournaments.prize-resolution.js";
 
 const log = logger.child("tournaments.service");
 
@@ -39,28 +51,11 @@ type TournamentEntry = {
   createdAt: Date;
   updatedAt: Date;
 };
-type TournamentPrize = {
-  id: number;
-  tournamentId: number;
-  rankFrom: number;
-  rankTo: number;
-  prizeType: string;
-  polAmount: number | null;
-  blkAmount: number | null;
-  boostHashRate: number | null;
-  boostHours: number | null;
-  minerId: number | null;
-  minerCount: number | null;
-  miner?: {
-    id: number;
-    name: string;
-    imageUrl: string | null;
-    baseHashRate: unknown;
-    slotSize?: number | null;
-  } | null;
-};
-
 export const LEADERBOARD_LIMIT = 100;
+
+/** Ranks are written in short batched transactions — never one long-running tx. */
+const RANK_BATCH_SIZE =
+  Number.parseInt(String(process.env.TOURNAMENT_RANK_BATCH_SIZE || "200").trim(), 10) || 200;
 
 export { computeScoresForTournament } from "./tournaments.score-computation.js";
 
@@ -119,17 +114,29 @@ function nextCycleWindow(
   return { newStart: start, newEnd: end };
 }
 
-export async function finalizeTournament(
+/**
+ * Closes a tournament: score → rank → grant → end.
+ *
+ * Deliberately split into short phases. An earlier version wrapped the whole
+ * thing — every entry, every grant — in one interactive transaction; past the
+ * 15s budget (core/database/prisma.ts) it aborted with P2028, rolled back every
+ * prize, left the tournament ACTIVE, and the 60s lifecycle cron retried it
+ * forever. Nobody got paid. Keep each transaction here small and per-unit.
+ */
+async function runFinalizeTournament(
   tournamentId: number,
-): Promise<{ ranked: number; rewarded: number; nextId: number | null }> {
+): Promise<{ ranked: number; rewarded: number; failed: number; nextId: number | null }> {
   await miningEngine.drainSettlements();
   const tournament = await prisma.tournament.findUnique({
     where: { id: tournamentId },
     include: { prizes: { include: { miner: true } } },
   });
   if (!tournament) throw new Error("Tournament not found");
-  if (tournament.status === "ENDED") return { ranked: 0, rewarded: 0, nextId: null };
+  if (tournament.status === "ENDED") {
+    return { ranked: 0, rewarded: 0, failed: 0, nextId: null };
+  }
 
+  // ── Phase A — scoring (no transaction) ──────────────────────────────────
   if (isTournamentIncrementalScoringEnabled()) {
     registerTournamentMetricScorers();
     await reconcileTournament(tournamentId, { recomputeBlocks: true });
@@ -137,57 +144,130 @@ export async function finalizeTournament(
     await computeScoresForTournament(tournament);
   }
 
+  // ── Phase B — ranking, in short batches ─────────────────────────────────
+  // Read immediately after scoring so late in-window callbacks have the
+  // smallest possible chance of landing between the snapshot and the ranks.
   const entries = await prisma.tournamentEntry.findMany({
     where: { tournamentId },
     orderBy: [{ score: "desc" }, { firstContributionAt: "asc" }],
   });
+  const ranked = assignRanks(entries);
+  await persistRanks(ranked);
 
+  // ── Phase C — grants, one short transaction per winner ──────────────────
+  // Only entries inside a prize band can win, so this loop is bounded by the
+  // prize table rather than by how many people entered.
+  const cutoff = maxPrizeRank(tournament.prizes);
   let rewarded = 0;
+  let failed = 0;
   const powerGrantUserIds = new Set<number>();
-  await prisma.$transaction(async (tx) => {
-    for (let i = 0; i < entries.length; i++) {
-      const rank = i + 1;
-      const entry = entries[i];
-      const prize = tournament.prizes.find((p) => rank >= p.rankFrom && rank <= p.rankTo);
 
-      const grantedUpdate = await tx.tournamentEntry.updateMany({
-        where: { id: entry.id, rewardGranted: false },
-        data: {
-          rank,
-          rewardGranted: !!prize,
-          rewardGrantedAt: prize ? new Date() : null,
+  for (const entry of ranked.slice(0, cutoff)) {
+    const prize = findPrizeForRank(tournament.prizes, entry.rank);
+    if (!prize) continue;
+
+    const grant = resolvePrizeGrant(prize as PrizeRow);
+    if (grant.kind === "invalid") {
+      failed++;
+      // impact HIGH, not CRITICAL: exactly one player goes unpaid and the row is
+      // still fixable by an admin — the tournament itself stays consistent.
+      reportError({
+        code: grant.code,
+        category: "BUSINESS",
+        severity: "ERROR",
+        impact: "HIGH",
+        module: "tournaments",
+        operation: "finalizeTournament.resolvePrize",
+        context: {
+          reason: grant.reason,
+          tournamentId,
+          entryId: entry.id,
+          userId: entry.userId,
+          prizeId: prize.id,
+          prizeType: prize.prizeType,
+          rank: entry.rank,
         },
       });
+      continue;
+    }
 
-      if (prize && grantedUpdate.count === 1) {
-        await grantPrize(tx, {
+    try {
+      // The atomic claim IS the idempotency primitive, for every prize type.
+      // If the grant below throws, the claim rolls back with it and the entry
+      // stays payable — it is never flagged as rewarded without a real grant.
+      const didGrant = await prisma.$transaction(async (tx) => {
+        const claim = await tx.tournamentEntry.updateMany({
+          where: { id: entry.id, rewardGranted: false },
+          data: { rewardGranted: true, rewardGrantedAt: new Date() },
+        });
+        if (claim.count !== 1) return false; // an earlier pass already paid this one
+        await applyGrant(tx, {
           userId: entry.userId,
           entryId: entry.id,
           tournamentId,
           tournamentName: tournament.name,
-          prize: prize as TournamentPrize,
+          grant,
         });
-        if (prize.prizeType === "MINING_BOOST") powerGrantUserIds.add(entry.userId);
-        rewarded++;
-      } else if (prize && grantedUpdate.count === 0) {
-        // Another finalize pass already granted — keep idempotent.
-        await tx.tournamentEntry.update({
-          where: { id: entry.id },
-          data: { rank },
-        });
-      } else if (!prize) {
-        await tx.tournamentEntry.update({
-          where: { id: entry.id },
-          data: { rank },
-        });
-      }
-    }
+        return true;
+      });
 
-    await tx.tournament.update({
-      where: { id: tournamentId },
-      data: { status: "ENDED" },
-    });
+      if (didGrant) {
+        rewarded++;
+        if (grant.kind === "boost") powerGrantUserIds.add(entry.userId);
+      }
+    } catch (err) {
+      // One broken prize must not cost the other winners theirs.
+      failed++;
+      reportError({
+        code: TOURNAMENT_ERROR.GRANT_FAILED,
+        category: "BUSINESS",
+        severity: "ERROR",
+        impact: "HIGH",
+        module: "tournaments",
+        operation: "finalizeTournament.grant",
+        error: err,
+        context: {
+          tournamentId,
+          entryId: entry.id,
+          userId: entry.userId,
+          prizeId: prize.id,
+          prizeType: prize.prizeType,
+          grantKind: grant.kind,
+          rank: entry.rank,
+        },
+      });
+    }
+  }
+
+  // ── Phase D — close it out, even on partial failure ─────────────────────
+  // Ending unconditionally is what breaks the infinite retry loop and lets the
+  // recurring cycle spawn. Ungranted winners stay rewardGranted:false and are
+  // reported below rather than silently swallowed.
+  await prisma.tournament.update({
+    where: { id: tournamentId },
+    data: { status: "ENDED" },
   });
+
+  if (failed > 0) {
+    // impact CRITICAL: the tournament is closed and will never retry on its own,
+    // so every unpaid winner here needs a human before the prize is really lost.
+    reportError({
+      code: TOURNAMENT_ERROR.FINALIZE_PARTIAL,
+      category: "BUSINESS",
+      severity: "CRITICAL",
+      impact: "CRITICAL",
+      module: "tournaments",
+      operation: "finalizeTournament",
+      context: {
+        tournamentId,
+        tournamentName: tournament.name,
+        metric: tournament.metric,
+        ranked: ranked.length,
+        rewarded,
+        failed,
+      },
+    });
+  }
 
   for (const userId of powerGrantUserIds) {
     await syncUserBaseHashRate(userId).catch(() => undefined);
@@ -227,20 +307,71 @@ export async function finalizeTournament(
       log.info(`[tournaments] recurring: spawned next cycle #${next.id} for "${tournament.name}"`);
       if (next.status === "ACTIVE" && next.metric === "MINIGAME_WINS") {
         void backfillMinigameTournamentFromLogs(next.id).catch((err) => {
-          log.error(`[tournaments] minigame backfill recurring #${next.id}:`, {
-            error: String(err),
+          reportError({
+            code: TOURNAMENT_ERROR.MINIGAME_BACKFILL_FAILED,
+            category: "BUSINESS",
+            severity: "ERROR",
+            impact: "HIGH",
+            module: "tournaments",
+            operation: "finalizeTournament.backfillNextCycle",
+            error: err,
+            context: { tournamentId: next.id, tournamentName: next.name },
           });
         });
       }
     } catch (err) {
-      log.error(`[tournaments] failed to spawn next cycle for #${tournamentId}:`, {
-        error: String(err),
+      // The series silently stops here: this cycle is ENDED and no next one
+      // exists, so nothing will ever retry it. Needs a human.
+      reportError({
+        code: TOURNAMENT_ERROR.RECURRING_SPAWN_FAILED,
+        category: "BUSINESS",
+        severity: "CRITICAL",
+        impact: "HIGH",
+        module: "tournaments",
+        operation: "finalizeTournament.spawnNextCycle",
+        error: err,
+        context: {
+          tournamentId,
+          tournamentName: tournament.name,
+          type: tournament.type,
+          metric: tournament.metric,
+        },
       });
     }
   }
 
   await invalidateTournamentCaches(tournamentId, tournament.metric);
-  return { ranked: entries.length, rewarded, nextId };
+  return { ranked: ranked.length, rewarded, failed, nextId };
+}
+
+/**
+ * Two callers can reach finalization for the same tournament at the same time:
+ * the 60s lifecycle cron tick and the admin `POST /:id/finalize` button. Both
+ * would read `status: ACTIVE` before either wrote ENDED, both would enter the
+ * `recurring` branch, and `prisma.tournament.create` would run twice — forking
+ * the series into two duplicate tournaments. The atomic rewardGranted claim
+ * prevents paying a prize twice; it does not prevent that.
+ *
+ * Keyed on tournamentId, so finalizing two different tournaments still runs in
+ * parallel. A second caller joins the in-flight run and receives its real
+ * result rather than a silent no-op.
+ */
+export const finalizeTournament = keyedSingleFlight(runFinalizeTournament);
+
+/**
+ * Writes ranks in batched transactions. Prisma has no bulk "different value per
+ * row" update, so this sends chunks as array transactions: one round trip per
+ * chunk instead of one per entry, and a fresh short transaction each time.
+ */
+async function persistRanks(ranked: ReadonlyArray<{ id: number; rank: number }>): Promise<void> {
+  for (let i = 0; i < ranked.length; i += RANK_BATCH_SIZE) {
+    const batch = ranked.slice(i, i + RANK_BATCH_SIZE);
+    await prisma.$transaction(
+      batch.map((entry) =>
+        prisma.tournamentEntry.update({ where: { id: entry.id }, data: { rank: entry.rank } }),
+      ),
+    );
+  }
 }
 
 async function invalidateTournamentCaches(tournamentId: number, metric?: string): Promise<void> {
@@ -249,93 +380,79 @@ async function invalidateTournamentCaches(tournamentId: number, metric?: string)
   invalidateTournamentCache(metric);
 }
 
-async function countInboxGrantsForEntryTx(
-  tx: TxClient,
-  userId: number,
-  entryId: number,
-): Promise<number> {
-  return tx.userRewardInbox.count({
-    where: {
-      userId,
-      source: "tournament",
-      metaJson: { path: ["entryId"], equals: entryId },
-    },
-  });
-}
-
-async function grantPrize(
+/**
+ * Performs an already-validated grant. Every branch here writes something —
+ * validation and refusal live in resolvePrizeGrant, so this function can no
+ * longer "succeed" by falling through without granting anything.
+ *
+ * Callers must run this inside the same transaction as the rewardGranted claim:
+ * that pairing is what makes the grant idempotent and rollback-safe.
+ */
+async function applyGrant(
   tx: TxClient,
   ctx: {
     userId: number;
     entryId: number;
     tournamentId: number;
     tournamentName: string;
-    prize: TournamentPrize;
+    grant: Exclude<PrizeGrant, { kind: "invalid" }>;
   },
 ): Promise<void> {
-  const { userId, entryId, tournamentId, tournamentName, prize } = ctx;
+  const { userId, entryId, tournamentId, tournamentName, grant } = ctx;
   const source = "tournament";
   const meta = { tournamentName, tournamentId, entryId };
 
-  if ((await countInboxGrantsForEntryTx(tx, userId, entryId)) > 0) {
-    return;
-  }
-
-  if (prize.prizeType === "POL" && prize.polAmount) {
-    await createRewardInboxEntry(tx, {
-      userId,
-      source,
-      rewardType: "pol",
-      rewardValue: prize.polAmount,
-      metaJson: meta,
-    });
-    return;
-  }
-
-  if (prize.prizeType === "BLK" && prize.blkAmount) {
-    await createRewardInboxEntry(tx, {
-      userId,
-      source,
-      rewardType: "blk",
-      rewardValue: prize.blkAmount,
-      metaJson: meta,
-    });
-    return;
-  }
-
-  if (prize.prizeType === "MINING_BOOST" && prize.boostHashRate && prize.boostHours) {
-    await grantTemporaryPowerInTx(tx, userId, {
-      rewardValue: prize.boostHashRate,
-      durationHours: prize.boostHours,
-      rewardType: "hashrate_boost",
-      source,
-    });
-    return;
-  }
-
-  if (prize.prizeType === "MACHINE") {
-    if (!prize.miner) {
-      log.error("tournament MACHINE prize missing miner catalog row", {
-        tournamentId,
-        entryId,
-        userId,
-        minerId: prize.minerId,
-      });
-      throw new Error("TOURNAMENT_MACHINE_PRIZE_MINER_MISSING");
-    }
-    const hashRate = Number(prize.miner.baseHashRate ?? 0);
-    const quantity = Math.max(1, prize.minerCount ?? 1);
-    for (let k = 0; k < quantity; k++) {
+  switch (grant.kind) {
+    case "pol":
+    case "blk":
       await createRewardInboxEntry(tx, {
         userId,
         source,
-        rewardType: "machine",
-        rewardValue: hashRate,
-        minerId: prize.miner.id,
-        minerName: prize.miner.name,
-        minerImageUrl: prize.miner.imageUrl ?? null,
-        slotSize: prize.miner.slotSize ?? 1,
+        rewardType: grant.kind,
+        rewardValue: grant.amount,
         metaJson: meta,
+      });
+      return;
+
+    case "boost":
+      await grantTemporaryPowerInTx(tx, userId, {
+        rewardValue: grant.hashRate,
+        durationHours: grant.hours,
+        rewardType: "hashrate_boost",
+        source,
+      });
+      return;
+
+    case "machine":
+      for (let k = 0; k < grant.quantity; k++) {
+        await createRewardInboxEntry(tx, {
+          userId,
+          source,
+          rewardType: "machine",
+          rewardValue: grant.hashRate,
+          minerId: grant.minerId,
+          minerName: grant.minerName,
+          minerImageUrl: grant.minerImageUrl,
+          slotSize: grant.slotSize,
+          metaJson: meta,
+        });
+      }
+  }
+}
+
+/**
+ * Refuses prize rows that could never be paid out, at write time.
+ * Throws in the codebase's existing shape: Error carrying a stable `code`.
+ */
+function assertPrizesArePayable(prizes: readonly PrizeRow[] | undefined): void {
+  if (!prizes) return;
+  for (const prize of prizes) {
+    const check = validatePrizeInput(prize);
+    if (!check.ok) {
+      throw Object.assign(new Error(check.code), {
+        code: check.code,
+        status: 400,
+        reason: check.reason,
       });
     }
   }
@@ -623,6 +740,8 @@ export async function adminCreateTournament(data: {
     minerCount?: number;
   }>;
 }) {
+  assertPrizesArePayable(data.prizes);
+
   let startsAt = data.startsAt;
   let endsAt = data.endsAt;
   if (data.type !== "CUSTOM") {
@@ -666,8 +785,15 @@ export async function adminCreateTournament(data: {
 
   if (status === "ACTIVE" && data.metric === "MINIGAME_WINS") {
     void backfillMinigameTournamentFromLogs(tournament.id).catch((err) => {
-      log.error(`[tournaments] minigame backfill failed for #${tournament.id}:`, {
-        error: String(err),
+      reportError({
+        code: TOURNAMENT_ERROR.MINIGAME_BACKFILL_FAILED,
+        category: "BUSINESS",
+        severity: "ERROR",
+        impact: "HIGH",
+        module: "tournaments",
+        operation: "adminCreateTournament.backfill",
+        error: err,
+        context: { tournamentId: tournament.id, tournamentName: tournament.name },
       });
     });
   }
@@ -698,6 +824,8 @@ export async function adminUpdateTournament(
     }>;
   },
 ) {
+  assertPrizesArePayable(data.prizes);
+
   const existing = await prisma.tournament.findUnique({ where: { id: tournamentId } });
   if (!existing) throw new Error("Tournament not found");
   if (existing.status === "ENDED" || existing.status === "CANCELLED") {

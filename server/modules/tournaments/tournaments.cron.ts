@@ -14,7 +14,9 @@ import {
 } from "./tournaments.providers.js";
 import { processTournamentOutboxBatch } from "./tournaments.outbox.js";
 import { registerTournamentMetricScorers } from "./tournaments.scorers.js";
-import { runOfferwallShadowValidation } from "./tournaments.offerwall-drift.js";
+import { reportError } from "../../core/errors/index.js";
+import { TOURNAMENT_ERROR } from "./tournaments.errors.js";
+import { nonOverlapping } from "./tournaments.tick-guard.js";
 
 const log = logger.child("tournaments.cron");
 
@@ -22,12 +24,28 @@ let scoreIntervalId: ReturnType<typeof setInterval> | null = null;
 let lifecycleIntervalId: ReturnType<typeof setInterval> | null = null;
 let outboxIntervalId: ReturnType<typeof setInterval> | null = null;
 let reconcileIntervalId: ReturnType<typeof setInterval> | null = null;
-let shadowValidationIntervalId: ReturnType<typeof setInterval> | null = null;
+
+/**
+ * Schedules `job` so a tick can never overlap the previous one — see
+ * tournaments.tick-guard.ts for why every job here needs it.
+ *
+ * A skipped tick is logged at WARN, not reported as an error: shedding it is the
+ * correct outcome. It is logged because a job that keeps skipping is running
+ * longer than its own interval, which is the signal that something needs
+ * attention before it becomes a stall.
+ */
+function guardedTick(jobName: string, job: () => Promise<void>): () => Promise<void> {
+  return nonOverlapping(job, () =>
+    log.warn("tournaments.cron.tick_skipped", {
+      job: jobName,
+      reason: "previous tick still running",
+    }),
+  );
+}
 
 /** Score updater interval — product copy says ~5 min; 2 min keeps boards fresher. */
 const SCORE_UPDATE_INTERVAL_MS = Number(process.env.TOURNAMENT_SCORE_INTERVAL_MS || 2 * 60 * 1000);
 const RECONCILE_INTERVAL_MS = Number(process.env.TOURNAMENT_RECONCILE_INTERVAL_MS || 15 * 60 * 1000);
-const SHADOW_INTERVAL_MS = Number(process.env.TOURNAMENT_SHADOW_INTERVAL_MS || 60 * 60 * 1000);
 const LIFECYCLE_INTERVAL_MS = Number(process.env.TOURNAMENT_LIFECYCLE_INTERVAL_MS || 60 * 1000);
 const OUTBOX_INTERVAL_MS = Number(process.env.TOURNAMENT_OUTBOX_INTERVAL_MS || 5_000);
 
@@ -41,40 +59,71 @@ const INCREMENTAL_METRICS = new Set([
 const OFFERWALL_SOURCE_METRICS = new Set([...OFFERS_INCREMENTAL_METRICS]);
 const OUTBOX_METRICS = new Set(["BLOCKS_MINED"]);
 
+/**
+ * The outbox drain used to be `processTournamentOutboxBatch().catch(() => {})`
+ * in both call sites — a silent swallow. This job owns BLOCKS_MINED scoring, so
+ * a persistent failure froze those leaderboards with no log line anywhere.
+ */
+async function runOutbox(): Promise<void> {
+  try {
+    await processTournamentOutboxBatch();
+  } catch (err) {
+    reportError({
+      code: TOURNAMENT_ERROR.OUTBOX_TICK_FAILED,
+      category: "BUSINESS",
+      severity: "ERROR",
+      // BLOCKS_MINED scores stall while this is down: players see a frozen board
+      // and the tournament can finalize on stale scores.
+      impact: "HIGH",
+      module: "tournaments",
+      operation: "cron.processTournamentOutboxBatch",
+      error: err,
+    });
+  }
+}
+
 export function startTournamentsCron() {
   registerTournamentMetricScorers();
 
-  scoreIntervalId = setInterval(() => {
-    void runScoreUpdater();
-  }, SCORE_UPDATE_INTERVAL_MS);
+  // Built once and shared between the interval and the startup kick, so the
+  // immediate run and the first tick cannot overlap each other either.
+  const tickScoreUpdater = guardedTick("scoreUpdater", runScoreUpdater);
+  const tickReconcile = guardedTick("reconcile", runReconcile);
+  const tickOutbox = guardedTick("outbox", runOutbox);
+  const tickLifecycle = guardedTick("lifecycle", runLifecycleManager);
+
+  scoreIntervalId = setInterval(() => void tickScoreUpdater(), SCORE_UPDATE_INTERVAL_MS);
 
   if (isTournamentIncrementalScoringEnabled()) {
-    reconcileIntervalId = setInterval(() => {
-      void runReconcile();
-    }, RECONCILE_INTERVAL_MS);
-    shadowValidationIntervalId = setInterval(() => {
-      void runShadowValidation();
-    }, SHADOW_INTERVAL_MS);
+    reconcileIntervalId = setInterval(() => void tickReconcile(), RECONCILE_INTERVAL_MS);
   }
 
-  outboxIntervalId = setInterval(() => {
-    void processTournamentOutboxBatch().catch(() => {});
-  }, OUTBOX_INTERVAL_MS);
+  outboxIntervalId = setInterval(() => void tickOutbox(), OUTBOX_INTERVAL_MS);
 
-  lifecycleIntervalId = setInterval(() => {
-    void runLifecycleManager();
-  }, LIFECYCLE_INTERVAL_MS);
+  lifecycleIntervalId = setInterval(() => void tickLifecycle(), LIFECYCLE_INTERVAL_MS);
 
-  void runLifecycleManager();
-  void alignActiveTournamentWindows().catch((err) =>
-    log.error("[tournaments] align windows error:", { error: String(err) }),
+  // Goes through the same guard as the interval, so this startup run and the
+  // first scheduled tick cannot both be inside finalizeTournament at once.
+  void tickLifecycle().then(() =>
+    alignActiveTournamentWindows().catch((err) =>
+      reportError({
+        code: TOURNAMENT_ERROR.WINDOW_ALIGN_FAILED,
+        category: "BUSINESS",
+        severity: "ERROR",
+        // Windows drifting off their UTC boundary means scores are counted over
+        // the wrong period — wrong winners, not just a cosmetic label.
+        impact: "HIGH",
+        module: "tournaments",
+        operation: "cron.alignActiveTournamentWindows",
+        error: err,
+      }),
+    ),
   );
-  void runScoreUpdater();
+  void tickScoreUpdater();
   if (isTournamentIncrementalScoringEnabled()) {
-    void runReconcile();
-    void runShadowValidation();
+    void tickReconcile();
   }
-  void processTournamentOutboxBatch().catch(() => {});
+  void tickOutbox();
 
   return {
     stop: () => {
@@ -82,12 +131,10 @@ export function startTournamentsCron() {
       if (lifecycleIntervalId) clearInterval(lifecycleIntervalId);
       if (outboxIntervalId) clearInterval(outboxIntervalId);
       if (reconcileIntervalId) clearInterval(reconcileIntervalId);
-      if (shadowValidationIntervalId) clearInterval(shadowValidationIntervalId);
       scoreIntervalId = null;
       lifecycleIntervalId = null;
       outboxIntervalId = null;
       reconcileIntervalId = null;
-      shadowValidationIntervalId = null;
     },
   };
 }
@@ -114,27 +161,32 @@ async function runScoreUpdater() {
         // HASHRATE / CHECKINS / FAUCET / SHORTLINK / AUTO_MINING / etc. — batch recompute
         await computeScoresForTournament(tournament);
       } catch (err) {
-        log.error(`[tournaments] score update failed for #${tournament.id}:`, {
-          error: String(err),
+        // Isolated on purpose: one tournament failing to rescore must not stop
+        // the loop and freeze every other active board.
+        reportError({
+          code: TOURNAMENT_ERROR.SCORE_UPDATE_FAILED,
+          category: "BUSINESS",
+          severity: "ERROR",
+          impact: "MEDIUM",
+          module: "tournaments",
+          operation: "cron.computeScoresForTournament",
+          error: err,
+          context: { tournamentId: tournament.id, metric: tournament.metric },
         });
       }
     }
   } catch (err) {
-    log.error("[tournaments] score updater error:", { error: String(err) });
-  }
-}
-
-async function runShadowValidation() {
-  try {
-    const reports = await runOfferwallShadowValidation();
-    const drift = reports.filter((r) => r.driftCount > 0);
-    if (drift.length > 0) {
-      log.warn(
-        `[tournaments] shadow validation drift in ${drift.length} offerwall tournament(s) (stub)`,
-      );
-    }
-  } catch (err) {
-    log.error("[tournaments] shadow validation error:", { error: String(err) });
+    reportError({
+      code: TOURNAMENT_ERROR.SCORE_UPDATER_TICK_FAILED,
+      category: "BUSINESS",
+      severity: "ERROR",
+      // Nothing rescores at all while this is failing: every batch-scored board
+      // is frozen, not just one.
+      impact: "HIGH",
+      module: "tournaments",
+      operation: "cron.runScoreUpdater",
+      error: err,
+    });
   }
 }
 
@@ -161,7 +213,17 @@ async function runReconcile() {
       }
     }
   } catch (err) {
-    log.error("[tournaments] reconcile error:", { error: String(err) });
+    reportError({
+      code: TOURNAMENT_ERROR.RECONCILE_TICK_FAILED,
+      category: "BUSINESS",
+      severity: "ERROR",
+      // Reconcile is the net that catches scoring drift. While it is down,
+      // drift accumulates undetected and a tournament can pay on wrong scores.
+      impact: "HIGH",
+      module: "tournaments",
+      operation: "cron.runReconcile",
+      error: err,
+    });
   }
 }
 
@@ -176,8 +238,18 @@ async function runLifecycleManager() {
       log.info(`[tournaments] activated tournament #${t.id} "${t.name}"`);
       if (t.metric === "MINIGAME_WINS") {
         void backfillMinigameTournamentFromLogs(t.id).catch((err) => {
-          log.error(`[tournaments] minigame backfill on activate #${t.id}:`, {
-            error: String(err),
+          // Fire-and-forget: the tournament is already ACTIVE. Without the
+          // backfill it starts from zero and every win logged before activation
+          // is lost from the score.
+          reportError({
+            code: TOURNAMENT_ERROR.MINIGAME_BACKFILL_FAILED,
+            category: "BUSINESS",
+            severity: "ERROR",
+            impact: "HIGH",
+            module: "tournaments",
+            operation: "cron.backfillMinigameTournamentFromLogs",
+            error: err,
+            context: { tournamentId: t.id, tournamentName: t.name },
           });
         });
       }
@@ -187,16 +259,50 @@ async function runLifecycleManager() {
       where: { status: "ACTIVE", endsAt: { lte: now } },
     });
     for (const t of toFinalize) {
+      const startedAt = Date.now();
       try {
-        const { ranked, rewarded } = await finalizeTournament(t.id);
-        log.info(
-          `[tournaments] finalized #${t.id} "${t.name}" — ${ranked} ranked, ${rewarded} rewarded`,
-        );
+        const { ranked, rewarded, failed } = await finalizeTournament(t.id);
+        log.info("tournament.finalized", {
+          tournamentId: t.id,
+          tournamentName: t.name,
+          metric: t.metric,
+          ranked,
+          rewarded,
+          failed,
+          duration_ms: Date.now() - startedAt,
+        });
       } catch (err) {
-        log.error(`[tournaments] finalization failed for #${t.id}:`, { error: String(err) });
+        // A throw here leaves the tournament ACTIVE with endsAt in the past, so
+        // this same finalize is retried every LIFECYCLE_INTERVAL_MS forever and
+        // nobody in it gets paid until someone intervenes. That is CRITICAL.
+        reportError({
+          code: TOURNAMENT_ERROR.FINALIZE_PARTIAL,
+          category: "BUSINESS",
+          severity: "CRITICAL",
+          impact: "CRITICAL",
+          module: "tournaments",
+          operation: "cron.finalizeTournament",
+          error: err,
+          context: {
+            tournamentId: t.id,
+            tournamentName: t.name,
+            metric: t.metric,
+            endsAt: t.endsAt,
+            duration_ms: Date.now() - startedAt,
+            note: "tournament stays ACTIVE and will be retried on the next tick",
+          },
+        });
       }
     }
   } catch (err) {
-    log.error("[tournaments] lifecycle manager error:", { error: String(err) });
+    reportError({
+      code: TOURNAMENT_ERROR.LIFECYCLE_TICK_FAILED,
+      category: "BUSINESS",
+      severity: "ERROR",
+      impact: "HIGH",
+      module: "tournaments",
+      operation: "cron.runLifecycleManager",
+      error: err,
+    });
   }
 }
