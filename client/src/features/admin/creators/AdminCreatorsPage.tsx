@@ -3,6 +3,13 @@ import { toast } from 'sonner';
 import { Youtube, Plus, Trash2, Search, X, Save, ExternalLink } from 'lucide-react';
 import { api } from '../../../shared/auth/auth.store';
 import { readAxiosResponseMessage } from '../lib/admin.api';
+import type { AdminSocialTab } from './adminSocial.shared';
+import {
+  CredentialRequestsTab,
+  ProfilesTab,
+  RewardSettingsPanel,
+  SubmissionsTab,
+} from './adminSocial.tabs';
 
 function YtLogo({ className = 'w-5 h-5' }: { className?: string }) {
   return (
@@ -20,8 +27,6 @@ type CreatorSearchUser = {
   isCreator?: boolean;
 };
 
-type CreatorSearchResponse = { ok: true; users?: CreatorSearchUser[] } | { ok: false };
-
 type CreatorListRow = {
   id: number;
   username?: string | null;
@@ -29,10 +34,6 @@ type CreatorListRow = {
   youtubeUrl?: string | null;
   createdAt: string | Date;
 };
-
-type CreatorsListResponse = { ok: true; creators?: CreatorListRow[] } | { ok: false };
-
-type CreatorMutationResponse = { ok: boolean; message?: string };
 
 function AddCreatorModal({ onClose, onAdded }: { onClose: () => void; onAdded: () => void }) {
   const [query, setQuery] = useState('');
@@ -52,7 +53,9 @@ function AddCreatorModal({ onClose, onAdded }: { onClose: () => void; onAdded: (
     setSearching(true);
     debounce.current = setTimeout(async () => {
       try {
-        const res = await api.get<CreatorSearchResponse>(`/admin/creators/search?q=${encodeURIComponent(q)}`);
+        const res = await api.get<{ ok: boolean; users?: CreatorSearchUser[] }>(
+          `/admin/creators/search?q=${encodeURIComponent(q)}`,
+        );
         if (res.data.ok) setResults(res.data.users || []);
       } catch {
         /* noop */
@@ -66,7 +69,7 @@ function AddCreatorModal({ onClose, onAdded }: { onClose: () => void; onAdded: (
     if (!selected) return;
     setSaving(true);
     try {
-      const res = await api.put<CreatorMutationResponse>(`/admin/creators/${selected.id}`, { youtubeUrl: ytUrl });
+      const res = await api.put<{ ok: boolean }>(`/admin/creators/${selected.id}`, { youtubeUrl: ytUrl });
       if (res.data.ok) {
         toast.success(`${selected.username} credenciado como criador!`);
         onAdded();
@@ -83,7 +86,6 @@ function AddCreatorModal({ onClose, onAdded }: { onClose: () => void; onAdded: (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
       onClick={onClose}
-      onKeyDown={(e) => e.key === 'Escape' && onClose()}
       role="presentation"
     >
       <div
@@ -93,7 +95,7 @@ function AddCreatorModal({ onClose, onAdded }: { onClose: () => void; onAdded: (
       >
         <div className="flex items-center justify-between">
           <h2 className="text-base font-black text-white flex items-center gap-2">
-            <YtLogo className="w-5 h-5 text-red-500" /> Credenciar Criador
+            <YtLogo className="w-5 h-5 text-red-500" /> Flag isCreator
           </h2>
           <button type="button" onClick={onClose} className="text-slate-500 hover:text-white transition-colors">
             <X className="w-4 h-4" />
@@ -151,12 +153,18 @@ function AddCreatorModal({ onClose, onAdded }: { onClose: () => void; onAdded: (
                 <p className="text-sm font-black text-white">{selected.username}</p>
                 <p className="text-xs text-slate-500">{selected.name}</p>
               </div>
-              <button type="button" onClick={() => setSelected(null)} className="ml-auto text-slate-500 hover:text-white transition-colors">
+              <button
+                type="button"
+                onClick={() => setSelected(null)}
+                className="ml-auto text-slate-500 hover:text-white transition-colors"
+              >
                 <X className="w-3.5 h-3.5" />
               </button>
             </div>
             <div className="space-y-1">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Link do Canal YouTube</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                Link do Canal YouTube
+              </label>
               <input
                 autoFocus
                 className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500/50 placeholder:text-slate-600"
@@ -172,7 +180,7 @@ function AddCreatorModal({ onClose, onAdded }: { onClose: () => void; onAdded: (
               className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-black text-sm transition-colors disabled:opacity-40"
             >
               <YtLogo className="w-4 h-4" />
-              {saving ? 'Salvando...' : 'Credenciar como Criador'}
+              {saving ? 'Salvando...' : 'Marcar isCreator'}
             </button>
           </div>
         )}
@@ -181,7 +189,7 @@ function AddCreatorModal({ onClose, onAdded }: { onClose: () => void; onAdded: (
   );
 }
 
-export default function AdminCreators() {
+function CreatorsFlagsTab() {
   const [creators, setCreators] = useState<CreatorListRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
@@ -192,7 +200,7 @@ export default function AdminCreators() {
   const load = async () => {
     setIsLoading(true);
     try {
-      const res = await api.get<CreatorsListResponse>('/admin/creators');
+      const res = await api.get<{ ok: boolean; creators?: CreatorListRow[] }>('/admin/creators');
       if (res.data.ok) setCreators(res.data.creators || []);
     } catch {
       toast.error('Erro ao carregar criadores.');
@@ -206,10 +214,10 @@ export default function AdminCreators() {
   }, []);
 
   const handleRemove = async (id: number, username: string | null | undefined) => {
-    if (!confirm(`Remover credencial de criador de @${username}?`)) return;
+    if (!confirm(`Remover flag isCreator de @${username}?`)) return;
     try {
       await api.delete(`/admin/creators/${id}`);
-      toast.success('Credencial removida.');
+      toast.success('Flag removida.');
       setCreators((c) => c.filter((x) => x.id !== id));
     } catch {
       toast.error('Erro ao remover.');
@@ -219,7 +227,7 @@ export default function AdminCreators() {
   const handleEditSave = async (id: number) => {
     setSaving(true);
     try {
-      const res = await api.put<CreatorMutationResponse>(`/admin/creators/${id}`, { youtubeUrl: editUrl });
+      const res = await api.put<{ ok: boolean }>(`/admin/creators/${id}`, { youtubeUrl: editUrl });
       if (res.data.ok) {
         toast.success('Link atualizado!');
         setEditingId(null);
@@ -233,25 +241,19 @@ export default function AdminCreators() {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="space-y-4">
       {showAdd ? <AddCreatorModal onClose={() => setShowAdd(false)} onAdded={() => void load()} /> : null}
 
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-3 bg-red-500/10 rounded-2xl">
-            <YtLogo className="w-6 h-6 text-red-500" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-black text-white">Criadores de Conteúdo</h1>
-            <p className="text-sm text-slate-500">{creators.length} criador(es) credenciado(s)</p>
-          </div>
-        </div>
+      <div className="flex items-center justify-between">
+        <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
+          {creators.length} flag(s) isCreator — separado dos perfis Social
+        </p>
         <button
           type="button"
           onClick={() => setShowAdd(true)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-red-600 hover:bg-red-500 text-white font-black text-sm rounded-xl transition-colors shadow-lg shadow-red-900/30"
+          className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-black text-xs rounded-xl transition-colors"
         >
-          <Plus className="w-4 h-4" /> Credenciar Criador
+          <Plus className="w-3.5 h-3.5" /> Credenciar
         </button>
       </div>
 
@@ -261,112 +263,156 @@ export default function AdminCreators() {
         ) : creators.length === 0 ? (
           <div className="p-12 flex flex-col items-center gap-3 text-slate-600">
             <YtLogo className="w-10 h-10 opacity-30" />
-            <p className="text-sm font-bold">Nenhum criador credenciado ainda.</p>
+            <p className="text-sm font-bold">Nenhum usuário com flag isCreator.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-800/50 text-[10px] uppercase tracking-widest font-black text-slate-500">
-              <tr>
-                <th className="px-6 py-4 text-left">Usuário</th>
-                <th className="px-6 py-4 text-left hidden md:table-cell">Canal YouTube</th>
-                <th className="px-6 py-4 text-left hidden md:table-cell">Desde</th>
-                <th className="px-6 py-4 text-right">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/60">
-              {creators.map((c) => (
-                <tr key={c.id} className="hover:bg-slate-800/20 transition-colors">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="relative">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-800/50 text-[10px] uppercase tracking-widest font-black text-slate-500">
+                <tr>
+                  <th className="px-6 py-4 text-left">Usuário</th>
+                  <th className="px-6 py-4 text-left hidden md:table-cell">Canal YouTube</th>
+                  <th className="px-6 py-4 text-left hidden md:table-cell">Desde</th>
+                  <th className="px-6 py-4 text-right">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60">
+                {creators.map((c) => (
+                  <tr key={c.id} className="hover:bg-slate-800/20 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-full bg-slate-700 flex items-center justify-center text-xs font-black text-white">
                           {c.username?.charAt(0).toUpperCase()}
                         </div>
-                        <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-red-600 rounded-full flex items-center justify-center">
-                          <YtLogo className="w-2.5 h-2.5 text-white" />
+                        <div>
+                          <p className="font-black text-white">{c.username}</p>
+                          <p className="text-xs text-slate-500">{c.name}</p>
                         </div>
                       </div>
-                      <div>
-                        <p className="font-black text-white">{c.username}</p>
-                        <p className="text-xs text-slate-500">{c.name}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 hidden md:table-cell">
-                    {editingId === c.id ? (
-                      <div className="flex items-center gap-2">
-                        <input
-                          autoFocus
-                          className="bg-slate-950 border border-slate-600 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-red-500/50 w-64"
-                          value={editUrl}
-                          onChange={(e) => setEditUrl(e.target.value)}
-                          placeholder="https://youtube.com/@canal"
-                        />
+                    </td>
+                    <td className="px-6 py-4 hidden md:table-cell">
+                      {editingId === c.id ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            autoFocus
+                            className="bg-slate-950 border border-slate-600 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-red-500/50 w-64"
+                            value={editUrl}
+                            onChange={(e) => setEditUrl(e.target.value)}
+                            placeholder="https://youtube.com/@canal"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => void handleEditSave(c.id)}
+                            disabled={saving}
+                            className="p-1.5 bg-red-600 hover:bg-red-500 rounded-lg text-white transition-colors disabled:opacity-40"
+                          >
+                            <Save className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditingId(null)}
+                            className="p-1.5 text-slate-500 hover:text-white transition-colors"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ) : c.youtubeUrl ? (
+                        <a
+                          href={c.youtubeUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 transition-colors font-bold truncate max-w-xs"
+                        >
+                          <YtLogo className="w-3.5 h-3.5 flex-shrink-0" />
+                          <span className="truncate">
+                            {c.youtubeUrl.replace('https://', '').replace('http://', '')}
+                          </span>
+                          <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                        </a>
+                      ) : (
+                        <span className="text-xs text-slate-600 italic">sem link</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 hidden md:table-cell text-xs text-slate-500">
+                      {new Date(c.createdAt).toLocaleDateString('pt-BR')}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-1">
                         <button
                           type="button"
-                          onClick={() => void handleEditSave(c.id)}
-                          disabled={saving}
-                          className="p-1.5 bg-red-600 hover:bg-red-500 rounded-lg text-white transition-colors disabled:opacity-40"
+                          onClick={() => {
+                            setEditingId(c.id);
+                            setEditUrl(c.youtubeUrl || '');
+                          }}
+                          className="p-2 text-slate-500 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+                          title="Editar link"
                         >
-                          <Save className="w-3.5 h-3.5" />
+                          <Youtube className="w-4 h-4" />
                         </button>
-                        <button type="button" onClick={() => setEditingId(null)} className="p-1.5 text-slate-500 hover:text-white transition-colors">
-                          <X className="w-3.5 h-3.5" />
+                        <button
+                          type="button"
+                          onClick={() => void handleRemove(c.id, c.username)}
+                          className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                          title="Remover flag"
+                        >
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        {c.youtubeUrl ? (
-                          <a
-                            href={c.youtubeUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 transition-colors font-bold truncate max-w-xs"
-                          >
-                            <YtLogo className="w-3.5 h-3.5 flex-shrink-0" />
-                            <span className="truncate">{c.youtubeUrl.replace('https://', '').replace('http://', '')}</span>
-                            <ExternalLink className="w-3 h-3 flex-shrink-0" />
-                          </a>
-                        ) : (
-                          <span className="text-xs text-slate-600 italic">sem link</span>
-                        )}
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 hidden md:table-cell text-xs text-slate-500">
-                    {new Date(c.createdAt).toLocaleDateString('pt-BR')}
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setEditingId(c.id);
-                          setEditUrl(c.youtubeUrl || '');
-                        }}
-                        className="p-2 text-slate-500 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
-                        title="Editar link"
-                      >
-                        <Youtube className="w-4 h-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => void handleRemove(c.id, c.username)}
-                        className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
-                        title="Remover credencial"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+const TABS: { id: AdminSocialTab; label: string }[] = [
+  { id: 'requests', label: 'Solicitações' },
+  { id: 'submissions', label: 'Vídeos' },
+  { id: 'profiles', label: 'Perfis' },
+  { id: 'flags', label: 'Flags' },
+  { id: 'settings', label: 'Config' },
+];
+
+export default function AdminCreators() {
+  const [activeTab, setActiveTab] = useState<AdminSocialTab>('requests');
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-6 pb-20 animate-in fade-in duration-500">
+      <div className="flex items-center gap-3">
+        <div className="w-9 h-9 rounded-xl bg-red-500/20 flex items-center justify-center">
+          <Youtube className="w-5 h-5 text-red-400" />
+        </div>
+        <div>
+          <h1 className="text-xl font-black text-white">Criadores & Social YouTube</h1>
+          <p className="text-xs text-gray-500">Solicitações, vídeos, perfis e recompensa</p>
+        </div>
+      </div>
+
+      <div className="flex gap-1 p-1 bg-white/5 rounded-2xl w-fit border border-white/8 flex-wrap">
+        {TABS.map((t) => (
+          <button
+            type="button"
+            key={t.id}
+            onClick={() => setActiveTab(t.id)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all ${
+              activeTab === t.id ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-white'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'requests' ? <CredentialRequestsTab /> : null}
+      {activeTab === 'submissions' ? <SubmissionsTab /> : null}
+      {activeTab === 'profiles' ? <ProfilesTab /> : null}
+      {activeTab === 'flags' ? <CreatorsFlagsTab /> : null}
+      {activeTab === 'settings' ? <RewardSettingsPanel /> : null}
     </div>
   );
 }
