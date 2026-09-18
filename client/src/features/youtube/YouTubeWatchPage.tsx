@@ -25,7 +25,6 @@ import {
   YoutubeTrackerSidebar,
   YT_PAUSED_KEY,
   extractVideoId,
-  isValidYoutubeVideoId,
   readPausedFlag,
   type PlayerUiState,
 } from './components/youtubeWatch.parts';
@@ -61,14 +60,10 @@ export default function YouTubeWatchPage() {
   const { ytApiReady, ytApiFailed } = useYoutubeIframeApi(t);
 
   const [url, setUrl] = useState('');
-  const [videoId, setVideoId] = useState<string | null>(() => {
-    try {
-      const saved = localStorage.getItem(YT_LAST_VIDEO_KEY);
-      return isValidYoutubeVideoId(saved) ? saved : null;
-    } catch {
-      return null;
-    }
-  });
+  // Never rehydrate/autoplay the last video on mount — user must paste + load explicitly.
+  // YT_LAST_VIDEO_KEY is still written on successful load (claim payload / future runners)
+  // and cleared on "clear URL".
+  const [videoId, setVideoId] = useState<string | null>(null);
   const [playerState, setPlayerState] = useState<PlayerUiState>('idle');
   const playerStateRef = useRef(playerState);
   useEffect(() => {
@@ -236,6 +231,11 @@ export default function YouTubeWatchPage() {
         ytPlayerRef.current = null;
       }
       setVideoId(null);
+      try {
+        localStorage.removeItem(YT_LAST_VIDEO_KEY);
+      } catch {
+        /* ignore */
+      }
       setPlayerMountKey((k) => k + 1);
       requestAnimationFrame(() => urlInputRef.current?.focus());
     },

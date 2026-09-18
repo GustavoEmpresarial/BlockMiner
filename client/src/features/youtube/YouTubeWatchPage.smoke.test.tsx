@@ -156,6 +156,11 @@ beforeEach(async () => {
   installApiMock();
   installFakeYouTubeApi();
   vi.useFakeTimers();
+  try {
+    localStorage.clear();
+  } catch {
+    /* ignore */
+  }
   await i18n.init({ lng: 'pt-BR', resources: { 'pt-BR': { translation: ptBR } }, interpolation: { escapeValue: false } });
 });
 
@@ -169,9 +174,21 @@ afterEach(() => {
   } catch {
     /* ignore */
   }
+  try {
+    localStorage.clear();
+  } catch {
+    /* ignore */
+  }
 });
 
 describe('YouTubeWatchPage smoke test (real component, fake player + backend, real timers)', () => {
+  it('does not auto-mount the previous localStorage video on page entry', async () => {
+    localStorage.setItem('blockminer:yt-last-video-id', 'dQw4w9WgXcQ');
+    await mountPage();
+    expect(lastPlayer).toBeNull();
+    expect(screen.queryByText(/Carregar|Load/i)).toBeTruthy();
+  });
+
   it('does not destroy/recreate the player on its own over time while a video is loaded (regression: "piscando preto")', { timeout: 20_000 }, async () => {
     await mountPage();
     await loadVideo();

@@ -7,7 +7,11 @@ import { useEffect, useSyncExternalStore } from 'react';
  * (plus the YT IFrame API bootstrap) into the layout chunk.
  */
 
-/** Written by YouTubeWatchPage whenever a video is loaded; off-page claims need a videoId. */
+/**
+ * Last explicitly loaded video id.
+ * Written on Load; removed on Clear. Must NOT be used to auto-mount/autoplay the player on
+ * `/youtube` entry — that resumed the previous video every visit.
+ */
 export const YT_LAST_VIDEO_KEY = 'blockminer:yt-last-video-id';
 
 /** Cool-off after the daily cap so nothing retries until well past the UTC reset check. */
