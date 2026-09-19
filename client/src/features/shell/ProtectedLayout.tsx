@@ -9,6 +9,7 @@ import PtcSessionManager from '../ptc/components/PtcSessionManager';
 import ShortlinkBackgroundRunner from '../shortlinks/components/ShortlinkBackgroundRunner';
 import AutoMiningBackgroundRunner from '../auto-mining/components/AutoMiningBackgroundRunner';
 import SiteFooter from '../../shared/components/SiteFooter';
+import EmailVerifyBanner from '../verify-email/EmailVerifyBanner';
 
 export default function ProtectedLayout() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -43,6 +44,9 @@ export default function ProtectedLayout() {
         <Header />
         <main className="flex-1 overflow-x-hidden px-4 py-6 sm:px-6 lg:px-8 supports-[padding:max(0px)]:pb-[max(1rem,env(safe-area-inset-bottom))]">
           <div className="mx-auto w-full max-w-7xl">
+            <div className="sticky top-14 z-20 md:top-20">
+              <EmailVerifyBanner />
+            </div>
             <Suspense
               fallback={
                 <div className="flex min-h-[40vh] items-center justify-center">

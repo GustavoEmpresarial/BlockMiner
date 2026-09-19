@@ -87,7 +87,11 @@ export function createWithdrawHandlers(deps: WithdrawHandlersDeps) {
         toast.error(res.data.message || t('common.error'));
       }
     } catch (err: unknown) {
-      const ax = err as AxiosError<{ message?: string }>;
+      const ax = err as AxiosError<{ message?: string; code?: string }>;
+      if (ax.response?.data?.code === 'EMAIL_NOT_VERIFIED') {
+        toast.error(t('auth.verifyEmail.banner_body'));
+        return;
+      }
       toast.error(ax.response?.data?.message || t('common.error'));
     } finally {
       setIsActionLoading(false);

@@ -4,6 +4,7 @@ import { API_TIMEOUT_MS_AUTH, API_TIMEOUT_MS_SESSION, resolveApiTimeoutMs } from
 import { readAuthErrorMessage } from './auth.errors';
 import { generateSecurityPayload } from '../utils/security';
 import { captureCsrfFromPayload, resolveCsrfTokenForRequest } from './csrfMemory';
+import { parseAuthUserPayload } from './parseAuthUser';
 
 /** Public session user (matches current/server auth JSON; no secrets). */
 export type AuthUser = {
@@ -55,17 +56,6 @@ export type LoginResult = LoginResultSuccess | LoginResultFailure;
 
 export interface CheckSessionOptions {
   silent?: boolean;
-}
-
-function parseAuthUserPayload(raw: unknown): AuthUser | null {
-  if (typeof raw !== 'object' || raw === null) return null;
-  const o = raw as Record<string, unknown>;
-  if (typeof o.id !== 'number') return null;
-  if (typeof o.name !== 'string') return null;
-  if (typeof o.email !== 'string') return null;
-  const un = o.username;
-  if (un !== null && typeof un !== 'string') return null;
-  return { id: o.id, name: o.name, email: o.email, username: un ?? null };
 }
 
 export interface AuthState {

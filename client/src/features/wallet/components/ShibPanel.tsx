@@ -65,8 +65,12 @@ export function ShibPanel({ balance, onRefresh }: Props) {
         toast.error(res.data?.message ?? t("common.error"));
       }
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      toast.error(msg ?? t("wallet.shib.withdraw_error"));
+      const data = (err as { response?: { data?: { message?: string; code?: string } } })?.response?.data;
+      toast.error(
+        data?.code === "EMAIL_NOT_VERIFIED"
+          ? t("auth.verifyEmail.banner_body")
+          : (data?.message ?? t("wallet.shib.withdraw_error")),
+      );
     } finally {
       setLoading(false);
     }
