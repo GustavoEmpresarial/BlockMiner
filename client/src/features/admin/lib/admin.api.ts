@@ -25,6 +25,13 @@ import type {
   AdminBroadcastListResponse,
   AdminBroadcastMutationResponse,
   AdminBroadcastResetViewsResponse,
+  AdminBackupsListResponse,
+  AdminBackupCreateResponse,
+  AdminBackupVerifyResponse,
+  GoogleDriveStatusResponse,
+  GoogleDriveAuthUrlResponse,
+  GoogleDriveConnectResponse,
+  GoogleDriveUploadResponse,
 } from './admin.types';
 
 
@@ -330,5 +337,39 @@ export function uploadAdminBroadcastImage(formData: FormData) {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
 }
+
+// ─── Database Backups & Cloud Sync ───────────────────────────────────────
+export function getAdminBackups() {
+  return api.get<AdminBackupsListResponse>('/admin/backups');
+}
+
+export function createAdminBackup() {
+  return api.post<AdminBackupCreateResponse>('/admin/backups');
+}
+
+export function deleteAdminBackup(filename: string) {
+  return api.delete<{ ok: boolean; message?: string }>('/admin/backups', { data: { filename } });
+}
+
+export function verifyAdminBackup(filename: string) {
+  return api.post<AdminBackupVerifyResponse>('/admin/backups/verify', { filename });
+}
+
+export function getAdminGoogleDriveStatus() {
+  return api.get<GoogleDriveStatusResponse>('/admin/backups/gdrive/status');
+}
+
+export function getAdminGoogleDriveAuthUrl() {
+  return api.post<GoogleDriveAuthUrlResponse>('/admin/backups/gdrive/auth-url');
+}
+
+export function connectAdminGoogleDrive(code: string) {
+  return api.post<GoogleDriveConnectResponse>('/admin/backups/gdrive/connect', { code });
+}
+
+export function uploadAdminBackupToGoogleDrive(filename: string) {
+  return api.post<GoogleDriveUploadResponse>('/admin/backups/upload-gdrive', { filename });
+}
+
 
 

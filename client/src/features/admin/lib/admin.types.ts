@@ -944,4 +944,127 @@ export interface AdminBroadcastResetViewsResponse {
   message: string;
 }
 
+// ─── Database Backups & Cloud Sync ───────────────────────────────────────
+export type BackupIntegrityStatus = "valid" | "corrupted" | "unverified";
+
+export type AdminBackupRow = {
+  name: string;
+  size: number;
+  created: string;
+  status: string;
+  publicTableCount?: number | null;
+  durationMs?: number | null;
+  copyPublicLineCount?: number | null;
+  criticalTablesPresent?: unknown[] | null;
+  totalDataRows?: number | null;
+  publicTablesWithRows?: number | null;
+  publicTablesEmpty?: number | null;
+  criticalRowCounts?: Record<string, unknown> | null;
+  rowCountAuditMode?: string | null;
+  bundleName?: string | null;
+  bundleSize?: number | null;
+  bundleIncludedPaths?: string[];
+  sha256?: string | null;
+  integrityStatus?: BackupIntegrityStatus | null;
+  lastVerifiedAt?: string | null;
+  integrityErrors?: string[] | null;
+  googleDrive?: {
+    uploadedAt?: string;
+    folderId?: string;
+    fileId?: string;
+    webViewLink?: string;
+    md5Checksum?: string;
+    bundleFileId?: string;
+  } | null;
+};
+
+export type AdminBackupsListResponse = {
+  ok: boolean;
+  backups?: AdminBackupRow[];
+  backupsDir?: string;
+  message?: string;
+};
+
+export type AdminBackupCreateResponse = {
+  ok: boolean;
+  message?: string;
+  backup?: AdminBackupRow;
+};
+
+export type BackupIntegrityReport = {
+  ok: boolean;
+  filename: string;
+  sizeBytes: number;
+  sha256: string;
+  status: "valid" | "corrupted";
+  verifiedAt: string;
+  checks: {
+    sizeOk: boolean;
+    headerOk: boolean;
+    footerOk: boolean;
+    criticalTablesOk: boolean;
+    hashMatch: boolean;
+    bundleOk?: boolean;
+  };
+  missingCriticalTables: string[];
+  errors: string[];
+};
+
+export type AdminBackupVerifyResponse = {
+  ok: boolean;
+  report?: BackupIntegrityReport;
+  message?: string;
+};
+
+export type GoogleDriveStatus = {
+  isConfigured: boolean;
+  isConnected: boolean;
+  folderId?: string | null;
+  folderName?: string | null;
+  userEmail?: string | null;
+  lastSyncAt?: string | null;
+  lastError?: string | null;
+};
+
+export type GoogleDriveStatusResponse = {
+  ok: boolean;
+  status?: GoogleDriveStatus;
+  message?: string;
+};
+
+export type GoogleDriveAuthUrlResponse = {
+  ok: boolean;
+  authUrl?: string;
+  message?: string;
+};
+
+export type GoogleDriveConnectResponse = {
+  ok: boolean;
+  message: string;
+  hasRefreshToken?: boolean;
+};
+
+export type GoogleDriveUploadResponse = {
+  ok: boolean;
+  message: string;
+  upload?: {
+    filename: string;
+    sqlUpload: {
+      fileId: string;
+      name: string;
+      size: number;
+      md5Checksum?: string;
+      webViewLink?: string;
+    };
+    bundleUpload?: {
+      fileId: string;
+      name: string;
+      size: number;
+      md5Checksum?: string;
+      webViewLink?: string;
+    };
+  };
+};
+
+
 
