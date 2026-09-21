@@ -17,6 +17,7 @@ import {
   Lock,
   CheckCircle2,
   X,
+  Settings,
 } from "lucide-react";
 import {
   getAdminBackups,
@@ -27,6 +28,7 @@ import {
   getAdminGoogleDriveAuthUrl,
   connectAdminGoogleDrive,
   uploadAdminBackupToGoogleDrive,
+  configureAdminGoogleDrive,
   readAxiosResponseMessage,
 } from "../lib/admin.api";
 import type {
@@ -59,6 +61,12 @@ export default function AdminBackups() {
   const [authUrl, setAuthUrl] = useState<string>("");
   const [authCode, setAuthCode] = useState("");
   const [isConnectingDrive, setIsConnectingDrive] = useState(false);
+
+  // OAuth credentials setup
+  const [showConfigForm, setShowConfigForm] = useState(false);
+  const [configClientId, setConfigClientId] = useState("");
+  const [configClientSecret, setConfigClientSecret] = useState("");
+  const [isSavingConfig, setIsSavingConfig] = useState(false);
 
   const fetchBackups = useCallback(async () => {
     try {
@@ -181,14 +189,50 @@ export default function AdminBackups() {
   };
 
   const handleOpenConnectModal = async () => {
+    setShowConnectModal(true);
+    if (!driveStatus?.isConfigured) {
+      setShowConfigForm(true);
+      return;
+    }
     try {
       const res = await getAdminGoogleDriveAuthUrl();
       if (res.data.ok && res.data.authUrl) {
         setAuthUrl(res.data.authUrl);
-        setShowConnectModal(true);
+        setShowConfigForm(false);
+      } else {
+        setShowConfigForm(true);
+      }
+    } catch {
+      setShowConfigForm(true);
+    }
+  };
+
+  const handleSaveCredentials = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!configClientId.trim() || !configClientSecret.trim()) {
+      toast.error("Preencha o Client ID e o Client Secret.");
+      return;
+    }
+
+    try {
+      setIsSavingConfig(true);
+      const res = await configureAdminGoogleDrive({
+        clientId: configClientId.trim(),
+        clientSecret: configClientSecret.trim(),
+      });
+      if (res.data.ok) {
+        toast.success("Credenciais do Google Drive salvas com sucesso!");
+        await fetchDriveStatus();
+        const urlRes = await getAdminGoogleDriveAuthUrl();
+        if (urlRes.data.ok && urlRes.data.authUrl) {
+          setAuthUrl(urlRes.data.authUrl);
+          setShowConfigForm(false);
+        }
       }
     } catch (err: unknown) {
-      toast.error(readAxiosResponseMessage(err) || "Falha ao obter URL de autenticação do Google.");
+      toast.error(readAxiosResponseMessage(err) || "Falha ao salvar credenciais.");
+    } finally {
+      setIsSavingConfig(false);
     }
   };
 
@@ -529,47 +573,114 @@ export default function AdminBackups() {
               </button>
             </div>
 
-            <div className="space-y-4 text-xs text-slate-400">
-              <p>{t("adminBackups.gdrive_modal_step1")}</p>
-              <a
-                href={authUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold transition-all shadow-glow"
-              >
-                <ExternalLink className="w-4 h-4" />
-                {t("adminBackups.gdrive_modal_open_link")}
-              </a>
+            {/* If not configured or user clicked to reconfigure credentials */}
+            {showConfigForm ? (
+              <form onSubmit={handleSaveCredentials} className="space-y-4 text-xs">
+                <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-2xl text-blue-300">
+                  Insira o <strong>Client ID</strong> e o <strong>Client Secret</strong> do projeto Google Cloud para habilitar a integração.
+                </div>
 
-              <p className="pt-2">{t("adminBackups.gdrive_modal_step2")}</p>
-              <form onSubmit={handleConnectSubmit} className="space-y-4">
-                <input
-                  type="text"
-                  value={authCode}
-                  onChange={(e) => setAuthCode(e.target.value)}
-                  placeholder={t("adminBackups.gdrive_modal_code_placeholder")}
-                  className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder:text-slate-600 font-mono text-xs focus:outline-none focus:border-blue-500"
-                />
+                <div>
+                  <label className="block text-slate-300 font-bold mb-1">Google OAuth Client ID</label>
+                  <input
+                    type="text"
+                    value={configClientId}
+                    onChange={(e) => setConfigClientId(e.target.value)}
+                    placeholder="244478264579-...apps.googleusercontent.com"
+                    className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder:text-slate-600 font-mono text-xs focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-300 font-bold mb-1">Google OAuth Client Secret</label>
+                  <input
+                    type="password"
+                    value={configClientSecret}
+                    onChange={(e) => setConfigClientSecret(e.target.value)}
+                    placeholder="GOCSPX-..."
+                    className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder:text-slate-600 font-mono text-xs focus:outline-none focus:border-blue-500"
+                  />
+                </div>
 
                 <div className="flex gap-3 justify-end pt-2">
                   <button
                     type="button"
-                    onClick={() => setShowConnectModal(false)}
+                    onClick={() => setShowConfigForm(false)}
                     className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-bold transition-all"
                   >
-                    {t("adminBackups.gdrive_modal_cancel")}
+                    Voltar
                   </button>
                   <button
                     type="submit"
-                    disabled={isConnectingDrive || !authCode.trim()}
-                    className="flex items-center gap-2 px-6 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold uppercase tracking-widest transition-all disabled:opacity-50 shadow-glow"
+                    disabled={isSavingConfig || !configClientId.trim() || !configClientSecret.trim()}
+                    className="flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold uppercase tracking-widest transition-all disabled:opacity-50 shadow-glow"
                   >
-                    {isConnectingDrive ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                    {t("adminBackups.gdrive_modal_confirm")}
+                    {isSavingConfig ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                    Salvar e Prosseguir
                   </button>
                 </div>
               </form>
-            </div>
+            ) : (
+              <div className="space-y-4 text-xs text-slate-400">
+                <div className="flex items-center justify-between">
+                  <span>Credenciais OAuth configuradas</span>
+                  <button
+                    type="button"
+                    onClick={() => setShowConfigForm(true)}
+                    className="flex items-center gap-1 text-blue-400 hover:text-blue-300 font-bold text-[11px]"
+                  >
+                    <Settings className="w-3 h-3" />
+                    Alterar credenciais
+                  </button>
+                </div>
+
+                <p>{t("adminBackups.gdrive_modal_step1")}</p>
+                {authUrl ? (
+                  <a
+                    href={authUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold transition-all shadow-glow"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    {t("adminBackups.gdrive_modal_open_link")}
+                  </a>
+                ) : (
+                  <div className="p-3 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-xl">
+                    Clique em "Alterar credenciais" acima para configurar o Client ID.
+                  </div>
+                )}
+
+                <p className="pt-2">{t("adminBackups.gdrive_modal_step2")}</p>
+                <form onSubmit={handleConnectSubmit} className="space-y-4">
+                  <input
+                    type="text"
+                    value={authCode}
+                    onChange={(e) => setAuthCode(e.target.value)}
+                    placeholder={t("adminBackups.gdrive_modal_code_placeholder")}
+                    className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder:text-slate-600 font-mono text-xs focus:outline-none focus:border-blue-500"
+                  />
+
+                  <div className="flex gap-3 justify-end pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowConnectModal(false)}
+                      className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-bold transition-all"
+                    >
+                      {t("adminBackups.gdrive_modal_cancel")}
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isConnectingDrive || !authCode.trim()}
+                      className="flex items-center gap-2 px-6 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold uppercase tracking-widest transition-all disabled:opacity-50 shadow-glow"
+                    >
+                      {isConnectingDrive ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                      {t("adminBackups.gdrive_modal_confirm")}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
           </div>
         </div>
       )}

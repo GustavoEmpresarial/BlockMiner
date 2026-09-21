@@ -7,14 +7,14 @@ import fs from "node:fs/promises";
 const gdrive = await import("../../server/modules/admin/google-drive.service.ts");
 const backupsSvc = await import("../../server/modules/admin/admin.backups.service.ts");
 
-test("Google Drive client configuration returns env values or empty string", () => {
+test("Google Drive client configuration returns env values or empty string", async () => {
   const prevId = process.env.GOOGLE_DRIVE_CLIENT_ID;
   const prevSec = process.env.GOOGLE_DRIVE_CLIENT_SECRET;
   try {
     process.env.GOOGLE_DRIVE_CLIENT_ID = "test-client-id.apps.googleusercontent.com";
     process.env.GOOGLE_DRIVE_CLIENT_SECRET = "test-client-secret-12345";
-    assert.equal(gdrive.getGoogleDriveClientId(), "test-client-id.apps.googleusercontent.com");
-    assert.equal(gdrive.getGoogleDriveClientSecret(), "test-client-secret-12345");
+    assert.equal(await gdrive.getGoogleDriveClientId(), "test-client-id.apps.googleusercontent.com");
+    assert.equal(await gdrive.getGoogleDriveClientSecret(), "test-client-secret-12345");
     assert.equal(gdrive.getGoogleDriveRedirectUri(), "http://localhost");
   } finally {
     if (prevId === undefined) delete process.env.GOOGLE_DRIVE_CLIENT_ID;
@@ -24,14 +24,21 @@ test("Google Drive client configuration returns env values or empty string", () 
   }
 });
 
-test("getGoogleDriveAuthUrl generates a valid Google OAuth consent URL", () => {
-  const authUrl = gdrive.getGoogleDriveAuthUrl();
-  assert.ok(authUrl.startsWith("https://accounts.google.com/o/oauth2/v2/auth"));
-  assert.ok(authUrl.includes("client_id="));
-  assert.ok(authUrl.includes("scope="));
-  assert.ok(authUrl.includes("access_type=offline"));
-  assert.ok(authUrl.includes("prompt=consent"));
-  assert.ok(authUrl.includes("response_type=code"));
+test("getGoogleDriveAuthUrl generates a valid Google OAuth consent URL", async () => {
+  const prevId = process.env.GOOGLE_DRIVE_CLIENT_ID;
+  try {
+    process.env.GOOGLE_DRIVE_CLIENT_ID = "test-client-id.apps.googleusercontent.com";
+    const authUrl = await gdrive.getGoogleDriveAuthUrl();
+    assert.ok(authUrl.startsWith("https://accounts.google.com/o/oauth2/v2/auth"));
+    assert.ok(authUrl.includes("client_id="));
+    assert.ok(authUrl.includes("scope="));
+    assert.ok(authUrl.includes("access_type=offline"));
+    assert.ok(authUrl.includes("prompt=consent"));
+    assert.ok(authUrl.includes("response_type=code"));
+  } finally {
+    if (prevId === undefined) delete process.env.GOOGLE_DRIVE_CLIENT_ID;
+    else process.env.GOOGLE_DRIVE_CLIENT_ID = prevId;
+  }
 });
 
 test("readGoogleDriveConfig & saveGoogleDriveConfig persist settings in BACKUP_DIR", async () => {

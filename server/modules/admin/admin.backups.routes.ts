@@ -20,6 +20,7 @@ import {
   getGoogleDriveAuthUrl,
   exchangeAuthCodeForTokens,
   uploadBackupPackageToGoogleDrive,
+  configureGoogleDriveOAuth,
 } from "./google-drive.service.js";
 import { requireAdminPermission } from "./admin.permissions.js";
 import { logAdminAction } from "./admin.audit-log.service.js";
@@ -271,14 +272,45 @@ backupsAdminRouter.get("/gdrive/status", async (_req, res) => {
 });
 
 /**
+ * Configures Google Drive OAuth client credentials.
+ */
+backupsAdminRouter.post("/gdrive/configure", async (req, res) => {
+  try {
+    const { clientId, clientSecret, redirectUri } = req.body ?? {};
+    if (!clientId || !clientSecret) {
+      res.status(400).json({ ok: false, message: "Client ID e Client Secret são obrigatórios." });
+      return;
+    }
+
+    await configureGoogleDriveOAuth({ clientId, clientSecret, redirectUri });
+
+    void logAdminAction({
+      adminId: req.admin?.adminId,
+      adminEmail: req.admin?.email,
+      sessionId: req.admin?.sessionId,
+      action: "BACKUP_GDRIVE_CONFIGURE",
+      module: "config",
+      resource: "GoogleDrive",
+      success: true,
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"],
+    });
+
+    res.json({ ok: true, message: "Credenciais do Google Drive salvas com sucesso." });
+  } catch (error) {
+    res.status(500).json({ ok: false, message: errMsg(error) });
+  }
+});
+
+/**
  * Generates the Google OAuth 2.0 authorization URL for linking Drive.
  */
 backupsAdminRouter.post("/gdrive/auth-url", async (_req, res) => {
   try {
-    const authUrl = getGoogleDriveAuthUrl();
+    const authUrl = await getGoogleDriveAuthUrl();
     res.json({ ok: true, authUrl });
   } catch (error) {
-    res.status(500).json({ ok: false, message: errMsg(error) });
+    res.status(400).json({ ok: false, message: errMsg(error) });
   }
 });
 

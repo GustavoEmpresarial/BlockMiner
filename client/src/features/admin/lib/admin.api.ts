@@ -363,6 +363,10 @@ export function getAdminGoogleDriveAuthUrl() {
   return api.post<GoogleDriveAuthUrlResponse>('/admin/backups/gdrive/auth-url');
 }
 
+export function configureAdminGoogleDrive(data: { clientId: string; clientSecret: string; redirectUri?: string }) {
+  return api.post<{ ok: boolean; message: string }>('/admin/backups/gdrive/configure', data);
+}
+
 export function connectAdminGoogleDrive(code: string) {
   return api.post<GoogleDriveConnectResponse>('/admin/backups/gdrive/connect', { code });
 }

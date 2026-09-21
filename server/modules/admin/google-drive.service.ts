@@ -18,6 +18,9 @@ import {
 const log = logger.child("GoogleDriveBackup");
 
 export interface GoogleDriveConfig {
+  clientId?: string;
+  clientSecret?: string;
+  redirectUri?: string;
   refreshToken?: string;
   folderId?: string;
   folderName?: string;
@@ -48,12 +51,18 @@ export interface GoogleDriveUploadResult {
 let cachedAccessToken: string | null = null;
 let accessTokenExpiresAt = 0;
 
-export function getGoogleDriveClientId(): string {
-  return String(process.env.GOOGLE_DRIVE_CLIENT_ID || "").trim();
+export async function getGoogleDriveClientId(): Promise<string> {
+  const fromEnv = String(process.env.GOOGLE_DRIVE_CLIENT_ID || "").trim();
+  if (fromEnv) return fromEnv;
+  const config = await readGoogleDriveConfig();
+  return String(config.clientId || "").trim();
 }
 
-export function getGoogleDriveClientSecret(): string {
-  return String(process.env.GOOGLE_DRIVE_CLIENT_SECRET || "").trim();
+export async function getGoogleDriveClientSecret(): Promise<string> {
+  const fromEnv = String(process.env.GOOGLE_DRIVE_CLIENT_SECRET || "").trim();
+  if (fromEnv) return fromEnv;
+  const config = await readGoogleDriveConfig();
+  return String(config.clientSecret || "").trim();
 }
 
 export function getGoogleDriveRedirectUri(): string {
@@ -90,11 +99,32 @@ export async function saveGoogleDriveConfig(patch: Partial<GoogleDriveConfig>): 
   return updated;
 }
 
+export async function configureGoogleDriveOAuth(opts: {
+  clientId: string;
+  clientSecret: string;
+  redirectUri?: string;
+}): Promise<GoogleDriveConfig> {
+  const clientId = opts.clientId.trim();
+  const clientSecret = opts.clientSecret.trim();
+  if (!clientId || !clientSecret) {
+    throw new Error("Client ID e Client Secret são obrigatórios.");
+  }
+  return await saveGoogleDriveConfig({
+    clientId,
+    clientSecret,
+    redirectUri: opts.redirectUri ? opts.redirectUri.trim() : undefined,
+    lastError: null,
+  });
+}
+
 /**
  * Generates the Google OAuth 2.0 authorization consent URL.
  */
-export function getGoogleDriveAuthUrl(): string {
-  const clientId = getGoogleDriveClientId();
+export async function getGoogleDriveAuthUrl(): Promise<string> {
+  const clientId = await getGoogleDriveClientId();
+  if (!clientId) {
+    throw new Error("Google Drive Client ID não está configurado. Configure as credenciais no painel.");
+  }
   const redirectUri = getGoogleDriveRedirectUri();
   const scope = "https://www.googleapis.com/auth/drive.file";
 
@@ -114,8 +144,8 @@ export function getGoogleDriveAuthUrl(): string {
  * Exchanges the one-time authorization code for an OAuth2 refresh token and access token.
  */
 export async function exchangeAuthCodeForTokens(code: string): Promise<{ refreshToken: string; accessToken: string }> {
-  const clientId = getGoogleDriveClientId();
-  const clientSecret = getGoogleDriveClientSecret();
+  const clientId = await getGoogleDriveClientId();
+  const clientSecret = await getGoogleDriveClientSecret();
   const redirectUri = getGoogleDriveRedirectUri();
 
   const body = new URLSearchParams({
@@ -182,8 +212,8 @@ export async function getValidAccessToken(): Promise<string> {
     throw new Error("Google Drive is not authorized. Please connect your Google account in the backup settings.");
   }
 
-  const clientId = getGoogleDriveClientId();
-  const clientSecret = getGoogleDriveClientSecret();
+  const clientId = await getGoogleDriveClientId();
+  const clientSecret = await getGoogleDriveClientSecret();
 
   const body = new URLSearchParams({
     client_id: clientId,
@@ -503,8 +533,8 @@ export async function uploadBackupPackageToGoogleDrive(filename: unknown): Promi
  * Returns the current Google Drive connectivity and configuration status.
  */
 export async function getGoogleDriveStatus(): Promise<GoogleDriveStatus> {
-  const clientId = getGoogleDriveClientId();
-  const clientSecret = getGoogleDriveClientSecret();
+  const clientId = await getGoogleDriveClientId();
+  const clientSecret = await getGoogleDriveClientSecret();
   const isConfigured = Boolean(clientId && clientSecret);
 
   const config = await readGoogleDriveConfig();
