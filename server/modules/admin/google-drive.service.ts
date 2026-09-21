@@ -385,7 +385,7 @@ export async function uploadFileToGoogleDrive(opts: {
     };
   }
 
-  // For larger files (>= 5MB), use Google Drive Resumable Upload protocol
+  // For larger files (>= 5MB), use Google Drive Resumable Upload protocol (chunked streaming)
   const initRes = await fetch(
     "https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&fields=id,name,size,md5Checksum,webViewLink",
     {
@@ -413,29 +413,60 @@ export async function uploadFileToGoogleDrive(opts: {
     throw new Error("Google Drive did not return a resumable upload location.");
   }
 
-  // Stream upload
-  const fileBuffer = await fs.readFile(filePath);
-  const uploadRes = await fetch(uploadUri, {
-    method: "PUT",
-    headers: {
-      "Content-Length": String(sizeBytes),
-      "Content-Type": mimeType,
-    },
-    body: fileBuffer,
-  });
+  // Chunked streaming upload — avoids Node.js 2 GiB Buffer limit
+  // Upload in 256 MiB slices so memory usage stays bounded regardless of file size.
+  const CHUNK_SIZE = 256 * 1024 * 1024; // 256 MiB
+  const fh = await fs.open(filePath, "r");
+  let offset = 0;
+  let finalData: Record<string, any> | null = null;
 
-  if (!uploadRes.ok) {
-    const err = await uploadRes.text();
-    throw new Error(`Google Drive chunk upload failed (${uploadRes.status}): ${err}`);
+  try {
+    while (offset < sizeBytes) {
+      const end = Math.min(offset + CHUNK_SIZE, sizeBytes);
+      const chunkLen = end - offset;
+      const chunk = Buffer.allocUnsafe(chunkLen);
+      await fh.read(chunk, 0, chunkLen, offset);
+
+      const chunkRes = await fetch(uploadUri, {
+        method: "PUT",
+        headers: {
+          "Content-Length": String(chunkLen),
+          "Content-Range": `bytes ${offset}-${end - 1}/${sizeBytes}`,
+          "Content-Type": mimeType,
+        },
+        body: chunk,
+      });
+
+      // 308 Resume Incomplete = chunk accepted, more data expected
+      if (chunkRes.status === 308) {
+        offset = end;
+        continue;
+      }
+
+      // 200/201 = upload complete
+      if (chunkRes.status === 200 || chunkRes.status === 201) {
+        finalData = await chunkRes.json() as Record<string, any>;
+        break;
+      }
+
+      // Any other status is an error
+      const errBody = await chunkRes.text();
+      throw new Error(`Google Drive chunk upload failed (${chunkRes.status}): ${errBody}`);
+    }
+  } finally {
+    await fh.close();
   }
 
-  const data = await uploadRes.json() as Record<string, any>;
+  if (!finalData) {
+    throw new Error("Google Drive upload completed without final metadata response.");
+  }
+
   return {
-    fileId: String(data.id),
-    name: String(data.name || fileName),
-    size: Number(data.size || sizeBytes),
-    md5Checksum: data.md5Checksum ? String(data.md5Checksum) : undefined,
-    webViewLink: data.webViewLink ? String(data.webViewLink) : undefined,
+    fileId: String(finalData.id),
+    name: String(finalData.name || fileName),
+    size: Number(finalData.size || sizeBytes),
+    md5Checksum: finalData.md5Checksum ? String(finalData.md5Checksum) : undefined,
+    webViewLink: finalData.webViewLink ? String(finalData.webViewLink) : undefined,
   };
 }
 
