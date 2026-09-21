@@ -15,6 +15,7 @@ import type {
   AdminSupportUploadImageResponse,
   AdminProfileResponse,
   AdminProfileUser,
+  AdminUserItem,
   AdminSessionItem,
   AdminAuditLogRow,
   AdminAuditListResponse,
@@ -217,7 +218,35 @@ export function listAdminCheckinMilestones() {
 }
 
 export function listAdmins() {
-  return api.get('/admin/admins');
+  return api.get<{ ok: boolean; admins: AdminUserItem[] }>('/admin/admins');
+}
+
+export function createAdminUser(data: {
+  name: string;
+  email: string;
+  password: string;
+  role: string;
+}) {
+  return api.post<{ ok: boolean; admin: AdminUserItem }>('/admin/admins', data);
+}
+
+export function updateAdminUser(
+  id: number,
+  data: { name?: string; role?: string; isActive?: boolean }
+) {
+  return api.patch<{ ok: boolean; admin: AdminUserItem }>(`/admin/admins/${id}`, data);
+}
+
+export function resetAdminUserPassword(id: number, newPassword: string) {
+  return api.post<{ ok: boolean; message?: string }>(`/admin/admins/${id}/reset-password`, { newPassword });
+}
+
+export function getAdminUserSessions(id: number) {
+  return api.get<{ ok: boolean; sessions: AdminSessionItem[] }>(`/admin/admins/${id}/sessions`);
+}
+
+export function revokeAdminUserSessions(id: number) {
+  return api.delete<{ ok: boolean; revokedCount: number }>(`/admin/admins/${id}/sessions`);
 }
 
 export function getAdminProfile() {

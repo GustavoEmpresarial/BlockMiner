@@ -834,6 +834,8 @@ export interface AdminProfileUser {
   lastLoginUa?: string | null;
 }
 
+export type AdminUserItem = AdminProfileUser;
+
 export interface AdminProfileResponse {
   ok: boolean;
   admin: AdminProfileUser;

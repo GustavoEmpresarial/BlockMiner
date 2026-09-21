@@ -37,7 +37,19 @@ export async function listAdminsHandler(_req: Request, res: Response): Promise<v
   res.json({ ok: true, admins });
 }
 
+function isSuperAdmin(req: Request): boolean {
+  return (
+    req.admin?.role === "super_admin" ||
+    (Array.isArray(req.admin?.permissions) && req.admin.permissions.includes("*"))
+  );
+}
+
 export async function createAdminHandler(req: Request, res: Response): Promise<void> {
+  if (!isSuperAdmin(req)) {
+    res.status(403).json({ ok: false, message: "Apenas Super Administradores podem gerenciar outros administradores." });
+    return;
+  }
+
   const ctx = getAdminCtx(req);
   const { name, email, password, role, permissions } = (req.body ?? {}) as Record<string, unknown>;
 
@@ -85,6 +97,11 @@ export async function createAdminHandler(req: Request, res: Response): Promise<v
 }
 
 export async function updateAdminHandler(req: Request, res: Response): Promise<void> {
+  if (!isSuperAdmin(req)) {
+    res.status(403).json({ ok: false, message: "Apenas Super Administradores podem gerenciar outros administradores." });
+    return;
+  }
+
   const ctx = getAdminCtx(req);
   const id = Number(req.params.id);
   if (!id) {
@@ -146,6 +163,11 @@ export async function updateAdminHandler(req: Request, res: Response): Promise<v
 }
 
 export async function resetAdminPasswordHandler(req: Request, res: Response): Promise<void> {
+  if (!isSuperAdmin(req)) {
+    res.status(403).json({ ok: false, message: "Apenas Super Administradores podem gerenciar outros administradores." });
+    return;
+  }
+
   const ctx = getAdminCtx(req);
   const id = Number(req.params.id);
   if (!id) {
@@ -166,6 +188,11 @@ export async function resetAdminPasswordHandler(req: Request, res: Response): Pr
 }
 
 export async function getAdminSessionsHandler(req: Request, res: Response): Promise<void> {
+  if (!isSuperAdmin(req)) {
+    res.status(403).json({ ok: false, message: "Apenas Super Administradores podem ver sessões de outros administradores." });
+    return;
+  }
+
   const id = Number(req.params.id);
   if (!id) {
     res.status(400).json({ ok: false, message: "Invalid id" });
@@ -176,6 +203,11 @@ export async function getAdminSessionsHandler(req: Request, res: Response): Prom
 }
 
 export async function revokeAdminSessionsHandler(req: Request, res: Response): Promise<void> {
+  if (!isSuperAdmin(req)) {
+    res.status(403).json({ ok: false, message: "Apenas Super Administradores podem revogar sessões de outros administradores." });
+    return;
+  }
+
   const ctx = getAdminCtx(req);
   const id = Number(req.params.id);
   if (!id) {

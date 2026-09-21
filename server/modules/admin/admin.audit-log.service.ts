@@ -32,6 +32,17 @@ const SENSITIVE_KEYS = new Set([
   "cvv",
 ]);
 
+function isSensitiveKey(lowerKey: string): boolean {
+  if (SENSITIVE_KEYS.has(lowerKey)) return true;
+  return (
+    lowerKey.includes("password") ||
+    lowerKey.includes("token") ||
+    lowerKey.includes("secret") ||
+    lowerKey.includes("mnemonic") ||
+    lowerKey.includes("privatekey")
+  );
+}
+
 export function sanitizeAuditPayload(val: unknown, depth = 0): unknown {
   if (depth > 4 || val == null) return val;
   if (typeof val !== "object") return val;
@@ -41,7 +52,7 @@ export function sanitizeAuditPayload(val: unknown, depth = 0): unknown {
   const sanitized: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(val as Record<string, unknown>)) {
     const lowerKey = k.toLowerCase().replace(/[-_]/g, "");
-    if (SENSITIVE_KEYS.has(lowerKey)) {
+    if (isSensitiveKey(lowerKey)) {
       sanitized[k] = "[REDACTED]";
     } else if (typeof v === "object" && v !== null) {
       sanitized[k] = sanitizeAuditPayload(v, depth + 1);
