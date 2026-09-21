@@ -17,23 +17,67 @@ export interface LogAdminActionOpts {
   durationMs?: number | null;
 }
 
+const SENSITIVE_KEYS = new Set([
+  "password",
+  "passwordhash",
+  "token",
+  "jwt",
+  "secret",
+  "privatekey",
+  "mnemonic",
+  "seed",
+  "authorization",
+  "creditcard",
+  "cardnumber",
+  "cvv",
+]);
+
+export function sanitizeAuditPayload(val: unknown, depth = 0): unknown {
+  if (depth > 4 || val == null) return val;
+  if (typeof val !== "object") return val;
+  if (Array.isArray(val)) {
+    return val.map((item) => sanitizeAuditPayload(item, depth + 1));
+  }
+  const sanitized: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(val as Record<string, unknown>)) {
+    const lowerKey = k.toLowerCase().replace(/[-_]/g, "");
+    if (SENSITIVE_KEYS.has(lowerKey)) {
+      sanitized[k] = "[REDACTED]";
+    } else if (typeof v === "object" && v !== null) {
+      sanitized[k] = sanitizeAuditPayload(v, depth + 1);
+    } else {
+      sanitized[k] = v;
+    }
+  }
+  return sanitized;
+}
+
+function truncateStr(s: unknown, maxLen: number): string | null {
+  if (s == null) return null;
+  const str = String(s).trim();
+  return str.length > maxLen ? str.slice(0, maxLen) : str;
+}
+
 export async function logAdminAction(opts: LogAdminActionOpts): Promise<void> {
+  const sanitizedOld = opts.oldValue !== undefined ? sanitizeAuditPayload(opts.oldValue) : undefined;
+  const sanitizedNew = opts.newValue !== undefined ? sanitizeAuditPayload(opts.newValue) : undefined;
+
   await prisma.adminAuditLog
     .create({
       data: {
         adminId: opts.adminId ?? null,
-        adminEmail: opts.adminEmail ?? null,
-        sessionId: opts.sessionId ?? null,
-        action: opts.action,
-        module: opts.module ?? null,
-        resource: opts.resource ?? null,
-        resourceId: opts.resourceId ? String(opts.resourceId) : null,
-        oldValue: opts.oldValue !== undefined ? (opts.oldValue as object) : undefined,
-        newValue: opts.newValue !== undefined ? (opts.newValue as object) : undefined,
-        ipAddress: opts.ipAddress ?? null,
-        userAgent: opts.userAgent ?? null,
+        adminEmail: truncateStr(opts.adminEmail, 255),
+        sessionId: truncateStr(opts.sessionId, 128),
+        action: truncateStr(opts.action, 100) || "UNKNOWN_ACTION",
+        module: truncateStr(opts.module, 50),
+        resource: truncateStr(opts.resource, 100),
+        resourceId: opts.resourceId ? truncateStr(opts.resourceId, 128) : null,
+        oldValue: sanitizedOld !== undefined ? (sanitizedOld as object) : undefined,
+        newValue: sanitizedNew !== undefined ? (sanitizedNew as object) : undefined,
+        ipAddress: truncateStr(opts.ipAddress, 64),
+        userAgent: truncateStr(opts.userAgent, 500),
         success: opts.success ?? true,
-        errorMsg: opts.errorMsg ?? null,
+        errorMsg: truncateStr(opts.errorMsg, 500),
         durationMs: opts.durationMs ?? null,
       },
     })
@@ -89,7 +133,15 @@ export async function queryAdminAuditLogs(opts: {
   return { rows: rows.map(serializeAuditRow), total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
 }
 
+let cachedStats: { data: Record<string, unknown>; timestamp: number } | null = null;
+const STATS_CACHE_TTL_MS = 5_000;
+
 export async function getAdminAuditStats() {
+  const now = Date.now();
+  if (cachedStats && now - cachedStats.timestamp < STATS_CACHE_TTL_MS) {
+    return cachedStats.data;
+  }
+
   const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
@@ -126,7 +178,7 @@ export async function getAdminAuditStats() {
     count: g._count.module,
   }));
 
-  return {
+  const result = {
     total,
     successCount,
     failedCount,
@@ -137,6 +189,9 @@ export async function getAdminAuditStats() {
     modulesBreakdown,
     admins,
   };
+
+  cachedStats = { data: result, timestamp: now };
+  return result;
 }
 
 /** AdminAuditLog.id is a BigInt — res.json → JSON.stringify cannot serialise it. */

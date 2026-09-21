@@ -210,19 +210,30 @@ export async function revokeSessionHandler(req: Request, res: Response): Promise
   res.json({ ok: true });
 }
 
-export async function adminAuditLogHandler(req: Request, res: Response): Promise<void> {
-  const page = Math.max(1, Number(req.query.page) || 1);
-  const pageSize = Math.min(200, Math.max(1, Number(req.query.pageSize) || 50));
-  const adminId = req.query.adminId ? Number(req.query.adminId) : undefined;
-  const action = typeof req.query.action === "string" ? req.query.action : undefined;
-  const moduleName = typeof req.query.module === "string" ? req.query.module : undefined;
-  const search = typeof req.query.search === "string" ? req.query.search : undefined;
-  const success = req.query.success === "true" ? true : req.query.success === "false" ? false : undefined;
-  const from = req.query.from ? new Date(String(req.query.from)) : undefined;
-  const to = req.query.to ? new Date(String(req.query.to)) : undefined;
+function parseSafeDate(raw: unknown): Date | undefined {
+  if (typeof raw !== "string" || !raw.trim()) return undefined;
+  const d = new Date(raw.trim());
+  return Number.isNaN(d.getTime()) ? undefined : d;
+}
 
-  const result = await queryAdminAuditLogs({ adminId, action, module: moduleName, search, success, from, to, page, pageSize });
-  res.json({ ok: true, ...result });
+export async function adminAuditLogHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const pageSize = Math.min(200, Math.max(1, Number(req.query.pageSize) || 50));
+    const adminIdRaw = req.query.adminId ? Number(req.query.adminId) : undefined;
+    const adminId = Number.isSafeInteger(adminIdRaw) && (adminIdRaw as number) > 0 ? (adminIdRaw as number) : undefined;
+    const action = typeof req.query.action === "string" && req.query.action.trim() ? req.query.action.trim().slice(0, 50) : undefined;
+    const moduleName = typeof req.query.module === "string" && req.query.module.trim() ? req.query.module.trim().slice(0, 50) : undefined;
+    const search = typeof req.query.search === "string" && req.query.search.trim() ? req.query.search.trim().slice(0, 100) : undefined;
+    const success = req.query.success === "true" ? true : req.query.success === "false" ? false : undefined;
+    const from = parseSafeDate(req.query.from);
+    const to = parseSafeDate(req.query.to);
+
+    const result = await queryAdminAuditLogs({ adminId, action, module: moduleName, search, success, from, to, page, pageSize });
+    res.json({ ok: true, ...result });
+  } catch (error) {
+    res.status(500).json({ ok: false, message: "Erro ao buscar registros de auditoria" });
+  }
 }
 
 export async function adminAuditStatsHandler(_req: Request, res: Response): Promise<void> {
