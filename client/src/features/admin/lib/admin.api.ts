@@ -13,7 +13,12 @@ import type {
   AdminSupportPlayerDossierParams,
   AdminSupportReplyPostResponse,
   AdminSupportUploadImageResponse,
+  AdminProfileResponse,
+  AdminProfileUser,
+  AdminSessionItem,
+  AdminAuditLogRow,
 } from './admin.types';
+
 
 export type {
   AdminSupportDossierPaged,
@@ -212,3 +217,35 @@ export function listAdminCheckinMilestones() {
 export function listAdmins() {
   return api.get('/admin/admins');
 }
+
+export function getAdminProfile() {
+  return api.get<AdminProfileResponse>('/admin/profile');
+}
+
+export function updateAdminProfile(name: string) {
+  return api.patch<{ ok: boolean; admin: AdminProfileUser; message: string }>('/admin/profile', { name });
+}
+
+export function changeAdminOwnPassword(data: { currentPassword?: string; newPassword: string }) {
+  return api.post<{ ok: boolean; message: string }>('/admin/change-password', data);
+}
+
+export function getAdminSessions() {
+  return api.get<{ ok: boolean; sessions: AdminSessionItem[]; currentSessionId: string }>('/admin/sessions');
+}
+
+export function revokeAdminSession(sessionId: string) {
+  return api.delete<{ ok: boolean }>(`/admin/sessions/${sessionId}`);
+}
+
+export function revokeOtherAdminSessions() {
+  return api.delete<{ ok: boolean; revokedCount: number; message: string }>('/admin/sessions/other');
+}
+
+export function getMyAdminAuditLogs(params?: { page?: number; pageSize?: number }) {
+  return api.get<{ ok: boolean; rows: AdminAuditLogRow[]; total: number; page: number; pageSize: number; totalPages: number }>(
+    '/admin/my-audit',
+    { params }
+  );
+}
+

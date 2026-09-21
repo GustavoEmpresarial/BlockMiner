@@ -819,3 +819,51 @@ export type AdminServerMetricsErrorResponse = {
 };
 
 export type AdminServerMetricsResponse = AdminServerMetricsSuccessResponse | AdminServerMetricsErrorResponse;
+
+export interface AdminProfileUser {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  permissions: string[];
+  isActive: boolean;
+  createdAt: string;
+  updatedAt?: string;
+  lastLoginAt?: string | null;
+  lastLoginIp?: string | null;
+  lastLoginUa?: string | null;
+}
+
+export interface AdminProfileResponse {
+  ok: boolean;
+  admin: AdminProfileUser;
+  activeSessionsCount: number;
+  totalAuditCount: number;
+  currentSessionId: string | null;
+}
+
+export interface AdminSessionItem {
+  id: string;
+  adminId: number;
+  ipAddress: string | null;
+  userAgent: string | null;
+  createdAt: string;
+  lastActivityAt: string;
+  expiresAt: string;
+}
+
+export interface AdminAuditLogRow {
+  id: string;
+  adminId: number | null;
+  action: string;
+  module: string | null;
+  resource: string | null;
+  resourceId: string | null;
+  success: boolean;
+  errorMsg: string | null;
+  ipAddress: string | null;
+  userAgent: string | null;
+  createdAt: string;
+  admin?: { name: string; email: string } | null;
+}
+

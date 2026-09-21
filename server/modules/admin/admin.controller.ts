@@ -11,11 +11,16 @@ import {
   listAllActiveAdminSessions,
   revokeAdminSession,
   revokeAllSessionsForAdmin,
+  revokeOtherSessionsForAdmin,
+  toPublic,
+  verifyAdminPassword,
   isStrongPassword,
 } from "./admin.service.js";
 import { queryAdminAuditLogs, logAdminAction, serializeAuditRow } from "./admin.audit-log.service.js";
 import { ADMIN_ROLES } from "./admin.permissions.js";
 import * as adminRepo from "./admin.repository.js";
+import prisma from "../../core/database/prisma.js";
+
 
 function getAdminCtx(req: Request) {
   return {
@@ -219,6 +224,125 @@ export async function adminAuditLogHandler(req: Request, res: Response): Promise
   res.json({ ok: true, ...result });
 }
 
+export async function getAdminProfileHandler(req: Request, res: Response): Promise<void> {
+  const adminId = req.admin?.adminId;
+  const currentSessionId = req.admin?.sessionId ?? null;
+
+  if (adminId) {
+    const adminRecord = await findAdminById(adminId);
+    if (!adminRecord) {
+      res.status(404).json({ ok: false, message: "Admin não encontrado" });
+      return;
+    }
+    const [activeSessionsCount, totalAuditCount] = await Promise.all([
+      prisma.adminSession.count({ where: { adminId, revokedAt: null, expiresAt: { gt: new Date() } } }),
+      prisma.adminAuditLog.count({ where: { adminId } }),
+    ]);
+
+    res.json({
+      ok: true,
+      admin: toPublic(adminRecord),
+      activeSessionsCount,
+      totalAuditCount,
+      currentSessionId,
+    });
+    return;
+  }
+
+  // Fallback for legacy environment admin
+  res.json({
+    ok: true,
+    admin: {
+      id: 0,
+      name: req.admin?.name || "Root Admin",
+      email: req.admin?.email || "admin@blockminer.space",
+      role: req.admin?.role || "super_admin",
+      permissions: req.admin?.permissions || ["*"],
+      isActive: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      lastLoginAt: new Date().toISOString(),
+      lastLoginIp: getRequestIp(req),
+      lastLoginUa: req.headers["user-agent"] || null,
+    },
+    activeSessionsCount: 1,
+    totalAuditCount: 0,
+    currentSessionId,
+  });
+}
+
+export async function updateAdminProfileHandler(req: Request, res: Response): Promise<void> {
+  const ctx = getAdminCtx(req);
+  const adminId = req.admin?.adminId;
+  if (!adminId) {
+    res.status(400).json({ ok: false, message: "Perfil não editável para administrador de sistema padrão." });
+    return;
+  }
+
+  const { name } = (req.body ?? {}) as Record<string, unknown>;
+  const trimmedName = typeof name === "string" ? name.trim() : "";
+  if (!trimmedName || trimmedName.length < 2 || trimmedName.length > 60) {
+    res.status(400).json({ ok: false, message: "O nome deve ter entre 2 e 60 caracteres." });
+    return;
+  }
+
+  const adminRecord = await findAdminById(adminId);
+  if (!adminRecord) {
+    res.status(404).json({ ok: false, message: "Admin não encontrado." });
+    return;
+  }
+
+  const updated = await updateAdmin(adminId, { name: trimmedName, updatedById: adminId });
+  await logAdminAction({
+    ...ctx,
+    action: "ADMIN_PROFILE_UPDATE",
+    module: "admins",
+    resource: "AdminUser",
+    resourceId: String(adminId),
+    oldValue: { name: adminRecord.name },
+    newValue: { name: updated.name },
+  });
+
+  res.json({ ok: true, admin: updated, message: "Perfil atualizado com sucesso." });
+}
+
+export async function revokeOtherSessionsHandler(req: Request, res: Response): Promise<void> {
+  const ctx = getAdminCtx(req);
+  const adminId = req.admin?.adminId;
+  const currentSessionId = req.admin?.sessionId;
+
+  if (!adminId || !currentSessionId) {
+    res.status(400).json({ ok: false, message: "Sessão não gerenciável para esta conta." });
+    return;
+  }
+
+  const revokedCount = await revokeOtherSessionsForAdmin(adminId, currentSessionId);
+  await logAdminAction({
+    ...ctx,
+    action: "ADMIN_SESSIONS_REVOKE_OTHER",
+    module: "admins",
+    resource: "AdminSession",
+    resourceId: String(adminId),
+    newValue: { revokedCount },
+  });
+
+  res.json({ ok: true, revokedCount, message: `${revokedCount} outras sessões foram encerradas.` });
+}
+
+export async function myAuditLogHandler(req: Request, res: Response): Promise<void> {
+  const adminId = req.admin?.adminId;
+  const page = Math.max(1, Number(req.query.page) || 1);
+  const pageSize = Math.min(50, Math.max(1, Number(req.query.pageSize) || 15));
+
+  if (!adminId) {
+    res.json({ ok: true, rows: [], total: 0, page: 1, pageSize, totalPages: 0 });
+    return;
+  }
+
+  const result = await queryAdminAuditLogs({ adminId, page, pageSize });
+  res.json({ ok: true, ...result });
+}
+
 export async function changeOwnPasswordHandler(req: Request, res: Response): Promise<void> {
   const ctx = getAdminCtx(req);
   const adminId = req.admin?.adminId;
@@ -227,21 +351,50 @@ export async function changeOwnPasswordHandler(req: Request, res: Response): Pro
     return;
   }
 
-  const { newPassword } = (req.body ?? {}) as Record<string, unknown>;
+  const { currentPassword, newPassword } = (req.body ?? {}) as Record<string, unknown>;
+  const adminRecord = await findAdminById(adminId);
+  if (!adminRecord) {
+    res.status(404).json({ ok: false, message: "Admin não encontrado." });
+    return;
+  }
+
+  // Verify current password if provided
+  if (currentPassword) {
+    const passwordOk = await verifyAdminPassword(String(currentPassword), adminRecord.passwordHash);
+    if (!passwordOk) {
+      await logAdminAction({
+        ...ctx,
+        action: "ADMIN_CHANGE_PASSWORD_FAILED",
+        module: "admins",
+        resource: "AdminUser",
+        resourceId: String(adminId),
+        success: false,
+        errorMsg: "WRONG_CURRENT_PASSWORD",
+      });
+      res.status(400).json({ ok: false, code: "INCORRECT_CURRENT_PASSWORD", message: "A senha atual informada está incorreta." });
+      return;
+    }
+  }
+
   if (!newPassword || !isStrongPassword(String(newPassword))) {
-    res.status(400).json({ ok: false, message: "Password must be at least 12 chars with uppercase, lowercase, number and symbol." });
+    res.status(400).json({
+      ok: false,
+      code: "WEAK_PASSWORD",
+      message: "A nova senha deve ter pelo menos 12 caracteres e conter maiúsculas, minúsculas, números e símbolos.",
+    });
     return;
   }
 
   await changeAdminPassword(adminId, String(newPassword));
   const currentSessionId = req.admin?.sessionId;
-  const sessions = await listActiveAdminSessions(adminId);
-  for (const s of sessions) {
-    if (s.id !== currentSessionId) await revokeAdminSession(s.id);
+  if (currentSessionId) {
+    await revokeOtherSessionsForAdmin(adminId, currentSessionId);
+  } else {
+    await revokeAllSessionsForAdmin(adminId);
   }
 
   await logAdminAction({ ...ctx, action: "ADMIN_CHANGE_OWN_PASSWORD", module: "admins", resource: "AdminUser", resourceId: String(adminId) });
-  res.json({ ok: true });
+  res.json({ ok: true, message: "Senha alterada com sucesso. Todas as outras sessões foram encerradas." });
 }
 
 export async function adminOverviewHandler(_req: Request, res: Response): Promise<void> {
@@ -249,3 +402,4 @@ export async function adminOverviewHandler(_req: Request, res: Response): Promis
   const serializedRecentLogs = recentLogs.map(serializeAuditRow);
   res.json({ ok: true, totalAdmins, activeAdmins, activeSessions, recentLogs: serializedRecentLogs });
 }
+

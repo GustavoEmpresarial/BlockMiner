@@ -11,6 +11,10 @@ import {
   listMySessionsHandler,
   listAllSessionsHandler,
   revokeSessionHandler,
+  revokeOtherSessionsHandler,
+  getAdminProfileHandler,
+  updateAdminProfileHandler,
+  myAuditLogHandler,
   adminAuditLogHandler,
   changeOwnPasswordHandler,
   adminOverviewHandler,
@@ -26,6 +30,11 @@ export const adminRouter = express.Router();
 const adminLimiter = createRateLimiter({ windowMs: 60_000, max: 300 });
 adminRouter.use(requireAdminAuth, adminLimiter);
 
+// Profile & Personal Admin Management
+adminRouter.get("/profile", getAdminProfileHandler);
+adminRouter.patch("/profile", updateAdminProfileHandler);
+adminRouter.get("/my-audit", myAuditLogHandler);
+
 // Admin CRUD
 adminRouter.get("/admins", listAdminsHandler);
 adminRouter.post("/admins", createAdminHandler);
@@ -37,7 +46,9 @@ adminRouter.delete("/admins/:id/sessions", revokeAdminSessionsHandler);
 // Sessions
 adminRouter.get("/sessions", listMySessionsHandler);
 adminRouter.get("/sessions/all", listAllSessionsHandler);
+adminRouter.delete("/sessions/other", revokeOtherSessionsHandler);
 adminRouter.delete("/sessions/:sessionId", revokeSessionHandler);
+
 
 // Audit log
 adminRouter.get("/admin-audit", adminAuditLogHandler);

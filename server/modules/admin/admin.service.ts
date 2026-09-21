@@ -40,7 +40,7 @@ export function isStrongPassword(password: string): boolean {
 
 export type AdminUserPublic = Omit<AdminUser, "passwordHash"> & { permissions: string[] };
 
-function toPublic(u: AdminUser): AdminUserPublic {
+export function toPublic(u: AdminUser): AdminUserPublic {
   const { passwordHash: _ph, ...rest } = u;
   return { ...rest, permissions: resolvePermissions(u.role, u.permissions) };
 }
@@ -168,6 +168,15 @@ export async function revokeAllSessionsForAdmin(adminId: number): Promise<number
   const result = await prisma.adminSession.updateMany({ where: { adminId, revokedAt: null }, data: { revokedAt: new Date() } });
   return result.count;
 }
+
+export async function revokeOtherSessionsForAdmin(adminId: number, currentSessionId: string): Promise<number> {
+  const result = await prisma.adminSession.updateMany({
+    where: { adminId, id: { not: currentSessionId }, revokedAt: null },
+    data: { revokedAt: new Date() },
+  });
+  return result.count;
+}
+
 
 export async function listActiveAdminSessions(adminId: number) {
   return prisma.adminSession.findMany({
