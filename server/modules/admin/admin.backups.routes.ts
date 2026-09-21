@@ -4,6 +4,9 @@
  * Mounted at /backups inside adminRouter.
  * Security: protected by requireAdminAuth + requireAdminPermission("config").
  * Audit: all operations logged to admin_audit_logs via logAdminAction.
+ *
+ * NOTE: Direct HTTP download of backup files is intentionally disabled.
+ * The only permitted transmission channel is Google Drive (cloud sync).
  */
 import express from "express";
 import prisma from "../../core/database/prisma.js";
@@ -11,8 +14,6 @@ import {
   createPostgresSqlBackup,
   listSqlBackups,
   deleteSqlBackup,
-  resolveBackupDownloadPath,
-  resolveBackupBundleDownloadPath,
   verifyBackupIntegrity,
 } from "./admin.backups.service.js";
 import {
@@ -109,83 +110,6 @@ backupsAdminRouter.post("/verify", async (req, res) => {
   }
 });
 
-// -------------------------------------------------------------
-// Download Plain SQL Dump
-// -------------------------------------------------------------
-backupsAdminRouter.get("/download", async (req, res) => {
-  try {
-    const { file } = req.query;
-    if (!file) {
-      res.status(400).send("File name required");
-      return;
-    }
-    const filePath = await resolveBackupDownloadPath(String(file));
-
-    void logAdminAction({
-      adminId: req.admin?.adminId,
-      adminEmail: req.admin?.email,
-      sessionId: req.admin?.sessionId,
-      action: "BACKUP_DOWNLOAD",
-      module: "config",
-      resource: "DatabaseBackup",
-      resourceId: String(file),
-      ipAddress: req.ip,
-      userAgent: req.headers["user-agent"],
-    });
-
-    res.download(filePath);
-  } catch (error) {
-    if (errMsg(error) === "Invalid backup filename") {
-      res.status(400).send("Invalid file name");
-      return;
-    }
-    if (errMsg(error) === "Backup file not found") {
-      res.status(404).send("Not found");
-      return;
-    }
-    log.error("admin_backup_download_failed", { message: errMsg(error) });
-    res.status(500).send("Download failed");
-  }
-});
-
-// -------------------------------------------------------------
-// Download Config Snapshot Bundle (.tar.gz)
-// -------------------------------------------------------------
-backupsAdminRouter.get("/download-bundle", async (req, res) => {
-  try {
-    const { file } = req.query;
-    if (!file) {
-      res.status(400).send("File name required");
-      return;
-    }
-    const filePath = await resolveBackupBundleDownloadPath(String(file));
-
-    void logAdminAction({
-      adminId: req.admin?.adminId,
-      adminEmail: req.admin?.email,
-      sessionId: req.admin?.sessionId,
-      action: "BACKUP_DOWNLOAD_BUNDLE",
-      module: "config",
-      resource: "DatabaseBackupBundle",
-      resourceId: String(file),
-      ipAddress: req.ip,
-      userAgent: req.headers["user-agent"],
-    });
-
-    res.download(filePath);
-  } catch (error) {
-    if (errMsg(error) === "Invalid backup bundle filename") {
-      res.status(400).send("Invalid file name");
-      return;
-    }
-    if (errMsg(error) === "Backup bundle not found") {
-      res.status(404).send("Not found");
-      return;
-    }
-    log.error("admin_backup_bundle_download_failed", { message: errMsg(error) });
-    res.status(500).send("Download failed");
-  }
-});
 
 // -------------------------------------------------------------
 // Create Backup (with immediate integrity audit)

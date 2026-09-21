@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import {
   Database,
-  Download,
   RefreshCw,
   Trash2,
   Clock,
@@ -505,31 +504,9 @@ export default function AdminBackups() {
                           {isUploading ? "Enviando…" : t("adminBackups.gdrive_upload_btn")}
                         </button>
 
-                        {/* Download SQL */}
-                        <a
-                          href={`/api/admin/backups/download?file=${encodeURIComponent(b.name)}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition-all text-[10px] font-bold uppercase tracking-widest"
-                        >
-                          <Download className="w-3 h-3" aria-hidden />
-                          SQL
-                        </a>
-
-                        {/* Download Bundle */}
-                        {b.bundleName ? (
-                          <a
-                            href={`/api/admin/backups/download-bundle?file=${encodeURIComponent(b.bundleName)}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="flex items-center gap-1 px-2.5 py-1.5 bg-sky-500/10 hover:bg-sky-500/20 text-sky-300 rounded-lg transition-all text-[10px] font-bold uppercase tracking-widest"
-                          >
-                            <Download className="w-3 h-3" aria-hidden />
-                            Tar
-                          </a>
-                        ) : null}
 
                         {/* Google Drive View Link if synced */}
+
                         {b.googleDrive?.webViewLink ? (
                           <a
                             href={b.googleDrive.webViewLink}
