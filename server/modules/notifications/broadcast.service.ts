@@ -44,6 +44,20 @@ export async function updateBroadcastMessage(id: number, data: Prisma.BroadcastM
   return prisma.broadcastMessage.update({ where: { id }, data });
 }
 
+export async function findBroadcastMessageById(id: number) {
+  return prisma.broadcastMessage.findUnique({
+    where: { id },
+    include: { _count: { select: { views: true } } },
+  });
+}
+
+export async function resetBroadcastViews(messageId: number): Promise<number> {
+  const result = await prisma.broadcastMessageView.deleteMany({
+    where: { messageId },
+  });
+  return result.count;
+}
+
 export async function deleteBroadcastMessage(id: number): Promise<void> {
   await prisma.broadcastMessage.delete({ where: { id } });
 }

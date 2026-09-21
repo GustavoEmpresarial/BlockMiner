@@ -20,6 +20,11 @@ import type {
   AdminAuditLogRow,
   AdminAuditListResponse,
   AdminAuditStatsResponse,
+  AdminBroadcastMessage,
+  AdminBroadcastForm,
+  AdminBroadcastListResponse,
+  AdminBroadcastMutationResponse,
+  AdminBroadcastResetViewsResponse,
 } from './admin.types';
 
 
@@ -297,6 +302,33 @@ export function getAdminAuditLogs(params?: {
 
 export function getAdminAuditStats() {
   return api.get<AdminAuditStatsResponse>('/admin/admin-audit/stats');
+}
+
+// ─── Broadcast Notifications ──────────────────────────────────────────────
+export function getAdminBroadcasts() {
+  return api.get<AdminBroadcastListResponse>('/admin/broadcast');
+}
+
+export function createAdminBroadcast(data: Partial<AdminBroadcastForm>) {
+  return api.post<AdminBroadcastMutationResponse>('/admin/broadcast', data);
+}
+
+export function updateAdminBroadcast(id: number, data: Partial<AdminBroadcastForm>) {
+  return api.patch<AdminBroadcastMutationResponse>(`/admin/broadcast/${id}`, data);
+}
+
+export function deleteAdminBroadcast(id: number) {
+  return api.delete<{ ok: boolean }>(`/admin/broadcast/${id}`);
+}
+
+export function resetAdminBroadcastViews(id: number) {
+  return api.post<AdminBroadcastResetViewsResponse>(`/admin/broadcast/${id}/reset-views`);
+}
+
+export function uploadAdminBroadcastImage(formData: FormData) {
+  return api.post<{ ok: boolean; url?: string; message?: string }>('/admin/broadcast/upload-image', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
 }
 
 

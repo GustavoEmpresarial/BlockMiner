@@ -902,4 +902,46 @@ export interface AdminAuditStatsResponse {
   stats: AdminAuditStats;
 }
 
+// ─── Broadcast Notifications ──────────────────────────────────────────────
+export interface AdminBroadcastMessage {
+  id: number;
+  title: string;
+  content?: string | null;
+  imageUrl?: string | null;
+  isActive: boolean;
+  dismissDelaySeconds?: number;
+  linkUrl?: string | null;
+  linkLabel?: string | null;
+  linkNewTab?: boolean;
+  createdAt: string | Date;
+  _count?: { views?: number };
+}
+
+export interface AdminBroadcastForm {
+  title: string;
+  content: string;
+  imageUrl: string;
+  isActive: boolean;
+  dismissDelaySeconds: number;
+  linkUrl: string;
+  linkLabel: string;
+  linkNewTab: boolean;
+}
+
+export interface AdminBroadcastListResponse {
+  ok: boolean;
+  messages: AdminBroadcastMessage[];
+}
+
+export interface AdminBroadcastMutationResponse {
+  ok: boolean;
+  message?: AdminBroadcastMessage;
+}
+
+export interface AdminBroadcastResetViewsResponse {
+  ok: boolean;
+  clearedViewsCount: number;
+  message: string;
+}
+
 

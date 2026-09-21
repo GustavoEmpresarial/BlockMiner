@@ -28,6 +28,7 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<AdminRole, string[]> = {
     "mining",
     "tournaments",
     "banners",
+    "broadcast",
     "config",
     "audit",
     "admins",
@@ -69,6 +70,7 @@ export const AVAILABLE_PERMISSIONS: PermissionDefinition[] = [
   { key: "config", label: "Configurações Gerais & Backups", category: "Sistema" },
   { key: "audit", label: "Logs de Auditoria Administrativa", category: "Administração" },
   { key: "admins", label: "Gerenciamento de Administradores", category: "Administração" },
+  { key: "broadcast", label: "Notificações & Anúncios Broadcast", category: "Engajamento" },
 ];
 
 export function resolvePermissions(role: string, permissionsOverride?: unknown): string[] {
@@ -84,5 +86,30 @@ export function hasPermission(permissions: string[], required: string): boolean 
   if (permissions.includes(required)) return true;
   const moduleName = required.split(".")[0];
   return Boolean(moduleName && permissions.includes(moduleName));
+}
+
+/**
+ * Middleware that gates route access based on required admin permission.
+ * Accepts full permission keys (e.g. "broadcast") or wildcard ("*").
+ * Also supports alternative permission fallback (e.g. "promotions").
+ */
+export function requireAdminPermission(...requiredPermissions: string[]) {
+  return (req: any, res: any, next: any): void => {
+    if (!req.admin) {
+      res.status(401).json({ ok: false, message: "Acesso não autorizado." });
+      return;
+    }
+    const userPermissions: string[] = req.admin.permissions ?? [];
+    const hasAny = requiredPermissions.some((perm) => hasPermission(userPermissions, perm));
+    if (!hasAny) {
+      res.status(403).json({
+        ok: false,
+        code: "FORBIDDEN_PERMISSION",
+        message: "Acesso negado: você não tem permissão para gerenciar este recurso.",
+      });
+      return;
+    }
+    next();
+  };
 }
 

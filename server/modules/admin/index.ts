@@ -12,5 +12,5 @@ export {
   verifyAdminPassword,
 } from "./admin.service.js";
 export { logAdminAction } from "./admin.audit-log.service.js";
-export { resolvePermissions, hasPermission, ADMIN_ROLES } from "./admin.permissions.js";
+export { resolvePermissions, hasPermission, requireAdminPermission, ADMIN_ROLES } from "./admin.permissions.js";
 export { bootstrapAdminUsers } from "./admin.bootstrap.js";
