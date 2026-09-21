@@ -413,15 +413,6 @@ export default function YouTubeWatchPage() {
         }
       } else {
         toast.error(t('youtube.claim_failed'));
-        reportApiFailure(
-          {
-            operation: 'youtube_claim',
-            message: isAxiosError(err) ? String(err.response?.data) : 'claim_failed',
-            statusCode: isAxiosError(err) ? err.response?.status : undefined,
-            context: { videoId },
-          },
-          err,
-        );
         resetClaimCycle();
         if (isAxiosError(err) && err.response?.status === 401) {
           setPlayerState('paused');

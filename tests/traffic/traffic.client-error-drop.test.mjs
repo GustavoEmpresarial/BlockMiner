@@ -478,3 +478,48 @@ test("keeps the real wallet-page crash and real 5xx", () => {
     false,
   );
 });
+
+test("drops transient service codes and scraper noise", () => {
+  for (const code of [
+    "SERVICE_BUSY",
+    "SERVICE_UNAVAILABLE",
+    "EMAIL_SEND_FAILED",
+    "EMAIL_2FA_UNAVAILABLE",
+    "REFERRAL_STATS_FAILED",
+    "SESSION_CANCELED",
+    "SESSION_EXPIRED",
+    "CLAIM_FAILED",
+  ]) {
+    assert.equal(
+      shouldDropClientError(apiFailure({ message: code, code, statusCode: 503 }), "Mozilla/5.0"),
+      true,
+      `expected ${code} to be dropped`,
+    );
+  }
+
+  // Scraper noise
+  assert.equal(
+    shouldDropClientError(
+      crash({ message: "SyntaxError: Cannot use 'import.meta' outside a module" }),
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) happy-dom/17.1.15",
+    ),
+    true,
+  );
+
+  // Business text
+  assert.equal(
+    shouldDropClientError(
+      apiFailure({ message: "Sessão cancelada.", statusCode: 400 }),
+      "Mozilla/5.0",
+    ),
+    true,
+  );
+  assert.equal(
+    shouldDropClientError(
+      apiFailure({ message: "Servidor está sobrecarregado.", statusCode: 503 }),
+      "Mozilla/5.0",
+    ),
+    true,
+  );
+});
+

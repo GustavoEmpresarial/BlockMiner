@@ -99,16 +99,10 @@ export async function getUserReferralStats(userId) {
         const refCode = await generateUniqueRefCode();
         user = await prisma.user.update({ where: { id: userId }, data: { refCode }, select: { id: true, refCode: true } });
     }
-    const [totalsAgg, shibAgg, earningsCount, referrals, referredEarnings, dailyRows, bySourceRows,] = await Promise.all([
+    const [totalsAgg, referrals, referredEarnings, dailyRows, bySourceRows] = await Promise.all([
         prisma.referralEarning.aggregate({
-            _sum: { amount: true },
-            where: { referrerId: userId, createdAt: { gte: since } },
-        }),
-        prisma.referralEarning.aggregate({
-            _sum: { amountShib: true },
-            where: { referrerId: userId, createdAt: { gte: since } },
-        }),
-        prisma.referralEarning.count({
+            _sum: { amount: true, amountShib: true },
+            _count: { _all: true },
             where: { referrerId: userId, createdAt: { gte: since } },
         }),
         prisma.referral.findMany({
@@ -185,8 +179,8 @@ export async function getUserReferralStats(userId) {
             referredJoinedSince,
             activeInPeriod,
             totalEarningsPol: roundPol(Number(totalsAgg._sum.amount ?? 0)),
-            totalEarningsShib: roundShib(Number(shibAgg._sum.amountShib ?? 0)),
-            earningsCount,
+            totalEarningsShib: roundShib(Number(totalsAgg._sum.amountShib ?? 0)),
+            earningsCount: totalsAgg._count._all ?? 0,
             totalDepositedPol: depositSummary.depositedPol,
             totalDepositedUsd: depositSummary.depositedUsd,
             depositCount: depositSummary.depositCount,

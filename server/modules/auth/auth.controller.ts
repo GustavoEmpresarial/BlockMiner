@@ -224,7 +224,17 @@ export async function resendVerificationPost(req, res) {
         }
         const verifyToken = signEmailVerificationToken(user.id);
         const verifyUrl = `${APP_URL.replace(/\/$/, "")}/verify-email?token=${encodeURIComponent(verifyToken)}`;
-        await sendEmailVerificationEmail({ to: user.email, name: user.name, verifyUrl });
+        try {
+            await sendEmailVerificationEmail({ to: user.email, name: user.name, verifyUrl });
+        } catch (sendErr) {
+            log.error("Resend verification email send failed", { error: unknownErrorMessage(sendErr), userId: user.id });
+            res.status(503).json({
+                ok: false,
+                code: "EMAIL_SEND_FAILED",
+                message: "Envio de e-mail temporariamente indisponível no momento. Tente novamente mais tarde.",
+            });
+            return;
+        }
         res.json({ ok: true, message: "Reenviamos o e-mail de confirmação." });
     }
     catch (error) {

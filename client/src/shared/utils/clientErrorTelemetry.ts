@@ -100,6 +100,14 @@ export const EXPECTED_CLIENT_UX_CODES = new Set([
   "BURN_NOT_READY",
   "SHORTLINK_NO_SESSION",
   "WALLET_ALREADY_LINKED",
+  "SERVICE_BUSY",
+  "SERVICE_UNAVAILABLE",
+  "EMAIL_SEND_FAILED",
+  "EMAIL_2FA_UNAVAILABLE",
+  "REFERRAL_STATS_FAILED",
+  "SESSION_CANCELED",
+  "SESSION_EXPIRED",
+  "CLAIM_FAILED",
 ]);
 
 /**
@@ -109,12 +117,13 @@ export const EXPECTED_CLIENT_UX_CODES = new Set([
  *   it has no stack and no user impact (was 8 of the 15 "critical" crashes).
  * - EIP-1193 disconnect + proxy-invariant TypeErrors come from injected wallet providers.
  * - "Cannot redefine property" comes from extensions patching built-ins.
+ * - Headless crawlers / scrapers (happy-dom, etc.) failing on modern ESM syntax.
  */
 const THIRD_PARTY_NOISE_TEXT =
-  /ResizeObserver loop (limit exceeded|completed with undelivered notifications)|provider is disconnected from all chains|Cannot redefine property|Extension context invalidated/i;
+  /ResizeObserver loop (limit exceeded|completed with undelivered notifications)|provider is disconnected from all chains|Cannot redefine property|Extension context invalidated|Cannot use 'import\.meta' outside a module|happy-dom|ECMAScriptModuleCompiler|Failed to parse module in/i;
 
 const EXPECTED_BUSINESS_RULE_TEXT =
-  /insufficient|insuficiente|already (claimed|active|purchased)|cooldown|limit reached|limite|not eligible|sold out|esgotad|não tem ventiladores|nao tem ventiladores|não tem racks|nao tem racks|ventiladores disponíveis|racks disponíveis/i;
+  /insufficient|insuficiente|already (claimed|active|purchased)|cooldown|limit reached|limite|not eligible|sold out|esgotad|não tem ventiladores|nao tem ventiladores|não tem racks|nao tem racks|ventiladores disponíveis|racks disponíveis|sessão cancelada|sessao cancelada|sessão expirada|sessao expirada|servidor está sobrecarregado|servidor esta sobrecarregado|email verification unavailable/i;
 
 const EXPECTED_CLIENT_API_FAILURE_TEXT =
   /3\+ cycles with no grant \(last code: (CLAIM_NOT_DUE|PRESENCE_STALE|PRESENCE_INSUFFICIENT|SESSION_PAUSED|CONCURRENT_CLAIM|NO_SESSION)\)|Sessão ZerAds inválida|Nenhuma sessão ZerAds|Could not open the ZerAds/i;
@@ -181,7 +190,7 @@ export function shouldDropClientTelemetry(payload: ClientTelemetryPayload): bool
   if (THIRD_PARTY_NOISE_TEXT.test(msg)) return true;
   // Axios transport failure with no HTTP status (deploy blip / offline).
   if (/^Network Error$/i.test(msg.trim()) && status == null) return true;
-  if (/site em manuten|site.?maintenance|sistemas em manuten/i.test(msg)) return true;
+  if (/site em manuten|site.?maintenance|sistemas em manuten|servidor (está |esta )?sobrecarregado|servidor temporariamente indispon[íi]vel|email verification unavailable/i.test(msg)) return true;
   if (/session invalid|not authenticated|login required/i.test(msg)) return true;
   if (/timeout of \d+ms exceeded/i.test(msg)) return true;
   if (/request aborted|canceled|cancelled|abort/i.test(msg)) return true;

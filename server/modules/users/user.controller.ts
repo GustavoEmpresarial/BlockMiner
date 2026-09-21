@@ -215,10 +215,11 @@ export async function getReferralStats(req, res) {
             res.status(infra.status).json({ ok: false, code: infra.code, message: infra.message, retryable: true });
             return;
         }
-        res.status(500).json({
+        res.status(503).json({
             ok: false,
-            code: "REFERRAL_STATS_FAILED",
-            message: "Erro ao obter estatísticas de indicações.",
+            code: "SERVICE_BUSY",
+            message: "Estatísticas de indicações temporariamente indisponíveis. Tente novamente em instantes.",
+            retryable: true,
         });
     }
 }
@@ -285,7 +286,7 @@ export async function requestEmailTwoFactorChallenge(req, res) {
         return;
     try {
         if (!isSmtpConfigured()) {
-            res.status(503).json({ ok: false, message: "Email verification unavailable." });
+            res.status(503).json({ ok: false, code: "EMAIL_2FA_UNAVAILABLE", message: "Verificação em duas etapas por e-mail indisponível no momento." });
             return;
         }
         const user = await userRepo.findUserEmailAndName(sessionUser.id);
@@ -294,7 +295,7 @@ export async function requestEmailTwoFactorChallenge(req, res) {
             return;
         }
         // Real challenge issuance/send is deferred with SMTP transport (see class doc-comment).
-        res.status(503).json({ ok: false, message: "Email verification unavailable." });
+        res.status(503).json({ ok: false, code: "EMAIL_2FA_UNAVAILABLE", message: "Verificação em duas etapas por e-mail indisponível no momento." });
     }
     catch {
         res.status(500).json({ ok: false, message: "Erro ao enviar código." });
@@ -304,7 +305,7 @@ export async function enableEmailTwoFactor(req, res) {
     const sessionUser = requireSessionUser(req, res);
     if (!sessionUser)
         return;
-    res.status(503).json({ ok: false, message: "Email verification unavailable." });
+    res.status(503).json({ ok: false, code: "EMAIL_2FA_UNAVAILABLE", message: "Verificação em duas etapas por e-mail indisponível no momento." });
 }
 export async function disableEmailTwoFactor(req, res) {
     const sessionUser = requireSessionUser(req, res);

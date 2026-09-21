@@ -49,6 +49,8 @@ export const CLIENT_ERROR_NOISE: RegExp[] = [
   /Extension context invalidated/i,
   /** EIP-1193 provider teardown (wallet app closed the session) — not a BM defect. */
   /provider is disconnected from all chains/i,
+  /** Headless bot scrapers / crawler noise failing on modern ESM syntax */
+  /Cannot use 'import\.meta' outside a module|happy-dom|ECMAScriptModuleCompiler|Failed to parse module in/i,
 ];
 
 /**
@@ -70,7 +72,7 @@ export function isWalletConnectExplorerFetchNoise(
 
 /** Business rules the UI already explains on screen — 4xx without a code, so named by text. */
 export const EXPECTED_BUSINESS_RULE_TEXT =
-  /insufficient|insuficiente|already (claimed|active|purchased)|cooldown|limit reached|limite|not eligible|sold out|esgotad|não tem ventiladores|nao tem ventiladores|não tem racks|nao tem racks|ventiladores disponíveis|racks disponíveis/i;
+  /insufficient|insuficiente|already (claimed|active|purchased)|cooldown|limit reached|limite|not eligible|sold out|esgotad|não tem ventiladores|nao tem ventiladores|não tem racks|nao tem racks|ventiladores disponíveis|racks disponíveis|sessão cancelada|sessao cancelada|sessão expirada|sessao expirada|servidor está sobrecarregado|servidor esta sobrecarregado|email verification unavailable/i;
 
 /**
  * Expected wait / UX copy that old clients still POST as api_failure.
@@ -109,7 +111,8 @@ export const EXPECTED_GATE_CODES = new Set([
   "CAPTCHA_DISABLED",
 ]);
 
-export const EXPECTED_GATE_TEXT = /site em manuten[cç][aã]o|site.?maintenance|sistemas em manuten/i;
+export const EXPECTED_GATE_TEXT =
+  /site em manuten[cç][aã]o|site.?maintenance|sistemas em manuten|servidor (está |esta )?sobrecarregado|servidor temporariamente indispon[íi]vel|email verification unavailable/i;
 
 /** Auth/session probes from logged-out tabs — expected 401 noise. */
 export const EXPECTED_AUTH_CODES = new Set([
@@ -170,6 +173,14 @@ export const EXPECTED_CLIENT_UX_CODES = new Set([
   "BURN_NOT_READY",
   "SHORTLINK_NO_SESSION",
   "WALLET_ALREADY_LINKED",
+  "SERVICE_BUSY",
+  "SERVICE_UNAVAILABLE",
+  "EMAIL_SEND_FAILED",
+  "EMAIL_2FA_UNAVAILABLE",
+  "REFERRAL_STATS_FAILED",
+  "SESSION_CANCELED",
+  "SESSION_EXPIRED",
+  "CLAIM_FAILED",
 ]);
 
 /**
