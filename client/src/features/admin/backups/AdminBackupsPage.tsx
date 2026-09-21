@@ -236,16 +236,32 @@ export default function AdminBackups() {
     }
   };
 
+  const extractCodeFromInput = (input: string): string => {
+    let val = input.trim();
+    if (val.includes("code=")) {
+      try {
+        const url = new URL(val.startsWith("http") ? val : `http://localhost/${val.replace(/^\?/, "")}`);
+        const extracted = url.searchParams.get("code");
+        if (extracted) return extracted.trim();
+      } catch {
+        const match = val.match(/[?&]code=([^&]+)/);
+        if (match && match[1]) return decodeURIComponent(match[1]).trim();
+      }
+    }
+    return val;
+  };
+
   const handleConnectSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!authCode.trim()) {
+    const clean = extractCodeFromInput(authCode);
+    if (!clean) {
       toast.error("Insira o código de autorização.");
       return;
     }
 
     try {
       setIsConnectingDrive(true);
-      const res = await connectAdminGoogleDrive(authCode.trim());
+      const res = await connectAdminGoogleDrive(clean);
       if (res.data.ok) {
         toast.success("Google Drive conectado com sucesso!");
         setShowConnectModal(false);
@@ -656,7 +672,14 @@ export default function AdminBackups() {
                   <input
                     type="text"
                     value={authCode}
-                    onChange={(e) => setAuthCode(e.target.value)}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      const clean = extractCodeFromInput(raw);
+                      setAuthCode(clean);
+                      if (clean !== raw.trim() && clean.length > 5) {
+                        toast.success("Código de autorização extraído com sucesso da URL!");
+                      }
+                    }}
                     placeholder={t("adminBackups.gdrive_modal_code_placeholder")}
                     className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder:text-slate-600 font-mono text-xs focus:outline-none focus:border-blue-500"
                   />
