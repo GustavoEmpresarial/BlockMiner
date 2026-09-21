@@ -449,24 +449,45 @@ export async function uploadBackupPackageToGoogleDrive(filename: unknown): Promi
   bundleUpload?: GoogleDriveUploadResult;
   metaUpload?: GoogleDriveUploadResult;
 }> {
-  const safe = safeBackupSqlName(filename);
+  // Accept both "backup-xxx.sql" and "backup-xxx.sql.gz"
+  const isGzip = typeof filename === "string" && filename.endsWith(".gz");
+  const baseName = isGzip ? (filename as string).slice(0, -3) : filename;
+  const safe = safeBackupSqlName(baseName);
   if (!safe) throw new Error("Invalid backup filename");
 
-  const sqlPath = await resolveBackupDownloadPath(safe);
+  // Resolve actual upload path — prefer .sql.gz if caller specified it
   const backupsDir = getAdminBackupsDirectory();
+  const gzPath = path.join(backupsDir, safe + ".gz");
+  const rawPath = path.join(backupsDir, safe);
+
+  let sqlPath: string;
+  let uploadName: string;
+  let mimeType: string;
+
+  try {
+    await fs.access(gzPath);
+    sqlPath = gzPath;
+    uploadName = safe + ".gz";
+    mimeType = "application/gzip";
+  } catch {
+    sqlPath = await resolveBackupDownloadPath(safe);
+    uploadName = safe;
+    mimeType = "application/sql";
+  }
+
   const metaPath = metaPathForSqlFile(backupsDir, safe);
   const bundlePath = bundlePathForSqlFile(backupsDir, safe);
 
   const accessToken = await getValidAccessToken();
   const folderId = await getOrCreateBackupFolder(accessToken);
 
-  log.info("gdrive_backup_upload_start", { filename: safe, folderId });
+  log.info("gdrive_backup_upload_start", { filename: uploadName, folderId });
 
-  // 1. Upload .sql dump
+  // 1. Upload .sql or .sql.gz dump
   const sqlUpload = await uploadFileToGoogleDrive({
     filePath: sqlPath,
-    fileName: safe,
-    mimeType: "application/sql",
+    fileName: uploadName,
+    mimeType,
     folderId,
   });
 
