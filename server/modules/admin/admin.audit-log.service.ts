@@ -45,13 +45,14 @@ export async function queryAdminAuditLogs(opts: {
   action?: string;
   module?: string;
   success?: boolean;
+  search?: string;
   from?: Date;
   to?: Date;
   page?: number;
   pageSize?: number;
 }) {
   const { page = 1, pageSize = 50 } = opts;
-  const where = {
+  const where: Record<string, unknown> = {
     ...(opts.adminId != null ? { adminId: opts.adminId } : {}),
     ...(opts.action ? { action: { contains: opts.action, mode: "insensitive" as const } } : {}),
     ...(opts.module ? { module: opts.module } : {}),
@@ -61,18 +62,81 @@ export async function queryAdminAuditLogs(opts: {
       : {}),
   };
 
+  if (opts.search && opts.search.trim()) {
+    const q = opts.search.trim();
+    where.OR = [
+      { action: { contains: q, mode: "insensitive" } },
+      { module: { contains: q, mode: "insensitive" } },
+      { adminEmail: { contains: q, mode: "insensitive" } },
+      { resource: { contains: q, mode: "insensitive" } },
+      { resourceId: { contains: q, mode: "insensitive" } },
+      { ipAddress: { contains: q, mode: "insensitive" } },
+      { errorMsg: { contains: q, mode: "insensitive" } },
+    ];
+  }
+
   const [rows, total] = await Promise.all([
     prisma.adminAuditLog.findMany({
       where,
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * pageSize,
       take: pageSize,
-      include: { admin: { select: { name: true, email: true } } },
+      include: { admin: { select: { id: true, name: true, email: true, role: true } } },
     }),
     prisma.adminAuditLog.count({ where }),
   ]);
 
   return { rows: rows.map(serializeAuditRow), total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
+}
+
+export async function getAdminAuditStats() {
+  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+  const [total, successCount, failedCount, last24hCount, last7dCount, actionsGroup, modulesGroup, admins] = await Promise.all([
+    prisma.adminAuditLog.count(),
+    prisma.adminAuditLog.count({ where: { success: true } }),
+    prisma.adminAuditLog.count({ where: { success: false } }),
+    prisma.adminAuditLog.count({ where: { createdAt: { gte: oneDayAgo } } }),
+    prisma.adminAuditLog.count({ where: { createdAt: { gte: sevenDaysAgo } } }),
+    prisma.adminAuditLog.groupBy({
+      by: ["action"],
+      _count: { action: true },
+      orderBy: { _count: { action: "desc" } },
+      take: 8,
+    }),
+    prisma.adminAuditLog.groupBy({
+      by: ["module"],
+      _count: { module: true },
+      orderBy: { _count: { module: "desc" } },
+    }),
+    prisma.adminUser.findMany({
+      select: { id: true, name: true, email: true, role: true },
+      orderBy: { name: "asc" },
+    }),
+  ]);
+
+  const topActions = actionsGroup.map((g) => ({
+    action: g.action,
+    count: g._count.action,
+  }));
+
+  const modulesBreakdown = modulesGroup.map((g) => ({
+    module: g.module || "other",
+    count: g._count.module,
+  }));
+
+  return {
+    total,
+    successCount,
+    failedCount,
+    last24hCount,
+    last7dCount,
+    successRate: total > 0 ? Math.round((successCount / total) * 100) : 100,
+    topActions,
+    modulesBreakdown,
+    admins,
+  };
 }
 
 /** AdminAuditLog.id is a BigInt — res.json → JSON.stringify cannot serialise it. */

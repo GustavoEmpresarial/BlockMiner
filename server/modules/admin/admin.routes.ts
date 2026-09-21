@@ -16,6 +16,7 @@ import {
   updateAdminProfileHandler,
   myAuditLogHandler,
   adminAuditLogHandler,
+  adminAuditStatsHandler,
   changeOwnPasswordHandler,
   adminOverviewHandler,
 } from "./admin.controller.js";
@@ -51,6 +52,7 @@ adminRouter.delete("/sessions/:sessionId", revokeSessionHandler);
 
 
 // Audit log
+adminRouter.get("/admin-audit/stats", adminAuditStatsHandler);
 adminRouter.get("/admin-audit", adminAuditLogHandler);
 
 // Own password change

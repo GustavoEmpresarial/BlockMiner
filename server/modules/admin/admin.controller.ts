@@ -16,7 +16,7 @@ import {
   verifyAdminPassword,
   isStrongPassword,
 } from "./admin.service.js";
-import { queryAdminAuditLogs, logAdminAction, serializeAuditRow } from "./admin.audit-log.service.js";
+import { queryAdminAuditLogs, getAdminAuditStats, logAdminAction, serializeAuditRow } from "./admin.audit-log.service.js";
 import { ADMIN_ROLES } from "./admin.permissions.js";
 import * as adminRepo from "./admin.repository.js";
 import prisma from "../../core/database/prisma.js";
@@ -212,16 +212,26 @@ export async function revokeSessionHandler(req: Request, res: Response): Promise
 
 export async function adminAuditLogHandler(req: Request, res: Response): Promise<void> {
   const page = Math.max(1, Number(req.query.page) || 1);
-  const pageSize = Math.min(100, Math.max(1, Number(req.query.pageSize) || 50));
+  const pageSize = Math.min(200, Math.max(1, Number(req.query.pageSize) || 50));
   const adminId = req.query.adminId ? Number(req.query.adminId) : undefined;
   const action = typeof req.query.action === "string" ? req.query.action : undefined;
   const moduleName = typeof req.query.module === "string" ? req.query.module : undefined;
+  const search = typeof req.query.search === "string" ? req.query.search : undefined;
   const success = req.query.success === "true" ? true : req.query.success === "false" ? false : undefined;
   const from = req.query.from ? new Date(String(req.query.from)) : undefined;
   const to = req.query.to ? new Date(String(req.query.to)) : undefined;
 
-  const result = await queryAdminAuditLogs({ adminId, action, module: moduleName, success, from, to, page, pageSize });
+  const result = await queryAdminAuditLogs({ adminId, action, module: moduleName, search, success, from, to, page, pageSize });
   res.json({ ok: true, ...result });
+}
+
+export async function adminAuditStatsHandler(_req: Request, res: Response): Promise<void> {
+  try {
+    const stats = await getAdminAuditStats();
+    res.json({ ok: true, stats });
+  } catch (error) {
+    res.status(500).json({ ok: false, message: "Erro ao carregar estatísticas de auditoria" });
+  }
 }
 
 export async function getAdminProfileHandler(req: Request, res: Response): Promise<void> {

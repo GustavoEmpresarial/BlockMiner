@@ -17,6 +17,8 @@ import type {
   AdminProfileUser,
   AdminSessionItem,
   AdminAuditLogRow,
+  AdminAuditListResponse,
+  AdminAuditStatsResponse,
 } from './admin.types';
 
 
@@ -248,4 +250,23 @@ export function getMyAdminAuditLogs(params?: { page?: number; pageSize?: number 
     { params }
   );
 }
+
+export function getAdminAuditLogs(params?: {
+  page?: number;
+  pageSize?: number;
+  adminId?: number;
+  action?: string;
+  module?: string;
+  search?: string;
+  success?: boolean;
+  from?: string;
+  to?: string;
+}) {
+  return api.get<AdminAuditListResponse>('/admin/admin-audit', { params });
+}
+
+export function getAdminAuditStats() {
+  return api.get<AdminAuditStatsResponse>('/admin/admin-audit/stats');
+}
+
 

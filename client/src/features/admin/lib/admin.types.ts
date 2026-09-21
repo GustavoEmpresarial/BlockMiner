@@ -855,15 +855,47 @@ export interface AdminSessionItem {
 export interface AdminAuditLogRow {
   id: string;
   adminId: number | null;
+  adminEmail?: string | null;
+  sessionId?: string | null;
   action: string;
   module: string | null;
   resource: string | null;
   resourceId: string | null;
+  oldValue?: unknown;
+  newValue?: unknown;
   success: boolean;
   errorMsg: string | null;
   ipAddress: string | null;
   userAgent: string | null;
+  durationMs?: number | null;
   createdAt: string;
-  admin?: { name: string; email: string } | null;
+  admin?: { id?: number; name: string; email: string; role?: string } | null;
 }
+
+export interface AdminAuditStats {
+  total: number;
+  successCount: number;
+  failedCount: number;
+  last24hCount: number;
+  last7dCount: number;
+  successRate: number;
+  topActions: { action: string; count: number }[];
+  modulesBreakdown: { module: string; count: number }[];
+  admins: { id: number; name: string; email: string; role: string }[];
+}
+
+export interface AdminAuditListResponse {
+  ok: boolean;
+  rows: AdminAuditLogRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export interface AdminAuditStatsResponse {
+  ok: boolean;
+  stats: AdminAuditStats;
+}
+
 
