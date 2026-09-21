@@ -1,9 +1,22 @@
 import type { Request, Response } from "express";
+import { z } from "zod";
 import * as transparencyRepo from "./transparency.repository.js";
-import { assertValidTransparencyWalletAddress } from "./transparency.validation.js";
+import {
+  assertValidTransparencyWalletAddress,
+  parsePositiveIntParam,
+  transparencyEntryCreateSchema,
+  transparencyEntryUpdateSchema,
+  externalInvestmentCreateSchema,
+  externalInvestmentUpdateSchema,
+  trackedWalletCreateSchema,
+  trackedWalletUpdateSchema,
+  hardwareAssetCreateSchema,
+  hardwareAssetUpdateSchema,
+} from "./transparency.validation.js";
 import { fetchWalletNativeActivity } from "./transparency.activity.service.js";
 import { normalizeLegacyWalletFlags } from "./transparency.legacy-wallets.js";
 import { fetchAllBasePrices } from "./transparency.wallet-snapshot.service.js";
+import { logAdminAction } from "../admin/index.js";
 import {
   computeEarnedUsd,
   computeHardwareRoiSummary,
@@ -11,6 +24,25 @@ import {
   parsePositiveDecimal,
   parseSatoshiInput,
 } from "./transparency.hardware-profit.js";
+
+function getAdminContext(req: Request) {
+  const admin = (req as Request & { admin?: { adminId?: number; email?: string; sessionId?: string } }).admin;
+  return {
+    adminId: admin?.adminId ?? null,
+    adminEmail: admin?.email ?? null,
+    sessionId: admin?.sessionId ?? null,
+    ipAddress: ((req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim()) || req.ip || null,
+    userAgent: req.headers["user-agent"] || null,
+  };
+}
+
+function formatValidationError(error: unknown): string {
+  if (error instanceof z.ZodError) {
+    return error.errors.map((e) => e.message).join(", ");
+  }
+  if (error instanceof Error) return error.message;
+  return "Dados inválidos.";
+}
 
 function mapWalletForPublic(w: Awaited<ReturnType<typeof transparencyRepo.listPublicWalletsWithSnapshot>>[number]) {
   const totalUsd = w.manualUsdValue ?? w.snapshot?.totalUsd ?? null;
@@ -43,8 +75,6 @@ function mapWalletForPublic(w: Awaited<ReturnType<typeof transparencyRepo.listPu
       id: p.id,
       chainId: p.chainId,
       chainName: p.chainName,
-      contractAddress: p.contractAddress,
-      tokenId: p.tokenId,
       poolLabel: p.poolLabel,
       name: p.name,
       description: p.description,
@@ -65,7 +95,7 @@ function mapHardwareAsset(asset: Awaited<ReturnType<typeof transparencyRepo.list
     purchaseCostUsd,
     profitLogs.map((log) => ({
       earnedAt: log.earnedAt,
-      earnedUsd: log.earnedUsd,
+      earnedUsd: Number(log.earnedUsd),
       satoshiAmount: log.satoshiAmount,
     })),
   );
@@ -86,6 +116,8 @@ function mapHardwareAsset(asset: Awaited<ReturnType<typeof transparencyRepo.list
     profitLogs: profitLogs.map(mapProfitLogForPublic),
   };
 }
+
+// ─── Public Endpoints ────────────────────────────────────────────────────────
 
 export async function getPublicEntries(_req: Request, res: Response) {
   try {
@@ -123,7 +155,6 @@ export async function getPublicWithdrawalStats(_req: Request, res: Response) {
   }
 }
 
-/** Deferred — see module doc-comment. */
 export async function getPublicWalletStats(_req: Request, res: Response) {
   res.json({
     ok: true,
@@ -135,9 +166,6 @@ export async function getPublicWalletStats(_req: Request, res: Response) {
   });
 }
 
-/**
- * Serves the multi-chain snapshot persisted by wallet-snapshot cron (DB read, no live RPC).
- */
 export async function getPublicTrackedWalletsLive(_req: Request, res: Response) {
   try {
     const wallets = await transparencyRepo.listPublicWalletsWithSnapshot();
@@ -166,6 +194,8 @@ export async function getPublicHardwareAssets(_req: Request, res: Response) {
   }
 }
 
+// ─── Admin External Investments ──────────────────────────────────────────────
+
 export async function adminExternalInvestmentList(_req: Request, res: Response) {
   try {
     res.json({ ok: true, investments: await transparencyRepo.listAllExternalInvestments() });
@@ -175,8 +205,21 @@ export async function adminExternalInvestmentList(_req: Request, res: Response) 
 }
 
 export async function adminExternalInvestmentCreate(req: Request, res: Response) {
+  const parsed = externalInvestmentCreateSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ ok: false, message: formatValidationError(parsed.error) });
+    return;
+  }
   try {
-    const investment = await transparencyRepo.createExternalInvestment(req.body);
+    const investment = await transparencyRepo.createExternalInvestment(parsed.data);
+    void logAdminAction({
+      ...getAdminContext(req),
+      action: "TRANSPARENCY_INVESTMENT_CREATE",
+      module: "transparency",
+      resource: "TransparencyExternalInvestment",
+      resourceId: String(investment.id),
+      newValue: investment,
+    });
     res.status(201).json({ ok: true, investment });
   } catch (error) {
     res.status(400).json({ ok: false, message: error instanceof Error ? error.message : "Erro ao criar investimento." });
@@ -184,7 +227,40 @@ export async function adminExternalInvestmentCreate(req: Request, res: Response)
 }
 
 export async function adminExternalInvestmentUpdate(req: Request, res: Response) {
-  const id = parseInt(String(req.params.id || ""), 10);
+  const id = parsePositiveIntParam(req.params.id);
+  if (!id) {
+    res.status(400).json({ ok: false, message: "ID inválido." });
+    return;
+  }
+  const parsed = externalInvestmentUpdateSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ ok: false, message: formatValidationError(parsed.error) });
+    return;
+  }
+  try {
+    const current = await transparencyRepo.findExternalInvestmentById(id);
+    if (!current) {
+      res.status(404).json({ ok: false, message: "Investimento não encontrado." });
+      return;
+    }
+    const investment = await transparencyRepo.updateExternalInvestment(id, parsed.data);
+    void logAdminAction({
+      ...getAdminContext(req),
+      action: "TRANSPARENCY_INVESTMENT_UPDATE",
+      module: "transparency",
+      resource: "TransparencyExternalInvestment",
+      resourceId: String(id),
+      oldValue: current,
+      newValue: investment,
+    });
+    res.json({ ok: true, investment });
+  } catch (error) {
+    res.status(400).json({ ok: false, message: error instanceof Error ? error.message : "Erro ao atualizar investimento." });
+  }
+}
+
+export async function adminExternalInvestmentDelete(req: Request, res: Response) {
+  const id = parsePositiveIntParam(req.params.id);
   if (!id) {
     res.status(400).json({ ok: false, message: "ID inválido." });
     return;
@@ -195,26 +271,22 @@ export async function adminExternalInvestmentUpdate(req: Request, res: Response)
       res.status(404).json({ ok: false, message: "Investimento não encontrado." });
       return;
     }
-    const investment = await transparencyRepo.updateExternalInvestment(id, req.body);
-    res.json({ ok: true, investment });
-  } catch (error) {
-    res.status(400).json({ ok: false, message: error instanceof Error ? error.message : "Erro ao atualizar investimento." });
-  }
-}
-
-export async function adminExternalInvestmentDelete(req: Request, res: Response) {
-  const id = parseInt(String(req.params.id || ""), 10);
-  if (!id) {
-    res.status(400).json({ ok: false, message: "ID inválido." });
-    return;
-  }
-  try {
     await transparencyRepo.deleteExternalInvestment(id);
+    void logAdminAction({
+      ...getAdminContext(req),
+      action: "TRANSPARENCY_INVESTMENT_DELETE",
+      module: "transparency",
+      resource: "TransparencyExternalInvestment",
+      resourceId: String(id),
+      oldValue: current,
+    });
     res.json({ ok: true });
   } catch {
     res.status(500).json({ ok: false, message: "Erro ao remover investimento." });
   }
 }
+
+// ─── Admin Transparency Entries (Receitas / Despesas) ────────────────────────
 
 export async function adminList(_req: Request, res: Response) {
   try {
@@ -225,16 +297,62 @@ export async function adminList(_req: Request, res: Response) {
 }
 
 export async function adminCreate(req: Request, res: Response) {
+  const parsed = transparencyEntryCreateSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ ok: false, message: formatValidationError(parsed.error) });
+    return;
+  }
   try {
-    const entry = await transparencyRepo.createTransparencyEntry(req.body);
-    res.json({ ok: true, entry });
+    const entry = await transparencyRepo.createTransparencyEntry(parsed.data as any);
+    void logAdminAction({
+      ...getAdminContext(req),
+      action: "TRANSPARENCY_ENTRY_CREATE",
+      module: "transparency",
+      resource: "TransparencyEntry",
+      resourceId: String(entry.id),
+      newValue: entry,
+    });
+    res.status(201).json({ ok: true, entry });
   } catch (error) {
     res.status(400).json({ ok: false, message: error instanceof Error ? error.message : "Erro ao criar entrada." });
   }
 }
 
 export async function adminUpdate(req: Request, res: Response) {
-  const id = parseInt(String(req.params.id || ""), 10);
+  const id = parsePositiveIntParam(req.params.id);
+  if (!id) {
+    res.status(400).json({ ok: false, message: "ID inválido." });
+    return;
+  }
+  const parsed = transparencyEntryUpdateSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ ok: false, message: formatValidationError(parsed.error) });
+    return;
+  }
+  try {
+    const current = await transparencyRepo.findTransparencyEntryById(id);
+    if (!current) {
+      res.status(404).json({ ok: false, message: "Entrada não encontrada." });
+      return;
+    }
+    const entry = await transparencyRepo.updateTransparencyEntry(id, parsed.data as any);
+    void logAdminAction({
+      ...getAdminContext(req),
+      action: "TRANSPARENCY_ENTRY_UPDATE",
+      module: "transparency",
+      resource: "TransparencyEntry",
+      resourceId: String(id),
+      oldValue: current,
+      newValue: entry,
+    });
+    res.json({ ok: true, entry });
+  } catch (error) {
+    res.status(400).json({ ok: false, message: error instanceof Error ? error.message : "Erro ao atualizar." });
+  }
+}
+
+export async function adminDelete(req: Request, res: Response) {
+  const id = parsePositiveIntParam(req.params.id);
   if (!id) {
     res.status(400).json({ ok: false, message: "ID inválido." });
     return;
@@ -245,26 +363,22 @@ export async function adminUpdate(req: Request, res: Response) {
       res.status(404).json({ ok: false, message: "Entrada não encontrada." });
       return;
     }
-    const entry = await transparencyRepo.updateTransparencyEntry(id, req.body);
-    res.json({ ok: true, entry });
-  } catch (error) {
-    res.status(400).json({ ok: false, message: error instanceof Error ? error.message : "Erro ao atualizar." });
-  }
-}
-
-export async function adminDelete(req: Request, res: Response) {
-  const id = parseInt(String(req.params.id || ""), 10);
-  if (!id) {
-    res.status(400).json({ ok: false, message: "ID inválido." });
-    return;
-  }
-  try {
     await transparencyRepo.deleteTransparencyEntry(id);
+    void logAdminAction({
+      ...getAdminContext(req),
+      action: "TRANSPARENCY_ENTRY_DELETE",
+      module: "transparency",
+      resource: "TransparencyEntry",
+      resourceId: String(id),
+      oldValue: current,
+    });
     res.json({ ok: true });
   } catch {
     res.status(500).json({ ok: false, message: "Erro ao deletar." });
   }
 }
+
+// ─── Admin Wallet Settings ───────────────────────────────────────────────────
 
 export async function adminWalletGetSettings(_req: Request, res: Response) {
   try {
@@ -282,14 +396,24 @@ export async function adminWalletPutSettings(req: Request, res: Response) {
       res.status(400).json({ ok: false, message: "Body deve incluir address (string vazia para limpar)." });
       return;
     }
-    const trimmed = String(body.address).trim();
+    const trimmed = String(body.address || "").trim();
     const stored = trimmed ? assertValidTransparencyWalletAddress(trimmed) : null;
     await transparencyRepo.upsertWalletSettings(stored);
+    void logAdminAction({
+      ...getAdminContext(req),
+      action: "TRANSPARENCY_WALLET_SETTINGS_UPDATE",
+      module: "transparency",
+      resource: "TransparencyWalletSettings",
+      resourceId: "1",
+      newValue: { address: stored },
+    });
     res.json({ ok: true, address: stored });
   } catch (e) {
     res.status(400).json({ ok: false, message: e instanceof Error ? e.message : "Erro ao guardar carteira." });
   }
 }
+
+// ─── Admin Tracked Wallets ───────────────────────────────────────────────────
 
 export async function adminTrackedWalletList(_req: Request, res: Response) {
   try {
@@ -300,8 +424,21 @@ export async function adminTrackedWalletList(_req: Request, res: Response) {
 }
 
 export async function adminTrackedWalletCreate(req: Request, res: Response) {
+  const parsed = trackedWalletCreateSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ ok: false, message: formatValidationError(parsed.error) });
+    return;
+  }
   try {
-    const wallet = await transparencyRepo.createTrackedWallet(req.body);
+    const wallet = await transparencyRepo.createTrackedWallet(parsed.data);
+    void logAdminAction({
+      ...getAdminContext(req),
+      action: "TRANSPARENCY_WALLET_CREATE",
+      module: "transparency",
+      resource: "TransparencyTrackedWallet",
+      resourceId: String(wallet.id),
+      newValue: wallet,
+    });
     res.status(201).json({ ok: true, wallet });
   } catch (error) {
     res.status(400).json({ ok: false, message: error instanceof Error ? error.message : "Erro ao criar carteira rastreada." });
@@ -309,7 +446,40 @@ export async function adminTrackedWalletCreate(req: Request, res: Response) {
 }
 
 export async function adminTrackedWalletUpdate(req: Request, res: Response) {
-  const id = parseInt(String(req.params.id || ""), 10);
+  const id = parsePositiveIntParam(req.params.id);
+  if (!id) {
+    res.status(400).json({ ok: false, message: "ID inválido." });
+    return;
+  }
+  const parsed = trackedWalletUpdateSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ ok: false, message: formatValidationError(parsed.error) });
+    return;
+  }
+  try {
+    const current = await transparencyRepo.findTrackedWalletById(id);
+    if (!current) {
+      res.status(404).json({ ok: false, message: "Carteira não encontrada." });
+      return;
+    }
+    const wallet = await transparencyRepo.updateTrackedWallet(id, parsed.data);
+    void logAdminAction({
+      ...getAdminContext(req),
+      action: "TRANSPARENCY_WALLET_UPDATE",
+      module: "transparency",
+      resource: "TransparencyTrackedWallet",
+      resourceId: String(id),
+      oldValue: current,
+      newValue: wallet,
+    });
+    res.json({ ok: true, wallet });
+  } catch (error) {
+    res.status(400).json({ ok: false, message: error instanceof Error ? error.message : "Erro ao atualizar carteira rastreada." });
+  }
+}
+
+export async function adminTrackedWalletDelete(req: Request, res: Response) {
+  const id = parsePositiveIntParam(req.params.id);
   if (!id) {
     res.status(400).json({ ok: false, message: "ID inválido." });
     return;
@@ -320,21 +490,15 @@ export async function adminTrackedWalletUpdate(req: Request, res: Response) {
       res.status(404).json({ ok: false, message: "Carteira não encontrada." });
       return;
     }
-    const wallet = await transparencyRepo.updateTrackedWallet(id, req.body);
-    res.json({ ok: true, wallet });
-  } catch (error) {
-    res.status(400).json({ ok: false, message: error instanceof Error ? error.message : "Erro ao atualizar carteira rastreada." });
-  }
-}
-
-export async function adminTrackedWalletDelete(req: Request, res: Response) {
-  const id = parseInt(String(req.params.id || ""), 10);
-  if (!id) {
-    res.status(400).json({ ok: false, message: "ID inválido." });
-    return;
-  }
-  try {
     await transparencyRepo.deleteTrackedWallet(id);
+    void logAdminAction({
+      ...getAdminContext(req),
+      action: "TRANSPARENCY_WALLET_DELETE",
+      module: "transparency",
+      resource: "TransparencyTrackedWallet",
+      resourceId: String(id),
+      oldValue: current,
+    });
     res.json({ ok: true });
   } catch {
     res.status(500).json({ ok: false, message: "Erro ao remover carteira rastreada." });
@@ -395,6 +559,8 @@ export async function adminTrackedWalletActivity(_req: Request, res: Response) {
   }
 }
 
+// ─── Admin Hardware Assets ───────────────────────────────────────────────────
+
 export async function adminHardwareAssetList(_req: Request, res: Response) {
   try {
     const assets = await transparencyRepo.listAllHardwareAssets();
@@ -414,8 +580,21 @@ export async function adminHardwareAssetList(_req: Request, res: Response) {
 }
 
 export async function adminHardwareAssetCreate(req: Request, res: Response) {
+  const parsed = hardwareAssetCreateSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ ok: false, message: formatValidationError(parsed.error) });
+    return;
+  }
   try {
-    const asset = await transparencyRepo.createHardwareAsset(req.body);
+    const asset = await transparencyRepo.createHardwareAsset(parsed.data as any);
+    void logAdminAction({
+      ...getAdminContext(req),
+      action: "TRANSPARENCY_HARDWARE_CREATE",
+      module: "transparency",
+      resource: "TransparencyHardwareAsset",
+      resourceId: String(asset.id),
+      newValue: asset,
+    });
     res.status(201).json({ ok: true, asset });
   } catch (error) {
     res.status(400).json({ ok: false, message: error instanceof Error ? error.message : "Erro ao criar ativo." });
@@ -423,7 +602,40 @@ export async function adminHardwareAssetCreate(req: Request, res: Response) {
 }
 
 export async function adminHardwareAssetUpdate(req: Request, res: Response) {
-  const id = parseInt(String(req.params.id || ""), 10);
+  const id = parsePositiveIntParam(req.params.id);
+  if (!id) {
+    res.status(400).json({ ok: false, message: "ID inválido." });
+    return;
+  }
+  const parsed = hardwareAssetUpdateSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ ok: false, message: formatValidationError(parsed.error) });
+    return;
+  }
+  try {
+    const current = await transparencyRepo.findHardwareAssetById(id);
+    if (!current) {
+      res.status(404).json({ ok: false, message: "Ativo não encontrado." });
+      return;
+    }
+    const asset = await transparencyRepo.updateHardwareAsset(id, parsed.data as any);
+    void logAdminAction({
+      ...getAdminContext(req),
+      action: "TRANSPARENCY_HARDWARE_UPDATE",
+      module: "transparency",
+      resource: "TransparencyHardwareAsset",
+      resourceId: String(id),
+      oldValue: current,
+      newValue: asset,
+    });
+    res.json({ ok: true, asset });
+  } catch (error) {
+    res.status(400).json({ ok: false, message: error instanceof Error ? error.message : "Erro ao atualizar ativo." });
+  }
+}
+
+export async function adminHardwareAssetDelete(req: Request, res: Response) {
+  const id = parsePositiveIntParam(req.params.id);
   if (!id) {
     res.status(400).json({ ok: false, message: "ID inválido." });
     return;
@@ -434,21 +646,15 @@ export async function adminHardwareAssetUpdate(req: Request, res: Response) {
       res.status(404).json({ ok: false, message: "Ativo não encontrado." });
       return;
     }
-    const asset = await transparencyRepo.updateHardwareAsset(id, req.body);
-    res.json({ ok: true, asset });
-  } catch (error) {
-    res.status(400).json({ ok: false, message: error instanceof Error ? error.message : "Erro ao atualizar ativo." });
-  }
-}
-
-export async function adminHardwareAssetDelete(req: Request, res: Response) {
-  const id = parseInt(String(req.params.id || ""), 10);
-  if (!id) {
-    res.status(400).json({ ok: false, message: "ID inválido." });
-    return;
-  }
-  try {
     await transparencyRepo.deleteHardwareAsset(id);
+    void logAdminAction({
+      ...getAdminContext(req),
+      action: "TRANSPARENCY_HARDWARE_DELETE",
+      module: "transparency",
+      resource: "TransparencyHardwareAsset",
+      resourceId: String(id),
+      oldValue: current,
+    });
     res.json({ ok: true });
   } catch {
     res.status(500).json({ ok: false, message: "Erro ao remover ativo." });
@@ -520,7 +726,7 @@ export async function adminHardwareProfitLogList(req: Request, res: Response) {
         purchaseCostUsd,
         logs.map((log) => ({
           earnedAt: log.earnedAt,
-          earnedUsd: log.earnedUsd,
+          earnedUsd: Number(log.earnedUsd),
           satoshiAmount: log.satoshiAmount,
         })),
       ),
@@ -556,6 +762,19 @@ export async function adminHardwareProfitLogCreate(req: Request, res: Response) 
       earnedUsd: payload.earnedUsd,
       notes: payload.notes,
     });
+    void logAdminAction({
+      ...getAdminContext(req),
+      action: "TRANSPARENCY_PROFIT_CREATE",
+      module: "transparency",
+      resource: "TransparencyHardwareProfitLog",
+      resourceId: String(log.id),
+      newValue: {
+        hardwareAssetId: assetId,
+        satoshiAmount: payload.satoshi.toString(),
+        btcUsdPrice: payload.btcUsdPrice,
+        earnedUsd: payload.earnedUsd,
+      },
+    });
     res.status(201).json({ ok: true, profitLog: mapProfitLogForPublic(log) });
   } catch (error) {
     res.status(400).json({ ok: false, message: error instanceof Error ? error.message : "Erro ao registrar lucro." });
@@ -564,7 +783,7 @@ export async function adminHardwareProfitLogCreate(req: Request, res: Response) 
 
 export async function adminHardwareProfitLogUpdate(req: Request, res: Response) {
   const assetId = parseHardwareAssetId(req);
-  const logId = parseInt(String(req.params.id || ""), 10);
+  const logId = parsePositiveIntParam(req.params.id);
   if (!assetId || !logId) {
     res.status(400).json({ ok: false, message: "ID inválido." });
     return;
@@ -587,6 +806,23 @@ export async function adminHardwareProfitLogUpdate(req: Request, res: Response) 
       earnedUsd: payload.earnedUsd,
       notes: payload.notes,
     });
+    void logAdminAction({
+      ...getAdminContext(req),
+      action: "TRANSPARENCY_PROFIT_UPDATE",
+      module: "transparency",
+      resource: "TransparencyHardwareProfitLog",
+      resourceId: String(logId),
+      oldValue: {
+        satoshiAmount: current.satoshiAmount.toString(),
+        btcUsdPrice: current.btcUsdPrice,
+        earnedUsd: current.earnedUsd,
+      },
+      newValue: {
+        satoshiAmount: payload.satoshi.toString(),
+        btcUsdPrice: payload.btcUsdPrice,
+        earnedUsd: payload.earnedUsd,
+      },
+    });
     res.json({ ok: true, profitLog: mapProfitLogForPublic(log) });
   } catch (error) {
     res.status(400).json({ ok: false, message: error instanceof Error ? error.message : "Erro ao atualizar lucro." });
@@ -595,7 +831,7 @@ export async function adminHardwareProfitLogUpdate(req: Request, res: Response) 
 
 export async function adminHardwareProfitLogDelete(req: Request, res: Response) {
   const assetId = parseHardwareAssetId(req);
-  const logId = parseInt(String(req.params.id || ""), 10);
+  const logId = parsePositiveIntParam(req.params.id);
   if (!assetId || !logId) {
     res.status(400).json({ ok: false, message: "ID inválido." });
     return;
@@ -607,6 +843,17 @@ export async function adminHardwareProfitLogDelete(req: Request, res: Response) 
       return;
     }
     await transparencyRepo.deleteHardwareProfitLog(logId);
+    void logAdminAction({
+      ...getAdminContext(req),
+      action: "TRANSPARENCY_PROFIT_DELETE",
+      module: "transparency",
+      resource: "TransparencyHardwareProfitLog",
+      resourceId: String(logId),
+      oldValue: {
+        satoshiAmount: current.satoshiAmount.toString(),
+        earnedUsd: current.earnedUsd,
+      },
+    });
     res.json({ ok: true });
   } catch {
     res.status(500).json({ ok: false, message: "Erro ao remover lançamento." });

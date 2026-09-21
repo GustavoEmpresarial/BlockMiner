@@ -5,8 +5,11 @@ const MS_PER_DAY = 86_400_000;
 
 export function parseSatoshiInput(raw: unknown): bigint | null {
   if (raw == null || raw === '') return null;
+  if (typeof raw === 'number' && raw <= 0) return null;
+  const s = String(raw).trim();
+  if (s.startsWith('-')) return null;
   try {
-    const digits = String(raw).trim().replace(/[^\d]/g, '');
+    const digits = s.replace(/[^\d]/g, '');
     if (!digits) return null;
     const value = BigInt(digits);
     if (value <= 0n) return null;
@@ -35,7 +38,7 @@ export function computeEarnedUsd(satoshi: bigint, btcUsdPrice: number): number {
 
 export type HardwareProfitLogRow = {
   earnedAt: Date;
-  earnedUsd: number | string;
+  earnedUsd: number | string | { toString(): string };
   satoshiAmount?: bigint | string | number | null;
 };
 
@@ -92,7 +95,9 @@ export function computeHardwareRoiSummary(
     const spanMs = Math.max(MS_PER_DAY, new Date(last).getTime() - new Date(first).getTime());
     const spanDays = spanMs / MS_PER_DAY;
     avgDailyUsd = Math.round((roundedTotal / spanDays) * 100) / 100;
-    if (!roiReached && avgDailyUsd > 0 && remainingUsd > 0) {
+    if (roiReached) {
+      estimatedDaysToRoi = 0;
+    } else if (avgDailyUsd > 0 && remainingUsd > 0) {
       estimatedDaysToRoi = Math.ceil(remainingUsd / avgDailyUsd);
     }
   }
