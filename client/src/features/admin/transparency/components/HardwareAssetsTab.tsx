@@ -340,7 +340,7 @@ export default function HardwareAssetsTab() {
                   <div className="rounded-2xl border border-white/5 bg-slate-950/40 p-3.5">
                     <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Minerado</p>
                     <p className="text-lg font-black text-white mt-0.5">
-                      ${profitSummary?.totalEarnedUsd.toFixed(2) || '0.00'}
+                      ${profitSummary?.totalEarnedUsd != null ? profitSummary.totalEarnedUsd.toFixed(2) : '0.00'}
                     </p>
                     <p className="text-[10px] text-amber-400 mt-0.5">
                       {profitSummary?.totalEarnedSatoshi || '0'} sats
@@ -350,7 +350,7 @@ export default function HardwareAssetsTab() {
                   <div className="rounded-2xl border border-white/5 bg-slate-950/40 p-3.5">
                     <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Recuperado (% ROI)</p>
                     <p className="text-lg font-black text-emerald-300 mt-0.5">
-                      {profitSummary?.recoveredPct.toFixed(1) || '0.0'}%
+                      {profitSummary?.recoveredPct != null ? profitSummary.recoveredPct.toFixed(1) : '0.0'}%
                     </p>
                     <div className="w-full bg-slate-800 rounded-full h-1.5 mt-1.5 overflow-hidden">
                       <div
@@ -363,7 +363,7 @@ export default function HardwareAssetsTab() {
                   <div className="rounded-2xl border border-white/5 bg-slate-950/40 p-3.5">
                     <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Saldo Restante</p>
                     <p className="text-lg font-black text-slate-200 mt-0.5">
-                      ${profitSummary?.remainingUsd.toFixed(2) || '0.00'}
+                      ${profitSummary?.remainingUsd != null ? profitSummary.remainingUsd.toFixed(2) : '0.00'}
                     </p>
                     <p className="text-[10px] text-slate-500 mt-0.5">Para amortização 100%</p>
                   </div>
@@ -378,7 +378,7 @@ export default function HardwareAssetsTab() {
                           : 'Calculando...'}
                     </p>
                     <p className="text-[10px] text-slate-500 mt-0.5">
-                      {profitSummary?.avgDailyUsd ? `Média $${profitSummary.avgDailyUsd.toFixed(2)}/dia` : 'Sem dados'}
+                      {profitSummary?.avgDailyUsd != null ? `Média $${profitSummary.avgDailyUsd.toFixed(2)}/dia` : 'Sem dados'}
                     </p>
                   </div>
                 </div>

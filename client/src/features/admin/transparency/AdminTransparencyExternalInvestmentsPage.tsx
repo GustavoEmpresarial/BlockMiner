@@ -220,7 +220,7 @@ export default function AdminTransparencyExternalInvestmentsPage() {
         <div className="rounded-2xl border border-white/10 bg-slate-900/60 p-4 flex items-center justify-between">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Investido</p>
-            <p className="text-xl font-black text-white mt-1 font-mono">${totalInvested.toFixed(2)}</p>
+            <p className="text-xl font-black text-white mt-1 font-mono">{`$${totalInvested.toFixed(2)}`}</p>
             <p className="text-[10px] text-slate-500 mt-0.5">{investments.length} plataformas registradas</p>
           </div>
           <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400">
@@ -231,7 +231,7 @@ export default function AdminTransparencyExternalInvestmentsPage() {
         <div className="rounded-2xl border border-emerald-500/20 bg-emerald-950/20 p-4 flex items-center justify-between">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-400">Total Resgatado</p>
-            <p className="text-xl font-black text-emerald-300 mt-1 font-mono">${totalWithdrawn.toFixed(2)}</p>
+            <p className="text-xl font-black text-emerald-300 mt-1 font-mono">{`$${totalWithdrawn.toFixed(2)}`}</p>
             <p className="text-[10px] text-emerald-500 mt-0.5">Saques efetuados</p>
           </div>
           <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">
