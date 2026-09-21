@@ -148,10 +148,22 @@ export async function exchangeAuthCodeForTokens(code: string): Promise<{ refresh
   const clientSecret = await getGoogleDriveClientSecret();
   const redirectUri = getGoogleDriveRedirectUri();
 
+  let cleanCode = code.trim();
+  if (cleanCode.includes("code=")) {
+    try {
+      const url = new URL(cleanCode.startsWith("http") ? cleanCode : `http://localhost/${cleanCode.replace(/^\?/, "")}`);
+      const extracted = url.searchParams.get("code");
+      if (extracted) cleanCode = extracted.trim();
+    } catch {
+      const match = cleanCode.match(/[?&]code=([^&]+)/);
+      if (match && match[1]) cleanCode = decodeURIComponent(match[1]).trim();
+    }
+  }
+
   const body = new URLSearchParams({
     client_id: clientId,
     client_secret: clientSecret,
-    code: code.trim(),
+    code: cleanCode,
     grant_type: "authorization_code",
     redirect_uri: redirectUri,
   });

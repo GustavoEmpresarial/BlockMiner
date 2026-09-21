@@ -126,3 +126,11 @@ test("getValidAccessToken throws friendly error when no token exists", async () 
     await fs.rm(tmpDir, { recursive: true, force: true });
   }
 });
+
+test("exchangeAuthCodeForTokens rejects invalid code without crashing", async () => {
+  await assert.rejects(
+    () => gdrive.exchangeAuthCodeForTokens("http://localhost/?code=invalid_dummy_code&scope=drive"),
+    /Google OAuth error/
+  );
+});
+
