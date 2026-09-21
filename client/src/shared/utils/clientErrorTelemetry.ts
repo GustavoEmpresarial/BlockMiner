@@ -108,7 +108,12 @@ export const EXPECTED_CLIENT_UX_CODES = new Set([
   "SESSION_CANCELED",
   "SESSION_EXPIRED",
   "CLAIM_FAILED",
+  "RACK_OCCUPIED",
+  "MIN_VIEW_NOT_MET",
+  "EMAIL_NOT_VERIFIED",
+  "ECONNABORTED",
 ]);
+
 
 /**
  * Browser/third-party noise that reaches window.onerror or unhandledrejection but is not a
@@ -180,7 +185,8 @@ export function shouldDropClientTelemetry(payload: ClientTelemetryPayload): bool
 
   if (status === 401 || status === 429) return true;
   if (status === 502 || status === 504) return true;
-  if (status != null && status >= 520 && status <= 524) return true;
+  if (status != null && status >= 520 && status <= 526) return true;
+  if (code === "ECONNABORTED") return true;
 
   if (/human verification|captchaRequired|captcha (required|failed)|captcha.?disabled/i.test(msg)) {
     return true;

@@ -181,6 +181,10 @@ export const EXPECTED_CLIENT_UX_CODES = new Set([
   "SESSION_CANCELED",
   "SESSION_EXPIRED",
   "CLAIM_FAILED",
+  "RACK_OCCUPIED",
+  "MIN_VIEW_NOT_MET",
+  "EMAIL_NOT_VERIFIED",
+  "ECONNABORTED",
 ]);
 
 /**
@@ -219,7 +223,7 @@ export type ClientErrorDropInput = {
 };
 
 /** Cloudflare edge codes when origin is down / unreachable / reset — not app bugs. */
-export const CLOUDFLARE_ORIGIN_ERROR_STATUS_CODES = new Set([520, 521, 522, 523, 524]);
+export const CLOUDFLARE_ORIGIN_ERROR_STATUS_CODES = new Set([520, 521, 522, 523, 524, 525, 526]);
 
 /** Axios default abort copy — network/origin wedged, not a product defect. */
 export const AXIOS_TIMEOUT_EXCEEDED_RE = /timeout of \d+ms exceeded/i;
@@ -250,7 +254,7 @@ export function shouldDropClientError(body: ClientErrorDropInput, userAgent: str
   ) {
     return true;
   }
-  if (category === "api_failure" && /Request failed with status code 52[0-4]\b/i.test(message)) {
+  if (category === "api_failure" && /Request failed with status code 52[0-6]\b/i.test(message)) {
     return true;
   }
   if (category === "api_failure" && /Request failed with status code 502\b/i.test(message)) {
@@ -259,7 +263,8 @@ export function shouldDropClientError(body: ClientErrorDropInput, userAgent: str
   if (category === "api_failure" && /Request failed with status code 504\b/i.test(message)) {
     return true;
   }
-  if (category === "api_failure" && AXIOS_TIMEOUT_EXCEEDED_RE.test(message)) return true;
+  if (category === "api_failure" && (AXIOS_TIMEOUT_EXCEEDED_RE.test(message) || code === "ECONNABORTED")) return true;
+
   if (category === "api_failure" && /no session/i.test(message)) return true;
   if (category === "api_failure" && /request aborted|canceled|cancelled|abort/i.test(message)) return true;
   if (category === "api_failure" && /bot|crawler|spider|headless|renderresources/i.test(userAgent ?? "")) return true;

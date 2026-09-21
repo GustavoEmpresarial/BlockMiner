@@ -521,5 +521,14 @@ test("drops transient service codes and scraper noise", () => {
     ),
     true,
   );
+
+  // Additional UX and cloudflare origin codes
+  assert.equal(shouldDropClientError(apiFailure({ statusCode: 525, message: "SSL Handshake Failed" }), "Mozilla/5.0"), true);
+  assert.equal(shouldDropClientError(apiFailure({ statusCode: 526, message: "Invalid SSL" }), "Mozilla/5.0"), true);
+  assert.equal(shouldDropClientError(apiFailure({ code: "ECONNABORTED", message: "timeout of 10000ms exceeded" }), "Mozilla/5.0"), true);
+  assert.equal(shouldDropClientError(apiFailure({ code: "RACK_OCCUPIED", message: "RACK_OCCUPIED", statusCode: 400 }), "Mozilla/5.0"), true);
+  assert.equal(shouldDropClientError(apiFailure({ code: "MIN_VIEW_NOT_MET", message: "MIN_VIEW_NOT_MET", statusCode: 400 }), "Mozilla/5.0"), true);
+  assert.equal(shouldDropClientError(apiFailure({ code: "EMAIL_NOT_VERIFIED", message: "EMAIL_NOT_VERIFIED", statusCode: 403 }), "Mozilla/5.0"), true);
 });
+
 
