@@ -38,7 +38,11 @@ export function isStrongPassword(password: string): boolean {
 // Admin users
 // ---------------------------------------------------------------------------
 
-export type AdminUserPublic = Omit<AdminUser, "passwordHash"> & { permissions: string[] };
+export type AdminUserPublic = Omit<AdminUser, "passwordHash"> & {
+  permissions: string[];
+  activeSessionsCount?: number;
+  auditCount?: number;
+};
 
 export function toPublic(u: AdminUser): AdminUserPublic {
   const { passwordHash: _ph, ...rest } = u;
@@ -54,8 +58,22 @@ export async function findAdminById(id: number): Promise<AdminUser | null> {
 }
 
 export async function listAdmins(): Promise<AdminUserPublic[]> {
-  const admins = await prisma.adminUser.findMany({ orderBy: { createdAt: "asc" } });
-  return admins.map(toPublic);
+  const admins = await prisma.adminUser.findMany({
+    orderBy: { createdAt: "asc" },
+    include: {
+      _count: {
+        select: {
+          sessions: { where: { revokedAt: null, expiresAt: { gt: new Date() } } },
+          auditLogs: true,
+        },
+      },
+    },
+  });
+  return admins.map((u) => ({
+    ...toPublic(u),
+    activeSessionsCount: u._count?.sessions ?? 0,
+    auditCount: u._count?.auditLogs ?? 0,
+  }));
 }
 
 export async function createAdmin(data: {
@@ -144,6 +162,10 @@ export async function createAdminSession(opts: { adminId: number; ip: string | n
   const expiresAt = new Date(Date.now() + ttl);
   const id = generateSessionId();
   return prisma.adminSession.create({ data: { id, adminId: opts.adminId, ipAddress: opts.ip, userAgent: opts.ua, expiresAt } });
+}
+
+export async function findAdminSessionById(sessionId: string): Promise<AdminSession | null> {
+  return prisma.adminSession.findUnique({ where: { id: sessionId } });
 }
 
 export async function getActiveAdminSession(sessionId: string): Promise<AdminSession | null> {

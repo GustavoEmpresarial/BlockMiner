@@ -832,6 +832,8 @@ export interface AdminProfileUser {
   lastLoginAt?: string | null;
   lastLoginIp?: string | null;
   lastLoginUa?: string | null;
+  activeSessionsCount?: number;
+  auditCount?: number;
 }
 
 export type AdminUserItem = AdminProfileUser;

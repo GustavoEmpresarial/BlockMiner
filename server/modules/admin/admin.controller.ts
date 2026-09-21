@@ -9,6 +9,7 @@ import {
   countSuperAdmins,
   listActiveAdminSessions,
   listAllActiveAdminSessions,
+  findAdminSessionById,
   revokeAdminSession,
   revokeAllSessionsForAdmin,
   revokeOtherSessionsForAdmin,
@@ -53,27 +54,40 @@ export async function createAdminHandler(req: Request, res: Response): Promise<v
   const ctx = getAdminCtx(req);
   const { name, email, password, role, permissions } = (req.body ?? {}) as Record<string, unknown>;
 
-  if (!name || !email || !password) {
-    res.status(400).json({ ok: false, message: "name, email and password are required" });
+  const nameStr = typeof name === "string" ? name.trim() : "";
+  const emailStr = typeof email === "string" ? email.toLowerCase().trim() : "";
+  const passwordStr = typeof password === "string" ? password : "";
+
+  if (!nameStr || !emailStr || !passwordStr) {
+    res.status(400).json({ ok: false, message: "Nome, e-mail e senha são obrigatórios." });
     return;
   }
-  if (!isStrongPassword(String(password))) {
+  if (nameStr.length < 2 || nameStr.length > 100) {
+    res.status(400).json({ ok: false, message: "O nome deve ter entre 2 e 100 caracteres." });
+    return;
+  }
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(emailStr) || emailStr.length > 150) {
+    res.status(400).json({ ok: false, message: "Formato de e-mail inválido." });
+    return;
+  }
+  if (!isStrongPassword(passwordStr)) {
     res.status(400).json({
       ok: false,
-      message: "Password must be at least 12 characters and include uppercase, lowercase, number and symbol.",
+      message: "A senha deve ter no mínimo 12 caracteres e incluir maiúsculas, minúsculas, números e símbolos.",
     });
     return;
   }
   if (role && !ADMIN_ROLES.includes(role as (typeof ADMIN_ROLES)[number])) {
-    res.status(400).json({ ok: false, message: `Invalid role. Allowed: ${ADMIN_ROLES.join(", ")}` });
+    res.status(400).json({ ok: false, message: `Função inválida. Permitidas: ${ADMIN_ROLES.join(", ")}` });
     return;
   }
 
   try {
     const admin = await createAdmin({
-      name: String(name),
-      email: String(email),
-      password: String(password),
+      name: nameStr,
+      email: emailStr,
+      password: passwordStr,
       role: (role as string) ?? "admin",
       permissions: Array.isArray(permissions) ? (permissions as string[]) : [],
       createdById: ctx.adminId ?? undefined,
@@ -89,9 +103,9 @@ export async function createAdminHandler(req: Request, res: Response): Promise<v
     res.status(201).json({ ok: true, admin });
   } catch (err: unknown) {
     if (String(err).includes("Unique constraint")) {
-      res.status(409).json({ ok: false, message: "Email already in use." });
+      res.status(409).json({ ok: false, message: "Este e-mail já está em uso por outro administrador." });
     } else {
-      res.status(500).json({ ok: false, message: "Failed to create admin." });
+      res.status(500).json({ ok: false, message: "Falha ao criar administrador." });
     }
   }
 }
@@ -110,6 +124,19 @@ export async function updateAdminHandler(req: Request, res: Response): Promise<v
   }
 
   const { name, role, permissions, isActive } = (req.body ?? {}) as Record<string, unknown>;
+
+  // Self-lockout check:
+  if (id === ctx.adminId && isActive === false) {
+    res.status(400).json({ ok: false, message: "Você não pode desativar sua própria conta de administrador." });
+    return;
+  }
+  if (id === ctx.adminId && role && role !== "super_admin") {
+    const count = await countSuperAdmins();
+    if (count <= 1) {
+      res.status(400).json({ ok: false, message: "Você é o único super administrador ativo. Não é possível remover seus próprios privilégios." });
+      return;
+    }
+  }
 
   if (role && !ADMIN_ROLES.includes(role as (typeof ADMIN_ROLES)[number])) {
     res.status(400).json({ ok: false, message: "Invalid role" });
@@ -237,9 +264,38 @@ export async function listAllSessionsHandler(_req: Request, res: Response): Prom
 export async function revokeSessionHandler(req: Request, res: Response): Promise<void> {
   const ctx = getAdminCtx(req);
   const sessionId = req.params.sessionId as string;
-  await revokeAdminSession(sessionId);
-  await logAdminAction({ ...ctx, action: "ADMIN_SESSION_REVOKE", module: "admins", resource: "AdminSession", resourceId: sessionId });
-  res.json({ ok: true });
+
+  if (!sessionId || typeof sessionId !== "string" || !sessionId.trim()) {
+    res.status(400).json({ ok: false, message: "ID de sessão inválido." });
+    return;
+  }
+
+  const session = await findAdminSessionById(sessionId.trim());
+  if (!session) {
+    res.status(404).json({ ok: false, message: "Sessão não encontrada ou já encerrada." });
+    return;
+  }
+
+  // IDOR / Broken Access Control protection:
+  // Non-super-admins may ONLY revoke their own sessions!
+  if (session.adminId !== ctx.adminId && !isSuperAdmin(req)) {
+    res.status(403).json({
+      ok: false,
+      message: "Apenas Super Administradores podem revogar sessões de outros administradores.",
+    });
+    return;
+  }
+
+  await revokeAdminSession(sessionId.trim());
+  await logAdminAction({
+    ...ctx,
+    action: "ADMIN_SESSION_REVOKE",
+    module: "admins",
+    resource: "AdminSession",
+    resourceId: sessionId.trim(),
+    newValue: { targetAdminId: session.adminId },
+  });
+  res.json({ ok: true, message: "Sessão revogada com sucesso." });
 }
 
 function parseSafeDate(raw: unknown): Date | undefined {

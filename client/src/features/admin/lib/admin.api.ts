@@ -226,13 +226,14 @@ export function createAdminUser(data: {
   email: string;
   password: string;
   role: string;
+  permissions?: string[];
 }) {
   return api.post<{ ok: boolean; admin: AdminUserItem }>('/admin/admins', data);
 }
 
 export function updateAdminUser(
   id: number,
-  data: { name?: string; role?: string; isActive?: boolean }
+  data: { name?: string; role?: string; isActive?: boolean; permissions?: string[] }
 ) {
   return api.patch<{ ok: boolean; admin: AdminUserItem }>(`/admin/admins/${id}`, data);
 }
