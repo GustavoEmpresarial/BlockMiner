@@ -277,8 +277,13 @@ export async function verifyBackupIntegrity(filename: unknown): Promise<BackupIn
   const safe = safeBackupSqlName(filename);
   if (!safe) throw new Error("Invalid backup filename");
 
-  const filePath = await resolveBackupDownloadPath(safe);
   const backupsDir = getAdminBackupsDirectory();
+  const filePath = path.join(backupsDir, safe);
+  try {
+    await fs.access(filePath);
+  } catch {
+    throw new Error("Backup file not found");
+  }
   const metaPath = metaPathForSqlFile(backupsDir, safe);
   const bundlePath = bundlePathForSqlFile(backupsDir, safe);
 
@@ -790,40 +795,3 @@ export async function deleteSqlBackup(filename: unknown): Promise<void> {
   }
 }
 
-export async function resolveBackupDownloadPath(filename: unknown): Promise<string> {
-  const safe = safeBackupSqlName(filename);
-  if (!safe) throw new Error("Invalid backup filename");
-  const backupsDir = path.resolve(getAdminBackupsDirectory());
-  const full = path.resolve(path.join(backupsDir, safe));
-  const rel = path.relative(backupsDir, full);
-  if (rel.startsWith("..") || path.isAbsolute(rel)) throw new Error("Invalid backup filename");
-  try {
-    await fs.access(full);
-  } catch {
-    throw new Error("Backup file not found");
-  }
-  const realDir = await fs.realpath(backupsDir);
-  const realFile = await fs.realpath(full);
-  const relReal = path.relative(realDir, realFile);
-  if (relReal.startsWith("..") || path.isAbsolute(relReal)) throw new Error("Invalid backup filename");
-  return full;
-}
-
-export async function resolveBackupBundleDownloadPath(filename: unknown): Promise<string> {
-  const safe = safeBackupBundleName(filename);
-  if (!safe) throw new Error("Invalid backup bundle filename");
-  const backupsDir = path.resolve(getAdminBackupsDirectory());
-  const full = path.resolve(path.join(backupsDir, safe));
-  const rel = path.relative(backupsDir, full);
-  if (rel.startsWith("..") || path.isAbsolute(rel)) throw new Error("Invalid backup bundle filename");
-  try {
-    await fs.access(full);
-  } catch {
-    throw new Error("Backup bundle not found");
-  }
-  const realDir = await fs.realpath(backupsDir);
-  const realFile = await fs.realpath(full);
-  const relReal = path.relative(realDir, realFile);
-  if (relReal.startsWith("..") || path.isAbsolute(relReal)) throw new Error("Invalid backup bundle filename");
-  return full;
-}

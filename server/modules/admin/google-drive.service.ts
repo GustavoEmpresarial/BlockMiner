@@ -11,7 +11,6 @@ import {
   getAdminBackupsDirectory,
   metaPathForSqlFile,
   bundlePathForSqlFile,
-  resolveBackupDownloadPath,
   safeBackupSqlName,
 } from "./admin.backups.service.js";
 
@@ -501,7 +500,14 @@ export async function uploadBackupPackageToGoogleDrive(filename: unknown): Promi
     uploadName = safe + ".gz";
     mimeType = "application/gzip";
   } catch {
-    sqlPath = await resolveBackupDownloadPath(safe);
+    // Fall back to raw .sql
+    const rawFull = path.join(backupsDir, safe);
+    try {
+      await fs.access(rawFull);
+    } catch {
+      throw new Error("Backup file not found");
+    }
+    sqlPath = rawFull;
     uploadName = safe;
     mimeType = "application/sql";
   }

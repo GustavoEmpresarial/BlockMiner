@@ -5,8 +5,8 @@
  * Security: protected by requireAdminAuth + requireAdminPermission("config").
  * Audit: all operations logged to admin_audit_logs via logAdminAction.
  *
- * NOTE: Direct HTTP download of backup files is intentionally disabled.
- * The only permitted transmission channel is Google Drive (cloud sync).
+ * NOTE: HTTP download of backup files is permanently disabled.
+ *       Backups are only transmitted via Google Drive cloud sync.
  */
 import express from "express";
 import prisma from "../../core/database/prisma.js";

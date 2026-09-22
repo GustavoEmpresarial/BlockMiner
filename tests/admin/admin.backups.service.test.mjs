@@ -73,43 +73,6 @@ test("getAdminBackupsDirectory respects BACKUP_DIR override", () => {
   }
 });
 
-test("resolveBackupDownloadPath rejects invalid filenames without touching disk", async () => {
-  await assert.rejects(() => svc.resolveBackupDownloadPath("../../etc/passwd"), /Invalid backup filename/);
-  await assert.rejects(() => svc.resolveBackupDownloadPath("not-a-backup.sql"), /Invalid backup filename/);
-});
-
-test("resolveBackupDownloadPath: 404s for a missing (but well-formed) filename, and resolves a real file inside BACKUP_DIR", async () => {
-  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "bm-backups-test-"));
-  const prev = process.env.BACKUP_DIR;
-  try {
-    process.env.BACKUP_DIR = tmpDir;
-    await assert.rejects(() => svc.resolveBackupDownloadPath("backup-does-not-exist.sql"), /Backup file not found/);
-
-    const filename = "backup-2026-01-01T00-00-00-000Z.sql";
-    await fs.writeFile(path.join(tmpDir, filename), "-- fake dump\n");
-    const resolved = await svc.resolveBackupDownloadPath(filename);
-    assert.equal(resolved, path.join(tmpDir, filename));
-  } finally {
-    if (prev === undefined) delete process.env.BACKUP_DIR;
-    else process.env.BACKUP_DIR = prev;
-    await fs.rm(tmpDir, { recursive: true, force: true });
-  }
-});
-
-test("resolveBackupDownloadPath: path-traversal guard blocks escaping BACKUP_DIR via crafted relative segments", async () => {
-  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "bm-backups-test-"));
-  const prev = process.env.BACKUP_DIR;
-  try {
-    process.env.BACKUP_DIR = tmpDir;
-    // safeBackupSqlName already blocks "/" and "..", so this exercises the
-    // filename-validation gate directly (the realpath check is defense in depth).
-    await assert.rejects(() => svc.resolveBackupDownloadPath("backup-..%2f..%2fetc.sql"), /Invalid backup filename/);
-  } finally {
-    if (prev === undefined) delete process.env.BACKUP_DIR;
-    else process.env.BACKUP_DIR = prev;
-    await fs.rm(tmpDir, { recursive: true, force: true });
-  }
-});
 
 test("collectPublicTableExactRowCounts refuses invalid table names before issuing raw SQL", async () => {
   const fakePrisma = { $queryRaw: async () => [{ c: 0n }] };

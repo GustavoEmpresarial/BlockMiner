@@ -35,11 +35,6 @@ function createMockReqRes({ admin, query = {}, body = {}, ip = "127.0.0.1" } = {
       ended = true;
       return res;
     },
-    download(path) {
-      sentData = { downloadPath: path };
-      ended = true;
-      return res;
-    },
   };
 
   return {
@@ -123,25 +118,6 @@ test("RBAC: requireAdminPermission('config') permits super_admin with '*' wildca
   });
 
   assert.equal(nextCalled, true);
-});
-
-test("Security: path traversal download attempts are blocked", async () => {
-  await assert.rejects(
-    () => backupsSvc.resolveBackupDownloadPath("../../etc/shadow"),
-    /Invalid backup filename/
-  );
-  await assert.rejects(
-    () => backupsSvc.resolveBackupDownloadPath("backup-../../../etc/passwd.sql"),
-    /Invalid backup filename/
-  );
-  await assert.rejects(
-    () => backupsSvc.resolveBackupBundleDownloadPath("../../etc/passwd"),
-    /Invalid backup bundle filename/
-  );
-  await assert.rejects(
-    () => backupsSvc.resolveBackupBundleDownloadPath("backup-..%2f..%2f.bundle.tar.gz"),
-    /Invalid backup bundle filename/
-  );
 });
 
 test("Security: deleteSqlBackup blocks path traversal attempts", async () => {
