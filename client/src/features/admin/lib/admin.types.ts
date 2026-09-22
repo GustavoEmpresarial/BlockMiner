@@ -1066,5 +1066,52 @@ export type GoogleDriveUploadResponse = {
   };
 };
 
+// ─── System Logs (AuditLog) ───────────────────────────────────────────────
+export interface AdminSystemLogItem {
+  id: number;
+  userId: number | null;
+  user_id?: number | null;
+  user_email?: string | null;
+  user?: { email?: string | null; username?: string | null } | null;
+  action: string;
+  label?: string | null;
+  description?: string | null;
+  source: string;
+  severity: string;
+  ip?: string | null;
+  userAgent?: string | null;
+  detailsJson?: unknown;
+  metadata?: unknown;
+  actorAdminId?: number | null;
+  createdAt: string | Date;
+  created_at?: string | Date;
+}
+
+export interface AdminSystemLogsResponse {
+  ok: boolean;
+  logs: AdminSystemLogItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+  hasMore: boolean;
+  sourcesSummary?: { source: string; count: number }[];
+  severitiesSummary?: { severity: string; count: number }[];
+}
+
+export interface AdminSystemLogsQueryParams {
+  page?: number;
+  pageSize?: number;
+  limit?: number;
+  offset?: number;
+  source?: string;
+  severity?: string;
+  action?: string;
+  userId?: number;
+  q?: string;
+  from?: string;
+  to?: string;
+}
+
+
 
 

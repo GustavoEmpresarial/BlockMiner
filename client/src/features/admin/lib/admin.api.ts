@@ -32,6 +32,9 @@ import type {
   GoogleDriveAuthUrlResponse,
   GoogleDriveConnectResponse,
   GoogleDriveUploadResponse,
+  AdminSystemLogItem,
+  AdminSystemLogsResponse,
+  AdminSystemLogsQueryParams,
 } from './admin.types';
 
 
@@ -373,6 +376,15 @@ export function connectAdminGoogleDrive(code: string) {
 
 export function uploadAdminBackupToGoogleDrive(filename: string) {
   return api.post<GoogleDriveUploadResponse>('/admin/backups/upload-gdrive', { filename });
+}
+
+// ─── System Logs (AuditLog) ───────────────────────────────────────────────
+export function getAdminSystemLogs(params?: AdminSystemLogsQueryParams) {
+  return api.get<AdminSystemLogsResponse>('/admin/logs', { params });
+}
+
+export function getAdminSystemLogById(id: number) {
+  return api.get<{ ok: boolean; data: AdminSystemLogItem }>(`/admin/logs/${id}`);
 }
 
 
