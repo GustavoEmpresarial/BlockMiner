@@ -17,7 +17,6 @@ import {
   Play,
   Star,
 } from 'lucide-react';
-import { api } from '../../../shared/auth/auth.store';
 import { readAxiosResponseMessage } from '../lib/admin.api';
 import {
   AddProfileModal,
@@ -26,7 +25,8 @@ import {
   RejectModal,
   STATUS_CFG,
 } from './adminSocial.shared';
-import type { Profile, RewardMiner, Submission } from './adminSocial.shared';
+import type { Profile, RewardMiner, Submission } from './creators.types';
+import * as creatorsApi from './creators.api';
 
 export function RewardSettingsPanel() {
   const [miner, setMiner] = useState<RewardMiner | null>(null);
@@ -40,10 +40,8 @@ export function RewardSettingsPanel() {
   useEffect(() => {
     void (async () => {
       try {
-        const res = await api.get<{ ok: boolean; minerId: number | null; miner: RewardMiner | null }>(
-          '/admin/social/reward-settings',
-        );
-        if (res.data.ok) setMiner(res.data.miner);
+        const data = await creatorsApi.getRewardSettings();
+        if (data.ok) setMiner(data.miner);
       } catch {
         /* silent */
       } finally {
@@ -61,10 +59,8 @@ export function RewardSettingsPanel() {
     debounceRef.current = setTimeout(async () => {
       setSearchLoading(true);
       try {
-        const res = await api.get<{ ok: boolean; miners?: RewardMiner[] }>(
-          `/admin/miners?q=${encodeURIComponent(q)}`,
-        );
-        if (res.data.ok) setSearchResults((res.data.miners ?? []).slice(0, 20));
+        const miners = await creatorsApi.searchMiners(q);
+        setSearchResults(miners);
       } catch {
         setSearchResults([]);
       } finally {
@@ -78,13 +74,11 @@ export function RewardSettingsPanel() {
     setSearchResults([]);
     setSaving(true);
     try {
-      const res = await api.put<{ ok: boolean; miner: RewardMiner | null }>('/admin/social/reward-settings', {
-        minerId: m.id,
-      });
-      setMiner(res.data.miner);
-      toast.success('Recompensa configurada.');
+      const data = await creatorsApi.setRewardSettings(m.id);
+      setMiner(data.miner);
+      toast.success('Recompensa configurada com sucesso.');
     } catch (err) {
-      toast.error(readAxiosResponseMessage(err) ?? 'Erro ao salvar.');
+      toast.error(readAxiosResponseMessage(err) || 'Erro ao salvar máquina de recompensa.');
     } finally {
       setSaving(false);
     }
@@ -93,11 +87,11 @@ export function RewardSettingsPanel() {
   const handleClear = async () => {
     setSaving(true);
     try {
-      await api.put('/admin/social/reward-settings', { minerId: null });
+      await creatorsApi.setRewardSettings(null);
       setMiner(null);
-      toast.success('Recompensa desativada.');
+      toast.success('Recompensa desativada com sucesso.');
     } catch (err) {
-      toast.error(readAxiosResponseMessage(err) ?? 'Erro ao salvar.');
+      toast.error(readAxiosResponseMessage(err) || 'Erro ao desativar recompensa.');
     } finally {
       setSaving(false);
     }
@@ -132,8 +126,9 @@ export function RewardSettingsPanel() {
                 type="button"
                 onClick={() => void handleClear()}
                 disabled={saving}
-                className="text-gray-600 hover:text-red-400 transition-colors"
+                className="text-gray-600 hover:text-red-400 transition-colors p-1"
                 title="Remover recompensa"
+                aria-label="Remover recompensa"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -159,7 +154,7 @@ export function RewardSettingsPanel() {
                 }}
                 placeholder="Nome da máquina..."
                 disabled={saving}
-                className="w-full bg-black/40 border border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-primary/50 disabled:opacity-50"
+                className="w-full bg-black/40 border border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-red-500/50 disabled:opacity-50"
               />
               {searchLoading ? (
                 <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-gray-500" />
@@ -214,14 +209,12 @@ export function RejectCredentialModal({
   const handleReject = async () => {
     setLoading(true);
     try {
-      await api.post(`/admin/social/credential-requests/${profile.id}/reject`, {
-        rejectNote: note.trim() || undefined,
-      });
-      toast.success('Solicitação recusada.');
+      await creatorsApi.rejectCredentialRequest(profile.id, note);
+      toast.success('Solicitação recusada com sucesso.');
       onRejected();
       onClose();
     } catch (err) {
-      toast.error(readAxiosResponseMessage(err) ?? 'Erro ao recusar.');
+      toast.error(readAxiosResponseMessage(err) || 'Erro ao recusar solicitação.');
     } finally {
       setLoading(false);
     }
@@ -232,7 +225,7 @@ export function RejectCredentialModal({
       <div className="bg-gray-900 border border-white/10 rounded-2xl w-full max-w-md shadow-2xl">
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/8">
           <p className="font-black text-white">Recusar Credenciamento</p>
-          <button type="button" onClick={onClose} className="text-gray-500 hover:text-white">
+          <button type="button" onClick={onClose} className="text-gray-500 hover:text-white" aria-label="Fechar">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -280,10 +273,10 @@ export function CredentialRequestsTab() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get<{ ok: boolean; profiles: Profile[] }>('/admin/social/credential-requests');
-      if (res.data.ok) setRequests(res.data.profiles);
+      const data = await creatorsApi.listCredentialRequests();
+      setRequests(data);
     } catch {
-      toast.error('Erro ao carregar solicitações.');
+      toast.error('Erro ao carregar solicitações de credenciamento.');
     } finally {
       setLoading(false);
     }
@@ -295,11 +288,11 @@ export function CredentialRequestsTab() {
 
   const handleApprove = async (profile: Profile) => {
     try {
-      await api.post(`/admin/social/credential-requests/${profile.id}/approve`);
-      toast.success(`${profile.channelName} credenciado!`);
+      await creatorsApi.approveCredentialRequest(profile.id);
+      toast.success(`${profile.channelName} credenciado com sucesso!`);
       void load();
     } catch (err) {
-      toast.error(readAxiosResponseMessage(err) ?? 'Erro ao aprovar.');
+      toast.error(readAxiosResponseMessage(err) || 'Erro ao aprovar credenciamento.');
     }
   };
 
@@ -321,7 +314,9 @@ export function CredentialRequestsTab() {
         <button
           type="button"
           onClick={() => void load()}
-          className="p-2 rounded-xl bg-white/5 border border-white/8 text-gray-500 hover:text-white"
+          className="p-2 rounded-xl bg-white/5 border border-white/8 text-gray-500 hover:text-white transition-colors"
+          title="Recarregar solicitações"
+          aria-label="Recarregar"
         >
           <RefreshCw className="w-3.5 h-3.5" />
         </button>
@@ -399,10 +394,10 @@ export function ProfilesTab() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get<{ ok: boolean; profiles: Profile[] }>('/admin/social/profiles');
-      if (res.data.ok) setProfiles(res.data.profiles);
+      const data = await creatorsApi.listProfiles();
+      setProfiles(data);
     } catch {
-      toast.error('Erro ao carregar perfis.');
+      toast.error('Erro ao carregar perfis de criadores.');
     } finally {
       setLoading(false);
     }
@@ -413,13 +408,13 @@ export function ProfilesTab() {
   }, [load]);
 
   const handleDelete = async (id: number, name: string) => {
-    if (!confirm(`Remover perfil de "${name}"? As submissões serão excluídas também.`)) return;
+    if (!confirm(`Remover perfil de "${name}"? As submissões de vídeos serão excluídas também.`)) return;
     try {
-      await api.delete(`/admin/social/profiles/${id}`);
-      toast.success('Perfil removido.');
+      await creatorsApi.deleteProfile(id);
+      toast.success('Perfil removido com sucesso.');
       setProfiles((p) => p.filter((x) => x.id !== id));
     } catch (err) {
-      toast.error(readAxiosResponseMessage(err) ?? 'Erro ao remover.');
+      toast.error(readAxiosResponseMessage(err) || 'Erro ao remover perfil.');
     }
   };
 
@@ -486,6 +481,8 @@ export function ProfilesTab() {
                   type="button"
                   onClick={() => setEditing(p)}
                   className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+                  title="Editar perfil"
+                  aria-label="Editar"
                 >
                   <Save className="w-3.5 h-3.5" />
                 </button>
@@ -493,6 +490,8 @@ export function ProfilesTab() {
                   type="button"
                   onClick={() => void handleDelete(p.id, p.channelName)}
                   className="p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-colors"
+                  title="Remover perfil"
+                  aria-label="Remover"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
@@ -514,10 +513,8 @@ export function SubmissionsTab() {
   const load = useCallback(async (s: string) => {
     setLoading(true);
     try {
-      const res = await api.get<{ ok: boolean; submissions: Submission[] }>(
-        `/admin/social/submissions?status=${s}`,
-      );
-      if (res.data.ok) setSubmissions(res.data.submissions);
+      const data = await creatorsApi.listSubmissions(s);
+      setSubmissions(data);
     } catch {
       toast.error('Erro ao carregar vídeos.');
     } finally {
@@ -538,27 +535,25 @@ export function SubmissionsTab() {
       return;
     }
     try {
-      await api.delete(`/admin/social/submissions/${sub.id}`);
-      toast.success('Vídeo removido.');
+      await creatorsApi.deleteSubmission(sub.id);
+      toast.success('Vídeo removido com sucesso.');
       void load(statusFilter);
     } catch (err) {
-      toast.error(readAxiosResponseMessage(err) ?? 'Erro ao remover.');
+      toast.error(readAxiosResponseMessage(err) || 'Erro ao remover vídeo.');
     }
   };
 
   const handleApprove = async (sub: Submission) => {
     try {
-      const res = await api.post<{ ok: boolean; rewardGranted: boolean; rewardMinerName: string | null }>(
-        `/admin/social/submissions/${sub.id}/approve`,
-      );
-      if (res.data.rewardGranted) {
-        toast.success(`Aprovado! Máquina "${res.data.rewardMinerName}" concedida.`);
+      const res = await creatorsApi.approveSubmission(sub.id);
+      if (res.rewardGranted) {
+        toast.success(`Aprovado! Máquina "${res.rewardMinerName}" concedida ao criador.`);
       } else {
-        toast.success('Aprovado (sem recompensa configurada).');
+        toast.success('Aprovado com sucesso (sem máquina de recompensa configurada).');
       }
       void load(statusFilter);
     } catch (err) {
-      toast.error(readAxiosResponseMessage(err) ?? 'Erro ao aprovar.');
+      toast.error(readAxiosResponseMessage(err) || 'Erro ao aprovar submissão.');
     }
   };
 
@@ -587,7 +582,7 @@ export function SubmissionsTab() {
             onClick={() => setStatusFilter(b.value)}
             className={`px-4 py-1.5 rounded-xl text-xs font-black transition-colors ${
               statusFilter === b.value
-                ? 'bg-primary text-white'
+                ? 'bg-red-600 text-white'
                 : 'bg-white/5 text-gray-500 hover:text-white border border-white/8'
             }`}
           >
@@ -597,7 +592,9 @@ export function SubmissionsTab() {
         <button
           type="button"
           onClick={() => void load(statusFilter)}
-          className="p-2 rounded-xl bg-white/5 border border-white/8 text-gray-500 hover:text-white ml-auto"
+          className="p-2 rounded-xl bg-white/5 border border-white/8 text-gray-500 hover:text-white ml-auto transition-colors"
+          title="Recarregar lista"
+          aria-label="Recarregar"
         >
           <RefreshCw className="w-3.5 h-3.5" />
         </button>

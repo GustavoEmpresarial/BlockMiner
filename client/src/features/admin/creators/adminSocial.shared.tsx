@@ -8,60 +8,21 @@ import {
   X,
   XCircle,
 } from 'lucide-react';
-import { api } from '../../../shared/auth/auth.store';
 import { ChannelAvatar as BaseChannelAvatar } from '../../creator/components/ChannelAvatar';
 import { readAxiosResponseMessage } from '../lib/admin.api';
+import type {
+  AdminSocialTab,
+  CreatorUser,
+  Profile,
+  ProfileUser,
+  RewardMiner,
+  Submission,
+} from './creators.types';
+import * as creatorsApi from './creators.api';
 
-export type AdminSocialTab = 'requests' | 'submissions' | 'profiles' | 'flags' | 'settings';
-
-export type ProfileUser = {
-  id?: number;
-  username: string;
-  name?: string | null;
-  email?: string | null;
-};
-
-export type Profile = {
-  id: number;
-  channelName: string;
-  channelPhoto: string | null;
-  channelUrl: string | null;
-  bio?: string | null;
-  isCredentialed: boolean;
-  credentialRequestStatus?: string | null;
-  createdAt: string | Date;
-  user: ProfileUser;
-  _count?: { submissions: number };
-};
-
-export type Submission = {
-  id: number;
-  videoUrl: string;
-  videoId: string;
-  title: string | null;
-  status: string;
-  reviewNote?: string | null;
-  rewardGranted?: boolean;
-  submittedAt: string | Date;
-  profile: { channelName: string; channelPhoto: string | null; channelUrl?: string | null };
-  user: { id?: number; username: string; name?: string | null };
-  miner?: { id?: number; name: string; imageUrl?: string | null } | null;
-};
-
-export type RewardMiner = {
-  id: number;
-  name: string;
-  imageUrl?: string | null;
-  baseHashRate?: number | null;
-};
-
-export type SearchUser = {
-  id: number;
-  username?: string | null;
-  name?: string | null;
-  youtubeUrl?: string | null;
-  isCreator?: boolean;
-};
+// Re-export for compatibility
+export type { AdminSocialTab, ProfileUser, Profile, Submission, RewardMiner };
+export type SearchUser = CreatorUser;
 
 export const STATUS_CFG: Record<
   string,
@@ -135,14 +96,12 @@ export function RejectModal({
   const handleReject = async () => {
     setLoading(true);
     try {
-      await api.post(`/admin/social/submissions/${submission.id}/reject`, {
-        reviewNote: note.trim() || undefined,
-      });
-      toast.success('Vídeo recusado.');
+      await creatorsApi.rejectSubmission(submission.id, note);
+      toast.success('Vídeo recusado com sucesso.');
       onRejected();
       onClose();
     } catch (err) {
-      toast.error(readAxiosResponseMessage(err) ?? 'Erro ao recusar.');
+      toast.error(readAxiosResponseMessage(err) || 'Erro ao recusar vídeo.');
     } finally {
       setLoading(false);
     }
@@ -153,7 +112,7 @@ export function RejectModal({
       <div className="bg-gray-900 border border-white/10 rounded-2xl w-full max-w-md shadow-2xl">
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/8">
           <p className="font-black text-white">Recusar vídeo</p>
-          <button type="button" onClick={onClose} className="text-gray-500 hover:text-white">
+          <button type="button" onClick={onClose} className="text-gray-500 hover:text-white" aria-label="Fechar">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -189,9 +148,9 @@ export function RejectModal({
 
 export function AddProfileModal({ onClose, onAdded }: { onClose: () => void; onAdded: () => void }) {
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<SearchUser[]>([]);
+  const [results, setResults] = useState<CreatorUser[]>([]);
   const [searching, setSearching] = useState(false);
-  const [selected, setSelected] = useState<SearchUser | null>(null);
+  const [selected, setSelected] = useState<CreatorUser | null>(null);
   const [channelName, setChannelName] = useState('');
   const [channelUrl, setChannelUrl] = useState('');
   const [bio, setBio] = useState('');
@@ -200,17 +159,15 @@ export function AddProfileModal({ onClose, onAdded }: { onClose: () => void; onA
 
   const search = (q: string) => {
     if (debounce.current) clearTimeout(debounce.current);
-    if (q.length < 2) {
+    if (q.trim().length < 2) {
       setResults([]);
       return;
     }
     setSearching(true);
     debounce.current = setTimeout(async () => {
       try {
-        const res = await api.get<{ ok: boolean; users?: SearchUser[] }>(
-          `/admin/creators/search?q=${encodeURIComponent(q)}`,
-        );
-        if (res.data.ok) setResults(res.data.users ?? []);
+        const users = await creatorsApi.searchCreators(q);
+        setResults(users);
       } catch {
         setResults([]);
       } finally {
@@ -223,18 +180,18 @@ export function AddProfileModal({ onClose, onAdded }: { onClose: () => void; onA
     if (!selected || !channelName.trim()) return;
     setSaving(true);
     try {
-      await api.post('/admin/social/profiles', {
+      await creatorsApi.createProfile({
         userId: selected.id,
         channelName: channelName.trim(),
         channelUrl: channelUrl.trim() || undefined,
         bio: bio.trim() || undefined,
         isCredentialed: true,
       });
-      toast.success('Perfil criado.');
+      toast.success('Perfil criado com sucesso.');
       onAdded();
       onClose();
     } catch (err) {
-      toast.error(readAxiosResponseMessage(err) ?? 'Erro ao criar perfil.');
+      toast.error(readAxiosResponseMessage(err) || 'Erro ao criar perfil.');
     } finally {
       setSaving(false);
     }
@@ -253,7 +210,7 @@ export function AddProfileModal({ onClose, onAdded }: { onClose: () => void; onA
       >
         <div className="flex items-center justify-between">
           <p className="font-black text-white">Adicionar criador</p>
-          <button type="button" onClick={onClose} className="text-slate-500 hover:text-white">
+          <button type="button" onClick={onClose} className="text-slate-500 hover:text-white" aria-label="Fechar">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -294,7 +251,7 @@ export function AddProfileModal({ onClose, onAdded }: { onClose: () => void; onA
           <div className="space-y-3">
             <div className="flex items-center justify-between px-3 py-2 bg-slate-800 rounded-xl">
               <span className="text-sm font-black text-white">@{selected.username}</span>
-              <button type="button" onClick={() => setSelected(null)} className="text-slate-500 hover:text-white">
+              <button type="button" onClick={() => setSelected(null)} className="text-slate-500 hover:text-white" aria-label="Limpar seleção">
                 <X className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -322,8 +279,9 @@ export function AddProfileModal({ onClose, onAdded }: { onClose: () => void; onA
               type="button"
               onClick={() => void handleSave()}
               disabled={saving || !channelName.trim()}
-              className="w-full py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-black text-sm disabled:opacity-40"
+              className="w-full py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-black text-sm disabled:opacity-40 flex items-center justify-center gap-2"
             >
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
               {saving ? 'Salvando...' : 'Criar perfil'}
             </button>
           </div>
@@ -353,18 +311,18 @@ export function EditProfileModal({
     if (!channelName.trim()) return;
     setSaving(true);
     try {
-      await api.put(`/admin/social/profiles/${profile.id}`, {
+      await creatorsApi.updateProfile(profile.id, {
         channelName: channelName.trim(),
         channelUrl: channelUrl.trim() || null,
         channelPhoto: channelPhoto.trim() || null,
         bio: bio.trim() || null,
         isCredentialed,
       });
-      toast.success('Perfil atualizado.');
+      toast.success('Perfil atualizado com sucesso.');
       onSaved();
       onClose();
     } catch (err) {
-      toast.error(readAxiosResponseMessage(err) ?? 'Erro ao salvar.');
+      toast.error(readAxiosResponseMessage(err) || 'Erro ao salvar perfil.');
     } finally {
       setSaving(false);
     }
@@ -375,7 +333,7 @@ export function EditProfileModal({
       <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-md space-y-3 shadow-2xl">
         <div className="flex items-center justify-between">
           <p className="font-black text-white">Editar perfil</p>
-          <button type="button" onClick={onClose} className="text-slate-500 hover:text-white">
+          <button type="button" onClick={onClose} className="text-slate-500 hover:text-white" aria-label="Fechar">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -417,8 +375,9 @@ export function EditProfileModal({
           type="button"
           onClick={() => void handleSave()}
           disabled={saving || !channelName.trim()}
-          className="w-full py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-black text-sm disabled:opacity-40"
+          className="w-full py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-black text-sm disabled:opacity-40 flex items-center justify-center gap-2"
         >
+          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
           {saving ? 'Salvando...' : 'Salvar'}
         </button>
       </div>

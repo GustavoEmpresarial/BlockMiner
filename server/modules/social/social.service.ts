@@ -28,9 +28,9 @@ const FEED_PAGE_SIZE = 20;
 const ALLOWED_CHANNEL_URL_HOSTS = new Set(["youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be"]);
 
 /** `undefined` = campo não enviado (não mexe); `null` = campo limpo; string = valor válido. */
-type ChannelUrlValidation = { ok: true; value: string | null | undefined } | { ok: false };
+export type ChannelUrlValidation = { ok: true; value: string | null | undefined } | { ok: false };
 
-function validateChannelUrl(raw: unknown): ChannelUrlValidation {
+export function validateChannelUrl(raw: unknown): ChannelUrlValidation {
   if (raw === undefined) return { ok: true, value: undefined };
   const trimmed = raw ? String(raw).trim() : "";
   if (!trimmed) return { ok: true, value: null };

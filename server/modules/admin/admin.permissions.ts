@@ -29,11 +29,12 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<AdminRole, string[]> = {
     "tournaments",
     "banners",
     "broadcast",
+    "creators",
     "config",
     "audit",
     "admins",
   ],
-  moderator: ["dashboard", "users.view", "users.ban", "support", "logs.view"],
+  moderator: ["dashboard", "users.view", "users.ban", "support", "logs.view", "creators.view"],
   finance: ["dashboard", "users.view", "payments", "withdrawals", "deposits"],
   support: ["dashboard", "users.view", "support"],
   readonly: ["dashboard"],
@@ -71,6 +72,8 @@ export const AVAILABLE_PERMISSIONS: PermissionDefinition[] = [
   { key: "audit", label: "Logs de Auditoria Administrativa", category: "Administração" },
   { key: "admins", label: "Gerenciamento de Administradores", category: "Administração" },
   { key: "broadcast", label: "Notificações & Anúncios Broadcast", category: "Engajamento" },
+  { key: "creators", label: "Gestão de Criadores & Social YouTube", category: "Engajamento" },
+  { key: "creators.view", label: "Visualizar Criadores & Vídeos", category: "Engajamento" },
 ];
 
 export function resolvePermissions(role: string, permissionsOverride?: unknown): string[] {
