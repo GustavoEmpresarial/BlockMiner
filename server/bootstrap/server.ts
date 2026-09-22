@@ -265,16 +265,25 @@ export function createApp() {
     });
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     app.use((err, req, res, _next) => {
-        reportError({
-            code: "UNHANDLED_HTTP_ERROR",
-            category: "UNKNOWN",
-            severity: "CRITICAL",
-            module: "bootstrap.server",
-            error: err,
-            req,
-            context: { path: req?.originalUrl, method: req?.method },
-        });
-        res.status(500).json({ ok: false, code: "INTERNAL_ERROR", message: "Internal server error." });
+        const httpStatus = typeof (err as any)?.status === "number" ? (err as any).status : typeof (err as any)?.statusCode === "number" ? (err as any).statusCode : 500;
+        if (httpStatus >= 500) {
+            reportError({
+                code: "UNHANDLED_HTTP_ERROR",
+                category: "UNKNOWN",
+                severity: "CRITICAL",
+                module: "bootstrap.server",
+                error: err,
+                req,
+                context: { path: req?.originalUrl, method: req?.method },
+            });
+            res.status(500).json({ ok: false, code: "INTERNAL_ERROR", message: "Internal server error." });
+        } else {
+            res.status(httpStatus).json({
+                ok: false,
+                code: (err as any)?.type === "entity.too.large" ? "PAYLOAD_TOO_LARGE" : "BAD_REQUEST",
+                message: (err as any)?.message || "Invalid request.",
+            });
+        }
     });
     return app;
 }

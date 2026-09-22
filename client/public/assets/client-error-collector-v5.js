@@ -10,8 +10,8 @@
  */
 (function () {
   "use strict";
-  if (window.__BM_CLIENT_ERROR_COLLECTOR_V4__) return;
-  window.__BM_CLIENT_ERROR_COLLECTOR_V4__ = true;
+  if (window.__BM_CLIENT_ERROR_COLLECTOR_V5__) return;
+  window.__BM_CLIENT_ERROR_COLLECTOR_V5__ = true;
 
   var CAPTCHA_CODES = {
     CAPTCHA_REQUIRED: 1,
@@ -214,6 +214,27 @@
         stack: payload.stack || null,
         componentStack: payload.componentStack || null,
         buildId: payload.buildId || readBuildId(),
+        fingerprint: [
+          category,
+          String(payload.message || "").toLowerCase().replace(/[^a-z0-9]/g, "_").slice(0, 40),
+          payload.operation || "",
+          payload.code || "",
+          payload.statusCode != null ? String(payload.statusCode) : ""
+        ].filter(Boolean).join(":").slice(0, 64),
+        environment: (function () {
+          try {
+            var nav = typeof navigator !== "undefined" ? navigator : {};
+            return {
+              viewport: (typeof window !== "undefined" && window.innerWidth) ? (window.innerWidth + "x" + window.innerHeight) : null,
+              connection: (nav.connection && nav.connection.effectiveType) || (nav.onLine ? "online" : "offline"),
+              language: nav.language || null,
+              memoryMb: typeof nav.deviceMemory === "number" ? Math.round(nav.deviceMemory * 1024) : null,
+              online: typeof nav.onLine === "boolean" ? nav.onLine : null,
+            };
+          } catch (e) {
+            return null;
+          }
+        })(),
       };
       fetch("/api/track/client-error", {
         method: "POST",

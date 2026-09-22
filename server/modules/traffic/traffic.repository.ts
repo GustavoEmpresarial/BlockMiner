@@ -1,4 +1,5 @@
 /** Ported from legacy/server/modules/traffic/infrastructure/repositories/traffic.repository.ts. */
+import { Prisma } from "@prisma/client";
 import prisma from "../../core/database/prisma.js";
 import type {
   ClientErrorListItem,
@@ -163,16 +164,49 @@ export async function createClientErrorLog(input: ClientErrorReportInput): Promi
         code: input.code,
         operation: input.operation,
         requestId: input.requestId,
+        fingerprint: input.fingerprint || null,
+        breadcrumbs: input.breadcrumbs || null,
+        environment: input.environment || null,
       },
     },
   });
 }
 
-export async function listClientErrors(limit: number): Promise<ClientErrorListItem[]> {
+export type ClientErrorListOptions = {
+  limit?: number;
+  offset?: number;
+  category?: "crash" | "api_failure";
+  search?: string;
+};
+
+export async function listClientErrors(optsOrLimit?: number | ClientErrorListOptions): Promise<ClientErrorListItem[]> {
+  const opts: ClientErrorListOptions = typeof optsOrLimit === "number" ? { limit: optsOrLimit } : (optsOrLimit ?? {});
+  const limit = Math.min(Math.max(opts.limit ?? 50, 1), 1000);
+  const offset = Math.max(opts.offset ?? 0, 0);
+
+  const where: Prisma.AuditLogWhereInput = {
+    action: opts.category
+      ? opts.category === "api_failure"
+        ? "client_api_failure"
+        : "client_error_report"
+      : { in: [...CLIENT_ERROR_ACTIONS] },
+  };
+
+  if (opts.search && typeof opts.search === "string" && opts.search.trim()) {
+    const s = opts.search.trim();
+    where.OR = [
+      { label: { contains: s, mode: "insensitive" } },
+      { description: { contains: s, mode: "insensitive" } },
+      { ip: { contains: s } },
+      { userAgent: { contains: s, mode: "insensitive" } },
+    ];
+  }
+
   const rows = await prisma.auditLog.findMany({
-    where: { action: { in: [...CLIENT_ERROR_ACTIONS] } },
+    where,
     orderBy: { createdAt: "desc" },
     take: limit,
+    skip: offset,
     select: {
       id: true,
       action: true,

@@ -65,12 +65,19 @@ export function endpointOf(r: Pick<ClientErrorRow, 'metadata' | 'label'>): strin
   return method ? `${method} ${path}` : path;
 }
 
+export function fingerprintOf(r: Pick<ClientErrorRow, 'metadata' | 'label' | 'action'>): string {
+  if (r.metadata?.fingerprint) return r.metadata.fingerprint;
+  const raw = `${r.metadata?.category || r.action}:${r.label || ''}:${r.metadata?.code || ''}:${r.metadata?.statusCode || ''}`;
+  return raw.slice(0, 64);
+}
+
 export function decorate(r: ClientErrorRow): DecoratedRow {
   return {
     ...r,
     category: categoryOf(r),
     criticality: deriveCriticality(r),
     endpoint: endpointOf(r),
+    fingerprint: fingerprintOf(r),
   };
 }
 
@@ -241,12 +248,26 @@ export function buildClipboardText(r: DecoratedRow): string {
     `IP: ${r.ip ?? '(unknown)'}`,
     `User-Agent: ${r.userAgent ?? '(unknown)'}`,
     `BuildId: ${meta.buildId ?? '(unknown)'}`,
+    meta.fingerprint ? `Fingerprint: ${meta.fingerprint}` : null,
+    meta.environment ? `Environment: ${JSON.stringify(meta.environment)}` : null,
     '',
     '## Stack',
     meta.stack || r.description || '(none)',
     '',
     '## Component stack',
     meta.componentStack || '(none)',
+    '',
+    '## Breadcrumbs',
+    meta.breadcrumbs && meta.breadcrumbs.length > 0
+      ? meta.breadcrumbs
+          .map(
+            (b) =>
+              `  [${new Date(b.ts).toLocaleTimeString()}] (${b.type}) ${b.message}${
+                b.data ? ` -> ${JSON.stringify(b.data)}` : ''
+              }`
+          )
+          .join('\n')
+      : '(none)',
   ]
     .filter(Boolean)
     .join('\n');

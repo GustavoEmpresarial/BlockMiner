@@ -12,6 +12,21 @@ export type Criticality = 'critical' | 'high' | 'warning' | 'info';
 
 export type ClientErrorUser = { id: number; name: string };
 
+export type ClientBreadcrumbItem = {
+  ts: number;
+  type: "navigation" | "click" | "xhr" | "fetch" | "console" | "custom";
+  message: string;
+  data?: Record<string, unknown> | null;
+};
+
+export type ClientEnvironmentInfo = {
+  viewport?: string | null;
+  connection?: string | null;
+  language?: string | null;
+  memoryMb?: number | null;
+  online?: boolean | null;
+};
+
 /** `metadata` as written by traffic.service.ts's reportClientError. */
 export type ClientErrorMetadata = {
   category?: string;
@@ -23,6 +38,9 @@ export type ClientErrorMetadata = {
   buildId?: string | null;
   stack?: string | null;
   componentStack?: string | null;
+  fingerprint?: string | null;
+  breadcrumbs?: ClientBreadcrumbItem[] | null;
+  environment?: ClientEnvironmentInfo | null;
 };
 
 export type ClientErrorRow = {
@@ -43,6 +61,7 @@ export type DecoratedRow = ClientErrorRow & {
   category: ClientErrorCategory;
   criticality: Criticality;
   endpoint: string;
+  fingerprint: string;
 };
 
 export type ClientErrorFilters = {

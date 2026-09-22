@@ -84,6 +84,9 @@ export async function reportClientError(args: ReportClientErrorArgs): Promise<Re
       requestId,
       ip,
       userId,
+      fingerprint: body.fingerprint ?? null,
+      breadcrumbs: body.breadcrumbs ?? null,
+      environment: body.environment ?? null,
     });
   } catch {
     /* never fail an error report over a DB write */
@@ -113,8 +116,10 @@ export function clampDays(raw: unknown): number {
   return days;
 }
 
-export async function listClientErrorReports(limit: number): Promise<ClientErrorListItem[]> {
-  return listClientErrors(limit);
+export async function listClientErrorReports(
+  opts?: number | import("./traffic.repository.js").ClientErrorListOptions
+): Promise<ClientErrorListItem[]> {
+  return listClientErrors(opts);
 }
 
 export async function clearClientErrorReports(): Promise<number> {

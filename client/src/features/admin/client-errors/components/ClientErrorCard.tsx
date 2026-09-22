@@ -73,7 +73,42 @@ export function ClientErrorCard({
           <Meta label="IP" value={row.ip ?? '—'} />
           <Meta label="Build" value={meta.buildId ?? '—'} />
           <Meta label="User-Agent" value={row.userAgent ?? '—'} />
+          {meta.fingerprint && <Meta label="Fingerprint" value={meta.fingerprint} />}
+          {meta.environment && (
+            <Meta
+              label="Ambiente"
+              value={[
+                meta.environment.viewport ? `Tela: ${meta.environment.viewport}` : null,
+                meta.environment.connection ? `Rede: ${meta.environment.connection}` : null,
+                meta.environment.language ? `Idioma: ${meta.environment.language}` : null,
+                meta.environment.memoryMb ? `RAM: ~${meta.environment.memoryMb}MB` : null,
+              ]
+                .filter(Boolean)
+                .join(' · ') || '—'}
+            />
+          )}
         </div>
+
+        {meta.breadcrumbs && meta.breadcrumbs.length > 0 && (
+          <details>
+            <summary className="cursor-pointer text-[10px] uppercase tracking-wider text-slate-500 hover:text-slate-300">
+              Trilha de Ações ({meta.breadcrumbs.length} passos anteriores)
+            </summary>
+            <div className="mt-2 space-y-1.5 rounded-lg border border-white/5 bg-slate-950/80 p-3 font-mono text-[11px]">
+              {meta.breadcrumbs.map((b, idx) => (
+                <div key={idx} className="flex items-start gap-2 text-slate-300">
+                  <span className="shrink-0 text-[10px] text-slate-500">
+                    {new Date(b.ts).toLocaleTimeString()}
+                  </span>
+                  <span className="shrink-0 rounded bg-slate-800 px-1 py-0.5 text-[9px] font-bold uppercase text-slate-400">
+                    {b.type}
+                  </span>
+                  <span className="break-all">{b.message}</span>
+                </div>
+              ))}
+            </div>
+          </details>
+        )}
 
         {(meta.stack || row.description) && (
           <details open>
@@ -100,3 +135,4 @@ export function ClientErrorCard({
     </article>
   );
 }
+

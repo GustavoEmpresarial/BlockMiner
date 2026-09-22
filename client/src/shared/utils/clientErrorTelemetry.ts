@@ -267,6 +267,95 @@ function pruneRecent(recent: Map<string, number>, now: number): void {
   }
 }
 
+export type ClientBreadcrumb = {
+  ts: number;
+  type: "navigation" | "click" | "xhr" | "fetch" | "console" | "custom";
+  message: string;
+  data?: Record<string, unknown> | null;
+};
+
+const MAX_BREADCRUMBS = 15;
+const breadcrumbsBuffer: ClientBreadcrumb[] = [];
+
+export function addClientBreadcrumb(b: Omit<ClientBreadcrumb, "ts"> & { ts?: number }): void {
+  try {
+    breadcrumbsBuffer.push({
+      ts: b.ts ?? Date.now(),
+      type: b.type,
+      message: String(b.message || "").slice(0, 200),
+      data: b.data ?? null,
+    });
+    if (breadcrumbsBuffer.length > MAX_BREADCRUMBS) {
+      breadcrumbsBuffer.shift();
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+export function getClientBreadcrumbs(): ClientBreadcrumb[] {
+  return [...breadcrumbsBuffer];
+}
+
+if (typeof window !== "undefined" && !(window as any).__BM_BREADCRUMBS_INSTALLED__) {
+  (window as any).__BM_BREADCRUMBS_INSTALLED__ = true;
+  try {
+    window.addEventListener("popstate", () => {
+      addClientBreadcrumb({ type: "navigation", message: `nav_to:${window.location.pathname}` });
+    });
+    const _pushState = history.pushState;
+    if (typeof _pushState === "function") {
+      history.pushState = function (...args) {
+        const url = args[2] ? String(args[2]) : "";
+        addClientBreadcrumb({ type: "navigation", message: `pushState:${url || window.location.pathname}` });
+        return _pushState.apply(this, args);
+      };
+    }
+    window.addEventListener(
+      "click",
+      (e) => {
+        const target = e.target as HTMLElement | null;
+        if (!target) return;
+        const tag = target.tagName?.toLowerCase();
+        if (tag === "button" || tag === "a" || target.closest("button") || target.closest("a")) {
+          const text = (target.textContent || "").trim().slice(0, 50);
+          addClientBreadcrumb({ type: "click", message: `click:${tag}${text ? ` [${text}]` : ""}` });
+        }
+      },
+      { passive: true }
+    );
+  } catch {
+    /* ignore */
+  }
+}
+
+export function readEnvironment(): Record<string, unknown> | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const nav = navigator as any;
+    return {
+      viewport: `${window.innerWidth}x${window.innerHeight}`,
+      connection: nav.connection?.effectiveType || (nav.onLine ? "online" : "offline"),
+      language: nav.language || null,
+      memoryMb: typeof nav.deviceMemory === "number" ? Math.round(nav.deviceMemory * 1024) : null,
+      online: Boolean(nav.onLine),
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function computeClientErrorFingerprint(payload: ClientTelemetryPayload): string {
+  const parts = [
+    payload.category || "crash",
+    (payload.message || "").toLowerCase().replace(/[^a-z0-9]/g, "_").slice(0, 40),
+    payload.operation || "",
+    payload.code || "",
+    payload.statusCode != null ? String(payload.statusCode) : "",
+  ];
+  return parts.filter(Boolean).join(":").slice(0, 64);
+}
+
 /** Best-effort POST. Never throws. */
 export function postClientErrorTelemetry(payload: ClientTelemetryPayload): void {
   try {
@@ -291,6 +380,9 @@ export function postClientErrorTelemetry(payload: ClientTelemetryPayload): void 
       stack: payload.stack ?? null,
       componentStack: payload.componentStack ?? null,
       buildId: payload.buildId ?? readBuildId(),
+      fingerprint: computeClientErrorFingerprint(payload),
+      breadcrumbs: getClientBreadcrumbs(),
+      environment: readEnvironment(),
     };
 
     void fetch("/api/track/client-error", {
@@ -317,6 +409,11 @@ export function reportClientCrash(args: {
   componentStack?: string | null;
   operation?: string;
 }): void {
+  addClientBreadcrumb({
+    type: "custom",
+    message: `crash:${(args.message || "").slice(0, 100)}`,
+  });
+
   postClientErrorTelemetry({
     category: "crash",
     message: args.message,
@@ -349,6 +446,11 @@ export function reportApiFailureViaTelemetry(args: ReportApiFailureArgs, err?: u
     ...(extracted.responseMessage ? { responseMessage: extracted.responseMessage } : {}),
   };
 
+  addClientBreadcrumb({
+    type: "fetch",
+    message: `${extracted.method || "REQ"} ${extracted.apiUrl || args.operation} [${statusCode ?? "ERR"}]`,
+  });
+
   postClientErrorTelemetry({
     category: "api_failure",
     message,
@@ -360,3 +462,4 @@ export function reportApiFailureViaTelemetry(args: ReportApiFailureArgs, err?: u
     stack: Object.keys(context).length > 0 ? JSON.stringify(context) : null,
   });
 }
+

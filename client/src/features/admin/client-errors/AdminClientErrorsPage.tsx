@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Loader2, RefreshCw, Trash2 } from 'lucide-react';
+import { FileJson, FileSpreadsheet, Loader2, RefreshCw, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { clearAdminClientErrors, listAdminClientErrors, readAxiosResponseMessage } from '../lib/admin.api';
@@ -28,6 +28,7 @@ export default function AdminClientErrorsPage() {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [clearing, setClearing] = useState(false);
+  const [limit, setLimit] = useState(500);
   const [raw, setRaw] = useState<DecoratedRow[]>([]);
   const [filters, setFilters] = useState<ClientErrorFilters>(DEFAULT_FILTERS);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -36,7 +37,7 @@ export default function AdminClientErrorsPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await listAdminClientErrors(500);
+      const res = await listAdminClientErrors(limit);
       if (!res.data?.ok) throw new Error(res.data?.message ?? t('adminSystem.load_error'));
       setRaw(decorateAll(res.data.items ?? []));
     } catch (err) {
@@ -44,7 +45,7 @@ export default function AdminClientErrorsPage() {
     } finally {
       setLoading(false);
     }
-  }, [t]);
+  }, [limit, t]);
 
   useEffect(() => {
     void load();
@@ -84,6 +85,65 @@ export default function AdminClientErrorsPage() {
     }
   };
 
+  const exportJson = () => {
+    if (filtered.length === 0) {
+      toast.error('Nenhum erro para exportar.');
+      return;
+    }
+    const blob = new Blob([JSON.stringify(filtered, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `blockminer-client-errors-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('JSON exportado com sucesso.');
+  };
+
+  const exportCsv = () => {
+    if (filtered.length === 0) {
+      toast.error('Nenhum erro para exportar.');
+      return;
+    }
+    const headers = [
+      'ID',
+      'Data/Hora',
+      'Criticidade',
+      'Categoria',
+      'Endpoint',
+      'Status_HTTP',
+      'Codigo_Erro',
+      'Mensagem',
+      'User_ID',
+      'User_Nome',
+      'IP',
+      'Fingerprint',
+    ];
+    const rows = filtered.map((r) => [
+      r.id,
+      r.createdAt,
+      r.criticality,
+      r.category,
+      `"${(r.endpoint || '').replace(/"/g, '""')}"`,
+      r.metadata?.statusCode ?? '',
+      r.metadata?.code ?? '',
+      `"${(r.label || '').replace(/"/g, '""')}"`,
+      r.userId ?? '',
+      `"${(r.user?.name || '').replace(/"/g, '""')}"`,
+      r.ip ?? '',
+      `"${(r.fingerprint || '').replace(/"/g, '""')}"`,
+    ].join(','));
+    const csv = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `blockminer-client-errors-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('CSV exportado com sucesso.');
+  };
+
   return (
     <div className="space-y-6">
       <header className="flex flex-wrap items-end justify-between gap-3">
@@ -93,12 +153,48 @@ export default function AdminClientErrorsPage() {
             {t('adminSystem.client_errors_subtitle', { count: raw.length })}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Limit selector */}
+          <select
+            value={limit}
+            onChange={(e) => setLimit(Number(e.target.value))}
+            className="rounded-xl border border-white/10 bg-slate-800 px-3 py-2 text-xs font-bold text-slate-200 outline-none hover:bg-slate-700 transition-colors"
+          >
+            <option value={100}>100 itens</option>
+            <option value={250}>250 itens</option>
+            <option value={500}>500 itens</option>
+            <option value={1000}>1000 itens</option>
+          </select>
+
+          {/* Export JSON */}
+          <button
+            type="button"
+            onClick={exportJson}
+            disabled={loading || filtered.length === 0}
+            title="Exportar dados filtrados em formato JSON"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-slate-800 px-3 py-2 text-xs font-bold text-slate-200 hover:bg-slate-700 transition-colors disabled:opacity-40"
+          >
+            <FileJson className="h-3.5 w-3.5 text-blue-400" />
+            JSON
+          </button>
+
+          {/* Export CSV */}
+          <button
+            type="button"
+            onClick={exportCsv}
+            disabled={loading || filtered.length === 0}
+            title="Exportar dados filtrados em formato CSV"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-slate-800 px-3 py-2 text-xs font-bold text-slate-200 hover:bg-slate-700 transition-colors disabled:opacity-40"
+          >
+            <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-400" />
+            CSV
+          </button>
+
           <button
             type="button"
             onClick={() => void load()}
             disabled={loading}
-            className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-slate-800 px-4 py-2 text-xs font-bold text-slate-200"
+            className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-slate-800 px-4 py-2 text-xs font-bold text-slate-200 hover:bg-slate-700 transition-colors"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             {t('adminSystem.refresh')}
@@ -107,7 +203,7 @@ export default function AdminClientErrorsPage() {
             type="button"
             onClick={() => void clear()}
             disabled={clearing || raw.length === 0}
-            className="inline-flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2 text-xs font-bold text-red-300 disabled:opacity-40"
+            className="inline-flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2 text-xs font-bold text-red-300 hover:bg-red-500/20 transition-colors disabled:opacity-40"
           >
             {clearing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
             {t('adminSystem.clear_all')}
