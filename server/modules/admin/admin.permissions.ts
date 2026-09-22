@@ -66,7 +66,7 @@ export const AVAILABLE_PERMISSIONS: PermissionDefinition[] = [
   { key: "support", label: "Tickets & Suporte ao Usuário", category: "Suporte" },
   { key: "logs", label: "Logs de Sistema & Diagnóstico", category: "Sistema" },
   { key: "logs.view", label: "Visualizar Logs do Sistema", category: "Sistema" },
-  { key: "monitoring", label: "Monitoramento & Saúde da IA", category: "Sistema" },
+  { key: "monitoring", label: "Monitoramento & Métricas do Servidor", category: "Sistema" },
   { key: "config", label: "Configurações Gerais & Backups", category: "Sistema" },
   { key: "audit", label: "Logs de Auditoria Administrativa", category: "Administração" },
   { key: "admins", label: "Gerenciamento de Administradores", category: "Administração" },

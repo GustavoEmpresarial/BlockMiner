@@ -24,7 +24,6 @@ import { backupsAdminRouter } from "./admin.backups.routes.js";
 import { fraudSignalsAdminRouter } from "./admin.fraud-signals.routes.js";
 import { adminOpsRouter } from "./admin.ops.routes.js";
 import { adminLogsRouter } from "./admin.logs.routes.js";
-import { adminAiHealthRouter } from "./ai-health/ai-health.routes.js";
 
 export const adminRouter = express.Router();
 
@@ -66,4 +65,3 @@ adminRouter.use("/backups", backupsAdminRouter);
 adminRouter.use("/fraud-signals", fraudSignalsAdminRouter);
 adminRouter.use("/ops", adminOpsRouter);
 adminRouter.use("/logs", adminLogsRouter);
-adminRouter.use("/ai-health", adminAiHealthRouter);

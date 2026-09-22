@@ -6289,16 +6289,6 @@
     "decline": "Essential only",
     "policyLink": "Cookie Policy"
   },
-  "adminAiHealth": {
-    "title": "Game Health AI",
-    "subtitle": "AI-generated diagnostics from real production data: POL economy, free hashrate channels, and platform/user indicators.",
-    "analyze_now": "run now",
-    "analyzing": "analyzing…",
-    "running": "running...",
-    "next_run": "next automatic analysis in {{time}}",
-    "empty": "waiting for first run...",
-    "error": "failed to generate diagnostics."
-  },
   "adminTransparencyInvestments": {
     "title": "Investments on other sites",
     "subtitle": "Manage the external investments shown in the \"Other Investments\" tab of the Transparency Portal."

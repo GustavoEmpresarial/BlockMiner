@@ -43,7 +43,6 @@ import {
   Settings,
   Users2,
   ClipboardList,
-  BrainCircuit,
   UserCircle2,
 } from 'lucide-react';
 import { adminLogout } from '../../admin-auth/index';
@@ -150,7 +149,6 @@ const ADMIN_MENU_SECTIONS: AdminMenuSection[] = [
     labelKey: 'adminSidebar.section.system',
     icon: Settings,
     items: [
-      { icon: BrainCircuit, labelKey: 'adminSidebar.nav.ai_health', path: '/admin/ai-health' },
       { icon: FileText, labelKey: 'adminSidebar.nav.logs', path: '/admin/logs' },
       { icon: FileText, labelKey: 'adminSidebar.nav.client_errors', path: '/admin/client-errors' },
       { icon: Database, labelKey: 'adminSidebar.nav.backups', path: '/admin/backups' },

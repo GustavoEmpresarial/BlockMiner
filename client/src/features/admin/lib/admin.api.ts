@@ -132,21 +132,6 @@ export function clearAdminClientErrors() {
   return api.delete<{ ok: boolean; deleted?: number; message?: string }>('/admin/client-errors');
 }
 
-export type AdminAiHealthMetrics = {
-  economy: Record<string, unknown>;
-  freeChannels: Record<string, unknown>;
-  platform: Record<string, unknown>;
-  spenders: Record<string, unknown>;
-};
-
-export function analyzeAdminAiHealth() {
-  return api.post<{ ok: boolean; metrics?: AdminAiHealthMetrics; report?: string; message?: string }>(
-    '/admin/ai-health/analyze',
-    undefined,
-    { timeout: 120_000 },
-  );
-}
-
 export function listAdminFraudSignals(params: { scope: string; page: number; limit: number }) {
   return api.get('/admin/fraud-signals', { params });
 }

@@ -1138,7 +1138,6 @@
       "transparency_investments": "Investimentos externos",
       "deposit_tickets": "Dep. tickets",
       "backups": "Backups",
-      "ai_health": "IA de Saúde",
       "logs": "Logs",
       "client_errors": "Erros de cliente",
       "metrics": "Métricas",
@@ -3814,16 +3813,6 @@
     "login_fields_required": "Preenche o e-mail de admin e o código de segurança.",
     "login_failed_generic": "Não foi possível entrar no painel de administração.",
     "email_placeholder": "admin@blockminer.com"
-  },
-  "adminAiHealth": {
-    "title": "IA de Saúde do Jogo",
-    "subtitle": "Diagnóstico gerado por IA a partir de dados reais de produção: economia de POL, canais gratuitos de hashrate e indicadores de plataforma/usuário.",
-    "analyze_now": "rodar agora",
-    "analyzing": "analisando…",
-    "running": "rodando...",
-    "next_run": "próxima análise automática em {{time}}",
-    "empty": "aguardando primeira execução...",
-    "error": "falha ao gerar diagnóstico."
   },
   "adminBackups": {
     "title": "Backups da base de dados",
