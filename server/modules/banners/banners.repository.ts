@@ -23,6 +23,10 @@ export async function listAllBanners() {
   return prisma.dashboardBanner.findMany({ orderBy: { createdAt: "desc" } });
 }
 
+export async function findBannerById(id: number) {
+  return prisma.dashboardBanner.findUnique({ where: { id } });
+}
+
 export type CreateBannerInput = {
   title: string;
   message: string;

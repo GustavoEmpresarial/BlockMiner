@@ -1,14 +1,15 @@
-/**
- * Ported from legacy/server/modules/banners/banner.controller.ts.
- * Image upload itself is NOT handled here — banners reuse the generic
- * POST /api/admin/upload-image?category=banners endpoint from the media module
- * (see server/modules/media/index.ts); this controller only persists the resulting
- * imageUrl string, same as legacy.
- */
 import type { Request, Response } from "express";
 import { logger } from "../../core/logger/index.js";
+import { reportError } from "../../core/errors/index.js";
+import { logAdminAction } from "../admin/admin.audit-log.service.js";
 import * as bannersRepo from "./banners.repository.js";
-import { parseBannerUtcMidnight, type BannerWriteBody } from "./banners.types.js";
+import { BANNER_ERROR } from "./banners.errors.js";
+import { parseBannerUtcMidnight } from "./banners.types.js";
+import {
+  bannerIdParamSchema,
+  createBannerSchema,
+  updateBannerSchema,
+} from "./banners.schemas.js";
 
 const log = logger.child("banners.controller");
 
@@ -18,7 +19,18 @@ export async function getActiveBanners(_req: Request, res: Response): Promise<vo
     res.json({ ok: true, banners });
   } catch (err: unknown) {
     log.error("getActiveBanners failed", { error: String(err) });
-    res.status(500).json({ ok: false, message: "Erro ao buscar banners." });
+    reportError({
+      code: "BANNERS_LIST_ACTIVE_FAILED",
+      category: "DATABASE",
+      severity: "ERROR",
+      module: "banners.active",
+      error: err,
+    });
+    res.status(500).json({
+      ok: false,
+      code: BANNER_ERROR.INTERNAL_ERROR,
+      message: "Erro ao buscar banners ativos.",
+    });
   }
 }
 
@@ -28,66 +40,217 @@ export async function adminList(_req: Request, res: Response): Promise<void> {
     res.json({ ok: true, banners });
   } catch (err: unknown) {
     log.error("adminList failed", { error: String(err) });
-    res.status(500).json({ ok: false, message: "Erro ao listar banners." });
+    reportError({
+      code: "BANNERS_ADMIN_LIST_FAILED",
+      category: "DATABASE",
+      severity: "ERROR",
+      module: "banners.admin_list",
+      error: err,
+    });
+    res.status(500).json({
+      ok: false,
+      code: BANNER_ERROR.INTERNAL_ERROR,
+      message: "Erro ao listar banners administrativos.",
+    });
   }
 }
 
-export async function adminCreate(req: Request<unknown, unknown, BannerWriteBody>, res: Response): Promise<void> {
+export async function adminCreate(req: Request, res: Response): Promise<void> {
   try {
-    const { title, message, imageUrl, type, link, linkLabel, isActive, startsAt, endsAt } = req.body;
-    if (!title?.trim()) {
-      res.status(400).json({ ok: false, message: "Título é obrigatório." });
+    const parsed = createBannerSchema.safeParse(req.body);
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0];
+      res.status(400).json({
+        ok: false,
+        code: BANNER_ERROR.VALIDATION_ERROR,
+        message: issue?.message || "Dados do banner inválidos.",
+        errors: parsed.error.format(),
+      });
       return;
     }
+
+    const data = parsed.data;
     const banner = await bannersRepo.createBanner({
-      title: title.trim(),
-      message: message?.trim() || "",
-      imageUrl: imageUrl?.trim() || null,
-      type: type || "info",
-      link: link?.trim() || null,
-      linkLabel: linkLabel?.trim() || null,
-      isActive: isActive !== false,
-      startsAt: parseBannerUtcMidnight(startsAt),
-      endsAt: parseBannerUtcMidnight(endsAt),
+      title: data.title,
+      message: data.message || "",
+      imageUrl: data.imageUrl || null,
+      type: data.type,
+      link: data.link || null,
+      linkLabel: data.linkLabel || null,
+      isActive: data.isActive,
+      startsAt: parseBannerUtcMidnight(data.startsAt),
+      endsAt: parseBannerUtcMidnight(data.endsAt),
     });
-    res.json({ ok: true, banner });
+
+    const adminUser = (req as unknown as { admin?: { id?: number; email?: string } }).admin;
+    void logAdminAction({
+      adminId: adminUser?.id,
+      adminEmail: adminUser?.email,
+      action: "admin_banner_created",
+      module: "banners",
+      resource: "dashboard_banner",
+      resourceId: String(banner.id),
+      newValue: banner,
+      ipAddress: req.ip,
+      userAgent: req.get("user-agent") || null,
+      success: true,
+    });
+
+    res.status(201).json({ ok: true, banner });
   } catch (err: unknown) {
     log.error("adminCreate failed", { error: String(err) });
-    res.status(500).json({ ok: false, message: "Erro ao criar banner." });
+    reportError({
+      code: "BANNERS_ADMIN_CREATE_FAILED",
+      category: "DATABASE",
+      severity: "ERROR",
+      module: "banners.admin_create",
+      error: err,
+      req,
+    });
+    res.status(500).json({
+      ok: false,
+      code: BANNER_ERROR.INTERNAL_ERROR,
+      message: "Erro ao criar banner.",
+    });
   }
 }
 
-type IdParams = { id: string };
-
-export async function adminUpdate(req: Request<IdParams, unknown, BannerWriteBody>, res: Response): Promise<void> {
+export async function adminUpdate(req: Request, res: Response): Promise<void> {
   try {
-    const id = parseInt(req.params.id, 10);
-    const { title, message, imageUrl, type, link, linkLabel, isActive, startsAt, endsAt } = req.body;
+    const parsedParams = bannerIdParamSchema.safeParse(req.params);
+    if (!parsedParams.success) {
+      res.status(400).json({
+        ok: false,
+        code: BANNER_ERROR.INVALID_ID,
+        message: parsedParams.error.issues[0]?.message || "ID de banner inválido.",
+      });
+      return;
+    }
+
+    const { id } = parsedParams.data;
+    const existing = await bannersRepo.findBannerById(id);
+    if (!existing) {
+      res.status(404).json({
+        ok: false,
+        code: BANNER_ERROR.NOT_FOUND,
+        message: "Banner não encontrado.",
+      });
+      return;
+    }
+
+    const parsedBody = updateBannerSchema.safeParse(req.body);
+    if (!parsedBody.success) {
+      const issue = parsedBody.error.issues[0];
+      res.status(400).json({
+        ok: false,
+        code: BANNER_ERROR.VALIDATION_ERROR,
+        message: issue?.message || "Dados de atualização inválidos.",
+        errors: parsedBody.error.format(),
+      });
+      return;
+    }
+
+    const data = parsedBody.data;
     const banner = await bannersRepo.updateBanner(id, {
-      ...(title !== undefined && { title: title.trim() }),
-      ...(message !== undefined && { message: message.trim() }),
-      ...(imageUrl !== undefined && { imageUrl: imageUrl?.trim() || null }),
-      ...(type !== undefined && { type }),
-      link: link?.trim() || null,
-      linkLabel: linkLabel?.trim() || null,
-      ...(isActive !== undefined && { isActive }),
-      startsAt: parseBannerUtcMidnight(startsAt),
-      endsAt: parseBannerUtcMidnight(endsAt),
+      ...(data.title !== undefined && { title: data.title }),
+      ...(data.message !== undefined && { message: data.message }),
+      ...(data.imageUrl !== undefined && { imageUrl: data.imageUrl || null }),
+      ...(data.type !== undefined && { type: data.type }),
+      ...(data.link !== undefined && { link: data.link || null }),
+      ...(data.linkLabel !== undefined && { linkLabel: data.linkLabel || null }),
+      ...(data.isActive !== undefined && { isActive: data.isActive }),
+      ...(data.startsAt !== undefined && { startsAt: parseBannerUtcMidnight(data.startsAt) }),
+      ...(data.endsAt !== undefined && { endsAt: parseBannerUtcMidnight(data.endsAt) }),
     });
+
+    const adminUser = (req as unknown as { admin?: { id?: number; email?: string } }).admin;
+    void logAdminAction({
+      adminId: adminUser?.id,
+      adminEmail: adminUser?.email,
+      action: "admin_banner_updated",
+      module: "banners",
+      resource: "dashboard_banner",
+      resourceId: String(banner.id),
+      oldValue: existing,
+      newValue: banner,
+      ipAddress: req.ip,
+      userAgent: req.get("user-agent") || null,
+      success: true,
+    });
+
     res.json({ ok: true, banner });
   } catch (err: unknown) {
     log.error("adminUpdate failed", { error: String(err) });
-    res.status(500).json({ ok: false, message: "Erro ao atualizar banner." });
+    reportError({
+      code: "BANNERS_ADMIN_UPDATE_FAILED",
+      category: "DATABASE",
+      severity: "ERROR",
+      module: "banners.admin_update",
+      error: err,
+      req,
+    });
+    res.status(500).json({
+      ok: false,
+      code: BANNER_ERROR.INTERNAL_ERROR,
+      message: "Erro ao atualizar banner.",
+    });
   }
 }
 
-export async function adminDelete(req: Request<IdParams>, res: Response): Promise<void> {
+export async function adminDelete(req: Request, res: Response): Promise<void> {
   try {
-    const id = parseInt(req.params.id, 10);
+    const parsedParams = bannerIdParamSchema.safeParse(req.params);
+    if (!parsedParams.success) {
+      res.status(400).json({
+        ok: false,
+        code: BANNER_ERROR.INVALID_ID,
+        message: parsedParams.error.issues[0]?.message || "ID de banner inválido.",
+      });
+      return;
+    }
+
+    const { id } = parsedParams.data;
+    const existing = await bannersRepo.findBannerById(id);
+    if (!existing) {
+      res.status(404).json({
+        ok: false,
+        code: BANNER_ERROR.NOT_FOUND,
+        message: "Banner não encontrado.",
+      });
+      return;
+    }
+
     await bannersRepo.deleteBanner(id);
+
+    const adminUser = (req as unknown as { admin?: { id?: number; email?: string } }).admin;
+    void logAdminAction({
+      adminId: adminUser?.id,
+      adminEmail: adminUser?.email,
+      action: "admin_banner_deleted",
+      module: "banners",
+      resource: "dashboard_banner",
+      resourceId: String(id),
+      oldValue: existing,
+      ipAddress: req.ip,
+      userAgent: req.get("user-agent") || null,
+      success: true,
+    });
+
     res.json({ ok: true });
   } catch (err: unknown) {
     log.error("adminDelete failed", { error: String(err) });
-    res.status(500).json({ ok: false, message: "Erro ao excluir banner." });
+    reportError({
+      code: "BANNERS_ADMIN_DELETE_FAILED",
+      category: "DATABASE",
+      severity: "ERROR",
+      module: "banners.admin_delete",
+      error: err,
+      req,
+    });
+    res.status(500).json({
+      ok: false,
+      code: BANNER_ERROR.INTERNAL_ERROR,
+      message: "Erro ao excluir banner.",
+    });
   }
 }
