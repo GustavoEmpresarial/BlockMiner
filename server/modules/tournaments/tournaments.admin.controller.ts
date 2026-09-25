@@ -213,9 +213,10 @@ export async function create(req: Request, res: Response): Promise<void> {
       prizes: prizes as Parameters<typeof adminCreateTournament>[0]["prizes"],
     });
 
-    const adminUser = (req as unknown as { admin?: { id?: number; email?: string } }).admin;
-    void logAdminAction({
-      adminId: adminUser?.id,
+    const adminUser = (req as unknown as { admin?: { id?: number; adminId?: number; email?: string } }).admin;
+    const adminId = adminUser?.adminId ?? adminUser?.id ?? null;
+    await logAdminAction({
+      adminId,
       adminEmail: adminUser?.email,
       action: "admin_tournament_created",
       module: "tournaments",
@@ -302,9 +303,10 @@ export async function update(req: Request, res: Response): Promise<void> {
   try {
     const tournament = await adminUpdateTournament(id, patch);
 
-    const adminUser = (req as unknown as { admin?: { id?: number; email?: string } }).admin;
-    void logAdminAction({
-      adminId: adminUser?.id,
+    const adminUser = (req as unknown as { admin?: { id?: number; adminId?: number; email?: string } }).admin;
+    const adminId = adminUser?.adminId ?? adminUser?.id ?? null;
+    await logAdminAction({
+      adminId,
       adminEmail: adminUser?.email,
       action: "admin_tournament_updated",
       module: "tournaments",
@@ -331,9 +333,10 @@ export async function cancel(req: Request, res: Response): Promise<void> {
   try {
     const tournament = await adminCancelTournament(id);
 
-    const adminUser = (req as unknown as { admin?: { id?: number; email?: string } }).admin;
-    void logAdminAction({
-      adminId: adminUser?.id,
+    const adminUser = (req as unknown as { admin?: { id?: number; adminId?: number; email?: string } }).admin;
+    const adminId = adminUser?.adminId ?? adminUser?.id ?? null;
+    await logAdminAction({
+      adminId,
       adminEmail: adminUser?.email,
       action: "admin_tournament_cancelled",
       module: "tournaments",
@@ -360,9 +363,10 @@ export async function finalize(req: Request, res: Response): Promise<void> {
   try {
     const result = await finalizeTournament(id);
 
-    const adminUser = (req as unknown as { admin?: { id?: number; email?: string } }).admin;
-    void logAdminAction({
-      adminId: adminUser?.id,
+    const adminUser = (req as unknown as { admin?: { id?: number; adminId?: number; email?: string } }).admin;
+    const adminId = adminUser?.adminId ?? adminUser?.id ?? null;
+    await logAdminAction({
+      adminId,
       adminEmail: adminUser?.email,
       action: "admin_tournament_finalized",
       module: "tournaments",
@@ -402,9 +406,10 @@ export async function updateDisplayOrder(req: Request, res: Response): Promise<v
   try {
     const typeOrder = await setTypeDisplayOrder(body.typeOrder);
 
-    const adminUser = (req as unknown as { admin?: { id?: number; email?: string } }).admin;
-    void logAdminAction({
-      adminId: adminUser?.id,
+    const adminUser = (req as unknown as { admin?: { id?: number; adminId?: number; email?: string } }).admin;
+    const adminId = adminUser?.adminId ?? adminUser?.id ?? null;
+    await logAdminAction({
+      adminId,
       adminEmail: adminUser?.email,
       action: "admin_tournament_display_order_updated",
       module: "tournaments",

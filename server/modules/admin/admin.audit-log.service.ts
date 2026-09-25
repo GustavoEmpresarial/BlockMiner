@@ -46,6 +46,9 @@ function isSensitiveKey(lowerKey: string): boolean {
 export function sanitizeAuditPayload(val: unknown, depth = 0): unknown {
   if (depth > 4 || val == null) return val;
   if (typeof val !== "object") return val;
+  if (typeof (val as { toJSON?: () => unknown }).toJSON === "function") {
+    return (val as { toJSON: () => unknown }).toJSON();
+  }
   if (Array.isArray(val)) {
     return val.map((item) => sanitizeAuditPayload(item, depth + 1));
   }
