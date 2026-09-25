@@ -83,7 +83,7 @@ export async function adminCreate(req: Request, res: Response): Promise<void> {
     });
 
     const adminUser = (req as unknown as { admin?: { id?: number; email?: string } }).admin;
-    void logAdminAction({
+    await logAdminAction({
       adminId: adminUser?.id,
       adminEmail: adminUser?.email,
       action: "admin_banner_created",
@@ -164,7 +164,7 @@ export async function adminUpdate(req: Request, res: Response): Promise<void> {
     });
 
     const adminUser = (req as unknown as { admin?: { id?: number; email?: string } }).admin;
-    void logAdminAction({
+    await logAdminAction({
       adminId: adminUser?.id,
       adminEmail: adminUser?.email,
       action: "admin_banner_updated",
@@ -223,7 +223,7 @@ export async function adminDelete(req: Request, res: Response): Promise<void> {
     await bannersRepo.deleteBanner(id);
 
     const adminUser = (req as unknown as { admin?: { id?: number; email?: string } }).admin;
-    void logAdminAction({
+    await logAdminAction({
       adminId: adminUser?.id,
       adminEmail: adminUser?.email,
       action: "admin_banner_deleted",
