@@ -1,8 +1,16 @@
-// @ts-nocheck
-// RECOVERED: this source file was missing from git history (never committed) while
-// production kept running off a stale compiled dist/ via Docker build cache.
-// Reconstructed verbatim from the last known-good compiled output on 2026-09-11.
-// TODO: remove @ts-nocheck once someone re-adds proper types for this file.
 export const BANNER_ERROR = {
-    TITLE_REQUIRED: "BANNER_TITLE_REQUIRED",
-};
+  TITLE_REQUIRED: "BANNER_TITLE_REQUIRED",
+  INVALID_ID: "BANNER_INVALID_ID",
+  INVALID_TYPE: "BANNER_INVALID_TYPE",
+  INVALID_LINK: "BANNER_INVALID_LINK",
+  INVALID_IMAGE_URL: "BANNER_INVALID_IMAGE_URL",
+  INVALID_DATE_RANGE: "BANNER_INVALID_DATE_RANGE",
+  NOT_FOUND: "BANNER_NOT_FOUND",
+  UNAUTHORIZED: "BANNER_UNAUTHORIZED",
+  FORBIDDEN: "BANNER_FORBIDDEN",
+  VALIDATION_ERROR: "BANNER_VALIDATION_ERROR",
+  INTERNAL_ERROR: "BANNER_INTERNAL_ERROR",
+} as const;
+
+export type BannerErrorCode = (typeof BANNER_ERROR)[keyof typeof BANNER_ERROR];
+
