@@ -1,5 +1,6 @@
 import express from "express";
-import { requireAdminAuth } from "../admin/index.js";
+import { requireAdminAuth } from "../admin/admin.auth.middleware.js";
+import { requireAdminPermission } from "../admin/admin.permissions.js";
 import { createRateLimiter } from "../../core/http/middleware/rateLimit.js";
 import * as ctrl from "./tournaments.admin.controller.js";
 
@@ -33,16 +34,20 @@ const adminFinalizeLimiter = createRateLimiter({
 
 tournamentsAdminRouter.use(requireAdminAuth);
 
-tournamentsAdminRouter.get("/", adminReadLimiter, ctrl.listAll);
-tournamentsAdminRouter.get("/display-order", adminReadLimiter, ctrl.getDisplayOrder);
-tournamentsAdminRouter.patch("/display-order", adminWriteLimiter, ctrl.updateDisplayOrder);
-tournamentsAdminRouter.post("/", adminWriteLimiter, ctrl.create);
-tournamentsAdminRouter.patch("/:id", adminWriteLimiter, ctrl.update);
-tournamentsAdminRouter.post("/:id/cancel", adminWriteLimiter, ctrl.cancel);
-tournamentsAdminRouter.post("/:id/finalize", adminFinalizeLimiter, ctrl.finalize);
-tournamentsAdminRouter.get("/:id/entries", adminReadLimiter, ctrl.entries);
-tournamentsAdminRouter.get("/:id/score-audit", adminReadLimiter, ctrl.scoreAudit);
-tournamentsAdminRouter.get("/:id/score-audit/:userId", adminReadLimiter, ctrl.scoreAuditUser);
-tournamentsAdminRouter.get("/:id/engine-stats", adminReadLimiter, ctrl.engineStats);
-tournamentsAdminRouter.get("/:id/drift-alerts", adminReadLimiter, ctrl.driftAlerts);
-tournamentsAdminRouter.get("/:id/migration", adminReadLimiter, ctrl.offerwallMigration);
+// Read endpoints gated by tournaments.view or tournaments
+tournamentsAdminRouter.get("/", adminReadLimiter, requireAdminPermission("tournaments.view", "tournaments"), ctrl.listAll);
+tournamentsAdminRouter.get("/display-order", adminReadLimiter, requireAdminPermission("tournaments.view", "tournaments"), ctrl.getDisplayOrder);
+tournamentsAdminRouter.get("/:id/entries", adminReadLimiter, requireAdminPermission("tournaments.view", "tournaments"), ctrl.entries);
+tournamentsAdminRouter.get("/:id/score-audit", adminReadLimiter, requireAdminPermission("tournaments.view", "tournaments"), ctrl.scoreAudit);
+tournamentsAdminRouter.get("/:id/score-audit/:userId", adminReadLimiter, requireAdminPermission("tournaments.view", "tournaments"), ctrl.scoreAuditUser);
+tournamentsAdminRouter.get("/:id/engine-stats", adminReadLimiter, requireAdminPermission("tournaments.view", "tournaments"), ctrl.engineStats);
+tournamentsAdminRouter.get("/:id/drift-alerts", adminReadLimiter, requireAdminPermission("tournaments.view", "tournaments"), ctrl.driftAlerts);
+tournamentsAdminRouter.get("/:id/migration", adminReadLimiter, requireAdminPermission("tournaments.view", "tournaments"), ctrl.offerwallMigration);
+
+// Write endpoints gated strictly by tournaments permission
+tournamentsAdminRouter.patch("/display-order", adminWriteLimiter, requireAdminPermission("tournaments"), ctrl.updateDisplayOrder);
+tournamentsAdminRouter.post("/", adminWriteLimiter, requireAdminPermission("tournaments"), ctrl.create);
+tournamentsAdminRouter.patch("/:id", adminWriteLimiter, requireAdminPermission("tournaments"), ctrl.update);
+tournamentsAdminRouter.post("/:id/cancel", adminWriteLimiter, requireAdminPermission("tournaments"), ctrl.cancel);
+tournamentsAdminRouter.post("/:id/finalize", adminFinalizeLimiter, requireAdminPermission("tournaments"), ctrl.finalize);
+

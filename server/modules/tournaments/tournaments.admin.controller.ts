@@ -6,6 +6,7 @@
  */
 import type { Request, Response } from "express";
 import { reportError } from "../../core/errors/index.js";
+import { logAdminAction } from "../admin/admin.audit-log.service.js";
 import {
   adminListTournaments,
   adminCreateTournament,
@@ -211,6 +212,21 @@ export async function create(req: Request, res: Response): Promise<void> {
       recurring: Boolean(recurring),
       prizes: prizes as Parameters<typeof adminCreateTournament>[0]["prizes"],
     });
+
+    const adminUser = (req as unknown as { admin?: { id?: number; email?: string } }).admin;
+    void logAdminAction({
+      adminId: adminUser?.id,
+      adminEmail: adminUser?.email,
+      action: "admin_tournament_created",
+      module: "tournaments",
+      resource: "tournament",
+      resourceId: String(tournament.id),
+      newValue: tournament,
+      ipAddress: req.ip,
+      userAgent: req.get("user-agent") || null,
+      success: true,
+    });
+
     res.json({ ok: true, tournament });
   } catch (err) {
     businessFailed(res, req, "create", err, { name, type, metric });
@@ -285,6 +301,21 @@ export async function update(req: Request, res: Response): Promise<void> {
 
   try {
     const tournament = await adminUpdateTournament(id, patch);
+
+    const adminUser = (req as unknown as { admin?: { id?: number; email?: string } }).admin;
+    void logAdminAction({
+      adminId: adminUser?.id,
+      adminEmail: adminUser?.email,
+      action: "admin_tournament_updated",
+      module: "tournaments",
+      resource: "tournament",
+      resourceId: String(tournament.id),
+      newValue: tournament,
+      ipAddress: req.ip,
+      userAgent: req.get("user-agent") || null,
+      success: true,
+    });
+
     res.json({ ok: true, tournament });
   } catch (err) {
     businessFailed(res, req, "update", err, { tournamentId: id });
@@ -299,6 +330,21 @@ export async function cancel(req: Request, res: Response): Promise<void> {
   }
   try {
     const tournament = await adminCancelTournament(id);
+
+    const adminUser = (req as unknown as { admin?: { id?: number; email?: string } }).admin;
+    void logAdminAction({
+      adminId: adminUser?.id,
+      adminEmail: adminUser?.email,
+      action: "admin_tournament_cancelled",
+      module: "tournaments",
+      resource: "tournament",
+      resourceId: String(tournament.id),
+      newValue: tournament,
+      ipAddress: req.ip,
+      userAgent: req.get("user-agent") || null,
+      success: true,
+    });
+
     res.json({ ok: true, tournament });
   } catch (err) {
     businessFailed(res, req, "cancel", err, { tournamentId: id });
@@ -313,6 +359,21 @@ export async function finalize(req: Request, res: Response): Promise<void> {
   }
   try {
     const result = await finalizeTournament(id);
+
+    const adminUser = (req as unknown as { admin?: { id?: number; email?: string } }).admin;
+    void logAdminAction({
+      adminId: adminUser?.id,
+      adminEmail: adminUser?.email,
+      action: "admin_tournament_finalized",
+      module: "tournaments",
+      resource: "tournament",
+      resourceId: String(id),
+      newValue: result,
+      ipAddress: req.ip,
+      userAgent: req.get("user-agent") || null,
+      success: true,
+    });
+
     res.json({ ok: true, ...result });
   } catch (err) {
     failed(res, req, "finalize", err, { tournamentId: id }, 400);
@@ -340,6 +401,20 @@ export async function updateDisplayOrder(req: Request, res: Response): Promise<v
   }
   try {
     const typeOrder = await setTypeDisplayOrder(body.typeOrder);
+
+    const adminUser = (req as unknown as { admin?: { id?: number; email?: string } }).admin;
+    void logAdminAction({
+      adminId: adminUser?.id,
+      adminEmail: adminUser?.email,
+      action: "admin_tournament_display_order_updated",
+      module: "tournaments",
+      resource: "tournament_display_config",
+      newValue: { typeOrder },
+      ipAddress: req.ip,
+      userAgent: req.get("user-agent") || null,
+      success: true,
+    });
+
     res.json({ ok: true, typeOrder });
   } catch (err) {
     failed(res, req, "updateDisplayOrder", err, {});
