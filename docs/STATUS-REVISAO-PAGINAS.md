@@ -50,3 +50,12 @@ Documento central de controle de qualidade e auditoria das páginas da aplicaç�
 - [ ] **Whitepaper** (`/whitepaper`)
 - [ ] **Regras & Termos** (`/rules`)
 - [ ] **FAQ & Ajuda** (`/faq`)
+
+---
+
+## 🛡️ Painel Administrativo (`/admin`)
+
+| Página / Módulo Admin | Status | Testes & Auditoria | Destaques da Passada |
+|---|:---:|---|---|
+| **Banners do Dashboard** (`/admin/banners`) | ✅ **Concluído em Produção** | 64 testes (29 backend + 35 Vitest) + Carga k6 + Pentest Kali | Validação Zod com bloqueio de URIs maliciosas (`javascript:`, `data:`), RBAC granular (`banners` e `banners.view`), persistência em `AdminAuditLog`, taxa de erro 0.00% em carga (219 req/s) e compatibilidade total. |
+
