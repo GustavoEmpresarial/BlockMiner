@@ -83,18 +83,33 @@ export type ReconcileReport = {
   tournamentId: number;
   driftCount: number;
   corrected: number;
+  offerwallDrift?: OfferwallDriftReport;
 };
 
 export type DriftDetail = {
   userId: number;
-  expected: number;
-  stored: number;
+  actionTotal: number;
+  contributionTotal: number;
+  entryScore: number;
+  deltaActionsContributions: number;
+  deltaContributionsEntry: number;
+  expected?: number;
+  stored?: number;
 };
 
 export type OfferwallDriftReport = {
   tournamentId: number;
+  metric: string;
   driftCount: number;
-  details: DriftDetail[];
+  drifts: DriftDetail[];
+  checkedAt: string;
+  actionTotals: Array<{ userId: number; score: number }>;
+  totals: {
+    actions: number;
+    contributions: number;
+    entries: number;
+  };
+  details?: DriftDetail[];
 };
 
 export function windowContains(

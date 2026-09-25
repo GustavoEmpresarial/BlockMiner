@@ -6070,8 +6070,6 @@
     "recurring": "Recorrente",
     "prizes": "Prêmios",
     "inspect": "Inspecionar",
-    "user_id": "ID do usuário",
-    "user_audit": "Carregar auditoria do usuário",
     "display_order": "Ordem de exibição dos torneios",
     "display_order_hint": "Reordene os tipos na ordem exibida aos jogadores.",
     "create_title": "Criar torneio",

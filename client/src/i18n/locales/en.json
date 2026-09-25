@@ -6063,8 +6063,6 @@
     "recurring": "Recurring",
     "prizes": "Prizes",
     "inspect": "Inspect",
-    "user_id": "User ID",
-    "user_audit": "Load user audit",
     "display_order": "Tournament display order",
     "display_order_hint": "Reorder types in the order shown to players.",
     "create_title": "Create tournament",

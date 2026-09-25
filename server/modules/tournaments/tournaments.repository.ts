@@ -66,7 +66,7 @@ export async function touchScoresReconciledAt(tournamentId) {
         data: { scoresReconciledAt: new Date() },
     });
 }
-export async function insertContributionIdempotent(tournamentId, delta, tx = undefined) {
+export async function insertContributionIdempotent(tournamentId: number, delta: any, tx?: any) {
     const client = tx ?? prisma;
     try {
         await client.tournamentScoreContribution.create({

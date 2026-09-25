@@ -56,7 +56,7 @@ const INCREMENTAL_METRICS = new Set([
 ]);
 
 /** Offerwall always batch-recomputes from ZeradsCallback / offerwall.me / internal (source of truth). */
-const OFFERWALL_SOURCE_METRICS = new Set([...OFFERS_INCREMENTAL_METRICS]);
+const OFFERWALL_SOURCE_METRICS = new Set<string>([...OFFERS_INCREMENTAL_METRICS]);
 const OUTBOX_METRICS = new Set(["BLOCKS_MINED"]);
 
 /**
