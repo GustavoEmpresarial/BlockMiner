@@ -58,4 +58,6 @@ Documento central de controle de qualidade e auditoria das páginas da aplicaç�
 | Página / Módulo Admin | Status | Testes & Auditoria | Destaques da Passada |
 |---|:---:|---|---|
 | **Banners do Dashboard** (`/admin/banners`) | ✅ **Concluído em Produção** | 64 testes (29 backend + 35 Vitest) + Carga k6 + Pentest Kali | Validação Zod com bloqueio de URIs maliciosas (`javascript:`, `data:`), RBAC granular (`banners` e `banners.view`), persistência em `AdminAuditLog`, taxa de erro 0.00% em carga (219 req/s) e compatibilidade total. |
+| **Torneios & Ligas** (`/admin/tournaments`) | ⏳ **Validado em Staging** | 127 testes (96 backend + 31 Vitest) + Carga k6 + Pentest Kali | Remoção de script de redirect que causava loop na home, correção de 8 erros TS de drift, extração de componentes modulares (`TournamentCard`, `TournamentForm`, etc.), confirmação inline sem `window.confirm`, paginação no leaderboard, RBAC granular (`tournaments` e `tournaments.view`), auditoria em `AdminAuditLog` e taxa de erro 0.00% em carga (334 req/s). |
+
 
