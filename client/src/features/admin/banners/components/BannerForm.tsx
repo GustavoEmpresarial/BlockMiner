@@ -1,9 +1,11 @@
-import { useState, useRef, type ChangeEvent, type SyntheticEvent } from 'react';
+import { useState, useRef, type ChangeEvent, type DragEvent, type SyntheticEvent } from 'react';
 import { toast } from 'sonner';
-import { X, Save, Upload, ToggleLeft, ToggleRight } from 'lucide-react';
+import { X, Save, Upload, Loader2, ToggleLeft, ToggleRight, Film, Image as ImageIcon } from 'lucide-react';
 import { BANNER_TYPES, EMPTY_BANNER_FORM, type BannerFormState, type BannerTypeValue } from '../banners.types';
 import { isVideoMediaUrl, resolveBannerMediaUrl } from '../banners.shared';
 import { uploadBannerMedia } from '../banners.api';
+
+const MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024; // 100 MB
 
 export interface BannerFormProps {
   initial?: BannerFormState;
@@ -15,18 +17,29 @@ export interface BannerFormProps {
 export function BannerForm({ initial, onSave, onCancel, isSaving }: BannerFormProps) {
   const [form, setForm] = useState<BannerFormState>(() => initial ?? EMPTY_BANNER_FORM);
   const [uploading, setUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const fileRef = useRef<HTMLInputElement | null>(null);
+
   const set = <K extends keyof BannerFormState>(k: K, v: BannerFormState[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
 
-  const handleUpload = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const processFile = async (file: File) => {
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      toast.error('O arquivo excede o limite máximo permitido de 100 MB.');
+      return;
+    }
+    const isImg = file.type.startsWith('image/');
+    const isVid = file.type.startsWith('video/');
+    if (!isImg && !isVid) {
+      toast.error('Formato não suportado. Envie uma imagem (PNG, JPG, WebP, GIF) ou vídeo (MP4, WebM).');
+      return;
+    }
+
     setUploading(true);
     try {
       const url = await uploadBannerMedia(file);
       set('imageUrl', url);
-      toast.success(file.type.startsWith('video/') ? 'Vídeo enviado!' : 'Imagem enviada!');
+      toast.success(isVid ? 'Vídeo enviado do navegador!' : 'Imagem enviada do navegador!');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erro ao enviar arquivo.';
       toast.error(msg);
@@ -35,44 +48,101 @@ export function BannerForm({ initial, onSave, onCancel, isSaving }: BannerFormPr
     }
   };
 
+  const handleFileInputChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      void processFile(file);
+    }
+    // Reset file input value so re-selecting the same file fires change event
+    e.target.value = '';
+  };
+
+  const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!uploading) setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    if (uploading) return;
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      void processFile(file);
+    }
+  };
+
   const resolvedUrl = resolveBannerMediaUrl(form.imageUrl);
 
   return (
     <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Upload de Mídia pelo Navegador */}
         <div className="md:col-span-2 space-y-2">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-            Mídia do Banner
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center justify-between">
+            <span>Mídia do Banner (Envio do Computador)</span>
+            {resolvedUrl ? (
+              <span className="text-[11px] font-mono text-slate-500 truncate max-w-[280px]">
+                {resolvedUrl}
+              </span>
+            ) : null}
           </label>
 
-          <div className="flex gap-2">
-            <input
-              className="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-amber-500/50"
-              value={form.imageUrl}
-              onChange={(e) => set('imageUrl', e.target.value)}
-              placeholder="Cole a URL da imagem (https://...) ou envie um arquivo →"
-            />
-            <button
-              type="button"
-              onClick={() => fileRef.current?.click()}
-              disabled={uploading}
-              className="shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-700 hover:border-amber-500/50 text-slate-400 hover:text-amber-400 text-xs font-bold transition-colors disabled:opacity-40"
-            >
-              <Upload className="w-4 h-4" />
-              {uploading ? 'Enviando…' : 'Upload'}
-            </button>
-          </div>
           <input
             ref={fileRef}
             type="file"
             accept="image/*,video/*"
             className="hidden"
-            onChange={handleUpload}
+            onChange={handleFileInputChange}
           />
 
-          {resolvedUrl ? (
+          {!resolvedUrl ? (
             <div
-              className="relative w-full rounded-xl overflow-hidden bg-slate-950 border border-slate-800"
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              onClick={() => !uploading && fileRef.current?.click()}
+              className={`flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-2xl cursor-pointer transition-all ${
+                isDragging
+                  ? 'border-amber-500 bg-amber-500/10 scale-[1.01]'
+                  : 'border-slate-700 hover:border-amber-500/50 bg-slate-950/70 hover:bg-slate-950'
+              } ${uploading ? 'opacity-60 cursor-not-allowed' : ''}`}
+            >
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-3 text-amber-400">
+                {uploading ? (
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                ) : (
+                  <Upload className="w-6 h-6" />
+                )}
+              </div>
+              <p className="text-sm font-bold text-white mb-1 text-center">
+                {uploading
+                  ? 'Enviando arquivo do navegador para o servidor…'
+                  : 'Clique para selecionar arquivo do computador ou arraste aqui'}
+              </p>
+              <p className="text-xs text-slate-500 text-center flex items-center gap-1.5 flex-wrap justify-center">
+                <span className="flex items-center gap-1">
+                  <ImageIcon className="w-3.5 h-3.5" /> PNG, JPG, GIF, WebP
+                </span>
+                <span>•</span>
+                <span className="flex items-center gap-1">
+                  <Film className="w-3.5 h-3.5" /> MP4, WebM
+                </span>
+                <span>•</span>
+                <span>máx. 100 MB</span>
+              </p>
+            </div>
+          ) : (
+            <div
+              className="relative w-full rounded-2xl overflow-hidden bg-slate-950 border border-slate-800 shadow-inner group"
               style={{ aspectRatio: '16/9' }}
             >
               {isVideoMediaUrl(resolvedUrl) ? (
@@ -94,19 +164,35 @@ export function BannerForm({ initial, onSave, onCancel, isSaving }: BannerFormPr
                   }}
                 />
               )}
-              <button
-                type="button"
-                onClick={() => set('imageUrl', '')}
-                className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/70 hover:bg-red-500/80 text-white flex items-center justify-center transition-colors"
-                title="Remover mídia"
-              >
-                <X className="w-3 h-3" />
-              </button>
+
+              <div className="absolute top-3 right-3 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => fileRef.current?.click()}
+                  disabled={uploading}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black/80 hover:bg-black text-amber-400 border border-amber-500/30 text-xs font-bold transition-all shadow-lg backdrop-blur-sm"
+                  title="Substituir por outro arquivo"
+                >
+                  {uploading ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Upload className="w-3.5 h-3.5" />
+                  )}
+                  Substituir Arquivo
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => set('imageUrl', '')}
+                  className="w-8 h-8 rounded-xl bg-black/80 hover:bg-red-600 text-white flex items-center justify-center transition-all shadow-lg border border-slate-700/50 hover:border-red-500/50 backdrop-blur-sm"
+                  title="Remover mídia"
+                  aria-label="Remover mídia"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
-          ) : null}
-          <p className="text-[10px] text-slate-600">
-            Upload: PNG, JPG, GIF, WebP, MP4, WebM · máx 100 MB &nbsp;|&nbsp; URL: qualquer imagem HTTPS
-          </p>
+          )}
         </div>
 
         <div className="space-y-1 md:col-span-2">

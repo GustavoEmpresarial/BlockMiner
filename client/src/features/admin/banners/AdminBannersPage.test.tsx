@@ -163,4 +163,32 @@ describe('AdminBannersPage — UI do Painel Administrativo de Banners', () => {
       expect(mockDeleteAdminBanner).toHaveBeenCalledWith(15);
     });
   });
+
+  it('permite upload de arquivo direto do navegador com drag and drop ou seleção', async () => {
+    mockListAdminBanners.mockResolvedValueOnce([]);
+    mockUploadBannerMedia.mockResolvedValueOnce('/media/banners/uploaded-test.webp');
+
+    render(<AdminBanners />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Nenhum banner cadastrado')).toBeInTheDocument();
+    });
+
+    const newBtn = screen.getByRole('button', { name: /novo banner/i });
+    await userEvent.click(newBtn);
+
+    expect(
+      screen.getByText('Clique para selecionar arquivo do computador ou arraste aqui'),
+    ).toBeInTheDocument();
+
+    const file = new File(['dummy content'], 'banner.png', { type: 'image/png' });
+    const fileInput = document.querySelector('input[type="file"]')!;
+
+    await userEvent.upload(fileInput, file);
+
+    await waitFor(() => {
+      expect(mockUploadBannerMedia).toHaveBeenCalledWith(file);
+      expect(screen.getByText('Substituir Arquivo')).toBeInTheDocument();
+    });
+  });
 });
