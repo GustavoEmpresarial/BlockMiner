@@ -1,32 +1,6 @@
 <!doctype html>
 <html lang="pt-BR" translate="no">
   <head>
-    <!--admin-t-redirect-->
-    <script>
-    (function () {
-      function go() {
-        var p = location.pathname;
-        if (p === '/admin/tournaments' || p === '/admin/tournaments/') {
-          location.replace('/admin-t/');
-        }
-      }
-      go();
-      var _ps = history.pushState;
-      var _rs = history.replaceState;
-      history.pushState = function () {
-        var r = _ps.apply(this, arguments);
-        go();
-        return r;
-      };
-      history.replaceState = function () {
-        var r = _rs.apply(this, arguments);
-        go();
-        return r;
-      };
-      addEventListener('popstate', go);
-    })();
-    </script>
-
     <meta charset="UTF-8" />
     <meta name="google" content="notranslate" />
     <meta name="highpay-ads-verification" content="bf11f2b77cfb2f87a7f2c6e0d1b1074f0d7eccf74ffb3f95dcd1d7dc22602b8c" />
