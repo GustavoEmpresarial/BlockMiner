@@ -1,16 +1,38 @@
 /** Ported from legacy/server/modules/banners/. Shapes mirror the DashboardBanner Prisma model. */
 
+export const BANNER_TYPE_VALUES = ["info", "warning", "success", "promo"] as const;
+export type BannerTypeValue = (typeof BANNER_TYPE_VALUES)[number];
+
+export function isValidBannerType(val: unknown): val is BannerTypeValue {
+  return typeof val === "string" && (BANNER_TYPE_VALUES as readonly string[]).includes(val);
+}
+
 export type BannerWriteBody = {
   title?: string;
   message?: string;
-  imageUrl?: string;
+  imageUrl?: string | null;
   type?: string;
-  link?: string;
-  linkLabel?: string;
+  link?: string | null;
+  linkLabel?: string | null;
   isActive?: boolean;
   startsAt?: unknown;
   endsAt?: unknown;
 };
+
+export interface DashboardBannerDto {
+  id: number;
+  title: string;
+  message: string;
+  imageUrl: string | null;
+  type: string;
+  link: string | null;
+  linkLabel: string | null;
+  isActive: boolean;
+  startsAt: Date | string | null;
+  endsAt: Date | string | null;
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
+}
 
 /**
  * Admin banner windows are calendar days in UTC, always at 00:00:00.000Z.
@@ -32,3 +54,4 @@ export function parseBannerUtcMidnight(value: unknown): Date | null {
     Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 0, 0, 0, 0),
   );
 }
+
