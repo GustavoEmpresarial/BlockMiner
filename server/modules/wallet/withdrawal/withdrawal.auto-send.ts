@@ -217,6 +217,7 @@ async function clearHotWalletCooldown(): Promise<void> {
 export function resetAutoSendStateForTests(): void {
   _tickInFlight = false;
   _hotWalletCooldownUntilMs = 0;
+  _cachedHotWalletRpc = null;
 }
 
 type ApprovedWithdrawal = Awaited<ReturnType<typeof withdrawalRepo.getApprovedWithdrawalsForAutoSend>>[number];
@@ -484,6 +485,14 @@ async function sendViaHotWallet(approved: ApprovedWithdrawal[]): Promise<{ proce
   return { processed, skipped: processed === 0 && skippedForFunds > 0 };
 }
 
+let _cachedHotWalletRpc: {
+  at: number;
+  balancePol: number | null;
+  balWei: bigint | null;
+  gasPriceWei: bigint;
+} | null = null;
+const RPC_CACHE_TTL_MS = 5_000;
+
 /**
  * Admin-facing snapshot of the payment (hot) wallet — balance, queue coverage, auto-send flags.
  * Never returns the private key. Address is the derived hot-wallet address when configured.
@@ -533,16 +542,30 @@ export async function getHotWalletPaymentStatus(): Promise<{
   let balancePol: number | null = null;
   let canCoverPending: boolean | null = null;
   try {
-    const bal = await getSharedPolygonProvider().getBalance(wallet.address);
-    balancePol = Number(ethers.formatEther(bal));
-    const feeData = await getSharedPolygonProvider().getFeeData().catch(() => null);
-    const gasPriceWei = feeData?.maxFeePerGas ?? feeData?.gasPrice ?? ethers.parseUnits("50", "gwei");
-    const gasBuffer = computeGasBufferWei(gasPriceWei, Math.max(1, pendingApprovedCount));
-    const need =
-      ethers.parseEther(String(pendingApprovedPol || 0)) +
-      gasBuffer +
-      ethers.parseEther(String(minReservePol));
-    canCoverPending = pendingApprovedCount === 0 ? true : bal >= need;
+    const now = Date.now();
+    let bal: bigint | null = null;
+    let gasPriceWei: bigint = ethers.parseUnits("50", "gwei");
+
+    if (_cachedHotWalletRpc && now - _cachedHotWalletRpc.at < RPC_CACHE_TTL_MS) {
+      balancePol = _cachedHotWalletRpc.balancePol;
+      bal = _cachedHotWalletRpc.balWei;
+      gasPriceWei = _cachedHotWalletRpc.gasPriceWei;
+    } else {
+      bal = await getSharedPolygonProvider().getBalance(wallet.address);
+      balancePol = Number(ethers.formatEther(bal));
+      const feeData = await getSharedPolygonProvider().getFeeData().catch(() => null);
+      gasPriceWei = feeData?.maxFeePerGas ?? feeData?.gasPrice ?? ethers.parseUnits("50", "gwei");
+      _cachedHotWalletRpc = { at: now, balancePol, balWei: bal, gasPriceWei };
+    }
+
+    if (bal != null) {
+      const gasBuffer = computeGasBufferWei(gasPriceWei, Math.max(1, pendingApprovedCount));
+      const need =
+        ethers.parseEther(String(pendingApprovedPol || 0)) +
+        gasBuffer +
+        ethers.parseEther(String(minReservePol));
+      canCoverPending = pendingApprovedCount === 0 ? true : bal >= need;
+    }
   } catch (err: unknown) {
     log.warn("hot-wallet status balance fetch failed", { error: String(err) });
   }
