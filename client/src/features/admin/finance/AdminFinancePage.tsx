@@ -21,6 +21,7 @@ import {
 import { toast } from 'sonner';
 import {
   approveWithdrawal,
+  clearHotWalletCooldown,
   completeWithdrawal,
   fetchAdminHotWalletStatus,
   listPendingWithdrawals,
@@ -239,6 +240,22 @@ export default function AdminFinancePage() {
       }
     } catch {
       // Non-blocking: failure to fetch hot wallet status does not prevent queue review
+    } finally {
+      setHotWalletLoading(false);
+    }
+  }, []);
+
+  const handleClearCooldown = useCallback(async () => {
+    setHotWalletLoading(true);
+    try {
+      const res = await clearHotWalletCooldown();
+      if (res.data.ok) {
+        setHotWallet(res.data.hotWallet);
+        toast.success('Cooldown removido! O envio automático foi liberado.');
+        void load();
+      }
+    } catch (err) {
+      toast.error(readAxiosResponseMessage(err) ?? 'Erro ao limpar cooldown');
     } finally {
       setHotWalletLoading(false);
     }
@@ -553,6 +570,7 @@ export default function AdminFinancePage() {
         status={hotWallet}
         loading={hotWalletLoading}
         onRefresh={() => void loadHotWallet()}
+        onClearCooldown={() => void handleClearCooldown()}
       />
 
       {/* Cards de Métricas (KPIs) */}

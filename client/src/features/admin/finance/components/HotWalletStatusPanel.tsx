@@ -19,12 +19,14 @@ interface HotWalletStatusPanelProps {
   status: AdminHotWalletStatus | null;
   loading: boolean;
   onRefresh: () => void;
+  onClearCooldown?: () => void;
 }
 
 export const HotWalletStatusPanel: React.FC<HotWalletStatusPanelProps> = ({
   status,
   loading,
   onRefresh,
+  onClearCooldown,
 }) => {
   const [copied, setCopied] = useState(false);
 
@@ -122,6 +124,19 @@ export const HotWalletStatusPanel: React.FC<HotWalletStatusPanelProps> = ({
             <BadgeIcon className="h-3.5 w-3.5" />
             {statusBadge.label}
           </span>
+
+          {inCooldown && onClearCooldown && (
+            <button
+              type="button"
+              disabled={loading}
+              onClick={onClearCooldown}
+              className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/40 bg-amber-500/20 px-3 py-1 text-xs font-bold text-amber-300 hover:bg-amber-500/30 transition-all active:scale-95 disabled:opacity-40"
+              title="Desbloquear cooldown e retomar envio automático agora"
+            >
+              <Zap className="h-3.5 w-3.5 text-amber-400" />
+              Desbloquear Cooldown Agora
+            </button>
+          )}
 
           <button
             type="button"

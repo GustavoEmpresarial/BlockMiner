@@ -99,6 +99,24 @@ describe('HotWalletStatusPanel — Componente de Monitoramento da Hot Wallet', (
     expect(screen.getByText(/Cooldown \(15m restante\)/)).toBeInTheDocument();
   });
 
+  it('exibe botão de desbloquear cooldown e chama onClearCooldown ao clicar', async () => {
+    const onClearCooldown = vi.fn();
+    render(
+      <HotWalletStatusPanel
+        status={mockStatusCooldown}
+        loading={false}
+        onRefresh={vi.fn()}
+        onClearCooldown={onClearCooldown}
+      />
+    );
+
+    const clearButton = screen.getByText('Desbloquear Cooldown Agora');
+    expect(clearButton).toBeInTheDocument();
+    await userEvent.click(clearButton);
+
+    expect(onClearCooldown).toHaveBeenCalledTimes(1);
+  });
+
   it('chama onRefresh ao clicar no botão de atualizar', async () => {
     const onRefresh = vi.fn();
     render(

@@ -171,6 +171,13 @@ export function fetchAdminHotWalletStatus() {
   );
 }
 
+/** POST /admin/wallet/hot-wallet/clear-cooldown — clear insufficient balance cooldown to resume auto-send immediately. */
+export function clearHotWalletCooldown() {
+  return api.post<{ ok: boolean; message: string; hotWallet: import('../finance/adminFinance.types').AdminHotWalletStatus }>(
+    '/admin/wallet/hot-wallet/clear-cooldown'
+  );
+}
+
 /** POST /admin/wallet/withdrawals/:id/approve — server: withdrawal.controller.ts adminApproveWithdrawal. 409 if the row already left "pending" (raced by another admin action). */
 export function approveWithdrawal(id: number | string) {
   return api.post(`/admin/wallet/withdrawals/${id}/approve`);

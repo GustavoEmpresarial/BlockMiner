@@ -14,7 +14,7 @@ import { requireSessionUser } from "../../../shared/errors/httpStatusError.js";
 import { WITHDRAW_PROCESSING_HOURS } from "../wallet.types.js";
 import * as withdrawalRepo from "./withdrawal.repository.js";
 import * as withdrawalService from "./withdrawal.service.js";
-import { getHotWalletPaymentStatus } from "./withdrawal.auto-send.js";
+import { getHotWalletPaymentStatus, clearHotWalletCooldown } from "./withdrawal.auto-send.js";
 import { notifyWithdrawalCompleted } from "../../notifications/telegram.service.js";
 import { logAdminAction } from "../../admin/index.js";
 import { logger } from "../../../core/logger/index.js";
@@ -304,5 +304,17 @@ export async function adminGetHotWalletStatus(_req: Request, res: Response): Pro
   } catch (err: unknown) {
     log.error("adminGetHotWalletStatus failed", { error: String(err) });
     res.status(500).json({ ok: false, message: "Unable to load hot wallet status" });
+  }
+}
+
+/** Clear insufficient balance cooldown flag to immediately resume auto-send processing. */
+export async function adminClearHotWalletCooldown(_req: Request, res: Response): Promise<void> {
+  try {
+    await clearHotWalletCooldown();
+    const status = await getHotWalletPaymentStatus();
+    res.json({ ok: true, message: "Cooldown da Hot Wallet removido com sucesso.", hotWallet: status });
+  } catch (err: unknown) {
+    log.error("adminClearHotWalletCooldown failed", { error: String(err) });
+    res.status(500).json({ ok: false, message: "Falha ao limpar cooldown da hot wallet" });
   }
 }

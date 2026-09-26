@@ -206,7 +206,7 @@ async function markHotWalletInsufficient(): Promise<void> {
   });
 }
 
-async function clearHotWalletCooldown(): Promise<void> {
+export async function clearHotWalletCooldown(): Promise<void> {
   _hotWalletCooldownUntilMs = 0;
   const redis = getRedis();
   if (!redis) return;
@@ -538,7 +538,7 @@ export async function getHotWalletPaymentStatus(): Promise<{
   const globalPause = withdrawalGlobalPause();
   const viaCoinEx = withdrawalViaCoinExEnabled();
   const minReservePol = hotWalletMinBalancePol();
-  const cooldownMs = await getHotWalletCooldownMs();
+  let cooldownMs = await getHotWalletCooldownMs();
 
   const approved = await withdrawalRepo.getApprovedWithdrawalsForAutoSend().catch(() => []);
   // Include all POL withdrawals (type withdrawal); shib is separate and not paid from POL hot wallet.
@@ -589,6 +589,11 @@ export async function getHotWalletPaymentStatus(): Promise<{
         gasBuffer +
         ethers.parseEther(String(minReservePol));
       canCoverPending = pendingApprovedCount === 0 ? true : bal >= need;
+      if (canCoverPending && cooldownMs > 0) {
+        log.info("Hot-wallet has sufficient funds to cover queue — auto-clearing cooldown flag");
+        await clearHotWalletCooldown();
+        cooldownMs = 0;
+      }
     }
   } catch (err: unknown) {
     log.warn("hot-wallet status balance fetch failed", { error: String(err) });
@@ -620,10 +625,35 @@ export async function processPendingWithdrawals(): Promise<{ processed: number; 
     return { processed: 0, reason: "global_pause" };
   }
 
-  const cooldownMs = await getHotWalletCooldownMs();
+  let cooldownMs = await getHotWalletCooldownMs();
   if (cooldownMs > 0) {
-    log.info(`Hot-wallet in cooldown — ${Math.round(cooldownMs / 60_000)}m remaining. Skipping tick.`);
-    return { processed: 0, reason: "hot_wallet_cooldown" };
+    const wallet = getWithdrawalHotWallet();
+    if (wallet) {
+      try {
+        const bal = await getSharedPolygonProvider().getBalance(wallet.address);
+        const minReserveWei = ethers.parseEther(String(hotWalletMinBalancePol()));
+        const allApproved = await withdrawalRepo.getApprovedWithdrawalsForAutoSend().catch(() => []);
+        const polApproved = (allApproved ?? []).filter((t) => t.type !== "shib_withdrawal");
+        const firstPol = polApproved[0];
+        const gasBuffer = computeGasBufferWei(ethers.parseUnits("50", "gwei"), 1);
+        const neededForFirst = firstPol
+          ? ethers.parseEther(firstPol.amount.toString()) + gasBuffer + minReserveWei
+          : minReserveWei;
+
+        if (bal >= neededForFirst) {
+          log.info("Hot-wallet replenished with sufficient balance — auto-clearing cooldown and proceeding with auto-send!");
+          await clearHotWalletCooldown();
+          cooldownMs = 0;
+        }
+      } catch (err: unknown) {
+        log.warn("Failed to check replenished balance during cooldown tick", { error: String(err) });
+      }
+    }
+
+    if (cooldownMs > 0) {
+      log.info(`Hot-wallet in cooldown — ${Math.round(cooldownMs / 60_000)}m remaining. Skipping tick.`);
+      return { processed: 0, reason: "hot_wallet_cooldown" };
+    }
   }
 
   const { token, viaRedis } = await acquireAutoSendLock();

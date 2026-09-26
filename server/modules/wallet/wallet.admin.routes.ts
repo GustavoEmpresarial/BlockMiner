@@ -21,6 +21,12 @@ walletAdminRouter.get(
 );
 
 walletAdminRouter.post(
+  "/wallet/hot-wallet/clear-cooldown",
+  requireAdminPermission("withdrawals"),
+  withdrawalController.adminClearHotWalletCooldown,
+);
+
+walletAdminRouter.post(
   "/wallet/withdrawals/:withdrawalId/approve",
   requireAdminPermission("withdrawals"),
   withdrawalController.adminApproveWithdrawal,
