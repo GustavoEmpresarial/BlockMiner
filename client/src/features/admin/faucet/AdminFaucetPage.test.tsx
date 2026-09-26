@@ -56,8 +56,8 @@ describe('AdminFaucetPage — UI do Painel Administrativo da Faucet', () => {
 
     await waitFor(() => {
       expect(screen.getAllByText(/configuração da faucet/i).length).toBeGreaterThan(0);
-      expect(screen.getByDisplayValue('Pulse Mini v1')).toBeInTheDocument();
       expect(screen.getByDisplayValue('30')).toBeInTheDocument();
+      expect(screen.getByText(/Pulse Mini v1/)).toBeInTheDocument();
     });
   });
 
@@ -72,7 +72,7 @@ describe('AdminFaucetPage — UI do Painel Administrativo da Faucet', () => {
 
     await waitFor(() => {
       expect(screen.getByText(/pré-visualização do jogador/i)).toBeInTheDocument();
-      expect(screen.getByText('+30')).toBeInTheDocument();
+      expect(screen.getAllByText(/\+30/).length).toBeGreaterThan(0);
       expect(screen.getByText('1h')).toBeInTheDocument();
       expect(screen.getByText('Ativa', { selector: 'span' })).toBeInTheDocument();
     });
@@ -110,7 +110,6 @@ describe('AdminFaucetPage — UI do Painel Administrativo da Faucet', () => {
       cooldownMs: 7200000,
       miner: {
         ...sampleReward.miner,
-        name: 'Pulse Pro v1',
         baseHashRate: 45,
       },
     };
@@ -124,12 +123,12 @@ describe('AdminFaucetPage — UI do Painel Administrativo da Faucet', () => {
     render(<AdminFaucetPage />);
 
     await waitFor(() => {
-      expect(screen.getByDisplayValue('Pulse Mini v1')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('30')).toBeInTheDocument();
     });
 
-    const nameInput = screen.getByDisplayValue('Pulse Mini v1');
-    await userEvent.clear(nameInput);
-    await userEvent.type(nameInput, 'Pulse Pro v1');
+    const hashRateInput = screen.getByDisplayValue('30');
+    await userEvent.clear(hashRateInput);
+    await userEvent.type(hashRateInput, '45');
 
     const saveButton = screen.getByRole('button', { name: /salvar configuração/i });
     await userEvent.click(saveButton);
@@ -137,8 +136,7 @@ describe('AdminFaucetPage — UI do Painel Administrativo da Faucet', () => {
     await waitFor(() => {
       expect(mockSaveAdminFaucetConfig).toHaveBeenCalledWith(
         expect.objectContaining({
-          name: 'Pulse Pro v1',
-          baseHashRate: 30,
+          baseHashRate: 45,
         })
       );
     });

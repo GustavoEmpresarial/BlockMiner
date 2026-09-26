@@ -1,13 +1,12 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Clock, Cpu, Image as ImageIcon, Sparkles, Zap } from 'lucide-react';
+import { Clock3, Info, Sparkles, Zap } from 'lucide-react';
 import type { AdminFaucetRewardDetail } from '../adminFaucet.types';
 
 interface FaucetRewardPreviewCardProps {
   reward: AdminFaucetRewardDetail | null;
   formName: string;
   formHashRate: number;
-  formImageUrl: string;
   formCooldownMs: number;
   formIsActive: boolean;
 }
@@ -24,33 +23,25 @@ function formatCooldown(ms: number): string {
 
 export const FaucetRewardPreviewCard: React.FC<FaucetRewardPreviewCardProps> = ({
   reward,
-  formName,
   formHashRate,
-  formImageUrl,
   formCooldownMs,
   formIsActive,
 }) => {
   const { t } = useTranslation();
-  const [imageError, setImageError] = React.useState(false);
 
-  const displayName = formName || reward?.miner.name || 'Mineradora Faucet';
   const displayHashRate = formHashRate > 0 ? formHashRate : (reward?.miner.baseHashRate ?? 30);
-  const displayImageUrl = formImageUrl || reward?.miner.imageUrl || '';
   const displayCooldown = formCooldownMs > 0 ? formCooldownMs : (reward?.cooldownMs ?? 3600000);
   const displayActive = formIsActive;
 
-  React.useEffect(() => {
-    setImageError(false);
-  }, [displayImageUrl]);
-
   return (
-    <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-b from-slate-900/90 to-slate-950 p-6 shadow-2xl backdrop-blur-xl">
-      <div className="absolute -right-16 -top-16 h-40 w-40 rounded-full bg-amber-500/10 blur-3xl pointer-events-none" />
+    <div className="relative overflow-hidden rounded-3xl border border-sky-500/20 bg-gradient-to-b from-slate-900/95 via-slate-950 to-slate-950 p-6 shadow-2xl backdrop-blur-xl">
+      <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-sky-500/10 blur-3xl pointer-events-none" />
+      <div className="absolute -left-16 -bottom-16 h-48 w-48 rounded-full bg-amber-500/10 blur-3xl pointer-events-none" />
 
       {/* Header do Card */}
-      <div className="flex items-center justify-between border-b border-white/5 pb-4 mb-5">
+      <div className="flex items-center justify-between border-b border-white/5 pb-4 mb-6">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-500/20 text-sky-400 border border-sky-500/30">
             <Sparkles className="h-5 w-5" />
           </div>
           <div>
@@ -77,73 +68,53 @@ export const FaucetRewardPreviewCard: React.FC<FaucetRewardPreviewCardProps> = (
         </span>
       </div>
 
-      {/* Visualização Central da Máquina */}
-      <div className="flex flex-col items-center justify-center py-4">
-        <div className="relative flex h-36 w-36 items-center justify-center rounded-2xl border border-white/10 bg-slate-950/80 p-3 shadow-inner">
-          {displayImageUrl && !imageError ? (
-            <img
-              src={displayImageUrl}
-              alt={displayName}
-              onError={() => setImageError(true)}
-              className="max-h-full max-w-full object-contain filter drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)] transition-transform hover:scale-105 duration-300"
-            />
-          ) : (
-            <div className="flex flex-col items-center justify-center text-slate-500 gap-1.5">
-              <ImageIcon className="h-10 w-10 stroke-[1.5]" />
-              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-600">
-                Sem Imagem
-              </span>
-            </div>
-          )}
+      {/* Caixa de Recompensa em Poder — Idêntica à /faucet */}
+      <div className="flex flex-col items-center justify-center text-center py-6 px-4 rounded-3xl border border-sky-500/20 bg-slate-950/80 shadow-inner group">
+        <div className="flex h-36 w-36 items-center justify-center rounded-3xl border border-sky-400/30 bg-gradient-to-br from-sky-500/20 via-sky-400/10 to-transparent p-6 shadow-inner group-hover:scale-105 transition-transform duration-500">
+          <Zap className="h-20 w-20 text-sky-400 drop-shadow-[0_0_20px_rgba(56,189,248,0.5)] animate-pulse" />
         </div>
 
-        <h4 className="mt-4 text-base font-black text-white tracking-wide text-center">
-          {displayName}
-        </h4>
-        <span className="text-[11px] text-slate-400 font-medium mt-0.5">
-          Slug:{' '}
-          <code className="text-amber-300/90 font-mono text-[11px]">
-            {reward?.miner.slug ?? 'faucet-miner'}
-          </code>
-        </span>
+        <div className="mt-5 space-y-1.5">
+          <span className="text-[11px] font-black uppercase tracking-[0.25em] text-slate-400">
+            Poder de Mineração
+          </span>
+          <h4 className="text-3xl font-black text-sky-400 tabular-nums tracking-tight">
+            +{displayHashRate} <span className="text-xl font-bold text-sky-300">H/s</span>
+          </h4>
+          <div className="inline-flex items-center gap-1.5 rounded-full bg-sky-500/10 px-3 py-1 text-xs font-semibold text-sky-300 border border-sky-500/20">
+            <Clock3 className="h-3.5 w-3.5 text-sky-400" />
+            <span>Temporário por 24 horas (ou 7d com Boost)</span>
+          </div>
+        </div>
       </div>
 
-      {/* Grid de Métricas Principais */}
-      <div className="grid grid-cols-2 gap-3 mt-4">
-        <div className="flex items-center gap-3 rounded-2xl border border-white/5 bg-slate-950/60 p-3.5">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
-            <Zap className="h-5 w-5" />
-          </div>
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-              {t('adminFaucet.hash_rate', 'Hash Rate Base')}
-            </p>
-            <p className="text-sm font-black text-white">
-              +{displayHashRate} <span className="text-xs font-semibold text-amber-400">H/s</span>
-            </p>
-          </div>
+      {/* Métricas e Regras */}
+      <div className="grid grid-cols-2 gap-3 mt-5">
+        <div className="rounded-2xl border border-white/5 bg-slate-950/60 p-3.5">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            Poder por Resgate
+          </p>
+          <p className="text-base font-black text-white mt-0.5">
+            +{displayHashRate} <span className="text-xs font-semibold text-sky-400">H/s</span>
+          </p>
         </div>
 
-        <div className="flex items-center gap-3 rounded-2xl border border-white/5 bg-slate-950/60 p-3.5">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-500/10 text-sky-400 border border-sky-500/20">
-            <Clock className="h-5 w-5" />
-          </div>
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-              {t('adminFaucet.cooldown_label', 'Intervalo')}
-            </p>
-            <p className="text-sm font-black text-white">{formatCooldown(displayCooldown)}</p>
-          </div>
+        <div className="rounded-2xl border border-white/5 bg-slate-950/60 p-3.5">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            Intervalo de Resgate
+          </p>
+          <p className="text-base font-black text-white mt-0.5">{formatCooldown(displayCooldown)}</p>
         </div>
       </div>
 
       {/* Nota Explicativa de Regra de Negócio */}
-      <div className="mt-5 rounded-2xl border border-amber-500/20 bg-amber-500/5 p-3.5 flex items-start gap-2.5">
-        <Cpu className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+      <div className="mt-5 rounded-2xl border border-sky-500/20 bg-sky-500/5 p-4 flex items-start gap-3">
+        <Info className="h-4 w-4 text-sky-400 shrink-0 mt-0.5" />
         <p className="text-[11px] leading-relaxed text-slate-300">
-          <strong className="text-amber-300">Poder Temporário:</strong> O claim da faucet credita{' '}
-          <strong className="text-white">UserPowerGame</strong> com duração de 24 horas (ou 7 dias com o
-          Power Boost ativo), sem alterar o inventário permanente de máquinas do jogador.
+          <strong className="text-sky-300">Regra de Negócio:</strong> A faucet concede{' '}
+          <strong className="text-white">exclusivamente poder de mineração temporário</strong> (tabela{' '}
+          <code className="text-sky-300 font-mono text-[10px]">UserPowerGame</code>). Não é uma mineradora física,
+          não ocupa slots e não consome energia do jogador.
         </p>
       </div>
     </div>

@@ -100,7 +100,7 @@ export default function AdminFaucetPage() {
               {t('adminFaucet.title', 'Configuração da Faucet')}
             </h1>
             <p className="text-xs sm:text-sm font-medium text-slate-400 mt-1">
-              {t('adminFaucet.subtitle', 'Gerencie a recompensa mineradora ativa da faucet e o intervalo.')}
+              {t('adminFaucet.subtitle', 'Gerencie a quantidade de poder temporário e o intervalo de recarga do claim.')}
             </p>
           </div>
         </div>
@@ -158,7 +158,6 @@ export default function AdminFaucetPage() {
             reward={reward}
             formName={formName}
             formHashRate={formHashRate}
-            formImageUrl={formImageUrl}
             formCooldownMs={formCooldownMs}
             formIsActive={formIsActive}
           />
