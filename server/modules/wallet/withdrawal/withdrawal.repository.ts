@@ -81,7 +81,7 @@ export async function createWithdrawal(
         amount: amountPol,
         fee: feeAmount,
         address,
-        status: "pending",
+        status: "approved",
         fundsReserved: true,
       },
     });
@@ -117,7 +117,7 @@ export async function createShibWithdrawal(
         amount: netAmount,
         fee: feeAmount,
         address,
-        status: "pending",
+        status: "approved",
         fundsReserved: true,
       },
     });

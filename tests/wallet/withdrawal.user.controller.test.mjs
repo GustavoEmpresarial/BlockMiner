@@ -76,7 +76,7 @@ test("requestWithdrawal: happy path debits polBalance and returns a public DTO",
   const res = fakeRes();
   await controller.requestWithdrawal(fakeReq(user, { amount: 20, address: "0x" + "1".repeat(40) }), res);
   assert.equal(res.calls.json.ok, true);
-  assert.equal(res.calls.json.transaction.status, "pending");
+  assert.equal(res.calls.json.transaction.status, "approved");
   const fresh = await prisma.user.findUnique({ where: { id: user.id } });
   assert.ok(Number(fresh.polBalance) < 100, "balance must be debited by amount+fee");
 });

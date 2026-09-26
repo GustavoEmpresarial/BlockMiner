@@ -43,7 +43,7 @@ test("createWithdrawal reserves amount+fee atomically from polBalance", async ()
   const { default: prismaPkg } = await import("@prisma/client");
   const Decimal = prismaPkg.Prisma.Decimal;
   const row = await repo.createWithdrawal(user.id, new Decimal("20"), "0x" + "1".repeat(40), new Decimal("0.5"));
-  assert.equal(row.status, "pending");
+  assert.equal(row.status, "approved");
   assert.equal(row.fundsReserved, true);
   const fresh = await prisma.user.findUnique({ where: { id: user.id } });
   assert.equal(fresh.polBalance.toString(), "79.5"); // 100 - (20 + 0.5)
