@@ -232,14 +232,6 @@ async function evaluateAutoSendGuards(tx: ApprovedWithdrawal): Promise<{ ok: tru
     return { ok: false, reason: `daily_limit_reached (${sentToday}/${maxPerDay})` };
   }
 
-  const lastHeartbeatAt = tx.user?.autoMiningLastHeartbeatAt ?? null;
-  if (lastHeartbeatAt) {
-    const heartbeatAgeMs = Date.now() - new Date(lastHeartbeatAt).getTime();
-    if (heartbeatAgeMs < AUTOMINE_HEARTBEAT_RECENT_MS) {
-      return { ok: false, reason: `automine_active (heartbeat ${heartbeatAgeMs}ms ago)` };
-    }
-  }
-
   return { ok: true };
 }
 
