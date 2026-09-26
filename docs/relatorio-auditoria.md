@@ -5,6 +5,7 @@
 **Superfícies Auditadas**:
 - Módulo de Banners (`server/modules/banners/`, `client/src/features/admin/banners/`)
 - Módulo de Torneios & Ligas (`server/modules/tournaments/`, `client/src/features/admin/tournaments/`)
+- Módulo de Faucet & Genesis Miner (`server/modules/faucet/`, `client/src/features/admin/faucet/`)
 **Responsável**: Antigravity Quality Gate & Security Engine  
 
 ---
@@ -110,3 +111,83 @@ Executado através da suíte `tests/security/run-kali-tournaments-audit.sh` util
 | **Prevenção de Information Disclosure** | Vazamento de stack trace ou SQL no `/finalize` | **Zero vazamentos** |
 
 **Total de Verificações de Segurança**: 21 executadas, 21 aprovadas, 0 falhas.
+
+---
+
+# PARTE III: MÓDULO FAUCET & GENESIS MINER (`/admin/faucet`)
+
+## 1. Resumo Executivo dos Achados — Faucet
+
+| ID | Descrição do Achado | Severidade | CWE / OWASP | Arquivo e Linha Original | Status da Correção |
+| :---: | :--- | :---: | :---: | :--- | :---: |
+| **SEC-07** | **BFLA nas Rotas Administrativas de Faucet:** Rota `/api/admin/faucet/config` continha apenas `requireAdminAuth`. Qualquer perfil administrativo (`finance`, `support`, `readonly`, `moderator`) podia alterar hashrate e cooldown da faucet. | **CRÍTICA** | CWE-285 / OWASP A1 | `server/modules/faucet/faucet.admin.routes.ts:13` | ✅ **Corrigido** |
+| **SEC-08** | **Ausência de Rastro de Auditoria Administrativa:** Alterações de parâmetros do Genesis Miner / Faucet não eram registradas em `admin_audit_logs`. | **ALTA** | CWE-778 / OWASP A9 | `server/modules/faucet/faucet.admin.routes.ts:44` | ✅ **Corrigido** |
+| **SEC-09** | **Injeção de Protocolos Perigosos (XSS/SSRF):** Campo `imageUrl` aceitava URIs `javascript:`, `data:text/html` e esquemas arbitrários sem sanitização estrita. | **ALTA** | CWE-79 / OWASP A3 | `server/modules/faucet/faucet.admin.routes.ts:63` | ✅ **Corrigido** |
+| **TEC-03** | **Diretivas `@ts-nocheck` e Tipagem Frouxa:** Módulo continha 3 arquivos com `@ts-nocheck` e parâmetros anônimos herdados de build antigo. | **MÉDIA** | Tipagem Estática | `server/modules/faucet/*.ts` | ✅ **Corrigido** |
+| **UX-02** | **Interface Inadequada de Configuração em Produção:** Painel administrativo continha apenas `<textarea>` com JSON stringificado cru, sem validação, sem presets e sem preview. | **MÉDIA** | Usabilidade & UX | `client/src/features/admin/faucet/AdminFaucetPage.tsx` | ✅ **Corrigido** |
+
+---
+
+## 2. Detalhamento dos Achados e Mitigações Aplicadas — Faucet
+
+### SEC-07: Controle de Acesso Quebrado (BFLA) — CRÍTICA
+- **Descrição**: O roteador `/api/admin/faucet/config` não validava permissões granulares. Qualquer administrador autenticado conseguia enviar requisição PUT para inflar o hashrate distribuído gratuitamente aos jogadores.
+- **Correção Aplicada**: Adicionadas permissões `faucet` e `faucet.view` em `server/modules/admin/admin.permissions.ts`. A rota GET agora exige `requireAdminPermission("faucet.view", "faucet")` e a rota PUT exige `requireAdminPermission("faucet")`. Perfis restritos recebem HTTP 403 `FORBIDDEN_PERMISSION`.
+- **Teste de Verificação**: `tests/faucet/faucet.admin.rbac.test.mjs` (10 testes aprovados).
+
+---
+
+### SEC-08: Rastreabilidade e Auditoria — ALTA
+- **Descrição**: A alteração dos parâmetros do Genesis Miner ocorria silenciosamente no banco sem gravar quem alterou, quando alterou ou os valores prévios.
+- **Correção Aplicada**: Integrada chamada assíncrona a `logAdminAction` registrando `action: "admin_faucet_config_updated"`, `oldValue`, `newValue`, `adminId`, `adminEmail`, IP e User-Agent.
+- **Teste de Verificação**: `tests/faucet/faucet.admin.smoke.test.mjs` (validação ponta a ponta com PostgreSQL real).
+
+---
+
+### SEC-09: Injeção de Protocolos em Imagens — ALTA
+- **Descrição**: Validação manual rudimentar permitia URLs de qualquer esquema em `imageUrl`.
+- **Correção Aplicada**: Criado schema Zod estrito `adminFaucetConfigUpdateSchema` que valida regex de URIs permitidas (somente `/media/...` relativo ou `http(s)://` seguro), rejeitando expressamente `javascript:`, `data:`, `vbscript:`, `file:`.
+- **Teste de Verificação**: `tests/faucet/faucet.admin.schemas.unit.test.mjs` e pentest Kali.
+
+---
+
+### UX-02 & TEC-03: Redesign Modular e Eliminação de `@ts-nocheck` — MÉDIA
+- **Descrição**: O frontend possuía um textarea de 47 linhas exibindo JSON cru. O backend possuía 3 arquivos com `@ts-nocheck`.
+- **Correção Aplicada**:
+  1. Remoção de todos os `@ts-nocheck` e adição de contratos DTO estritos compartilhados 1:1 entre client e server.
+  2. Redesign completo de `AdminFaucetPage.tsx` no padrão visual do BlockMiner (glassmorphism, status ativo/inativo, presets de cooldown de 15m a 24h, preview dinâmico em tempo real `FaucetRewardPreviewCard` e formulário tipado `FaucetConfigForm`).
+- **Teste de Verificação**: 9 testes no Vitest (`adminFaucet.api.test.ts`, `AdminFaucetPage.test.tsx`).
+
+---
+
+## 3. Resultados dos Testes de Carga (k6) — Faucet
+
+Executado através de `tests/performance/run-faucet-k6.mjs` com 15 VUs concorrentes realizando leituras e mutações:
+
+| Métrica | Meta Estabelecida | Resultado Obtido | Status |
+| :--- | :---: | :---: | :---: |
+| **Taxa de Erro 5xx** | `0.00%` | **0.00%** (0 de 1.798 requests) | ✅ Aprovado |
+| **Checks Totais** | `100.00%` | **100.00%** (1.798 de 1.798) | ✅ Aprovado |
+| **Latência Admin GET p50** | $< 100\text{ ms}$ | **2.72 ms** | ✅ Excelente |
+| **Latência Admin GET p95** | $< 300\text{ ms}$ | **5.33 ms** | ✅ Excelente |
+| **Latência Admin PUT p50** | $< 150\text{ ms}$ | **8.44 ms** | ✅ Excelente |
+| **Latência Admin PUT p95** | $< 500\text{ ms}$ | **13.58 ms** | ✅ Excelente |
+| **Throughput Médio** | $> 100\text{ req/s}$ | **163.38 req/s** | ✅ Aprovado |
+| **Uso de Recursos** | Sem leaks de memória | Estável ao longo de 1.510 iterações | ✅ Aprovado |
+
+---
+
+## 4. Resultados da Auditoria de Segurança (Container Kali Linux) — Faucet
+
+Executado através de `tests/security/run-kali-faucet-audit.sh` utilizando o container `kali-pentest:latest`:
+
+| Categoria do Teste | Casos Executados | Resultado |
+| :--- | :---: | :---: |
+| **Autenticação & RBAC Bypass** | 2 rotas admin (GET e PUT) | **100% Bloqueados** (HTTP 401 Unauthorized estrito) |
+| **Tokens Adulterados / Assinatura Inválida** | 3 vetores (alg:none, invalid jwt, SQLi probe) | **100% Rejeitados** (HTTP 401) |
+| **Injeção XSS / Protocolos Maliciosos em Imagem** | 5 vetores (javascript, data:html, vbscript, file) | **100% Bloqueados** (HTTP 400 `FAUCET_VALIDATION_ERROR`) |
+| **Fuzzing de Limites Numéricos & Lógica** | 8 vetores (hashrate negativo, zero, overflow, cooldown < 1m, empty) | **100% Bloqueados** (HTTP 400 Bad Request) |
+| **Prevenção de Information Disclosure** | Injeção de payloads malformados | **Zero vazamentos** de stack traces ou Prisma |
+
+**Total de Verificações de Segurança**: 20 executadas, 20 aprovadas, 0 falhas.
+

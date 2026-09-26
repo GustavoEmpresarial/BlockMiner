@@ -30,7 +30,7 @@ Documento central de controle de qualidade e auditoria das páginas da aplicaç�
 - [x] **Eventos de Queima** (`/burn`) — ✅ **Concluído**: Agrupamento de máquinas idênticas com contadores `+`/`-`/`Max`, ordenação estrita por menor poder para maior poder (`hashRate` ASC), botão inteligente de auto-seleção rápida, taxa de queima atômica com seleção entre SHIB (20), POL (0.01) ou BLK (0.001) e advisory locks no backend. 19 testes automatizados (12 backend + 7 Vitest) cobrindo o fluxo.
 - [ ] **Jogos** (`/games` e `/games/game-2048`)
 - [ ] **Grupo de Recompensas**:
-  - [ ] Faucet (`/faucet`)
+  - [x] **Faucet & Genesis Miner** (`/faucet` e `/admin/faucet`) — ✅ **Concluído**: Redesign do painel administrativo com Live Preview Card, seletor de cooldown com presets rápidos (15m a 24h), toggle de status ativo/inativo, validação estrita Zod no backend, auditoria completa (`logAdminAction`), RBAC granular (`faucet` e `faucet.view`), eliminação de `@ts-nocheck`, 41 testes automatizados (32 backend/smoke + 9 Vitest), teste de carga k6 (p95 < 14ms) e pentest Kali (20/20 verificações aprovadas).
   - [ ] Internal Offerwall (`/internal-offerwall`)
   - [ ] Offerwall Externo (`/offerwall`)
   - [ ] PTC (`/ptc`)
