@@ -206,11 +206,11 @@ export function putAdminSidebarNav(entries: unknown) {
 }
 
 export function getAdminFaucetConfig() {
-  return api.get('/admin/faucet/config');
+  return api.get<import('../faucet/adminFaucet.types').AdminFaucetConfigResponse>('/admin/faucet/config');
 }
 
-export function putAdminFaucetConfig(body: unknown) {
-  return api.put('/admin/faucet/config', body);
+export function putAdminFaucetConfig(body: import('../faucet/adminFaucet.types').AdminFaucetConfigInput) {
+  return api.put<import('../faucet/adminFaucet.types').AdminFaucetConfigUpdateResponse>('/admin/faucet/config', body);
 }
 
 export function listAdminCheckinMilestones() {
