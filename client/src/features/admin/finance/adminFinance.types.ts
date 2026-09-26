@@ -29,17 +29,22 @@ export type AdminFinancePendingWithdrawal = {
   collisionHints?: CollisionHints | null;
 };
 
-export type AdminAutoSendStatus = {
-  autoSendEnabled?: boolean;
-  globalPause?: boolean;
-  viaCoinEx?: boolean;
-  mode?: 'auto' | 'manual';
-  cooldownMsRemaining?: number;
-  hotWalletLowBalance?: boolean;
-  hotWalletAddress?: string | null;
-  queue?: { pending?: number; approved?: number; processing?: number };
-  autoSent24h?: number;
-};
+export interface AdminHotWalletStatus {
+  configured: boolean;
+  autoSendEnabled: boolean;
+  globalPause: boolean;
+  viaCoinEx: boolean;
+  address: string | null;
+  balancePol: number | null;
+  minReservePol: number;
+  cooldownMs: number;
+  pendingApprovedCount: number;
+  pendingApprovedPol: number;
+  canCoverPending: boolean | null;
+}
+
+/** Backward compatibility alias for AdminHotWalletStatus. */
+export type AdminAutoSendStatus = AdminHotWalletStatus;
 
 export type AdminFinanceOverview = {
   deposits24h?: number | string | null;
