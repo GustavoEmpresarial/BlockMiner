@@ -161,7 +161,7 @@ export async function adminApproveWithdrawal(req: Request, res: Response): Promi
       oldValue: { status: row.status, amount: String(row.amount), address: row.address, type: row.type },
       newValue: { status: "approved" },
       ipAddress: req.ip,
-      userAgent: req.get("user-agent") || null,
+      userAgent: typeof req.get === "function" ? req.get("user-agent") || null : null,
       success: true,
     }).catch((auditErr: unknown) => {
       log.warn("admin_audit_log failed for withdrawal approve", { error: String(auditErr) });
@@ -208,7 +208,7 @@ export async function adminRejectWithdrawal(req: Request, res: Response): Promis
       oldValue: { status: row.status, amount: String(row.amount), address: row.address, type: row.type },
       newValue: { status: "rejected", refundIssued: true },
       ipAddress: req.ip,
-      userAgent: req.get("user-agent") || null,
+      userAgent: typeof req.get === "function" ? req.get("user-agent") || null : null,
       success: true,
     }).catch((auditErr: unknown) => {
       log.warn("admin_audit_log failed for withdrawal reject", { error: String(auditErr) });
@@ -277,7 +277,7 @@ export async function adminCompleteWithdrawal(req: Request, res: Response): Prom
       oldValue: { status: row.status, amount: String(row.amount), address: row.address, type: row.type },
       newValue: { status: "completed", txHash },
       ipAddress: req.ip,
-      userAgent: req.get("user-agent") || null,
+      userAgent: typeof req.get === "function" ? req.get("user-agent") || null : null,
       success: true,
     }).catch((auditErr: unknown) => {
       log.warn("admin_audit_log failed for withdrawal complete", { error: String(auditErr) });

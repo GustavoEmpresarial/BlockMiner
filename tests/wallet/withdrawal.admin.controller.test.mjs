@@ -57,8 +57,13 @@ function fakeRes() {
   };
 }
 
-function fakeReq({ params = {}, body = {} } = {}) {
-  return { params, body };
+function fakeReq({ params = {}, body = {}, ip = "127.0.0.1" } = {}) {
+  return {
+    params,
+    body,
+    ip,
+    get: (header) => (header === "user-agent" ? "test-agent" : null),
+  };
 }
 
 test.after(async () => {
