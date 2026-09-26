@@ -16,6 +16,7 @@ import {
   User as UserIcon,
   Wallet,
   XCircle,
+  Zap,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
