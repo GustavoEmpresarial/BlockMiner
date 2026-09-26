@@ -164,6 +164,13 @@ export function listPendingWithdrawals() {
   return api.get('/admin/wallet/withdrawals/pending');
 }
 
+/** GET /admin/wallet/hot-wallet — server: wallet.admin.routes.ts -> withdrawal.controller.ts adminGetHotWalletStatus. Returns live hot-wallet balance & auto-send status. */
+export function fetchAdminHotWalletStatus() {
+  return api.get<{ ok: boolean; hotWallet: import('../finance/adminFinance.types').AdminHotWalletStatus }>(
+    '/admin/wallet/hot-wallet'
+  );
+}
+
 /** POST /admin/wallet/withdrawals/:id/approve — server: withdrawal.controller.ts adminApproveWithdrawal. 409 if the row already left "pending" (raced by another admin action). */
 export function approveWithdrawal(id: number | string) {
   return api.post(`/admin/wallet/withdrawals/${id}/approve`);

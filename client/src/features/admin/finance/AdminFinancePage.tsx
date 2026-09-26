@@ -21,10 +21,13 @@ import { toast } from 'sonner';
 import {
   approveWithdrawal,
   completeWithdrawal,
+  fetchAdminHotWalletStatus,
   listPendingWithdrawals,
   readAxiosResponseMessage,
   rejectWithdrawal,
 } from '../lib/admin.api';
+import type { AdminHotWalletStatus } from './adminFinance.types';
+import { HotWalletStatusPanel } from './components/HotWalletStatusPanel';
 
 type WithdrawalRow = {
   id: number | string;
@@ -223,19 +226,38 @@ export default function AdminFinancePage() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [rejectModalTarget, setRejectModalTarget] = useState<WithdrawalRow | null>(null);
+  const [hotWallet, setHotWallet] = useState<AdminHotWalletStatus | null>(null);
+  const [hotWalletLoading, setHotWalletLoading] = useState(false);
+
+  const loadHotWallet = useCallback(async () => {
+    setHotWalletLoading(true);
+    try {
+      const res = await fetchAdminHotWalletStatus();
+      if (res.data.ok && res.data.hotWallet) {
+        setHotWallet(res.data.hotWallet);
+      }
+    } catch {
+      // Non-blocking: failure to fetch hot wallet status does not prevent queue review
+    } finally {
+      setHotWalletLoading(false);
+    }
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await listPendingWithdrawals();
-      const data = res.data as { ok?: boolean; withdrawals?: WithdrawalRow[] };
+      const [resWithdrawals] = await Promise.all([
+        listPendingWithdrawals(),
+        loadHotWallet(),
+      ]);
+      const data = resWithdrawals.data as { ok?: boolean; withdrawals?: WithdrawalRow[] };
       setRows(data.withdrawals ?? []);
     } catch (err) {
       toast.error(readAxiosResponseMessage(err) ?? 'Erro ao carregar saques');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [loadHotWallet]);
 
   useEffect(() => {
     void load();
@@ -506,6 +528,13 @@ export default function AdminFinancePage() {
           </button>
         </div>
       </header>
+
+      {/* Painel de Status da Hot Wallet & Auto-Send */}
+      <HotWalletStatusPanel
+        status={hotWallet}
+        loading={hotWalletLoading}
+        onRefresh={() => void loadHotWallet()}
+      />
 
       {/* Cards de Métricas (KPIs) */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">

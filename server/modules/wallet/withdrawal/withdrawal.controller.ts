@@ -16,6 +16,7 @@ import * as withdrawalRepo from "./withdrawal.repository.js";
 import * as withdrawalService from "./withdrawal.service.js";
 import { getHotWalletPaymentStatus } from "./withdrawal.auto-send.js";
 import { notifyWithdrawalCompleted } from "../../notifications/telegram.service.js";
+import { logAdminAction } from "../../admin/index.js";
 import { logger } from "../../../core/logger/index.js";
 
 const log = logger.child("WithdrawalController");
@@ -147,6 +148,25 @@ export async function adminApproveWithdrawal(req: Request, res: Response): Promi
       res.status(409).json({ ok: false, message: "Withdrawal was already processed by another action" });
       return;
     }
+
+    const adminUser = (req as unknown as { admin?: { id?: number; adminId?: number; email?: string } }).admin;
+    const adminId = adminUser?.adminId ?? adminUser?.id ?? null;
+    void logAdminAction({
+      adminId,
+      adminEmail: adminUser?.email,
+      action: "admin_withdrawal_approved",
+      module: "wallet",
+      resource: "withdrawal",
+      resourceId: String(id),
+      oldValue: { status: row.status, amount: String(row.amount), address: row.address, type: row.type },
+      newValue: { status: "approved" },
+      ipAddress: req.ip,
+      userAgent: req.get("user-agent") || null,
+      success: true,
+    }).catch((auditErr: unknown) => {
+      log.warn("admin_audit_log failed for withdrawal approve", { error: String(auditErr) });
+    });
+
     res.json({ ok: true, message: "Withdrawal approved" });
   } catch (err: unknown) {
     log.error("adminApproveWithdrawal failed", { error: String(err) });
@@ -175,6 +195,25 @@ export async function adminRejectWithdrawal(req: Request, res: Response): Promis
       res.status(409).json({ ok: false, message: "Withdrawal was already processed by another action" });
       return;
     }
+
+    const adminUser = (req as unknown as { admin?: { id?: number; adminId?: number; email?: string } }).admin;
+    const adminId = adminUser?.adminId ?? adminUser?.id ?? null;
+    void logAdminAction({
+      adminId,
+      adminEmail: adminUser?.email,
+      action: "admin_withdrawal_rejected",
+      module: "wallet",
+      resource: "withdrawal",
+      resourceId: String(id),
+      oldValue: { status: row.status, amount: String(row.amount), address: row.address, type: row.type },
+      newValue: { status: "rejected", refundIssued: true },
+      ipAddress: req.ip,
+      userAgent: req.get("user-agent") || null,
+      success: true,
+    }).catch((auditErr: unknown) => {
+      log.warn("admin_audit_log failed for withdrawal reject", { error: String(auditErr) });
+    });
+
     res.json({ ok: true, message: "Withdrawal rejected" });
   } catch (err: unknown) {
     log.error("adminRejectWithdrawal failed", { error: String(err) });
@@ -225,6 +264,25 @@ export async function adminCompleteWithdrawal(req: Request, res: Response): Prom
       status: completed.status,
       createdAt: completed.createdAt,
     }).catch((err: unknown) => log.warn(`notifyWithdrawalCompleted failed for tx ${id}`, { error: String(err) }));
+
+    const adminUser = (req as unknown as { admin?: { id?: number; adminId?: number; email?: string } }).admin;
+    const adminId = adminUser?.adminId ?? adminUser?.id ?? null;
+    void logAdminAction({
+      adminId,
+      adminEmail: adminUser?.email,
+      action: "admin_withdrawal_completed",
+      module: "wallet",
+      resource: "withdrawal",
+      resourceId: String(id),
+      oldValue: { status: row.status, amount: String(row.amount), address: row.address, type: row.type },
+      newValue: { status: "completed", txHash },
+      ipAddress: req.ip,
+      userAgent: req.get("user-agent") || null,
+      success: true,
+    }).catch((auditErr: unknown) => {
+      log.warn("admin_audit_log failed for withdrawal complete", { error: String(auditErr) });
+    });
+
     res.json({ ok: true, message: "Withdrawal marked as completed" });
   } catch (err: unknown) {
     log.error("adminCompleteWithdrawal failed", { error: String(err) });
