@@ -124,10 +124,16 @@ export async function adminListPendingWithdrawals(_req: Request, res: Response):
   }
 }
 
+function parsePositiveIntId(val: unknown): number | null {
+  const n = Number(val);
+  if (!Number.isInteger(n) || n <= 0 || n > 2_147_483_647) return null;
+  return n;
+}
+
 export async function adminApproveWithdrawal(req: Request, res: Response): Promise<void> {
   try {
-    const id = Number(req.params.withdrawalId);
-    if (!Number.isFinite(id)) {
+    const id = parsePositiveIntId(req.params.withdrawalId);
+    if (!id) {
       res.status(400).json({ ok: false, message: "Invalid withdrawal id" });
       return;
     }
@@ -176,8 +182,8 @@ export async function adminApproveWithdrawal(req: Request, res: Response): Promi
 
 export async function adminRejectWithdrawal(req: Request, res: Response): Promise<void> {
   try {
-    const id = Number(req.params.withdrawalId);
-    if (!Number.isFinite(id)) {
+    const id = parsePositiveIntId(req.params.withdrawalId);
+    if (!id) {
       res.status(400).json({ ok: false, message: "Invalid withdrawal id" });
       return;
     }
@@ -223,8 +229,8 @@ export async function adminRejectWithdrawal(req: Request, res: Response): Promis
 
 export async function adminCompleteWithdrawal(req: Request, res: Response): Promise<void> {
   try {
-    const id = Number(req.params.withdrawalId);
-    if (!Number.isFinite(id)) {
+    const id = parsePositiveIntId(req.params.withdrawalId);
+    if (!id) {
       res.status(400).json({ ok: false, message: "Invalid withdrawal id" });
       return;
     }
