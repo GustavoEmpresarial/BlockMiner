@@ -7,13 +7,6 @@ export type FaucetRewardInfo = {
   miner: Miner;
 };
 
-export type FaucetStatusCore = {
-  available: boolean;
-  remainingMs: number;
-  nextClaimAt: Date | null;
-  totalClaims: number;
-};
-
 export type FaucetPartnerState = {
   hasFreshVisit: boolean;
   waitRemainingMs: number;
