@@ -249,12 +249,26 @@ const PRE_BROADCAST_ERROR_CODES = new Set([
   "UNSUPPORTED_OPERATION",
   "NUMERIC_FAULT",
   "UNCONFIGURED_NAME",
+  "REPLACEMENT_UNDERPRICED",
+  "NONCE_EXPIRED",
+  "ACTION_REJECTED",
 ]);
 
 function isDefinitelyNotBroadcast(err: unknown): boolean {
-  const e = err as { code?: unknown; transaction?: { hash?: string } };
+  const e = err as { code?: unknown; transaction?: { hash?: string }; message?: string; shortMessage?: string };
   if (e?.transaction?.hash) return false;
-  return typeof e?.code === "string" && PRE_BROADCAST_ERROR_CODES.has(e.code);
+  if (typeof e?.code === "string" && PRE_BROADCAST_ERROR_CODES.has(e.code)) return true;
+  const msg = (String(e?.message || "") + " " + String(e?.shortMessage || "")).toLowerCase();
+  if (
+    msg.includes("replacement transaction underpriced") ||
+    msg.includes("replacement fee too low") ||
+    msg.includes("nonce too low") ||
+    msg.includes("nonce_expired") ||
+    msg.includes("already known")
+  ) {
+    return true;
+  }
+  return false;
 }
 
 async function recordAutoSendSuccess(tx: ApprovedWithdrawal, via: "hotwallet" | "coinex", txHash: string | null): Promise<void> {
@@ -402,6 +416,13 @@ async function sendViaHotWallet(approved: ApprovedWithdrawal[]): Promise<{ proce
   // Running estimate so we do not re-RPC after every send; refreshed on first insufficient miss.
   let availableWei = hotBalance;
 
+  let currentNonce: number | null = null;
+  try {
+    currentNonce = await wallet.getNonce("pending");
+  } catch {
+    currentNonce = await provider.getTransactionCount(wallet.address, "latest").catch(() => null);
+  }
+
   for (const tx of approved) {
     try {
       if (!tx.address) continue;
@@ -448,8 +469,18 @@ async function sendViaHotWallet(approved: ApprovedWithdrawal[]): Promise<{ proce
         // transaction. Only reached when WITHDRAWAL_AUTO_SEND=true AND a real, funded
         // WITHDRAWAL_PRIVATE_KEY is configured — neither is true in this dev environment.
         // ═══════════════════════════════════════════════════════════════════════════
-        const transactionResponse = await wallet.sendTransaction({ to: tx.address, value: amountWei });
+        const txPayload: { to: string; value: bigint; nonce?: number } = {
+          to: tx.address,
+          value: amountWei,
+        };
+        if (currentNonce != null) {
+          txPayload.nonce = currentNonce;
+        }
+        const transactionResponse = await wallet.sendTransaction(txPayload);
         hash = transactionResponse.hash ?? null;
+        if (currentNonce != null) {
+          currentNonce += 1;
+        }
       } catch (sendErr: unknown) {
         if (isDefinitelyNotBroadcast(sendErr)) {
           await withdrawalRepo.releaseWithdrawalClaim(tx.id);
@@ -463,6 +494,7 @@ async function sendViaHotWallet(approved: ApprovedWithdrawal[]): Promise<{ proce
       await withdrawalRepo.markAutoSendCompleted(tx.id, "completed", hash);
       await recordAutoSendSuccess(tx, "hotwallet", hash);
       processed++;
+      await new Promise((r) => setTimeout(r, 1500));
       // Conservative local debit so the next rows in this tick do not over-commit.
       availableWei = availableWei > amountWei + gasPerTxWei ? availableWei - amountWei - gasPerTxWei : 0n;
     } catch (err: unknown) {
