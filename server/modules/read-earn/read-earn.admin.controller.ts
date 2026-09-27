@@ -3,11 +3,13 @@ import { Prisma } from "@prisma/client";
 import { ZodError } from "zod";
 import * as readEarnAdminRepo from "./read-earn.admin.repository.js";
 import { logger } from "../../core/logger/index.js";
+import { logAdminAction } from "../admin/index.js";
 import {
   READ_EARN_MACHINE,
   REDEMPTIONS_DEFAULT_TAKE,
   REDEMPTIONS_MAX_TAKE,
 } from "./read-earn.errors.js";
+
 import type { ReadEarnCampaignDto } from "./read-earn.types.js";
 import { parseReadEarnCreate, parseReadEarnUpdate } from "./read-earn.schemas.js";
 import { hashReadEarnCode } from "./read-earn.service.js";
@@ -117,7 +119,29 @@ export async function adminCreateReadEarnCampaign(req: Request, res: Response): 
       sortOrder: data.sortOrder,
       isActive: data.isActive,
     });
-    res.json({ ok: true, campaign: mapCampaign(row) });
+    const mapped = mapCampaign(row);
+    void logAdminAction({
+      adminId: req.admin?.adminId,
+      adminEmail: req.admin?.email,
+      sessionId: req.admin?.sessionId,
+      action: "READ_EARN_CAMPAIGN_CREATE",
+      module: "read-earn",
+      resource: "read_earn_campaign",
+      resourceId: String(row.id),
+      newValue: {
+        id: row.id,
+        title: row.title,
+        rewardType: row.rewardType,
+        rewardAmount: Number(row.rewardAmount),
+        startsAt: row.startsAt,
+        expiresAt: row.expiresAt,
+        isActive: row.isActive,
+      },
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"],
+      success: true,
+    });
+    res.json({ ok: true, campaign: mapped });
   } catch (e: unknown) {
     if (e instanceof ZodError) {
       res.status(400).json({ ok: false, message: e.issues?.[0]?.message || "Validation failed." });
@@ -174,7 +198,36 @@ export async function adminUpdateReadEarnCampaign(req: Request, res: Response): 
     if (data.rewardCode) updatePayload.codeHash = await hashReadEarnCode(data.rewardCode);
 
     const row = await readEarnAdminRepo.updateCampaign(id, updatePayload);
-    res.json({ ok: true, campaign: mapCampaign(row) });
+    const mapped = mapCampaign(row);
+    void logAdminAction({
+      adminId: req.admin?.adminId,
+      adminEmail: req.admin?.email,
+      sessionId: req.admin?.sessionId,
+      action: "READ_EARN_CAMPAIGN_UPDATE",
+      module: "read-earn",
+      resource: "read_earn_campaign",
+      resourceId: String(id),
+      oldValue: {
+        title: existing.title,
+        rewardType: existing.rewardType,
+        rewardAmount: Number(existing.rewardAmount),
+        startsAt: existing.startsAt,
+        expiresAt: existing.expiresAt,
+        isActive: existing.isActive,
+      },
+      newValue: {
+        title: row.title,
+        rewardType: row.rewardType,
+        rewardAmount: Number(row.rewardAmount),
+        startsAt: row.startsAt,
+        expiresAt: row.expiresAt,
+        isActive: row.isActive,
+      },
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"],
+      success: true,
+    });
+    res.json({ ok: true, campaign: mapped });
   } catch (e: unknown) {
     if (e instanceof ZodError) {
       res.status(400).json({ ok: false, message: e.issues?.[0]?.message || "Validation failed." });
@@ -206,6 +259,18 @@ export async function adminDeleteReadEarnCampaign(req: Request, res: Response): 
       return;
     }
     await readEarnAdminRepo.deleteCampaign(id);
+    void logAdminAction({
+      adminId: req.admin?.adminId,
+      adminEmail: req.admin?.email,
+      sessionId: req.admin?.sessionId,
+      action: "READ_EARN_CAMPAIGN_DELETE",
+      module: "read-earn",
+      resource: "read_earn_campaign",
+      resourceId: String(id),
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"],
+      success: true,
+    });
     res.json({ ok: true });
   } catch (e: unknown) {
     if (errCode(e) === "P2025") {
