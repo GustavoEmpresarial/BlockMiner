@@ -35,7 +35,7 @@ Documento central de controle de qualidade e auditoria das páginas da aplicaç�
   - [ ] Offerwall Externo (`/offerwall`)
   - [ ] PTC (`/ptc`)
   - [ ] Shortlinks (`/shortlinks`)
-  - [ ] Read & Earn (`/read-earn`)
+  - [x] **Read & Earn** (`/read-earn` e `/admin/read-earn`) — ✅ **Concluído em Produção**: Eliminação de `@ts-nocheck` em massa, tipagem estrita de DTOs e contratos compartilhados, modal inline de confirmação de exclusão (sem `window.confirm`), paginação dinâmica no histórico de resgates, RBAC granular (`read_earn` e `read_earn.view`), auditoria completa com `logAdminAction` em `admin_audit_logs`, hash seguro bcrypt com custo 12, 43 testes verdes (100% aprovados), carga k6 sob 15 VUs a 308 req/s (p95 < 6ms, zero 5xx) e pentest Kali (20/20 verificações aprovadas).
   - [ ] YouTube Watch (`/youtube`)
   - [ ] Auto-Mining (`/auto-mining`)
 
@@ -60,6 +60,8 @@ Documento central de controle de qualidade e auditoria das páginas da aplicaç�
 | **Banners do Dashboard** (`/admin/banners`) | ✅ **Concluído em Produção** | 64 testes (29 backend + 35 Vitest) + Carga k6 + Pentest Kali | Validação Zod com bloqueio de URIs maliciosas (`javascript:`, `data:`), RBAC granular (`banners` e `banners.view`), persistência em `AdminAuditLog`, taxa de erro 0.00% em carga (219 req/s) e compatibilidade total. |
 | **Torneios & Ligas** (`/admin/tournaments`) | ✅ **Concluído em Produção** | 127 testes (96 backend + 31 Vitest) + Carga k6 + Pentest Kali | Remoção de script de redirect que causava loop na home, correção de 8 erros TS de drift, extração de componentes modulares (`TournamentCard`, `TournamentForm`, etc.), confirmação inline sem `window.confirm`, paginação no leaderboard, RBAC granular (`tournaments` e `tournaments.view`), auditoria em `AdminAuditLog` e taxa de erro 0.00% em carga (334 req/s). |
 | **Faucet (Genesis Miner)** (`/admin/faucet`) | ✅ **Concluído em Produção** | 41 testes (32 backend + 9 Vitest) + Carga k6 + Pentest Kali | Alinhamento com regra de poder temporário, Live Preview do raio de poder, seletor de cooldown rápido (15m a 24h), Zod schemas estritos, RBAC granular (`faucet`), auditoria em `AdminAuditLog` e taxa de erro 0.00% em carga (163 req/s). |
-| **Financeiro & Saques** (`/admin/finance`) | 🚀 **Pronto para Deploy** | 54 testes (48 backend + 6 Vitest) + Carga k6 + Pentest Kali | Criação direta com status `approved` (sem necessidade de aprovação manual para auto-send), painel dinâmico da Hot Wallet com saldo POL ao vivo e cobertura da fila, RBAC granular (`withdrawals` e `finance`), auditoria em `admin_audit_logs`, cache RPC de 5s (latência p95 de 22ms) e pentest Kali (18/18 aprovados). |
+| **Financeiro & Saques** (`/admin/finance`) | ✅ **Concluído em Produção** | 54 testes (48 backend + 6 Vitest) + Carga k6 + Pentest Kali | Criação direta com status `approved` (sem necessidade de aprovação manual para auto-send), painel dinâmico da Hot Wallet com saldo POL ao vivo e cobertura da fila, RBAC granular (`withdrawals` e `finance`), auditoria em `admin_audit_logs`, cache RPC de 5s (latência p95 de 22ms) e pentest Kali (18/18 aprovados). |
+| **Read & Earn** (`/admin/read-earn`) | ✅ **Concluído em Produção** | 43 testes backend/smoke + Carga k6 + Pentest Kali | Eliminação de `@ts-nocheck` e números mágicos, DTOs compartilhados, modal inline para exclusão, paginação dinâmica na listagem de resgates, RBAC granular (`read_earn` e `read_earn.view`), auditoria `logAdminAction`, bcrypt custo 12, carga k6 a 308 req/s (p95 < 6ms, 0.00% 5xx) e pentest Kali (20/20). |
+
 
 
