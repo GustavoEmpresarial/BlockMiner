@@ -52,3 +52,54 @@ export type CreateTierInput = {
 };
 
 export type UpdateTierInput = Partial<CreateTierInput>;
+
+// ── Shared API DTOs ─────────────────────────────────────────────────────────
+
+export interface PtcSettingsDto {
+  id?: number;
+  pricePerViewShib: string | number;
+  rewardPerViewShib: string | number;
+  minDurationSeconds: number;
+  maxDurationSeconds: number;
+  minViews: number;
+  maxViews: number;
+  isEnabled: boolean;
+}
+
+export interface PtcTierDto {
+  id: number;
+  label: string;
+  adType: "window" | "iframe" | string;
+  durationSeconds: number;
+  pricePerViewShib: string | number;
+  rewardPerViewShib: string | number;
+  isActive: boolean;
+  sortOrder: number;
+}
+
+export interface PtcCampaignUserSnippet {
+  id: number;
+  name: string;
+  email: string;
+}
+
+export interface PtcCampaignDto {
+  id: number;
+  userId: number;
+  tierId: number | null;
+  title: string;
+  description: string;
+  url: string;
+  hash: string;
+  adType: string;
+  durationSeconds: number;
+  createdAt: Date | string;
+  status: string;
+  rejectionReason: string | null;
+  views: number;
+  targetViews: number;
+  costShib: string | number;
+  rewardPerViewShib: string | number;
+  user?: PtcCampaignUserSnippet;
+}
+
