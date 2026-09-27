@@ -7,41 +7,9 @@ import {
   Globe, PlayCircle,
 } from 'lucide-react';
 import { useUtcDailyResetCountdown } from '../../../shared/hooks/useUtcDailyResetCountdown';
+import type { PtcAd, PtcDailyReset, PtcSettings, SessionApiResponse } from '../ptc.types';
 
-// ── Types ─────────────────────────────────────────────────────────────────────
-
-
-export interface PtcAd {
-  id: number;
-  title: string;
-  description?: string;
-  url: string;
-  adType: 'iframe' | 'window';
-  durationSeconds: number;
-  rewardPerViewShib: string;
-  views?: number;
-  targetViews?: number;
-  viewedToday?: boolean;
-  availableToday?: boolean;
-}
-
-export interface PtcDailyReset {
-  utcDate: string;
-  nextResetAt: string;
-  nextResetInMs: number;
-}
-
-export interface PtcSettings {
-  rewardPerViewShib: string;
-  isEnabled: boolean;
-}
-
-export interface SessionApiResponse {
-  id: string;
-  status: string;
-  accumulatedMs: number;
-  ad: PtcAd;
-}
+export type { PtcAd, PtcDailyReset, PtcSettings, SessionApiResponse };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 

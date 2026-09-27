@@ -48,6 +48,33 @@ export interface PtcCampaign {
   user?: PtcCampaignUser;
 }
 
+export interface PtcAd {
+  id: number;
+  title: string;
+  description?: string;
+  url: string;
+  adType: 'iframe' | 'window';
+  durationSeconds: number;
+  rewardPerViewShib: string;
+  views?: number;
+  targetViews?: number;
+  viewedToday?: boolean;
+  availableToday?: boolean;
+}
+
+export interface PtcDailyReset {
+  utcDate: string;
+  nextResetAt: string;
+  nextResetInMs: number;
+}
+
+export interface SessionApiResponse {
+  id: string;
+  status: string;
+  accumulatedMs: number;
+  ad: PtcAd;
+}
+
 export interface PtcSettingsApiResponse {
   ok: boolean;
   settings?: PtcSettings;

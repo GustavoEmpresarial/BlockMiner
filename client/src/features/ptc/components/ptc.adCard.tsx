@@ -28,8 +28,6 @@ import {
 import type {
   PtcAd,
   PtcDailyReset,
-  PtcSettings,
-  SessionApiResponse,
 } from './ptc.shared';
 
 export interface AdCardProps {
