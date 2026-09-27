@@ -228,15 +228,16 @@ export async function addViews(userId: number, adId: number, extraViews: number)
   let pricePerView: InstanceType<typeof Decimal>;
   if (ad.tierId) {
     const tier = await repo.getTierById(ad.tierId);
-    pricePerView = new Decimal(tier ? tier.pricePerViewShib.toString() : ad.costShib.toString()).div(
-      ad.targetViews || 1,
-    );
+    pricePerView = tier
+      ? new Decimal(tier.pricePerViewShib.toString())
+      : (ad.targetViews > 0 ? new Decimal(ad.costShib.toString()).div(ad.targetViews) : new Decimal(settings.pricePerViewShib.toString()));
   } else {
     pricePerView =
       ad.targetViews > 0
         ? new Decimal(ad.costShib.toString()).div(ad.targetViews)
         : new Decimal(settings.pricePerViewShib.toString());
   }
+
   const costShib = pricePerView.mul(extraViews);
 
   await prisma.$transaction(async (tx) => {
