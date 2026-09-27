@@ -90,6 +90,7 @@ import { startSupportRetentionCron } from "../cron/support-retention.cron.js";
 import { startExpiredPowersCleanupCron } from "../cron/expired-powers-cleanup.cron.js";
 import { startUserCountSnapshotCron } from "../cron/user-count-snapshot.cron.js";
 import { startEventOutboxPublisherCronFromBootstrap } from "../cron/event-outbox-publisher.cron.js";
+import { startBackupCron } from "../cron/backup.cron.js";
 const log = logger.child("Bootstrap");
 export function createApp() {
     const app = express();
@@ -324,6 +325,7 @@ async function main() {
     const expiredPowersCleanupCron = startExpiredPowersCleanupCron();
     const userCountSnapshotCron = startUserCountSnapshotCron();
     const eventOutboxPublisherCron = startEventOutboxPublisherCronFromBootstrap();
+    const backupCron = startBackupCron();
     async function shutdown(signal) {
         log.info(`Received ${signal}, shutting down`);
         miningCron.stop();
@@ -347,6 +349,7 @@ async function main() {
         expiredPowersCleanupCron.stop();
         userCountSnapshotCron.stop();
         eventOutboxPublisherCron.stop();
+        backupCron.stop();
         server.close(() => log.info("HTTP server closed"));
         await prisma.$disconnect().catch(() => undefined);
         await shutdownRedis().catch(() => undefined);

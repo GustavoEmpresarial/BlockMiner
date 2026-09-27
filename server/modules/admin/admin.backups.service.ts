@@ -784,6 +784,11 @@ export async function deleteSqlBackup(filename: unknown): Promise<void> {
   const full = path.join(backupsDir, safe);
   await fs.unlink(full);
   try {
+    await fs.unlink(path.join(backupsDir, `${safe}.gz`));
+  } catch {
+    /* ignore */
+  }
+  try {
     await fs.unlink(metaPathForSqlFile(backupsDir, safe));
   } catch {
     /* ignore */
@@ -794,4 +799,26 @@ export async function deleteSqlBackup(filename: unknown): Promise<void> {
     /* ignore */
   }
 }
+
+export async function pruneOldBackups(retentionDays = 7): Promise<number> {
+  const { backups } = await listSqlBackups();
+  if (backups.length <= 1) return 0; // always keep at least 1 backup
+  const cutoffTime = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
+  let pruned = 0;
+  // backups are sorted newest first; we keep at least the newest backup
+  for (let i = 1; i < backups.length; i++) {
+    const b = backups[i];
+    const createdTime = new Date(b.created).getTime();
+    if (createdTime < cutoffTime || i >= retentionDays) {
+      try {
+        await deleteSqlBackup(b.name);
+        pruned++;
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+  return pruned;
+}
+
 

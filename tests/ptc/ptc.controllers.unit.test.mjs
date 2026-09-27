@@ -174,7 +174,7 @@ test("user.controller: authenticated routes reject unauthenticated requests", as
   }
 });
 
-test("user.controller: getEarningsHistory and getAvailableAds with authenticated user", async () => {
+test("user.controller: getEarningsHistory, getAvailableAds and getActiveSession with authenticated user", async () => {
   const mockUser = { id: 999999 };
   const req = { user: mockUser };
 
@@ -187,6 +187,10 @@ test("user.controller: getEarningsHistory and getAvailableAds with authenticated
   await userCtrl.getAvailableAds(req, resAds);
   assert.equal(resAds.getStatusCode(), 200);
   assert.ok(resAds.getData()?.daily);
+
+  const resSession = createMockRes();
+  await userCtrl.getActiveSession(req, resSession);
+  assert.equal(resSession.getStatusCode(), 200);
 });
 
 
@@ -204,3 +208,50 @@ test("user.controller: editCampaign, addViews, removeViews reject invalid ID", a
   await userCtrl.removeViews({ user: mockUser, params: { id: "bad" }, body: { views: 10 } }, resRemove);
   assert.equal(resRemove.getStatusCode(), 400);
 });
+
+test("user.controller: schema validation failures return 400 Bad Request", async () => {
+  const mockUser = { id: 1 };
+
+  // createCampaign with invalid schema
+  const resCreate = createMockRes();
+  await userCtrl.createCampaign({ user: mockUser, body: { title: "" } }, resCreate);
+  assert.equal(resCreate.getStatusCode(), 400);
+  assert.equal(resCreate.getData()?.message, "Invalid campaign payload.");
+
+  // editCampaign with invalid schema
+  const resEditBad = createMockRes();
+  await userCtrl.editCampaign({ user: mockUser, params: { id: "10" }, body: { title: 123 } }, resEditBad);
+  assert.equal(resEditBad.getStatusCode(), 400);
+
+  // addViews and removeViews with invalid views schema
+  const resAddBad = createMockRes();
+  await userCtrl.addViews({ user: mockUser, params: { id: "10" }, body: { views: -5 } }, resAddBad);
+  assert.equal(resAddBad.getStatusCode(), 400);
+
+  const resRemoveBad = createMockRes();
+  await userCtrl.removeViews({ user: mockUser, params: { id: "10" }, body: { views: 0 } }, resRemoveBad);
+  assert.equal(resRemoveBad.getStatusCode(), 400);
+
+  // startSession with missing adId
+  const resStart = createMockRes();
+  await userCtrl.startSession({ user: mockUser, body: { adId: -1 } }, resStart);
+  assert.equal(resStart.getStatusCode(), 400);
+
+  // heartbeat / pause / cancel / claim with non-existent session triggers sendServiceError
+  const resHb = createMockRes();
+  await userCtrl.heartbeat({ user: mockUser, params: { sessionId: "non-existent" } }, resHb);
+  assert.equal(resHb.getStatusCode(), 400);
+
+  const resPause = createMockRes();
+  await userCtrl.pauseSession({ user: mockUser, params: { sessionId: "non-existent" } }, resPause);
+  assert.equal(resPause.getStatusCode(), 400);
+
+  const resCancel = createMockRes();
+  await userCtrl.cancelSession({ user: mockUser, params: { sessionId: "non-existent" }, body: {} }, resCancel);
+  assert.equal(resCancel.getStatusCode(), 200); // cancelSession catches gracefully
+
+  const resClaim = createMockRes();
+  await userCtrl.claimSession({ user: mockUser, params: { sessionId: "non-existent" } }, resClaim);
+  assert.equal(resClaim.getStatusCode(), 400);
+});
+

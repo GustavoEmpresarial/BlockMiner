@@ -27,7 +27,13 @@ test("PTC End-to-End Smoke Test: Campaign lifecycle, Telegram alert, and reward 
   let secondCampaignId = null;
 
   try {
-    // 1. Setup usuários de teste
+    // 1. Setup configurações e usuários de teste
+    await prisma.ptcSettings.upsert({
+      where: { id: 1 },
+      create: { id: 1, isEnabled: true, minViews: 100, maxViews: 1000000 },
+      update: { isEnabled: true, minViews: 100, maxViews: 1000000 },
+    });
+
     advertiser = await prisma.user.create({
       data: {
         email: `ptc-adv-${timestamp}@blockminer.test`,
