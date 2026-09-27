@@ -326,6 +326,9 @@ export async function verifyBackupIntegrity(filename: unknown): Promise<BackupIn
 
     const isValid = sizeOk && bundleOk !== false && metaObj?.integrityStatus === "valid";
     const report: BackupIntegrityReport = {
+      filename: safe,
+      sizeBytes: Number(metaObj?.sizeBytes) || statGz.size,
+      sha256: typeof metaObj?.sha256 === "string" ? metaObj.sha256 : "",
       status: isValid ? "valid" : "corrupted",
       ok: isValid,
       verifiedAt: new Date().toISOString(),
