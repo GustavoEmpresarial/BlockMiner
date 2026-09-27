@@ -163,27 +163,27 @@ export async function createCampaign(userId: number, input: CreateCampaignInput)
   });
 
   if (createdAd) {
-    void createGenericTelegramOutboxEvent(
-      TELEGRAM_EVENT_TYPES.PTC_CAMPAIGN_SUBMITTED,
-      {
-        campaignId: createdAd.id,
-        title: createdAd.title,
-        url: createdAd.url,
-        targetViews: createdAd.targetViews,
-        durationSeconds: createdAd.durationSeconds,
-        adType: createdAd.adType,
-        costShib: createdAd.costShib.toString(),
-        createdAt: createdAd.createdAt,
-      },
-      { userId, usernameSnapshot: advertiserUsername },
-    )
-      .then(() => {
-        void runTelegramOutboxTick().catch(() => {});
-      })
-      .catch((err) => {
-        log.warn("ptc.telegram_notify_failed", { error: String(err), adId: createdAd.id });
-      });
+    try {
+      await createGenericTelegramOutboxEvent(
+        TELEGRAM_EVENT_TYPES.PTC_CAMPAIGN_SUBMITTED,
+        {
+          campaignId: createdAd.id,
+          title: createdAd.title,
+          url: createdAd.url,
+          targetViews: createdAd.targetViews,
+          durationSeconds: createdAd.durationSeconds,
+          adType: createdAd.adType,
+          costShib: createdAd.costShib.toString(),
+          createdAt: createdAd.createdAt,
+        },
+        { userId, usernameSnapshot: advertiserUsername },
+      );
+      void runTelegramOutboxTick().catch(() => {});
+    } catch (err: unknown) {
+      log.warn("ptc.telegram_notify_failed", { error: String(err), adId: createdAd.id });
+    }
   }
+
 
 
   return createdAd;
