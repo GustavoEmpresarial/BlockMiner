@@ -16,39 +16,23 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { api } from '../../../shared/auth/auth.store';
-import { readAxiosResponseMessage } from '../lib/admin.api';
+import { readAxiosResponseMessage, readAxiosResponseCode } from '../lib/admin.api';
+import type {
+  ReadEarnCampaignRow,
+  ReadEarnRedemptionRow,
+  ReadEarnCampaignsResponse as CampaignsListResponse,
+  ReadEarnRedemptionsResponse as RedemptionsListResponse,
+  MutateCampaignResponse,
+  SaveCampaignBody,
+} from '../../read-earn/read-earn.types';
 
 const MS_PER_DAY = 86_400_000;
 const DEFAULT_CAMPAIGN_DURATION_DAYS = 30;
 const REDEMPTIONS_DEFAULT_TAKE = 50;
 
-type ReadEarnCampaignRow = {
-  id: number;
-  title: string;
-  partnerUrl: string;
-  rewardType: string;
-  rewardAmount: number;
-  rewardMinerId?: number | null;
-  hashrateValidityDays?: number;
-  startsAt: string;
-  expiresAt: string;
-  maxRedemptions?: number | null;
-  sortOrder?: number;
-  isActive?: boolean;
-  redemptionCount?: number;
-};
-
 type AdminMinerRow = {
   id: number;
   name: string;
-};
-
-type ReadEarnRedemptionRow = {
-  id: number;
-  username?: string | null;
-  email?: string | null;
-  userId?: number;
-  redeemedAt: string;
 };
 
 type ReadEarnFormState = {
@@ -66,80 +50,19 @@ type ReadEarnFormState = {
   isActive: boolean;
 };
 
-type CampaignsListResponse = {
-  ok?: boolean;
-  campaigns?: ReadEarnCampaignRow[];
-  code?: string;
-  message?: string;
-};
-
 type MinersListResponse = {
   ok?: boolean;
   miners?: AdminMinerRow[];
 };
 
-type RedemptionsListResponse = {
-  ok?: boolean;
-  redemptions?: ReadEarnRedemptionRow[];
-  total?: number;
-  take?: number;
-  skip?: number;
-  message?: string;
-};
-
-type MutateCampaignResponse = {
-  ok?: boolean;
-  message?: string;
-  code?: string;
-};
-
-type SaveCampaignBody = {
-  title: string;
-  partnerUrl: string;
-  rewardType: string;
-  rewardAmount: number;
-  hashrateValidityDays: number;
-  startsAt: string;
-  expiresAt: string;
-  sortOrder: number;
-  isActive: boolean;
-  maxRedemptions?: number | null;
-  rewardMinerId?: number | null;
-  rewardCode?: string;
-};
-
-function readAdminReadEarnErrorPayload(errLike: unknown): { code?: string; message?: string } | undefined {
-  if (typeof errLike !== 'object' || errLike === null) return undefined;
-  let data: unknown;
-  if (
-    'response' in errLike &&
-    typeof (errLike as { response?: unknown }).response === 'object' &&
-    (errLike as { response?: unknown }).response !== null
-  ) {
-    const resp = (errLike as { response: { data?: unknown } }).response;
-    data = resp.data;
-  } else if ('data' in errLike) {
-    data = (errLike as { data?: unknown }).data;
-  } else {
-    return undefined;
-  }
-  if (typeof data !== 'object' || data === null) return undefined;
-  const codeRaw = 'code' in data ? (data as { code?: unknown }).code : undefined;
-  const messageRaw = 'message' in data ? (data as { message?: unknown }).message : undefined;
-  const code = typeof codeRaw === 'string' ? codeRaw : undefined;
-  const message = typeof messageRaw === 'string' ? messageRaw : undefined;
-  if (code === undefined && message === undefined) return undefined;
-  return { code, message };
-}
-
 function adminReadEarnErrMessage(errLike: unknown, t: TFunction, fallbackKey: string): string {
-  const payload = readAdminReadEarnErrorPayload(errLike);
-  if (payload?.code === 'READ_EARN_DB_PENDING') return t('adminReadEarn.migration_pending');
-  if (payload?.message) return payload.message;
-  const fromAxios = readAxiosResponseMessage(errLike);
-  if (fromAxios) return fromAxios;
+  const code = readAxiosResponseCode(errLike);
+  if (code === 'READ_EARN_DB_PENDING') return t('adminReadEarn.migration_pending');
+  const message = readAxiosResponseMessage(errLike);
+  if (message) return message;
   return t(fallbackKey);
 }
+
 
 function toLocalInput(iso: string | undefined | null): string {
   if (!iso) return '';

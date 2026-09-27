@@ -8,28 +8,11 @@ import {
   REDEMPTIONS_DEFAULT_TAKE,
   REDEMPTIONS_MAX_TAKE,
 } from "./read-earn.errors.js";
+import type { ReadEarnCampaignDto } from "./read-earn.types.js";
 import { parseReadEarnCreate, parseReadEarnUpdate } from "./read-earn.schemas.js";
 import { hashReadEarnCode } from "./read-earn.service.js";
 
 const log = logger.child("read-earn.admin.controller");
-
-export interface AdminReadEarnCampaignDto {
-  id: number;
-  title: string;
-  partnerUrl: string;
-  rewardType: string;
-  rewardAmount: number;
-  rewardMinerId: number | null;
-  hashrateValidityDays: number;
-  startsAt: Date;
-  expiresAt: Date;
-  isActive: boolean;
-  maxRedemptions: number | null;
-  sortOrder: number;
-  redemptionCount: number;
-  createdAt: Date;
-  updatedAt: Date;
-}
 
 function parsePositiveIntId(val: unknown): number | null {
   const n = Number(val);
@@ -71,7 +54,7 @@ interface RawCampaignRow {
   redemptionCount?: number;
 }
 
-function mapCampaign(row: unknown): AdminReadEarnCampaignDto | null {
+function mapCampaign(row: unknown): ReadEarnCampaignDto | null {
   if (!row || typeof row !== "object") return null;
   const r = row as RawCampaignRow;
   const redemptionCount = r._count?.redemptions ?? r.redemptionCount ?? 0;

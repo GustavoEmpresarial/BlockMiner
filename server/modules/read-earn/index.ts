@@ -18,4 +18,15 @@ export {
   type ReadEarnRewardSnapshot,
   type RedeemReadEarnCampaignParams,
 } from "./read-earn.service.js";
+export {
+  type ReadEarnCampaignDto,
+  type ReadEarnPublicCampaignDto,
+  type ReadEarnRedemptionDto,
+  type ReadEarnCampaignsApiResponse,
+  type ReadEarnPublicCampaignsResponse,
+  type ReadEarnRedemptionsApiResponse,
+  type ReadEarnRedeemApiResponse,
+  type ReadEarnRewardSnapshotDto,
+} from "./read-earn.types.js";
+
 

@@ -65,6 +65,18 @@ export function readAxiosResponseMessage(err: unknown): string | undefined {
   return typeof message === 'string' ? message : undefined;
 }
 
+/** Safe `response.data.code` from an axios-like error object (no `any`). */
+export function readAxiosResponseCode(err: unknown): string | undefined {
+  if (typeof err !== 'object' || err === null) return undefined;
+  const response = 'response' in err ? (err as { response?: unknown }).response : undefined;
+  if (typeof response !== 'object' || response === null) return undefined;
+  const data = 'data' in response ? (response as { data?: unknown }).data : undefined;
+  if (typeof data !== 'object' || data === null) return undefined;
+  const code = 'code' in data ? (data as { code?: unknown }).code : undefined;
+  return typeof code === 'string' ? code : undefined;
+}
+
+
 export function listAdminSupportMessages(params: { page?: number; limit?: number; userId?: number; archived?: boolean }) {
   const query: Record<string, string | number> = {};
   if (params.page != null) query.page = params.page;
