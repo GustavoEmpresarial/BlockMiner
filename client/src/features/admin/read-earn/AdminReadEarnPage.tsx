@@ -10,22 +10,29 @@ import {
   Save,
   Loader2,
   Users,
-  BookOpen
+  BookOpen,
+  ChevronLeft,
+  ChevronRight,
+  AlertTriangle,
 } from 'lucide-react';
 import { api } from '../../../shared/auth/auth.store';
 import { readAxiosResponseMessage } from '../lib/admin.api';
+
+const MS_PER_DAY = 86_400_000;
+const DEFAULT_CAMPAIGN_DURATION_DAYS = 30;
+const REDEMPTIONS_DEFAULT_TAKE = 50;
 
 type ReadEarnCampaignRow = {
   id: number;
   title: string;
   partnerUrl: string;
-  rewardType?: string;
-  rewardAmount?: unknown;
-  rewardMinerId?: unknown;
+  rewardType: string;
+  rewardAmount: number;
+  rewardMinerId?: number | null;
   hashrateValidityDays?: number;
   startsAt: string;
   expiresAt: string;
-  maxRedemptions?: unknown;
+  maxRedemptions?: number | null;
   sortOrder?: number;
   isActive?: boolean;
   redemptionCount?: number;
@@ -75,6 +82,8 @@ type RedemptionsListResponse = {
   ok?: boolean;
   redemptions?: ReadEarnRedemptionRow[];
   total?: number;
+  take?: number;
+  skip?: number;
   message?: string;
 };
 
@@ -147,7 +156,7 @@ function fromLocalInput(s: string | undefined | null): string {
 
 function defaultForm(): ReadEarnFormState {
   const now = new Date();
-  const later = new Date(now.getTime() + 30 * 86400000);
+  const later = new Date(now.getTime() + DEFAULT_CAMPAIGN_DURATION_DAYS * MS_PER_DAY);
   return {
     title: '',
     partnerUrl: 'https://',
@@ -160,7 +169,7 @@ function defaultForm(): ReadEarnFormState {
     expiresAt: toLocalInput(later.toISOString()),
     maxRedemptions: '',
     sortOrder: 0,
-    isActive: true
+    isActive: true,
   };
 }
 
@@ -172,10 +181,14 @@ export default function AdminReadEarn() {
   const [editingId, setEditingId] = useState<number | 'new' | null>(null);
   const [form, setForm] = useState<ReadEarnFormState>(defaultForm);
   const [saving, setSaving] = useState(false);
+  const [confirmDeleteCampaign, setConfirmDeleteCampaign] = useState<ReadEarnCampaignRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
   const [redemptionsCampaign, setRedemptionsCampaign] = useState<ReadEarnCampaignRow | null>(null);
   const [redemptions, setRedemptions] = useState<ReadEarnRedemptionRow[]>([]);
   const [redemptionsTotal, setRedemptionsTotal] = useState(0);
   const [redemptionsLoading, setRedemptionsLoading] = useState(false);
+  const [redemptionsSkip, setRedemptionsSkip] = useState(0);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -229,11 +242,14 @@ export default function AdminReadEarn() {
     setForm(defaultForm());
   };
 
-  const loadRedemptions = async (c: ReadEarnCampaignRow) => {
+  const loadRedemptions = async (c: ReadEarnCampaignRow, skip = 0) => {
     setRedemptionsCampaign(c);
+    setRedemptionsSkip(skip);
     setRedemptionsLoading(true);
     try {
-      const res = await api.get<RedemptionsListResponse>(`/admin/read-earn/campaigns/${c.id}/redemptions?take=50`);
+      const res = await api.get<RedemptionsListResponse>(
+        `/admin/read-earn/campaigns/${c.id}/redemptions?skip=${skip}&take=${REDEMPTIONS_DEFAULT_TAKE}`
+      );
       if (res.data?.ok) {
         setRedemptions(res.data.redemptions || []);
         setRedemptionsTotal(res.data.total ?? 0);
@@ -309,8 +325,14 @@ export default function AdminReadEarn() {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!window.confirm(t('adminReadEarn.confirm_delete'))) return;
+  const confirmDelete = (row: ReadEarnCampaignRow) => {
+    setConfirmDeleteCampaign(row);
+  };
+
+  const executeDelete = async () => {
+    if (!confirmDeleteCampaign) return;
+    const id = confirmDeleteCampaign.id;
+    setDeleting(true);
     try {
       await api.delete(`/admin/read-earn/campaigns/${id}`);
       toast.success(t('adminReadEarn.toast_deleted'));
@@ -319,9 +341,12 @@ export default function AdminReadEarn() {
         setRedemptionsCampaign(null);
         setRedemptions([]);
       }
+      setConfirmDeleteCampaign(null);
       await load();
     } catch (e: unknown) {
       toast.error(adminReadEarnErrMessage(e, t, 'adminReadEarn.toast_delete_error'));
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -574,7 +599,7 @@ export default function AdminReadEarn() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleDelete(r.id)}
+                      onClick={() => confirmDelete(r)}
                       className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-slate-800"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -589,8 +614,8 @@ export default function AdminReadEarn() {
       )}
 
       {redemptionsCampaign && (
-        <div className="rounded-2xl border border-slate-700 bg-slate-900/60 p-6">
-          <div className="flex items-center justify-between mb-4">
+        <div className="rounded-2xl border border-slate-700 bg-slate-900/60 p-6 space-y-4">
+          <div className="flex items-center justify-between">
             <h3 className="font-bold text-white flex items-center gap-2">
               <Users className="w-5 h-5 text-amber-500" />
               {t('adminReadEarn.redemptions')}: {redemptionsCampaign.title}
@@ -612,22 +637,90 @@ export default function AdminReadEarn() {
           ) : redemptions.length === 0 ? (
             <p className="text-slate-500 text-sm">{t('adminReadEarn.redemptions_empty')}</p>
           ) : (
-            <ul className="space-y-2 max-h-64 overflow-y-auto text-sm">
-              {redemptions.map((x) => (
-                <li
-                  key={x.id}
-                  className="flex flex-wrap justify-between gap-2 border border-slate-800 rounded-lg px-3 py-2"
-                >
-                  <span className="text-slate-300">
-                    {t('adminReadEarn.user')}: {x.username || x.email || `#${x.userId}`}
+            <div className="space-y-4">
+              <ul className="space-y-2 max-h-64 overflow-y-auto text-sm">
+                {redemptions.map((x) => (
+                  <li
+                    key={x.id}
+                    className="flex flex-wrap justify-between gap-2 border border-slate-800 rounded-lg px-3 py-2"
+                  >
+                    <span className="text-slate-300">
+                      {t('adminReadEarn.user')}: {x.username || x.email || `#${x.userId}`}
+                    </span>
+                    <span className="text-slate-500 text-xs">
+                      {t('adminReadEarn.redeemed_at')}: {new Date(x.redeemedAt).toLocaleString()}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              {redemptionsTotal > REDEMPTIONS_DEFAULT_TAKE && (
+                <div className="flex items-center justify-between pt-2 border-t border-slate-800 text-xs text-slate-400">
+                  <span>
+                    {redemptionsSkip + 1}–{Math.min(redemptionsSkip + REDEMPTIONS_DEFAULT_TAKE, redemptionsTotal)} de {redemptionsTotal}
                   </span>
-                  <span className="text-slate-500 text-xs">
-                    {t('adminReadEarn.redeemed_at')}: {new Date(x.redeemedAt).toLocaleString()}
-                  </span>
-                </li>
-              ))}
-            </ul>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={redemptionsSkip === 0 || redemptionsLoading}
+                      onClick={() => loadRedemptions(redemptionsCampaign, Math.max(0, redemptionsSkip - REDEMPTIONS_DEFAULT_TAKE))}
+                      className="p-1.5 rounded-lg border border-slate-800 hover:bg-slate-800 disabled:opacity-40"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      disabled={redemptionsSkip + REDEMPTIONS_DEFAULT_TAKE >= redemptionsTotal || redemptionsLoading}
+                      onClick={() => loadRedemptions(redemptionsCampaign, redemptionsSkip + REDEMPTIONS_DEFAULT_TAKE)}
+                      className="p-1.5 rounded-lg border border-slate-800 hover:bg-slate-800 disabled:opacity-40"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
+        </div>
+      )}
+
+      {confirmDeleteCampaign && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-red-500/30 bg-slate-900 p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center gap-3 text-red-400">
+              <AlertTriangle className="w-6 h-6 shrink-0" />
+              <h3 className="font-bold text-white text-lg">
+                {t('adminReadEarn.confirm_delete_title', 'Excluir Campanha')}
+              </h3>
+            </div>
+            <p className="text-sm text-slate-300">
+              {t(
+                'adminReadEarn.confirm_delete_desc',
+                'Tem certeza que deseja excluir esta campanha? Esta ação não pode ser desfeita.'
+              )}
+            </p>
+            <div className="p-3 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-400">
+              <span className="font-bold text-white">{confirmDeleteCampaign.title}</span> (ID: #{confirmDeleteCampaign.id})
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={() => setConfirmDeleteCampaign(null)}
+                className="px-4 py-2 rounded-xl text-slate-400 hover:text-white text-sm"
+              >
+                {t('adminReadEarn.cancel', 'Cancelar')}
+              </button>
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={executeDelete}
+                className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-semibold disabled:opacity-50"
+              >
+                {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                {t('adminReadEarn.delete', 'Excluir')}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
