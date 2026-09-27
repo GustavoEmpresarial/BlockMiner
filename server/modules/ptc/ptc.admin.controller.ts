@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import { logger } from "../../core/logger/index.js";
+import { logAdminAction } from "../admin/index.js";
 import * as svc from "./ptc.service.js";
 import * as repo from "./ptc.repository.js";
 import {
@@ -41,7 +42,21 @@ export async function updateSettings(req: Request, res: Response): Promise<void>
       err(res, 400, "Invalid settings payload.");
       return;
     }
+    const oldSettings = await svc.getSettings().catch(() => null);
     await svc.updateSettings(parsed.data);
+    void logAdminAction({
+      adminId: (req as any).admin?.adminId,
+      adminEmail: (req as any).admin?.email,
+      sessionId: (req as any).admin?.sessionId,
+      action: "PTC_SETTINGS_UPDATE",
+      module: "ptc",
+      resource: "ptc_settings",
+      oldValue: oldSettings,
+      newValue: parsed.data,
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"],
+      success: true,
+    });
     res.json({ ok: true });
   } catch (e: unknown) {
     err(res, 400, errorMessage(e));
@@ -80,7 +95,21 @@ export async function approve(req: Request, res: Response): Promise<void> {
       err(res, 400, "Invalid campaign ID.");
       return;
     }
+    const existing = await repo.getCampaignById(id);
     await svc.approveCampaign(id);
+    void logAdminAction({
+      adminId: (req as any).admin?.adminId,
+      adminEmail: (req as any).admin?.email,
+      sessionId: (req as any).admin?.sessionId,
+      action: "PTC_CAMPAIGN_APPROVE",
+      module: "ptc",
+      resource: "ptp_ad",
+      resourceId: String(id),
+      newValue: { id, title: existing?.title, status: "active" },
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"],
+      success: true,
+    });
     res.json({ ok: true });
   } catch (e: unknown) {
     err(res, 400, errorMessage(e));
@@ -96,7 +125,21 @@ export async function reject(req: Request, res: Response): Promise<void> {
     }
     const parsed = adminRejectCampaignSchema.safeParse(req.body ?? {});
     const reason = parsed.success ? parsed.data.reason : "Policy violation";
+    const existing = await repo.getCampaignById(id);
     await svc.rejectCampaign(id, reason);
+    void logAdminAction({
+      adminId: (req as any).admin?.adminId,
+      adminEmail: (req as any).admin?.email,
+      sessionId: (req as any).admin?.sessionId,
+      action: "PTC_CAMPAIGN_REJECT",
+      module: "ptc",
+      resource: "ptp_ad",
+      resourceId: String(id),
+      newValue: { id, title: existing?.title, status: "rejected", reason },
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"],
+      success: true,
+    });
     res.json({ ok: true });
   } catch (e: unknown) {
     err(res, 400, errorMessage(e));
@@ -121,6 +164,19 @@ export async function createTier(req: Request, res: Response): Promise<void> {
       return;
     }
     const tier = await svc.createTier(parsed.data);
+    void logAdminAction({
+      adminId: (req as any).admin?.adminId,
+      adminEmail: (req as any).admin?.email,
+      sessionId: (req as any).admin?.sessionId,
+      action: "PTC_TIER_CREATE",
+      module: "ptc",
+      resource: "ptc_ad_tier",
+      resourceId: String(tier.id),
+      newValue: tier,
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"],
+      success: true,
+    });
     res.json({ ok: true, tier });
   } catch (e: unknown) {
     err(res, 400, errorMessage(e));
@@ -139,7 +195,22 @@ export async function updateTier(req: Request, res: Response): Promise<void> {
       err(res, 400, "Invalid tier payload.");
       return;
     }
+    const existing = await repo.getTierById(id);
     const tier = await svc.updateTier(id, parsed.data);
+    void logAdminAction({
+      adminId: (req as any).admin?.adminId,
+      adminEmail: (req as any).admin?.email,
+      sessionId: (req as any).admin?.sessionId,
+      action: "PTC_TIER_UPDATE",
+      module: "ptc",
+      resource: "ptc_ad_tier",
+      resourceId: String(id),
+      oldValue: existing,
+      newValue: tier,
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"],
+      success: true,
+    });
     res.json({ ok: true, tier });
   } catch (e: unknown) {
     err(res, 400, errorMessage(e));
@@ -153,10 +224,25 @@ export async function deleteTier(req: Request, res: Response): Promise<void> {
       err(res, 400, "Invalid tier ID.");
       return;
     }
+    const existing = await repo.getTierById(id);
     await svc.deleteTier(id);
+    void logAdminAction({
+      adminId: (req as any).admin?.adminId,
+      adminEmail: (req as any).admin?.email,
+      sessionId: (req as any).admin?.sessionId,
+      action: "PTC_TIER_DELETE",
+      module: "ptc",
+      resource: "ptc_ad_tier",
+      resourceId: String(id),
+      oldValue: existing,
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"],
+      success: true,
+    });
     res.json({ ok: true });
   } catch (e: unknown) {
     err(res, 400, errorMessage(e));
   }
 }
+
 

@@ -46,6 +46,12 @@ import { logger } from "../../core/logger/index.js";
 import { getUtcDayKey, getUtcPeriodResetAt } from "../../shared/calendar/utcCalendar.js";
 import { PTC_ERROR_MESSAGE } from "./ptc.errors.js";
 import {
+  createGenericTelegramOutboxEvent,
+  TELEGRAM_EVENT_TYPES,
+} from "../notifications/index.js";
+import { runTelegramOutboxTick } from "../notifications/telegram.worker.js";
+import {
+
   SESSION_STALE_MS,
   SESSION_CLAIM_WINDOW_MS,
   HEARTBEAT_MAX_GAP_MS,
@@ -120,18 +126,25 @@ export async function createCampaign(userId: number, input: CreateCampaignInput)
   const costShib = pricePerView.mul(input.targetViews);
   const rewardPerViewShib = new Decimal(tier.rewardPerViewShib.toString());
 
+  let createdAd: any = null;
+  let advertiserUsername: string | null = null;
+
   await prisma.$transaction(async (tx) => {
-    const user = await tx.user.findUnique({ where: { id: userId } });
+    const user = await tx.user.findUnique({
+      where: { id: userId },
+      select: { id: true, username: true, email: true, shibBalance: true },
+    });
     if (!user) throw new Error(PTC_ERROR_MESSAGE.USER_NOT_FOUND);
 
     if (new Decimal(user.shibBalance.toString()).lt(costShib)) {
       throw new Error(PTC_ERROR_MESSAGE.INSUFFICIENT_BALANCE);
     }
 
+    advertiserUsername = user.username ?? null;
     await tx.user.update({ where: { id: userId }, data: { shibBalance: { decrement: costShib } } });
 
     const hash = randomHash();
-    await tx.ptpAd.create({
+    createdAd = await tx.ptpAd.create({
       data: {
         userId,
         tierId: tier.id,
@@ -148,7 +161,34 @@ export async function createCampaign(userId: number, input: CreateCampaignInput)
       },
     });
   });
+
+  if (createdAd) {
+    void createGenericTelegramOutboxEvent(
+      TELEGRAM_EVENT_TYPES.PTC_CAMPAIGN_SUBMITTED,
+      {
+        campaignId: createdAd.id,
+        title: createdAd.title,
+        url: createdAd.url,
+        targetViews: createdAd.targetViews,
+        durationSeconds: createdAd.durationSeconds,
+        adType: createdAd.adType,
+        costShib: createdAd.costShib.toString(),
+        createdAt: createdAd.createdAt,
+      },
+      { userId, usernameSnapshot: advertiserUsername },
+    )
+      .then(() => {
+        void runTelegramOutboxTick().catch(() => {});
+      })
+      .catch((err) => {
+        log.warn("ptc.telegram_notify_failed", { error: String(err), adId: createdAd.id });
+      });
+  }
+
+
+  return createdAd;
 }
+
 
 function randomHash(): string {
   return crypto.randomBytes(8).toString("hex");
