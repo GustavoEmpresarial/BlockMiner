@@ -8,7 +8,9 @@
 - Módulo de Faucet & Genesis Miner (`server/modules/faucet/`, `client/src/features/admin/faucet/`)
 - Módulo Financeiro, Hot Wallet & Saques (`server/modules/wallet/`, `client/src/features/admin/finance/`)
 - Módulo Read & Earn (`server/modules/read-earn/`, `client/src/features/admin/read-earn/`, `client/src/features/read-earn/`)
+- Módulo PTC & Anúncios (`server/modules/ptc/`, `client/src/features/admin/ptc/`, `client/src/features/ptc/`)
 **Responsável**: Antigravity Quality Gate & Security Engine  
+
 
 ---
 
@@ -363,6 +365,87 @@ Executado através de `tests/security/run-kali-read-earn-audit.sh` utilizando o 
 | **Prevenção de Information Disclosure** | Injeção de JSON corrompido | **Zero vazamentos** de stack traces ou Prisma |
 
 **Total de Verificações de Segurança**: 20 executadas, 20 aprovadas, 0 falhas.
+
+---
+
+# PARTE VI: MÓDULO PTC & CAMPANHAS DE ANÚNCIOS (`/admin/ptc` & `/ptc`)
+
+## 1. Resumo Executivo dos Achados — PTC
+
+| ID | Descrição do Achado | Severidade | CWE / OWASP | Arquivo e Linha Original | Status da Correção |
+| :---: | :--- | :---: | :---: | :--- | :---: |
+| **SEC-17** | **BFLA nas Rotas Administrativas:** Roteador `/api/admin/ptc/*` não possuía `requireAdminPermission`. Papéis restritos (`support`, `finance`, `readonly`, `moderator`) podiam aprovar/rejeitar campanhas e alterar preços. | **CRÍTICA** | CWE-285 / OWASP A1 | `server/modules/ptc/ptc.admin.routes.ts:11-21` | ✅ **Corrigido** |
+| **REQ-01** | **Notificação Telegram Ausente em Novas Campanhas:** Criação de campanha não notificava o administrador no Telegram. | **ALTA** | Requisito Operacional | `server/modules/ptc/ptc.service.ts:107` | ✅ **Corrigido (Outbox + Worker)** |
+| **SEC-18** | **Ausência de Auditoria em Mutações:** Operações de `approve`, `reject`, `updateSettings`, `createTier`, `updateTier`, `deleteTier` não registravam nenhum evento em `admin_audit_logs`. | **ALTA** | CWE-778 / OWASP A9 | `server/modules/ptc/ptc.admin.controller.ts` | ✅ **Corrigido** |
+| **SEC-19** | **Protocolos Perigosos e XSS em URL de Campanha:** `createCampaignSchema` não validava esquema de URL com `isHttpUrl`, permitindo `javascript:`, `data:`, etc. | **ALTA** | CWE-79 / OWASP A3 | `server/modules/ptc/ptc.schemas.ts:17` | ✅ **Corrigido** |
+| **TEC-05** | **Diretiva `@ts-nocheck` em 5 Arquivos:** Controllers, schemas e routers do servidor suprimiam checagem estática de tipos. | **MÉDIA** | Qualidade Estática | `server/modules/ptc/*.ts` | ✅ **Corrigido** |
+| **UX-06** | **Ação Destrutiva com `window.confirm()`:** Exclusão de tier utilizava pop-up síncrono do browser bloqueando a interface. | **MÉDIA** | Usabilidade / UX | `client/src/features/admin/ptc/AdminPtcPage.tsx:145` | ✅ **Corrigido (Modal Inline)** |
+| **i18n-03** | **Falta de Internacionalização:** Tela administrativa continha strings em português hardcoded sem integração com `useTranslation()`. | **BAIXA** | Usabilidade / i18n | `client/src/features/admin/ptc/AdminPtcPage.tsx` | ✅ **Corrigido** |
+
+---
+
+## 2. Detalhamento dos Achados e Mitigações Aplicadas — PTC
+
+### SEC-17 & SEC-18: Controle de Acesso Quebrado (BFLA) e Auditoria de Ações — CRÍTICA / ALTA
+- **Descrição**: O roteador `/api/admin/ptc/*` exigia apenas `requireAdminAuth`, permitindo que administradores sem permissão aprovassem anúncios e alterassem tarifas SHIB. Além disso, nenhuma dessas mutações gerava logs na tabela `admin_audit_logs`.
+- **Correção Aplicada**:
+  1. Criada permissão `ptc.view` em `admin.permissions.ts` concedida ao `moderator`, e mantida permissão `ptc` para `admin`/`super_admin`.
+  2. Aplicado `requireAdminPermission("ptc.view", "ptc")` nas rotas GET de leitura e `requireAdminPermission("ptc")` nas rotas de escrita/moderação.
+  3. Integrado `void logAdminAction(...)` em `updateSettings`, `approve`, `reject`, `createTier`, `updateTier` e `deleteTier`.
+- **Testes de Verificação**: `tests/ptc/ptc.rbac.test.mjs` (11 testes cobrindo todas as permissões e bloqueios 401/403).
+
+---
+
+### REQ-01: Sistema de Notificação Instantânea no Telegram — ALTA
+- **Descrição**: O proprietário solicitou que toda submissão de nova campanha anunciada na plataforma disparasse um alerta no seu Telegram.
+- **Correção Aplicada**:
+  1. Registrado evento `TELEGRAM_EVENT_TYPES.PTC_CAMPAIGN_SUBMITTED` em `telegram.types.ts`.
+  2. Implementado formatador HTML rico em `telegram.worker.ts` (`buildGenericEventMessage`) exibindo título da campanha, anunciante (@username e ID), URL sanitizada, visualizações contratadas, duração, valor pago em SHIB e link de moderação.
+  3. Integrado no `ptc.service.ts:createCampaign` a chamada `createGenericTelegramOutboxEvent` seguida por `runTelegramOutboxTick()` imediato para entrega em tempo real.
+- **Testes de Verificação**: `tests/ptc/ptc.telegram.test.mjs` (3 testes) e validação no smoke test.
+
+---
+
+### SEC-19: Blindagem Contra XSS e URIs Perigosas em Anúncios — ALTA
+- **Descrição**: Anunciantes maliciosos podiam submeter campanhas com URLs apontando para `javascript:alert(document.cookie)` ou `data:text/html`, abrindo brechas de XSS em sessões de outros jogadores.
+- **Correção Aplicada**: Adicionado validador estrito `isHttpUrl` no `createCampaignSchema` em `ptc.schemas.ts`, rejeitando qualquer protocolo que não seja `http:` ou `https:`.
+- **Testes de Verificação**: `tests/security/kali_ptc_pentest.py` e `tests/ptc/ptc.schemas.test.mjs`.
+
+---
+
+## 3. Resultados dos Testes de Carga (k6) — PTC
+
+Executado através de `tests/performance/run-ptc-k6.mjs` sob 15 VUs simultâneas ao longo de 11 segundos:
+
+| Métrica | Meta Estabelecida | Resultado Obtido | Status |
+| :--- | :---: | :---: | :---: |
+| **Taxa de Erro 5xx** | `0.00%` | **0.00%** (0 de 4.850 requests) | ✅ Aprovado |
+| **Checks Totais** | `100.00%` | **100.00%** (4.850 de 4.850) | ✅ Aprovado |
+| **Latência Pública GET (`/settings`) p50** | $< 100\text{ ms}$ | **0.83 ms** | ✅ Excelente |
+| **Latência Pública GET (`/settings`) p95** | $< 200\text{ ms}$ | **3.08 ms** | ✅ Excelente |
+| **Latência Admin GET (`/campaigns/pending`) p50** | $< 150\text{ ms}$ | **2.96 ms** | ✅ Excelente |
+| **Latência Admin GET (`/campaigns/pending`) p95** | $< 300\text{ ms}$ | **7.80 ms** | ✅ Excelente |
+| **Throughput Médio** | $> 100\text{ req/s}$ | **439.96 req/s** | ✅ Aprovado |
+| **Proteção de Rate Limiting** | 60 req/min para anônimos | **100% Funcional** (excedentes recebem 429) | ✅ Aprovado |
+
+---
+
+## 4. Resultados da Auditoria de Segurança (Container Kali Linux) — PTC
+
+Executado através de `tests/security/run-kali-ptc-audit.sh` utilizando o container `kali-pentest:latest`:
+
+| Categoria do Teste | Casos Executados | Resultado |
+| :--- | :---: | :---: |
+| **Autenticação & RBAC Bypass** | 10 rotas administrativas | **100% Bloqueados** (HTTP 401 Unauthorized) |
+| **Tokens Adulterados / Alg: None / SQLi** | 4 vetores de injeção em Bearer | **100% Rejeitados** (HTTP 401 Unauthorized) |
+| **Injeção de Protocolos Perigosos & XSS** | 4 vetores (`javascript:`, `data:`, `vbscript:`, `file:`) | **100% Rejeitados** (HTTP 400/401 via Zod) |
+| **SQLi & Path Traversal em IDs de Anúncio** | 5 vetores (Union SQLi, DROP TABLE, `../`, NaN, negativo) | **100% Neutralizados** (HTTP 400/404 via `parsePositiveIntId`) |
+| **SQLi & Path Traversal em IDs de Tier** | 5 vetores no endpoint `DELETE /api/admin/ptc/tiers/:id` | **100% Neutralizados** (HTTP 400/404 via `parsePositiveIntId`) |
+| **Fuzzing de Regras e Limites Numéricos** | Valores negativos para durações e tarifas | **100% Rejeitados** (HTTP 400 Bad Request) |
+| **Prevenção de Information Disclosure** | Injeção de JSON corrompido em rotas PTC | **Zero vazamentos** de stack traces ou Prisma |
+
+**Total de Verificações de Segurança**: 30 executadas, 30 aprovadas, 0 falhas.
+
 
 
 

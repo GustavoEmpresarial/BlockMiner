@@ -213,6 +213,33 @@ export function buildPublicProofMessage(event: TelegramOutboxEvent, baseUrl = no
 export function buildGenericEventMessage(event: TelegramOutboxEvent): string {
   const payload = payloadOf(event);
   const username = esc(payload.username || event.usernameSnapshot || `user-${event.userId || "?"}`);
+
+  if (event.type === TELEGRAM_EVENT_TYPES.PTC_CAMPAIGN_SUBMITTED) {
+    const url = cleanString(payload.url);
+    const targetViews = Number(payload.targetViews || 0);
+    const durationSeconds = Number(payload.durationSeconds || 10);
+    const costShib = payload.costShib
+      ? Number(payload.costShib).toLocaleString(undefined, { maximumFractionDigits: 2 })
+      : "0";
+    const adType = cleanString(payload.adType) || "window";
+    return [
+      "📢 <b>Nova Campanha PTC Submetida</b>",
+      "",
+      `👤 <b>Anunciante:</b> @${username} <code>(#${event.userId || "?"})</code>`,
+      `🏷️ <b>Título:</b> <b>${esc(payload.title || "Sem título")}</b>`,
+      url ? `🌐 <b>URL:</b> <code>${esc(url)}</code>` : null,
+      `⏱️ <b>Duração:</b> ${durationSeconds}s (${esc(adType)})`,
+      `👁️ <b>Visualizações:</b> ${targetViews.toLocaleString()} views`,
+      `💰 <b>Custo Pago:</b> ${costShib} SHIB`,
+      `📅 <b>Data:</b> ${esc(formatTelegramDate(event.createdAt))}`,
+      payload.campaignId ? `🆔 <b>ID Campanha:</b> #${payload.campaignId}` : null,
+      "",
+      `🔗 <a href="https://blockminer.space/admin/ptc">Revisar no Painel Admin</a>`,
+    ]
+      .filter(Boolean)
+      .join("\n");
+  }
+
   const titles: Record<string, string> = {
     [TELEGRAM_EVENT_TYPES.SUPPORT_TICKET_NEW]: "🎫 <b>Novo Ticket de Suporte</b>",
     [TELEGRAM_EVENT_TYPES.SUPPORT_REPLY_NEW]: "💬 <b>Nova Resposta de Suporte</b>",
@@ -234,6 +261,7 @@ export function buildGenericEventMessage(event: TelegramOutboxEvent): string {
   ];
   return lines.filter(Boolean).join("\n");
 }
+
 
 // ─── real Telegram Bot API call ────────────────────────────────────────────────────────────────
 async function telegramFetch(method: string, botToken: string | null, body: RequestInit): Promise<unknown> {
@@ -327,7 +355,9 @@ const GENERIC_EVENT_TYPES: readonly string[] = [
   TELEGRAM_EVENT_TYPES.PUBLIC_SUPPORT_TICKET_NEW,
   TELEGRAM_EVENT_TYPES.PUBLIC_GUEST_MESSAGE_NEW,
   TELEGRAM_EVENT_TYPES.VIDEO_SUBMISSION_NEW,
+  TELEGRAM_EVENT_TYPES.PTC_CAMPAIGN_SUBMITTED,
 ];
+
 
 /**
  * Sends one outbox event via the real Bot API. Throws on any failure — including a missing

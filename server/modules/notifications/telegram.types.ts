@@ -22,7 +22,9 @@ export const TELEGRAM_EVENT_TYPES = Object.freeze({
   PUBLIC_SUPPORT_TICKET_NEW: "public_support_ticket_new",
   PUBLIC_GUEST_MESSAGE_NEW: "public_guest_message_new",
   VIDEO_SUBMISSION_NEW: "video_submission_new",
+  PTC_CAMPAIGN_SUBMITTED: "ptc_campaign_submitted",
 } as const);
+
 
 export type TelegramEventType = (typeof TELEGRAM_EVENT_TYPES)[keyof typeof TELEGRAM_EVENT_TYPES];
 

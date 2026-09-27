@@ -1,14 +1,11 @@
-// @ts-nocheck
-// RECOVERED: this source file was missing from git history (never committed) while
-// production kept running off a stale compiled dist/ via Docker build cache.
-// Reconstructed verbatim from the last known-good compiled output on 2026-09-11.
-// TODO: remove @ts-nocheck once someone re-adds proper types for this file.
 /** Ported from legacy/server/modules/ptc/ptc.routes.ts (user-facing router; admin split into ptc.admin.routes.ts). */
 import express from "express";
 import { requireAuth } from "../../core/http/middleware/auth.js";
 import { createRateLimiter } from "../../core/http/middleware/rateLimit.js";
 import * as ctrl from "./ptc.controller.js";
+
 export const ptcRouter = express.Router();
+
 const limiter = createRateLimiter({ windowMs: 60_000, max: 60 });
 const viewLimiter = createRateLimiter({ windowMs: 10_000, max: 5 });
 const heartbeatLimiter = createRateLimiter({ windowMs: 30_000, max: 10 });

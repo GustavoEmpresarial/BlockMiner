@@ -1,47 +1,43 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { CheckCircle2, XCircle, Clock, Eye, Loader2, Settings, ChevronDown, ChevronUp, Save, Layers, Plus, Trash2, Edit3 } from 'lucide-react';
+import {
+  CheckCircle2,
+  XCircle,
+  Clock,
+  Eye,
+  Loader2,
+  Settings,
+  ChevronDown,
+  ChevronUp,
+  Save,
+  Layers,
+  Plus,
+  Trash2,
+  Edit3,
+  AlertTriangle,
+  X,
+} from 'lucide-react';
 import { api } from '../../../shared/auth/auth.store';
+import type {
+  PtcCampaign as Campaign,
+  PtcSettings,
+  PtcTier as Tier,
+} from '../../ptc/ptc.types';
 
-interface Campaign {
-    id: number;
-    title: string;
-    description: string;
-    url: string;
-    adType: string;
-    durationSeconds: number;
-    status: string;
-    views: number;
-    targetViews: number;
-    costShib: string;
-    createdAt: string;
-    user: { id: number; name: string; email: string };
-}
-
-interface PtcSettings {
-    pricePerViewShib: string;
-    rewardPerViewShib: string;
-    minDurationSeconds: number;
-    maxDurationSeconds: number;
-    minViews: number;
-    maxViews: number;
-    isEnabled: boolean;
-}
-
-interface Tier {
-    id: number;
-    label: string;
-    adType: 'window' | 'iframe';
-    durationSeconds: number;
-    pricePerViewShib: string;
-    rewardPerViewShib: string;
-    isActive: boolean;
-    sortOrder: number;
-}
-
-const EMPTY_TIER = { label: '', adType: 'window' as 'window' | 'iframe', durationSeconds: 10, pricePerViewShib: '', rewardPerViewShib: '', isActive: true, sortOrder: 0 };
+const EMPTY_TIER = {
+  label: '',
+  adType: 'window' as 'window' | 'iframe',
+  durationSeconds: 10,
+  pricePerViewShib: '',
+  rewardPerViewShib: '',
+  isActive: true,
+  sortOrder: 0,
+};
 
 export default function AdminPtc() {
+  const { t } = useTranslation();
+
     const [pending, setPending] = useState<Campaign[]>([]);
     const [all, setAll] = useState<Campaign[]>([]);
     const [settings, setSettings] = useState<PtcSettings | null>(null);
@@ -57,6 +53,9 @@ export default function AdminPtc() {
     const [rejectReason, setRejectReason] = useState<Record<number, string>>({});
     const [actionLoading, setActionLoading] = useState<number | null>(null);
     const [settingsSaving, setSettingsSaving] = useState(false);
+    const [tierToDelete, setTierToDelete] = useState<Tier | null>(null);
+    const [tierDeleting, setTierDeleting] = useState(false);
+
 
     const fetchData = useCallback(async () => {
         try {
@@ -141,25 +140,30 @@ export default function AdminPtc() {
         }
     }
 
-    async function handleDeleteTier(id: number) {
-        if (!confirm('Deletar este tier? Campanhas existentes não serão afetadas.')) return;
+    async function confirmDeleteTier() {
+        if (!tierToDelete) return;
+        setTierDeleting(true);
         try {
-            await api.delete(`/admin/ptc/tiers/${id}`);
-            toast.success('Tier deletado');
+            await api.delete(`/admin/ptc/tiers/${tierToDelete.id}`);
+            toast.success('Tier deletado com sucesso');
+            setTierToDelete(null);
             fetchData();
         } catch (err: unknown) {
             const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
             toast.error(msg ?? 'Erro ao deletar');
+        } finally {
+            setTierDeleting(false);
         }
     }
+
 
     function startEditTier(t: Tier) {
         setTierForm({
             label: t.label,
-            adType: t.adType ?? 'window',
+            adType: (t.adType as 'window' | 'iframe') ?? 'window',
             durationSeconds: t.durationSeconds,
-            pricePerViewShib: t.pricePerViewShib,
-            rewardPerViewShib: t.rewardPerViewShib,
+            pricePerViewShib: String(t.pricePerViewShib ?? ''),
+            rewardPerViewShib: String(t.rewardPerViewShib ?? ''),
             isActive: t.isActive,
             sortOrder: t.sortOrder,
         });
@@ -211,13 +215,13 @@ export default function AdminPtc() {
 
             {/* Tabs */}
             <div className="flex bg-gray-900/50 p-1.5 rounded-2xl gap-2 flex-wrap">
-                {(['pending', 'all', 'tiers', 'settings'] as const).map((t) => (
-                    <button key={t} onClick={() => setTab(t)}
-                        className={`flex-1 py-2.5 text-[9px] font-black uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-1.5 min-w-[80px] ${tab === t ? 'bg-primary text-white' : 'text-gray-500 hover:text-gray-300'}`}>
-                        {t === 'pending' && <><Clock className="w-3 h-3" /> Pendentes ({pending.length})</>}
-                        {t === 'all' && <><Eye className="w-3 h-3" /> Todas</>}
-                        {t === 'tiers' && <><Layers className="w-3 h-3" /> Tiers</>}
-                        {t === 'settings' && <><Settings className="w-3 h-3" /> Config</>}
+                {(['pending', 'all', 'tiers', 'settings'] as const).map((tabKey) => (
+                    <button key={tabKey} onClick={() => setTab(tabKey)}
+                        className={`flex-1 py-2.5 text-[9px] font-black uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-1.5 min-w-[80px] ${tab === tabKey ? 'bg-primary text-white' : 'text-gray-500 hover:text-gray-300'}`}>
+                        {tabKey === 'pending' && <><Clock className="w-3 h-3" /> {t('adminPtc.tab_pending', 'Pendentes')} ({pending.length})</>}
+                        {tabKey === 'all' && <><Eye className="w-3 h-3" /> {t('adminPtc.tab_all', 'Todas')}</>}
+                        {tabKey === 'tiers' && <><Layers className="w-3 h-3" /> {t('adminPtc.tab_tiers', 'Tiers')}</>}
+                        {tabKey === 'settings' && <><Settings className="w-3 h-3" /> {t('adminPtc.tab_settings', 'Configurações')}</>}
                     </button>
                 ))}
             </div>
@@ -227,7 +231,7 @@ export default function AdminPtc() {
                 <div className="space-y-4">
                     {pending.length === 0 ? (
                         <div className="text-center py-16 text-gray-600 font-black uppercase tracking-widest text-sm">
-                            Nenhuma campanha pendente
+                            {t('adminPtc.empty_pending', 'Nenhuma campanha pendente')}
                         </div>
                     ) : pending.map((c) => (
                         <div key={c.id} className="bg-surface border border-gray-800/50 rounded-2xl overflow-hidden">
@@ -235,7 +239,7 @@ export default function AdminPtc() {
                                 <div className="flex-1 min-w-0">
                                     <p className="text-white font-black text-sm uppercase italic truncate">{c.title}</p>
                                     <p className="text-gray-500 text-xs font-mono truncate">{c.url}</p>
-                                    <p className="text-gray-600 text-[9px] font-bold mt-0.5">{c.user.name} · {c.user.email}</p>
+                                    <p className="text-gray-600 text-[9px] font-bold mt-0.5">{c.user?.name} · {c.user?.email}</p>
                                 </div>
                                 <div className="text-right shrink-0">
                                     <p className="text-orange-300 font-black text-xs">{Number(c.costShib).toLocaleString(undefined, { maximumFractionDigits: 2 })} SHIB</p>
@@ -252,16 +256,16 @@ export default function AdminPtc() {
                                         <button onClick={() => handleApprove(c.id)} disabled={actionLoading === c.id}
                                             className="flex-1 py-3 bg-emerald-600 text-white font-black text-[9px] uppercase tracking-widest rounded-xl hover:bg-emerald-500 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
                                             {actionLoading === c.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
-                                            Aprovar
+                                            {t('adminPtc.approve', 'Aprovar')}
                                         </button>
                                         <div className="flex-1 space-y-2">
                                             <input value={rejectReason[c.id] ?? ''} onChange={(e) => setRejectReason({ ...rejectReason, [c.id]: e.target.value })}
-                                                placeholder="Motivo da rejeição..."
+                                                placeholder={t('adminPtc.reject_reason_placeholder', 'Motivo da rejeição...')}
                                                 className="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-red-500 transition-colors" />
                                             <button onClick={() => handleReject(c.id)} disabled={actionLoading === c.id}
                                                 className="w-full py-3 bg-red-600/80 text-white font-black text-[9px] uppercase tracking-widest rounded-xl hover:bg-red-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
                                                 {actionLoading === c.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-3.5 h-3.5" />}
-                                                Rejeitar
+                                                {t('adminPtc.reject', 'Rejeitar')}
                                             </button>
                                         </div>
                                     </div>
@@ -272,15 +276,20 @@ export default function AdminPtc() {
                 </div>
             )}
 
+
             {/* All Campaigns */}
             {tab === 'all' && (
                 <div className="space-y-3">
-                    {all.map((c) => (
+                    {all.length === 0 ? (
+                        <div className="text-center py-16 text-gray-600 font-black uppercase tracking-widest text-sm">
+                            {t('adminPtc.empty_all', 'Nenhuma campanha cadastrada')}
+                        </div>
+                    ) : all.map((c) => (
                         <div key={c.id} className="flex items-center gap-4 p-4 bg-surface border border-gray-800/30 rounded-2xl">
                             <div className="flex-1 min-w-0">
                                 <p className="text-white font-black text-xs uppercase italic truncate">{c.title}</p>
                                 <p className="text-gray-500 text-[9px] font-mono truncate">{c.url}</p>
-                                <p className="text-gray-600 text-[9px] font-bold">{c.user.name}</p>
+                                <p className="text-gray-600 text-[9px] font-bold">{c.user?.name}</p>
                             </div>
                             <div className="text-right shrink-0 space-y-0.5">
                                 <p className={`font-black text-[9px] uppercase tracking-widest ${STATUS_COLOR[c.status] ?? 'text-gray-500'}`}>{c.status}</p>
@@ -296,12 +305,12 @@ export default function AdminPtc() {
             {tab === 'tiers' && (
                 <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                        <p className="text-gray-400 text-xs font-medium">{tiers.length} tier(s) cadastrado(s)</p>
+                        <p className="text-gray-400 text-xs font-medium">{t('adminPtc.tier_registered', { count: tiers.length, defaultValue: `${tiers.length} tier(s) cadastrado(s)` })}</p>
                         <button
                             onClick={() => { setTierForm({ ...EMPTY_TIER }); setEditingTierId(null); setShowTierForm(true); }}
                             className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white font-black text-[9px] uppercase tracking-widest rounded-xl hover:bg-orange-400 transition-colors"
                         >
-                            <Plus className="w-3.5 h-3.5" /> Novo Tier
+                            <Plus className="w-3.5 h-3.5" /> {t('adminPtc.create_tier', 'Novo Tier')}
                         </button>
                     </div>
 
@@ -309,47 +318,47 @@ export default function AdminPtc() {
                     {showTierForm && (
                         <form onSubmit={handleSaveTier} className="bg-surface border border-gray-800/50 rounded-2xl p-6 space-y-4">
                             <h3 className="text-white font-black text-sm uppercase tracking-widest">
-                                {editingTierId !== null ? 'Editar Tier' : 'Novo Tier'}
+                                {editingTierId !== null ? t('adminPtc.edit_tier', 'Editar Tier') : t('adminPtc.create_tier', 'Novo Tier')}
                             </h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
-                                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1.5 block">Nome do Tier</label>
+                                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1.5 block">{t('adminPtc.tier_name', 'Nome do Tier')}</label>
                                     <input value={tierForm.label} onChange={(e) => setTierForm({ ...tierForm, label: e.target.value })} required
                                         placeholder="ex: Básico 10s"
                                         className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-orange-500 transition-colors" />
                                 </div>
                                 <div>
-                                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1.5 block">Duração (segundos)</label>
+                                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1.5 block">{t('adminPtc.tier_duration', 'Duração (segundos)')}</label>
                                     <input type="number" min="1" value={tierForm.durationSeconds} onChange={(e) => setTierForm({ ...tierForm, durationSeconds: Number(e.target.value) })} required
                                         className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-orange-500 transition-colors" />
                                 </div>
                                 <div>
-                                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1.5 block">Tipo de exibição</label>
+                                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1.5 block">{t('adminPtc.tier_display_type', 'Tipo de exibição')}</label>
                                     <select value={tierForm.adType} onChange={(e) => setTierForm({ ...tierForm, adType: e.target.value as 'window' | 'iframe' })}
                                         className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-orange-500 transition-colors">
-                                        <option value="window">Nova janela</option>
-                                        <option value="iframe">iframe</option>
+                                        <option value="window">{t('adminPtc.tier_display_window', 'Nova janela')}</option>
+                                        <option value="iframe">{t('adminPtc.tier_display_iframe', 'Iframe')}</option>
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1.5 block">Custo anunciante (SHIB/view)</label>
+                                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1.5 block">{t('adminPtc.tier_advertiser_cost', 'Custo anunciante (SHIB/view)')}</label>
                                     <input type="number" step="0.000001" min="0" value={tierForm.pricePerViewShib} onChange={(e) => setTierForm({ ...tierForm, pricePerViewShib: e.target.value })} required
                                         placeholder="0.000000"
                                         className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm font-mono focus:outline-none focus:border-orange-500 transition-colors" />
                                 </div>
                                 <div>
-                                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1.5 block">Recompensa viewer (SHIB/view)</label>
+                                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1.5 block">{t('adminPtc.tier_viewer_reward', 'Recompensa viewer (SHIB/view)')}</label>
                                     <input type="number" step="0.000001" min="0" value={tierForm.rewardPerViewShib} onChange={(e) => setTierForm({ ...tierForm, rewardPerViewShib: e.target.value })} required
                                         placeholder="0.000000"
                                         className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm font-mono focus:outline-none focus:border-orange-500 transition-colors" />
                                 </div>
                                 <div>
-                                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1.5 block">Ordem</label>
+                                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1.5 block">{t('adminPtc.tier_sort_order', 'Ordem')}</label>
                                     <input type="number" value={tierForm.sortOrder} onChange={(e) => setTierForm({ ...tierForm, sortOrder: Number(e.target.value) })}
                                         className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-orange-500 transition-colors" />
                                 </div>
                                 <div className="flex items-center gap-3 pt-5">
-                                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Ativo</label>
+                                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest">{t('adminPtc.tier_active', 'Ativo')}</label>
                                     <button type="button"
                                         onClick={() => setTierForm({ ...tierForm, isActive: !tierForm.isActive })}
                                         className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${tierForm.isActive ? 'bg-emerald-600' : 'bg-gray-700'}`}
@@ -362,20 +371,21 @@ export default function AdminPtc() {
                                 <button type="submit" disabled={tierLoading}
                                     className="flex items-center gap-2 px-6 py-3 bg-orange-500 text-white font-black text-xs uppercase tracking-widest rounded-2xl hover:bg-orange-400 transition-colors disabled:opacity-50">
                                     {tierLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                                    {editingTierId !== null ? 'Salvar' : 'Criar'}
+                                    {editingTierId !== null ? t('adminPtc.btn_save', 'Salvar') : t('adminPtc.btn_create', 'Criar')}
                                 </button>
                                 <button type="button" onClick={() => { setShowTierForm(false); setEditingTierId(null); }}
                                     className="px-6 py-3 bg-gray-800 text-white font-black text-xs uppercase tracking-widest rounded-2xl hover:bg-gray-700 transition-colors">
-                                    Cancelar
+                                    {t('adminPtc.btn_cancel', 'Cancelar')}
                                 </button>
                             </div>
                         </form>
                     )}
 
+
                     {/* Tier list */}
                     {tiers.length === 0 ? (
                         <div className="text-center py-12 text-gray-600 font-black uppercase tracking-widest text-sm">
-                            Nenhum tier cadastrado
+                            {t('adminPtc.empty_tiers', 'Nenhum tier cadastrado')}
                         </div>
                     ) : (
                         <div className="space-y-3">
@@ -400,10 +410,11 @@ export default function AdminPtc() {
                                             className="p-2 bg-gray-800 text-white rounded-xl hover:bg-gray-700 transition-colors">
                                             <Edit3 className="w-3.5 h-3.5" />
                                         </button>
-                                        <button onClick={() => handleDeleteTier(t.id)}
+                                        <button onClick={() => setTierToDelete(t)}
                                             className="p-2 bg-red-600/20 text-red-400 rounded-xl hover:bg-red-600/40 transition-colors">
                                             <Trash2 className="w-3.5 h-3.5" />
                                         </button>
+
                                     </div>
                                 </div>
                             ))}
@@ -415,16 +426,16 @@ export default function AdminPtc() {
             {/* Settings */}
             {tab === 'settings' && settings && (
                 <div className="bg-surface border border-gray-800/50 rounded-2xl p-6 space-y-5">
-                    <h3 className="text-white font-black uppercase tracking-widest text-sm">Configurações PTC</h3>
+                    <h3 className="text-white font-black uppercase tracking-widest text-sm">{t('adminPtc.settings', 'Configurações PTC')}</h3>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {[
-                            { key: 'pricePerViewShib', label: 'Custo por view (SHIB)', type: 'number', step: '0.0001' },
-                            { key: 'rewardPerViewShib', label: 'Recompensa por view (SHIB)', type: 'number', step: '0.0001' },
-                            { key: 'minDurationSeconds', label: 'Duração mínima (s)', type: 'number', step: '1' },
-                            { key: 'maxDurationSeconds', label: 'Duração máxima (s)', type: 'number', step: '1' },
-                            { key: 'minViews', label: 'Visualizações mínimas', type: 'number', step: '1' },
-                            { key: 'maxViews', label: 'Visualizações máximas', type: 'number', step: '1' },
+                            { key: 'pricePerViewShib', label: t('adminPtc.pricePerViewShib', 'Custo por view (SHIB)'), type: 'number', step: '0.0001' },
+                            { key: 'rewardPerViewShib', label: t('adminPtc.rewardPerViewShib', 'Recompensa por view (SHIB)'), type: 'number', step: '0.0001' },
+                            { key: 'minDurationSeconds', label: t('adminPtc.minDurationSeconds', 'Duração mínima (s)'), type: 'number', step: '1' },
+                            { key: 'maxDurationSeconds', label: t('adminPtc.maxDurationSeconds', 'Duração máxima (s)'), type: 'number', step: '1' },
+                            { key: 'minViews', label: t('adminPtc.minViews', 'Visualizações mínimas'), type: 'number', step: '1' },
+                            { key: 'maxViews', label: t('adminPtc.maxViews', 'Visualizações máximas'), type: 'number', step: '1' },
                         ].map(({ key, label, type, step }) => (
                             <div key={key}>
                                 <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1.5 block">{label}</label>
@@ -439,7 +450,7 @@ export default function AdminPtc() {
                     </div>
 
                     <div className="flex items-center gap-3">
-                        <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Sistema habilitado</label>
+                        <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest">{t('adminPtc.isEnabled', 'Sistema habilitado')}</label>
                         <button
                             onClick={() => setSettingsForm({ ...settingsForm, isEnabled: !settingsForm.isEnabled })}
                             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${settingsForm.isEnabled ? 'bg-emerald-600' : 'bg-gray-700'}`}
@@ -451,10 +462,51 @@ export default function AdminPtc() {
                     <button onClick={saveSettings} disabled={settingsSaving}
                         className="flex items-center gap-2 px-6 py-3 bg-primary text-white font-black text-xs uppercase tracking-widest rounded-2xl hover:bg-primary/80 transition-colors disabled:opacity-50">
                         {settingsSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                        Salvar configurações
+                        {t('adminPtc.btn_save_settings', 'Salvar configurações')}
                     </button>
+                </div>
+            )}
+
+
+            {/* Modal de confirmação para deletar Tier */}
+            {tierToDelete && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+                    <div className="w-full max-w-md rounded-2xl border border-red-500/30 bg-slate-900 p-6 space-y-4 shadow-2xl">
+                        <div className="flex items-center gap-3 text-red-400">
+                            <AlertTriangle className="w-6 h-6 shrink-0" />
+                            <h3 className="font-bold text-white text-lg">Excluir Tier PTC</h3>
+                        </div>
+                        <p className="text-sm text-slate-300">
+                            Tem certeza que deseja excluir o tier <span className="font-bold text-white">"{tierToDelete.label}"</span>? Campanhas já existentes não serão afetadas.
+                        </p>
+                        <div className="p-3 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-400 flex justify-between">
+                            <span>Duração: <strong className="text-white">{tierToDelete.durationSeconds}s</strong></span>
+                            <span>Tipo: <strong className="text-white">{tierToDelete.adType}</strong></span>
+                            <span>ID: #{tierToDelete.id}</span>
+                        </div>
+                        <div className="flex justify-end gap-2 pt-2">
+                            <button
+                                type="button"
+                                disabled={tierDeleting}
+                                onClick={() => setTierToDelete(null)}
+                                className="px-4 py-2 rounded-xl text-slate-400 hover:text-white text-sm"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="button"
+                                disabled={tierDeleting}
+                                onClick={confirmDeleteTier}
+                                className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-semibold disabled:opacity-50"
+                            >
+                                {tierDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                                Excluir
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>
     );
 }
+
