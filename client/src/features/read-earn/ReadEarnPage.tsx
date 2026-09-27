@@ -14,31 +14,13 @@ import {
 import { api } from '../../shared/auth/auth.store';
 import type { TFunction } from 'i18next';
 import { isAxiosError } from 'axios';
+import type {
+  ReadEarnPublicCampaign as ReadEarnCampaign,
+  ReadEarnPublicCampaignsResponse as ReadEarnCampaignsResponse,
+  ReadEarnRewardSnapshot as ReadEarnReward,
+  ReadEarnRedeemResponse,
+} from './read-earn.types';
 
-interface ReadEarnCampaign {
-  id: number;
-  title: string;
-  expiresAt: string;
-  partnerUrl: string;
-}
-
-interface ReadEarnCampaignsResponse {
-  ok?: boolean;
-  campaigns?: ReadEarnCampaign[];
-}
-
-interface ReadEarnReward {
-  rewardType?: string;
-  hashrateValidityDays?: number;
-  rewardAmount?: number | string;
-  rewardMinerId?: number | string;
-}
-
-interface ReadEarnRedeemResponse {
-  ok?: boolean;
-  reward?: ReadEarnReward;
-  code?: string;
-}
 
 function formatEndsAt(iso: string, locale: string | undefined) {
   try {

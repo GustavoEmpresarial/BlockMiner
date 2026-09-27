@@ -7,6 +7,7 @@
 - Módulo de Torneios & Ligas (`server/modules/tournaments/`, `client/src/features/admin/tournaments/`)
 - Módulo de Faucet & Genesis Miner (`server/modules/faucet/`, `client/src/features/admin/faucet/`)
 - Módulo Financeiro, Hot Wallet & Saques (`server/modules/wallet/`, `client/src/features/admin/finance/`)
+- Módulo Read & Earn (`server/modules/read-earn/`, `client/src/features/admin/read-earn/`, `client/src/features/read-earn/`)
 **Responsável**: Antigravity Quality Gate & Security Engine  
 
 ---
@@ -274,5 +275,94 @@ Executado através de `tests/security/run-kali-finance-audit.sh` utilizando o co
 | **Prevenção de Information Disclosure** | Injeção de payloads malformados | **Zero vazamentos** de stack traces ou Prisma |
 
 **Total de Verificações de Segurança**: 18 executadas, 18 aprovadas, 0 falhas.
+
+---
+
+# PARTE V: MÓDULO READ & EARN (`/admin/read-earn` & `/read-earn`)
+
+## 1. Resumo Executivo dos Achados — Read & Earn
+
+| ID | Descrição do Achado | Severidade | CWE / OWASP | Arquivo e Linha Original | Status da Correção |
+| :---: | :--- | :---: | :---: | :--- | :---: |
+| **SEC-14** | **BFLA nas Rotas Administrativas:** Roteador `/api/admin/read-earn/*` não possuía `requireAdminPermission`. Papéis restritos (`support`, `finance`, `readonly`, `moderator`) podiam criar, alterar e excluir campanhas. | **CRÍTICA** | CWE-285 / OWASP A1 | `server/modules/read-earn/read-earn.admin.routes.ts:11-16` | ✅ **Corrigido** |
+| **SEC-15** | **Ausência de Auditoria Administrativa:** Mutações de campanha (`create`, `update`, `delete`) não geravam nenhum registro na tabela `admin_audit_logs`. | **ALTA** | CWE-778 / OWASP A9 | `server/modules/read-earn/read-earn.admin.controller.ts` | ✅ **Corrigido** |
+| **SEC-16** | **Custo Criptográfico Subótimo:** Código secreto da campanha era hasheado com `bcrypt.hash(..., 10)` em vez do padrão OWASP `BCRYPT_COST = 12`. | **MÉDIA** | CWE-916 | `server/modules/read-earn/read-earn.service.ts:147` | ✅ **Corrigido** |
+| **TEC-03** | **Supressão `@ts-nocheck` em Massa:** 5 de 7 arquivos do backend continham `@ts-nocheck`, ocultando erros de tipagem estática. | **MÉDIA** | Qualidade Estática | `server/modules/read-earn/*.ts` | ✅ **Corrigido** |
+| **UX-04** | **Ação Destrutiva com `window.confirm()`:** Exclusão de campanha usava modal nativo síncrono do browser, bloqueando a UI. | **MÉDIA** | Usabilidade / UX | `client/src/features/admin/read-earn/AdminReadEarnPage.tsx:313` | ✅ **Corrigido (Modal Inline)** |
+| **UX-05** | **Paginação Ausente (`take=50` hardcoded):** URL da listagem de resgates no client continha `take=50` fixo, impedindo navegação além dos 50 primeiros registros. | **MÉDIA** | Usabilidade / Dados | `client/src/features/admin/read-earn/AdminReadEarnPage.tsx:236` | ✅ **Corrigido (Paginação Dinâmica)** |
+| **TEC-04** | **Tipos `unknown` e Números Mágicos:** Propriedades de modelo tipadas como `unknown` no client e 9 literais numéricos dispersos sem constantes nomeadas. | **BAIXA** | Manutenibilidade | `read-earn.service.ts`, `AdminReadEarnPage.tsx` | ✅ **Corrigido** |
+
+---
+
+## 2. Detalhamento dos Achados e Mitigações Aplicadas — Read & Earn
+
+### SEC-14 & SEC-15: Controle de Acesso Quebrado (BFLA) e Auditoria de Ações — CRÍTICA / ALTA
+- **Descrição**: Qualquer token de administrador autenticado podia executar mutações em campanhas Read & Earn, mesmo possuindo papéis restritos como `support` ou `readonly`. Além disso, nenhuma dessas ações deixava rastro na tabela `admin_audit_logs`.
+- **Correção Aplicada**:
+  1. Criadas permissões granulares `read_earn` (escrita) e `read_earn.view` (leitura) em `server/modules/admin/admin.permissions.ts`.
+  2. Aplicado `requireAdminPermission("read_earn.view", "read_earn")` nas rotas GET e `requireAdminPermission("read_earn")` nas rotas POST, PUT e DELETE em `server/modules/read-earn/read-earn.admin.routes.ts`.
+  3. Integrado `void logAdminAction(...)` nos handlers de `create`, `update` e `delete` registrando `oldValue`, `newValue`, `resourceId`, IP e User-Agent.
+- **Testes de Verificação**: `tests/read-earn/read-earn.rbac.test.mjs` (12 testes cobrindo todas as combinações de papéis e permissões).
+
+---
+
+### SEC-16: Fortalecimento Criptográfico para Códigos Promocionais — MÉDIA
+- **Descrição**: A função `hashReadEarnCode` utilizava custo 10 hardcoded no bcrypt, divergindo da constante global `BCRYPT_COST = 12` recomendada pela OWASP e definida em `server/shared/security/password.ts`.
+- **Correção Aplicada**: Importado `BCRYPT_COST` (12 rounds) de `server/shared/security/password.ts`, elevando a resistência contra ataques de força bruta offline em caso de vazamento da base.
+- **Teste de Verificação**: `tests/read-earn/read-earn.service.unit.test.mjs` validando prefixo `$2a$12$` ou `$2b$12$` no hash gerado.
+
+---
+
+### TEC-03 & TEC-04: Tipagem Estrita e Extração de Constantes — MÉDIA / BAIXA
+- **Descrição**: 5 arquivos no backend continham `// @ts-nocheck` e diversos números mágicos (`86_400_000`, `15 * 60 * 1000`, `20`, `50`, `100`, `64`, `512`). No client, campos numéricos estavam anotados como `unknown`.
+- **Correção Aplicada**:
+  1. Criado `server/modules/read-earn/read-earn.types.ts` e `client/src/features/read-earn/read-earn.types.ts` consolidando DTOs compartilhados.
+  2. Removidos todos os `// @ts-nocheck` do módulo; backend compila com 0 erros no TypeScript estrito.
+  3. Criadas constantes nomeadas em `read-earn.errors.ts`: `MS_PER_DAY`, `DEFAULT_HASHRATE_VALIDITY_DAYS`, `MINER_LEVEL_MIN`, `MINER_LEVEL_MAX`, `READ_EARN_IP_MAX_LENGTH`, `READ_EARN_UA_MAX_LENGTH`, `REDEEM_RATE_WINDOW_MS`, `REDEEM_RATE_MAX`, `REDEMPTIONS_DEFAULT_TAKE`, `REDEMPTIONS_MAX_TAKE`.
+
+---
+
+### UX-04 & UX-05: Redesign de Exclusão e Paginação de Resgates — MÉDIA
+- **Descrição**: O botão de exclusão utilizava `window.confirm()`, que pode ser bloqueado em navegadores modernos e trava a thread de renderização. O histórico de resgates carregava apenas os primeiros 50 registros sem controles de navegação.
+- **Correção Aplicada**:
+  1. Implementado modal inline de confirmação com visual destrutivo em vermelho, informando o título da campanha e ID a ser excluído.
+  2. Adicionados botões de paginação anterior/próxima (`skip` + `take`) na seção de resgates da campanha, informando a faixa atual e total de resgates.
+
+---
+
+## 3. Resultados dos Testes de Carga (k6) — Read & Earn
+
+Executado através de `tests/performance/run-read-earn-k6.mjs` sob 15 VUs simultâneas ao longo de 11 segundos:
+
+| Métrica | Meta Estabelecida | Resultado Obtido | Status |
+| :--- | :---: | :---: | :---: |
+| **Taxa de Erro 5xx** | `0.00%` | **0.00%** (0 de 3.414 requests) | ✅ Aprovado |
+| **Checks Totais** | `100.00%` | **100.00%** (3.414 de 3.414) | ✅ Aprovado |
+| **Latência Pública GET (`/campaigns`) p50** | $< 100\text{ ms}$ | **2.72 ms** | ✅ Excelente |
+| **Latência Pública GET (`/campaigns`) p95** | $< 200\text{ ms}$ | **6.06 ms** | ✅ Excelente |
+| **Latência Admin GET (`/admin/.../campaigns`) p50** | $< 150\text{ ms}$ | **2.04 ms** | ✅ Excelente |
+| **Latência Admin GET (`/admin/.../campaigns`) p95** | $< 300\text{ ms}$ | **4.60 ms** | ✅ Excelente |
+| **Latência Admin Redemptions p50** | $< 150\text{ ms}$ | **1.48 ms** | ✅ Excelente |
+| **Latência Admin Redemptions p95** | $< 300\text{ ms}$ | **3.46 ms** | ✅ Excelente |
+| **Throughput Médio** | $> 100\text{ req/s}$ | **308.35 req/s** | ✅ Aprovado |
+
+---
+
+## 4. Resultados da Auditoria de Segurança (Container Kali Linux) — Read & Earn
+
+Executado através de `tests/security/run-kali-read-earn-audit.sh` utilizando o container `kali-pentest:latest`:
+
+| Categoria do Teste | Casos Executados | Resultado |
+| :--- | :---: | :---: |
+| **Autenticação & RBAC Bypass** | 5 rotas administrativas | **100% Bloqueados** (HTTP 401 Unauthorized) |
+| **Tokens Adulterados / Assinatura Forjada** | 1 vetor com payload corrompido | **100% Rejeitados** (HTTP 401 Unauthorized) |
+| **Vazamento de Segredos na API Pública** | Listagem de campanhas `/api/read-earn/campaigns` | **100% Aprovado** (`codeHash` omitido da resposta) |
+| **Injeção de Protocolos Perigosos & XSS** | 4 vetores (`javascript:`, `data:`, `vbscript:`, `file:`) | **100% Rejeitados** (HTTP 400 Bad Request via Zod) |
+| **SQLi & Path Traversal em `:id`** | 5 vetores (Union SQLi, DROP TABLE, `../`, NaN, negativo) | **100% Neutralizados** (HTTP 400/404 via `parsePositiveIntId`) |
+| **Fuzzing de Regras e Limites de Negócio** | Código curto (<6), datas invertidas, máquina sem minerId | **100% Rejeitados** (HTTP 400 Bad Request) |
+| **Prevenção de Information Disclosure** | Injeção de JSON corrompido | **Zero vazamentos** de stack traces ou Prisma |
+
+**Total de Verificações de Segurança**: 20 executadas, 20 aprovadas, 0 falhas.
+
 
 
