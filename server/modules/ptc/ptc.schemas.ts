@@ -1,24 +1,24 @@
-// @ts-nocheck
-// RECOVERED: this source file was missing from git history (never committed) while
-// production kept running off a stale compiled dist/ via Docker build cache.
-// Reconstructed verbatim from the last known-good compiled output on 2026-09-11.
-// TODO: remove @ts-nocheck once someone re-adds proper types for this file.
-/**
- * New zod validation on top of legacy/server/modules/ptc/ptc.controller.ts's manual
- * `if (!title || !url) ...` checks — doctrine requires `.strict()` zod schemas at the
- * controller boundary (see current/server/modules/read-earn/read-earn.schemas.ts), legacy
- * didn't have this. Stricter than legacy, never looser.
- */
 import { z } from "zod";
+
+function isHttpUrl(value: unknown): boolean {
+  try {
+    const u = new URL(String(value));
+    return u.protocol === "http:" || u.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 export const createCampaignSchema = z
-    .object({
+  .object({
     title: z.string().trim().min(1).max(200),
     description: z.string().trim().max(2000).default(""),
-    url: z.string().trim().min(1).max(2048),
+    url: z.string().trim().min(1).max(2048).refine(isHttpUrl, "url must be a valid http(s) URL"),
     tierId: z.coerce.number().int().positive(),
     targetViews: z.coerce.number().int().positive(),
-})
-    .strict();
+  })
+  .strict();
+
 export const editCampaignSchema = z
     .object({
     title: z.string().trim().min(1).max(200).optional(),

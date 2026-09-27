@@ -1,7 +1,24 @@
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import { CheckCircle2, XCircle, Clock, Eye, Loader2, Settings, ChevronDown, ChevronUp, Save, Layers, Plus, Trash2, Edit3 } from 'lucide-react';
+import {
+  CheckCircle2,
+  XCircle,
+  Clock,
+  Eye,
+  Loader2,
+  Settings,
+  ChevronDown,
+  ChevronUp,
+  Save,
+  Layers,
+  Plus,
+  Trash2,
+  Edit3,
+  AlertTriangle,
+  X,
+} from 'lucide-react';
 import { api } from '../../../shared/auth/auth.store';
+
 
 interface Campaign {
     id: number;
@@ -57,6 +74,9 @@ export default function AdminPtc() {
     const [rejectReason, setRejectReason] = useState<Record<number, string>>({});
     const [actionLoading, setActionLoading] = useState<number | null>(null);
     const [settingsSaving, setSettingsSaving] = useState(false);
+    const [tierToDelete, setTierToDelete] = useState<Tier | null>(null);
+    const [tierDeleting, setTierDeleting] = useState(false);
+
 
     const fetchData = useCallback(async () => {
         try {
@@ -141,17 +161,22 @@ export default function AdminPtc() {
         }
     }
 
-    async function handleDeleteTier(id: number) {
-        if (!confirm('Deletar este tier? Campanhas existentes não serão afetadas.')) return;
+    async function confirmDeleteTier() {
+        if (!tierToDelete) return;
+        setTierDeleting(true);
         try {
-            await api.delete(`/admin/ptc/tiers/${id}`);
-            toast.success('Tier deletado');
+            await api.delete(`/admin/ptc/tiers/${tierToDelete.id}`);
+            toast.success('Tier deletado com sucesso');
+            setTierToDelete(null);
             fetchData();
         } catch (err: unknown) {
             const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
             toast.error(msg ?? 'Erro ao deletar');
+        } finally {
+            setTierDeleting(false);
         }
     }
+
 
     function startEditTier(t: Tier) {
         setTierForm({
@@ -400,10 +425,11 @@ export default function AdminPtc() {
                                             className="p-2 bg-gray-800 text-white rounded-xl hover:bg-gray-700 transition-colors">
                                             <Edit3 className="w-3.5 h-3.5" />
                                         </button>
-                                        <button onClick={() => handleDeleteTier(t.id)}
+                                        <button onClick={() => setTierToDelete(t)}
                                             className="p-2 bg-red-600/20 text-red-400 rounded-xl hover:bg-red-600/40 transition-colors">
                                             <Trash2 className="w-3.5 h-3.5" />
                                         </button>
+
                                     </div>
                                 </div>
                             ))}
@@ -455,6 +481,46 @@ export default function AdminPtc() {
                     </button>
                 </div>
             )}
+
+            {/* Modal de confirmação para deletar Tier */}
+            {tierToDelete && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+                    <div className="w-full max-w-md rounded-2xl border border-red-500/30 bg-slate-900 p-6 space-y-4 shadow-2xl">
+                        <div className="flex items-center gap-3 text-red-400">
+                            <AlertTriangle className="w-6 h-6 shrink-0" />
+                            <h3 className="font-bold text-white text-lg">Excluir Tier PTC</h3>
+                        </div>
+                        <p className="text-sm text-slate-300">
+                            Tem certeza que deseja excluir o tier <span className="font-bold text-white">"{tierToDelete.label}"</span>? Campanhas já existentes não serão afetadas.
+                        </p>
+                        <div className="p-3 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-400 flex justify-between">
+                            <span>Duração: <strong className="text-white">{tierToDelete.durationSeconds}s</strong></span>
+                            <span>Tipo: <strong className="text-white">{tierToDelete.adType}</strong></span>
+                            <span>ID: #{tierToDelete.id}</span>
+                        </div>
+                        <div className="flex justify-end gap-2 pt-2">
+                            <button
+                                type="button"
+                                disabled={tierDeleting}
+                                onClick={() => setTierToDelete(null)}
+                                className="px-4 py-2 rounded-xl text-slate-400 hover:text-white text-sm"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="button"
+                                disabled={tierDeleting}
+                                onClick={confirmDeleteTier}
+                                className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-semibold disabled:opacity-50"
+                            >
+                                {tierDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                                Excluir
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
+
