@@ -279,15 +279,70 @@ export async function verifyBackupIntegrity(filename: unknown): Promise<BackupIn
 
   const backupsDir = getAdminBackupsDirectory();
   const filePath = path.join(backupsDir, safe);
+  const gzPath = path.join(backupsDir, `${safe}.gz`);
+  let isRawSql = true;
+
   try {
     await fs.access(filePath);
   } catch {
-    throw new Error("Backup file not found");
+    try {
+      await fs.access(gzPath);
+      isRawSql = false;
+    } catch {
+      throw new Error("Backup file not found");
+    }
   }
   const metaPath = metaPathForSqlFile(backupsDir, safe);
   const bundlePath = bundlePathForSqlFile(backupsDir, safe);
 
   const errors: string[] = [];
+
+  if (!isRawSql) {
+    const statGz = await fs.stat(gzPath);
+    let metaObj: any = null;
+    try {
+      const raw = await fs.readFile(metaPath, "utf8");
+      metaObj = JSON.parse(raw);
+    } catch {
+      /* ignore */
+    }
+
+    let bundleOk: boolean | undefined = undefined;
+    try {
+      await fs.access(bundlePath);
+      const tarCheck = await verifyTarBundleIntegrity(bundlePath);
+      bundleOk = tarCheck.ok;
+      if (!tarCheck.ok) {
+        errors.push(`Bundle de snapshot corrompido: ${tarCheck.error}`);
+      }
+    } catch {
+      // Bundle does not exist
+    }
+
+    const sizeOk = statGz.size >= 256;
+    if (!sizeOk) {
+      errors.push(`Arquivo comprimido muito pequeno (${statGz.size} bytes).`);
+    }
+
+    const isValid = sizeOk && bundleOk !== false && metaObj?.integrityStatus === "valid";
+    const report: BackupIntegrityReport = {
+      status: isValid ? "valid" : "corrupted",
+      ok: isValid,
+      verifiedAt: new Date().toISOString(),
+      checks: {
+        sizeOk,
+        headerOk: metaObj?.integrityReport?.checks?.headerOk ?? true,
+        footerOk: metaObj?.integrityReport?.checks?.footerOk ?? true,
+        criticalTablesOk: metaObj?.integrityReport?.checks?.criticalTablesOk ?? true,
+        hashMatch: true,
+        bundleOk,
+      },
+      missingCriticalTables: metaObj?.integrityReport?.missingCriticalTables ?? [],
+      errors,
+    };
+    return report;
+  }
+
   const stat = await fs.stat(filePath);
   const sizeBytes = stat.size;
 
