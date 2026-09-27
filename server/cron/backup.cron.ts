@@ -92,6 +92,14 @@ export async function runDatabaseBackupJob(): Promise<{
       filename: backup.name,
       compressed,
     });
+    if (compressed) {
+      try {
+        await fs.unlink(sqlPath);
+        log.info("admin_backup_uncompressed_reclaimed", { filename: backup.name });
+      } catch {
+        /* ignore */
+      }
+    }
 
     // 3. Sync to Google Drive if authorized
     let driveUploaded = false;

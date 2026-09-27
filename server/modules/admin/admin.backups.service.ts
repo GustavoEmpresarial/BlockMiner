@@ -683,12 +683,31 @@ export async function listSqlBackups(): Promise<{ backupsDir: string; backups: S
   const names = await fs.readdir(backupsDir);
   const backups: SqlBackupListItem[] = [];
 
+  const seen = new Set<string>();
   for (const name of names) {
-    if (!name.endsWith(".sql")) continue;
-    if (!/^backup-.+\.sql$/i.test(name)) continue;
+    let baseSql = "";
+    if (/^backup-.+\.sql$/i.test(name)) {
+      baseSql = name;
+    } else if (/^backup-.+\.sql\.gz$/i.test(name)) {
+      baseSql = name.slice(0, -3);
+    } else {
+      continue;
+    }
+    if (seen.has(baseSql)) continue;
+    seen.add(baseSql);
 
-    const full = path.join(backupsDir, name);
-    const stat = await fs.stat(full);
+    const full = path.join(backupsDir, baseSql);
+    const fullGz = path.join(backupsDir, `${baseSql}.gz`);
+    let stat: { size: number; mtime: Date };
+    try {
+      stat = await fs.stat(full);
+    } catch {
+      try {
+        stat = await fs.stat(fullGz);
+      } catch {
+        continue;
+      }
+    }
     let status = "unknown";
     let publicTableCount: number | null = null;
     let durationMs: number | null = null;
@@ -707,10 +726,11 @@ export async function listSqlBackups(): Promise<{ backupsDir: string; backups: S
     let lastVerifiedAt: string | null = null;
     let integrityErrors: string[] | null = null;
     let googleDrive: SqlBackupListItem["googleDrive"] = null;
+    let meta: Record<string, any> | null = null;
 
     try {
-      const raw = await fs.readFile(metaPathForSqlFile(backupsDir, name), "utf8");
-      const meta = JSON.parse(raw);
+      const raw = await fs.readFile(metaPathForSqlFile(backupsDir, baseSql), "utf8");
+      meta = JSON.parse(raw);
       if (meta && typeof meta === "object") {
         if (meta.status === "success" || meta.status === "failed") status = meta.status;
         if (typeof meta.sha256 === "string") sha256 = meta.sha256;
@@ -749,8 +769,8 @@ export async function listSqlBackups(): Promise<{ backupsDir: string; backups: S
     }
 
     backups.push({
-      name,
-      size: stat.size,
+      name: baseSql,
+      size: (meta && typeof meta === "object" && Number.isFinite(meta.sizeBytes)) ? meta.sizeBytes : stat.size,
       created: stat.mtime.toISOString(),
       status,
       publicTableCount,
