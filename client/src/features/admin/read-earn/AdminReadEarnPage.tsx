@@ -279,8 +279,12 @@ export default function AdminReadEarn() {
         <div className="flex items-start gap-3">
           <BookOpen className="w-10 h-10 text-amber-500 shrink-0" />
           <div>
-            <h1 className="text-2xl font-black text-white tracking-tight">{t('adminReadEarn.title')}</h1>
-            <p className="text-sm text-slate-500 mt-1">{t('adminReadEarn.subtitle')}</p>
+            <h1 className="text-2xl font-black text-white tracking-tight">
+              {t('adminReadEarn.title', 'Ler e Ganhar')}
+            </h1>
+            <p className="text-sm text-slate-500 mt-1">
+              {t('adminReadEarn.subtitle', 'Gerencie campanhas de parceiros e códigos promocionais.')}
+            </p>
           </div>
         </div>
         <button
@@ -289,7 +293,7 @@ export default function AdminReadEarn() {
           className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500 text-slate-950 font-bold text-sm hover:bg-amber-400"
         >
           <Plus className="w-4 h-4" />
-          {t('adminReadEarn.create')}
+          {t('adminReadEarn.create', 'Criar campanha')}
         </button>
       </div>
 
@@ -297,7 +301,9 @@ export default function AdminReadEarn() {
         <div className="rounded-2xl border border-slate-700 bg-slate-900/80 p-6 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="font-bold text-white">
-              {editingId === 'new' ? t('adminReadEarn.create') : t('adminReadEarn.edit')}
+              {editingId === 'new'
+                ? t('adminReadEarn.create', 'Criar campanha')
+                : t('adminReadEarn.edit', 'Editar campanha')}
             </h2>
             <button type="button" onClick={cancelEdit} className="p-1 text-slate-500 hover:text-white">
               <X className="w-5 h-5" />
@@ -306,7 +312,9 @@ export default function AdminReadEarn() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <label className="block space-y-1">
-              <span className="text-xs text-slate-500 uppercase font-bold">{t('adminReadEarn.field_title')}</span>
+              <span className="text-xs text-slate-500 uppercase font-bold">
+                {t('adminReadEarn.field_title', 'Título da campanha')}
+              </span>
               <input
                 className="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm"
                 value={form.title}
@@ -315,7 +323,7 @@ export default function AdminReadEarn() {
             </label>
             <label className="block space-y-1 md:col-span-2">
               <span className="text-xs text-slate-500 uppercase font-bold">
-                {t('adminReadEarn.field_partner_url')}
+                {t('adminReadEarn.field_partner_url', 'URL do parceiro (com https://)')}
               </span>
               <input
                 className="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm"
@@ -325,7 +333,7 @@ export default function AdminReadEarn() {
             </label>
             <label className="block space-y-1 md:col-span-2">
               <span className="text-xs text-slate-500 uppercase font-bold">
-                {t('adminReadEarn.field_reward_code')}
+                {t('adminReadEarn.field_reward_code', 'Código secreto de resgate')}
               </span>
               <input
                 type="password"
@@ -335,28 +343,28 @@ export default function AdminReadEarn() {
                 onChange={(e) => setField('rewardCode', e.target.value)}
                 placeholder={
                   editingId === 'new'
-                    ? t('adminReadEarn.code_new_placeholder')
-                    : t('adminReadEarn.code_optional_placeholder')
+                    ? t('adminReadEarn.code_new_placeholder', 'Digite o código secreto (mínimo 6 caracteres)')
+                    : t('adminReadEarn.code_optional_placeholder', 'Deixe em branco para manter o código atual')
                 }
               />
             </label>
             <label className="block space-y-1">
               <span className="text-xs text-slate-500 uppercase font-bold">
-                {t('adminReadEarn.field_reward_type')}
+                {t('adminReadEarn.field_reward_type', 'Tipo de recompensa')}
               </span>
               <select
                 className="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm"
                 value={form.rewardType}
                 onChange={(e) => setField('rewardType', e.target.value)}
               >
-                <option value="hashrate">{t('adminReadEarn.type_hashrate')}</option>
-                <option value="blk">{t('adminReadEarn.type_blk')}</option>
-                <option value="machine">{t('adminReadEarn.type_machine')}</option>
+                <option value="hashrate">{t('adminReadEarn.type_hashrate', 'Poder temporário (Hashrate)')}</option>
+                <option value="blk">{t('adminReadEarn.type_blk', 'Tokens de mineração (BLK)')}</option>
+                <option value="machine">{t('adminReadEarn.type_machine', 'Máquina de inventário (Miner)')}</option>
               </select>
             </label>
             <label className="block space-y-1">
               <span className="text-xs text-slate-500 uppercase font-bold">
-                {t('adminReadEarn.field_reward_amount')}
+                {t('adminReadEarn.field_reward_amount', 'Quantidade / Poder')}
               </span>
               <input
                 type="number"
@@ -366,15 +374,18 @@ export default function AdminReadEarn() {
                 onChange={(e) => setField('rewardAmount', Number(e.target.value))}
               />
               <span className="text-[10px] text-slate-600">
-                {form.rewardType === 'hashrate' && t('adminReadEarn.amount_hashrate_hint')}
-                {form.rewardType === 'blk' && t('adminReadEarn.amount_blk_hint')}
-                {form.rewardType === 'machine' && t('adminReadEarn.amount_machine_hint')}
+                {form.rewardType === 'hashrate' &&
+                  t('adminReadEarn.amount_hashrate_hint', 'Poder concedido em TH/s pelo período determinado')}
+                {form.rewardType === 'blk' &&
+                  t('adminReadEarn.amount_blk_hint', 'Saldo em BLK creditado na conta do usuário')}
+                {form.rewardType === 'machine' &&
+                  t('adminReadEarn.amount_machine_hint', 'Nível inicial da máquina (1 a 100)')}
               </span>
             </label>
             {form.rewardType === 'machine' && (
               <label className="block space-y-1 md:col-span-2">
                 <span className="text-xs text-slate-500 uppercase font-bold">
-                  {t('adminReadEarn.field_miner')}
+                  {t('adminReadEarn.field_miner', 'Mineradora do catálogo')}
                 </span>
                 <select
                   className="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm"
@@ -395,7 +406,7 @@ export default function AdminReadEarn() {
             {form.rewardType === 'hashrate' && (
               <label className="block space-y-1">
                 <span className="text-xs text-slate-500 uppercase font-bold">
-                  {t('adminReadEarn.field_validity_days')}
+                  {t('adminReadEarn.field_validity_days', 'Duração do poder (dias)')}
                 </span>
                 <input
                   type="number"
@@ -406,7 +417,9 @@ export default function AdminReadEarn() {
               </label>
             )}
             <label className="block space-y-1">
-              <span className="text-xs text-slate-500 uppercase font-bold">{t('adminReadEarn.field_starts')}</span>
+              <span className="text-xs text-slate-500 uppercase font-bold">
+                {t('adminReadEarn.field_starts', 'Início da campanha')}
+              </span>
               <input
                 type="datetime-local"
                 className="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm"
@@ -415,7 +428,9 @@ export default function AdminReadEarn() {
               />
             </label>
             <label className="block space-y-1">
-              <span className="text-xs text-slate-500 uppercase font-bold">{t('adminReadEarn.field_expires')}</span>
+              <span className="text-xs text-slate-500 uppercase font-bold">
+                {t('adminReadEarn.field_expires', 'Fim da campanha')}
+              </span>
               <input
                 type="datetime-local"
                 className="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm"
@@ -425,18 +440,20 @@ export default function AdminReadEarn() {
             </label>
             <label className="block space-y-1">
               <span className="text-xs text-slate-500 uppercase font-bold">
-                {t('adminReadEarn.field_max_redemptions')}
+                {t('adminReadEarn.field_max_redemptions', 'Limite de resgates (opcional)')}
               </span>
               <input
                 type="number"
                 className="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm"
                 value={form.maxRedemptions}
                 onChange={(e) => setField('maxRedemptions', e.target.value)}
-                placeholder={t('adminReadEarn.field_max_placeholder')}
+                placeholder={t('adminReadEarn.field_max_placeholder', 'Ilimitado')}
               />
             </label>
             <label className="block space-y-1">
-              <span className="text-xs text-slate-500 uppercase font-bold">{t('adminReadEarn.field_sort')}</span>
+              <span className="text-xs text-slate-500 uppercase font-bold">
+                {t('adminReadEarn.field_sort', 'Ordem de exibição')}
+              </span>
               <input
                 type="number"
                 className="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm"
@@ -450,7 +467,7 @@ export default function AdminReadEarn() {
                 checked={form.isActive}
                 onChange={(e) => setField('isActive', e.target.checked)}
               />
-              <span className="text-sm">{t('adminReadEarn.field_active')}</span>
+              <span className="text-sm">{t('adminReadEarn.field_active', 'Campanha ativa')}</span>
             </label>
           </div>
 
@@ -460,7 +477,7 @@ export default function AdminReadEarn() {
               onClick={cancelEdit}
               className="px-4 py-2 rounded-xl text-slate-400 hover:text-white text-sm"
             >
-              {t('adminReadEarn.cancel')}
+              {t('adminReadEarn.cancel', 'Cancelar')}
             </button>
             <button
               type="button"
@@ -469,7 +486,7 @@ export default function AdminReadEarn() {
               className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold disabled:opacity-50"
             >
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              {t('adminReadEarn.save')}
+              {t('adminReadEarn.save', 'Salvar campanha')}
             </button>
           </div>
         </div>
@@ -485,11 +502,11 @@ export default function AdminReadEarn() {
           <table className="w-full text-sm">
             <thead className="bg-slate-900 text-slate-500 text-left text-xs uppercase tracking-wider">
               <tr>
-                <th className="px-4 py-3">{t('adminReadEarn.table_title')}</th>
-                <th className="px-4 py-3">{t('adminReadEarn.table_dates')}</th>
-                <th className="px-4 py-3">{t('adminReadEarn.table_type')}</th>
-                <th className="px-4 py-3">{t('adminReadEarn.table_redemptions')}</th>
-                <th className="px-4 py-3">{t('adminReadEarn.table_active')}</th>
+                <th className="px-4 py-3">{t('adminReadEarn.table_title', 'Título')}</th>
+                <th className="px-4 py-3">{t('adminReadEarn.table_dates', 'Período')}</th>
+                <th className="px-4 py-3">{t('adminReadEarn.table_type', 'Recompensa')}</th>
+                <th className="px-4 py-3">{t('adminReadEarn.table_redemptions', 'Resgates')}</th>
+                <th className="px-4 py-3">{t('adminReadEarn.table_active', 'Status')}</th>
                 <th className="px-4 py-3 text-right"> </th>
               </tr>
             </thead>
@@ -541,7 +558,7 @@ export default function AdminReadEarn() {
           <div className="flex items-center justify-between">
             <h3 className="font-bold text-white flex items-center gap-2">
               <Users className="w-5 h-5 text-amber-500" />
-              {t('adminReadEarn.redemptions')}: {redemptionsCampaign.title}
+              {t('adminReadEarn.redemptions', 'Histórico de resgates')}: {redemptionsCampaign.title}
               <span className="text-slate-500 font-normal text-sm">({redemptionsTotal})</span>
             </h3>
             <button
@@ -558,7 +575,9 @@ export default function AdminReadEarn() {
           {redemptionsLoading ? (
             <Loader2 className="w-8 h-8 animate-spin text-amber-500 mx-auto" />
           ) : redemptions.length === 0 ? (
-            <p className="text-slate-500 text-sm">{t('adminReadEarn.redemptions_empty')}</p>
+            <p className="text-slate-500 text-sm">
+              {t('adminReadEarn.redemptions_empty', 'Nenhum resgate registrado até o momento.')}
+            </p>
           ) : (
             <div className="space-y-4">
               <ul className="space-y-2 max-h-64 overflow-y-auto text-sm">
@@ -568,10 +587,10 @@ export default function AdminReadEarn() {
                     className="flex flex-wrap justify-between gap-2 border border-slate-800 rounded-lg px-3 py-2"
                   >
                     <span className="text-slate-300">
-                      {t('adminReadEarn.user')}: {x.username || x.email || `#${x.userId}`}
+                      {t('adminReadEarn.user', 'Jogador')}: {x.username || x.email || `#${x.userId}`}
                     </span>
                     <span className="text-slate-500 text-xs">
-                      {t('adminReadEarn.redeemed_at')}: {new Date(x.redeemedAt).toLocaleString()}
+                      {t('adminReadEarn.redeemed_at', 'Resgatado em')}: {new Date(x.redeemedAt).toLocaleString()}
                     </span>
                   </li>
                 ))}
