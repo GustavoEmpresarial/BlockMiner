@@ -746,7 +746,6 @@ async function dispatchCompletionHooks(args: {
     completedAtIso: now.toISOString(),
   });
 }
-}
 
 // ---------------------------------------------------------------------------
 // Admin flows

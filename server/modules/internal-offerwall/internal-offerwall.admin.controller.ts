@@ -3,6 +3,7 @@ import type { Request, Response } from "express";
 import type { InternalOfferwallOffer } from "@prisma/client";
 import prisma from "../../core/database/prisma.js";
 import { logger } from "../../core/logger/index.js";
+import { logAdminAction } from "../admin/index.js";
 import * as service from "./internal-offerwall.service.js";
 import { idParamSchema, adminListAttemptsQuerySchema, adminRejectAttemptBodySchema } from "./internal-offerwall.schemas.js";
 
@@ -62,6 +63,19 @@ export async function createOffer(req: Request, res: Response): Promise<void> {
       return;
     }
     const row = await service.adminCreateOffer(parsed.data);
+    void logAdminAction({
+      adminId: req.admin?.adminId ?? null,
+      adminEmail: req.admin?.email ?? null,
+      sessionId: req.admin?.sessionId ?? null,
+      action: "ADMIN_INTERNAL_OFFERWALL_CREATE_OFFER",
+      module: "internal_offerwall",
+      resource: "InternalOfferwallOffer",
+      resourceId: String(row.id),
+      newValue: offerToPlain(row),
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"],
+      success: true,
+    });
     res.status(201).json({ ok: true, offer: row });
   } catch (error: unknown) {
     log.error("createOffer failed", { error: String(error) });
@@ -87,6 +101,20 @@ export async function patchOffer(req: Request, res: Response): Promise<void> {
       return;
     }
     const row = await service.adminPatchOffer(id, parsed.data);
+    void logAdminAction({
+      adminId: req.admin?.adminId ?? null,
+      adminEmail: req.admin?.email ?? null,
+      sessionId: req.admin?.sessionId ?? null,
+      action: "ADMIN_INTERNAL_OFFERWALL_UPDATE_OFFER",
+      module: "internal_offerwall",
+      resource: "InternalOfferwallOffer",
+      resourceId: String(id),
+      oldValue: offerToPlain(existing),
+      newValue: offerToPlain(row),
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"],
+      success: true,
+    });
     res.json({ ok: true, offer: row });
   } catch (error: unknown) {
     log.error("patchOffer failed", { error: String(error) });
@@ -116,6 +144,18 @@ export async function approveAttempt(req: Request, res: Response): Promise<void>
       res.status(out.status).json({ ok: false, message: out.message });
       return;
     }
+    void logAdminAction({
+      adminId: req.admin?.adminId ?? null,
+      adminEmail: req.admin?.email ?? null,
+      sessionId: req.admin?.sessionId ?? null,
+      action: "ADMIN_INTERNAL_OFFERWALL_APPROVE_ATTEMPT",
+      module: "internal_offerwall",
+      resource: "InternalOfferwallAttempt",
+      resourceId: String(id),
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"],
+      success: true,
+    });
     res.json({ ok: true });
   } catch (error: unknown) {
     log.error("approveAttempt failed", { error: String(error) });
@@ -143,6 +183,18 @@ export async function deactivateFrameHost(req: Request, res: Response): Promise<
       res.status(out.status).json({ ok: false, message: out.message });
       return;
     }
+    void logAdminAction({
+      adminId: req.admin?.adminId ?? null,
+      adminEmail: req.admin?.email ?? null,
+      sessionId: req.admin?.sessionId ?? null,
+      action: "ADMIN_INTERNAL_OFFERWALL_DEACTIVATE_FRAME_HOST",
+      module: "internal_offerwall",
+      resource: "InternalOfferwallFrameHost",
+      resourceId: String(id),
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"],
+      success: true,
+    });
     res.json({ ok: true });
   } catch (error: unknown) {
     log.error("deactivateFrameHost failed", { error: String(error) });
@@ -162,6 +214,19 @@ export async function rejectAttempt(req: Request, res: Response): Promise<void> 
       res.status(out.status).json({ ok: false, message: out.message });
       return;
     }
+    void logAdminAction({
+      adminId: req.admin?.adminId ?? null,
+      adminEmail: req.admin?.email ?? null,
+      sessionId: req.admin?.sessionId ?? null,
+      action: "ADMIN_INTERNAL_OFFERWALL_REJECT_ATTEMPT",
+      module: "internal_offerwall",
+      resource: "InternalOfferwallAttempt",
+      resourceId: String(id),
+      newValue: { note },
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"],
+      success: true,
+    });
     res.json({ ok: true });
   } catch (error: unknown) {
     log.error("rejectAttempt failed", { error: String(error) });

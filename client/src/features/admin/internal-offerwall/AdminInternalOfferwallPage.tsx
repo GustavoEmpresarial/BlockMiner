@@ -41,6 +41,8 @@ export default function AdminInternalOfferwallPage() {
   const [busyId, setBusyId] = useState<number | null>(null);
   const [rejectId, setRejectId] = useState<number | null>(null);
   const [rejectNote, setRejectNote] = useState('');
+  const [frameHosts, setFrameHosts] = useState<{ id: number; hostname: string; isActive: boolean; createdAt: string }[]>([]);
+  const [loadingHosts, setLoadingHosts] = useState(false);
 
   const loadOffers = useCallback(async () => {
     setLoadingOffers(true);
@@ -68,9 +70,32 @@ export default function AdminInternalOfferwallPage() {
     }
   }, [t]);
 
+  const loadFrameHosts = useCallback(async () => {
+    setLoadingHosts(true);
+    try {
+      const res = await api.get('/admin/internal-offerwall/frame-hosts');
+      const data = res.data as { ok?: boolean; frameHosts?: { id: number; hostname: string; isActive: boolean; createdAt: string }[] };
+      setFrameHosts(Array.isArray(data.frameHosts) ? data.frameHosts : []);
+    } catch {
+      // non-critical error
+    } finally {
+      setLoadingHosts(false);
+    }
+  }, []);
+
   const refresh = useCallback(async () => {
-    await Promise.all([loadOffers(), loadAttempts()]);
-  }, [loadAttempts, loadOffers]);
+    await Promise.all([loadOffers(), loadAttempts(), loadFrameHosts()]);
+  }, [loadAttempts, loadFrameHosts, loadOffers]);
+
+  const onDeactivateHost = async (id: number) => {
+    try {
+      await api.delete(`/admin/internal-offerwall/frame-hosts/${id}`);
+      toast.success(t('admin_internal_offerwall.host_deactivated', { defaultValue: 'Host desativado com sucesso' }));
+      await loadFrameHosts();
+    } catch (err) {
+      toast.error(apiErrMessage(err, t('common.error')));
+    }
+  };
 
   useEffect(() => {
     void refresh();
@@ -246,6 +271,69 @@ export default function AdminInternalOfferwallPage() {
               setRejectNote('');
             }}
           />
+        )}
+      </section>
+
+      <section className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xs font-black uppercase tracking-widest text-sky-400">
+            {t('admin_internal_offerwall.frame_hosts_section', { defaultValue: 'Hosts Permitidos no Iframe (CSP frame-src)' })}
+          </h2>
+          <span className="text-xs text-slate-500">{frameHosts.length} hosts registrados</span>
+        </div>
+
+        {loadingHosts ? (
+          <div className="flex items-center gap-2 text-slate-400">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            <span>{t('admin_internal_offerwall.loading')}</span>
+          </div>
+        ) : frameHosts.length === 0 ? (
+          <p className="text-sm text-slate-500">Nenhum host dinâmico registrado além dos embutidos padrão.</p>
+        ) : (
+          <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900/40">
+            <table className="w-full text-left text-xs">
+              <thead className="border-b border-slate-800 text-slate-400">
+                <tr>
+                  <th className="px-4 py-3 font-semibold">Hostname</th>
+                  <th className="px-4 py-3 font-semibold">Status</th>
+                  <th className="px-4 py-3 font-semibold">Registrado em</th>
+                  <th className="px-4 py-3 font-semibold text-right">Ação</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60 text-slate-300">
+                {frameHosts.map((h) => (
+                  <tr key={h.id} className="hover:bg-slate-800/30">
+                    <td className="px-4 py-3 font-mono font-bold text-white">{h.hostname}</td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-bold ${
+                          h.isActive ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
+                        }`}
+                      >
+                        {h.isActive ? 'Ativo' : 'Inativo'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-slate-400">
+                      {h.createdAt ? new Date(h.createdAt).toLocaleDateString() : '—'}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      {h.isActive ? (
+                        <button
+                          type="button"
+                          onClick={() => void onDeactivateHost(h.id)}
+                          className="rounded-lg border border-rose-500/20 bg-rose-500/10 px-2.5 py-1 text-[11px] font-semibold text-rose-300 hover:bg-rose-500/20"
+                        >
+                          Desativar
+                        </button>
+                      ) : (
+                        <span className="text-[11px] text-slate-600">Desativado</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
     </div>
