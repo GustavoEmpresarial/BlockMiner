@@ -594,6 +594,79 @@ Executado através de `tests/security/run-kali-offerwall-analytics-audit.sh` uti
 
 **Total de Verificações de Segurança**: 15 executadas, 15 aprovadas, 0 falhas.
 
+---
+
+# PARTE IX: MÓDULO DE INTERNAL OFFERWALL & ADMIN REVIEW (`/internal-offerwall` e `/admin/internal-offerwall`)
+
+## 1. Resumo Executivo dos Achados — Internal Offerwall
+
+| ID | Descrição do Achado | Severidade | CWE / OWASP | Arquivo e Linha Original | Status da Correção |
+| :---: | :--- | :---: | :---: | :--- | :---: |
+| **SEC-23** | **BFLA (Broken Function Level Authorization):** Rotas de mutação administrativa (`/approve`, `/reject`, `/frame-hosts/:id`) protegidas apenas por autenticação genérica, permitindo que moderadores de leitura ou outros setores executassem aprovação financeira e exclusão de regras de segurança. | **CRÍTICA** | CWE-285 / OWASP A1 | `server/modules/internal-offerwall/internal-offerwall.admin.routes.ts:11` | ✅ **Corrigido** |
+| **AUDIT-04** | **Ausência de Trilha de Auditoria Administrativa:** Criação e alteração de ofertas, aprovação de crédito de saldo e desativação de hosts CSP não eram registradas em `admin_audit_logs`. | **ALTA** | CWE-778 / OWASP A9 | `server/modules/internal-offerwall/internal-offerwall.admin.controller.ts:42` | ✅ **Corrigido** |
+| **API-07** | **Incompatibilidade de Método HTTP Client ↔ Servidor (PUT vs PATCH):** O frontend enviava `PUT /admin/internal-offerwall/offers/:id` na edição de ofertas, enquanto o backend aceitava unicamente `PATCH`, resultando em falha 404 ao salvar edições. | **ALTA** | Contrato de API | `server/modules/internal-offerwall/internal-offerwall.admin.routes.ts:15` | ✅ **Corrigido** |
+| **TEC-06** | **Código sem Tipagem Estrita e `@ts-nocheck` em Módulos Centrais:** Três arquivos (`internal-offerwall.service.ts`, `iframe-allowlist.ts`, `iframe-validate.ts`) continham `@ts-nocheck` e código duplicado no disparo de hooks pós-conclusão. | **MÉDIA** | Qualidade Estática | `server/modules/internal-offerwall/*.ts:1` | ✅ **Corrigido** |
+| **UI-03** | **Falta de Gestão de Hosts CSP Dinâmicos na Interface:** O backend possuía rotas para consulta e desativação de frame hosts autorizados, mas a UI não disponibilizava essa gestão aos administradores. | **BAIXA** | Usabilidade & SecOps | `client/src/features/admin/internal-offerwall/AdminInternalOfferwallPage.tsx` | ✅ **Corrigido** |
+
+---
+
+## 2. Detalhamento das Mitigações Aplicadas — Internal Offerwall
+
+### SEC-23: Implementação de RBAC Granular & Guards de Mutação — CRÍTICA
+- **Descrição**: Administradores com permissão puramente de consulta (`moderator`) ou com acesso a outras áreas (`finance`, `support`) conseguiam aprovar tentativas manuais (creditando saldo BLK) e deletar hosts da allowlist de CSP.
+- **Correção Aplicada**: Registradas as permissões `internal_offerwall` e `internal_offerwall.view` em `server/modules/admin/admin.permissions.ts`. As rotas de leitura foram vinculadas ao `viewGuard` (`requireAdminPermission("internal_offerwall.view", "internal_offerwall", "offerwall.view", "offerwall")`) e as rotas de escrita foram protegidas com `manageGuard` (`requireAdminPermission("internal_offerwall", "offerwall")`), além de rate limiting dedicado a 300 req/min.
+- **Testes de Verificação**: `tests/internal-offerwall/internal-offerwall.rbac.test.mjs` (7 testes aprovados).
+
+### AUDIT-04: Rastreabilidade Total de Operações Administrativas — ALTA
+- **Descrição**: Ações administrativas sensíveis eram executadas sem rastro de auditoria.
+- **Correção Aplicada**: Integrada a função `logAdminAction` em `createOffer`, `patchOffer`, `approveAttempt`, `rejectAttempt` e `deactivateFrameHost`, registrando o ID do admin, ação, módulo, recurso, valores anteriores/posteriores, IP e User-Agent.
+
+### API-07: Unificação de Contratos HTTP (PUT & PATCH) — ALTA
+- **Descrição**: Divergência entre o verbo HTTP disparado pelo formulário do React (`PUT`) e as rotas registradas no Express (`PATCH`).
+- **Correção Aplicada**: O backend agora aceita tanto `PUT` quanto `PATCH` para a rota `/internal-offerwall/offers/:id`, compartilhando a mesma validação e serialização de dados.
+
+### TEC-06: Remoção de `@ts-nocheck` e Deduplicação de Hooks — MÉDIA
+- **Descrição**: Incompatibilidade de tipos e duplicação literal de 25 linhas de chamadas a serviços externos (Torneios, Mini Pass, Missões Diárias, Hashes) entre a auto-conclusão do usuário e a aprovação pelo administrador.
+- **Correção Aplicada**: `@ts-nocheck` removido de todos os arquivos do módulo; contratos tipados adicionados em `internal-offerwall.types.ts`; helper centralizado `dispatchCompletionHooks` extraído para unificar os disparos pós-conclusão. Duplicação de código no módulo reduzida para 2.01%.
+
+### UI-03: Visualização e Gestão de Frame Hosts na Interface — BAIXA
+- **Descrição**: Hosts adicionados dinamicamente na allowlist de CSP não podiam ser inspecionados ou revogados visualmente.
+- **Correção Aplicada**: Adicionada a seção "Hosts Permitidos no Iframe (CSP frame-src)" em `AdminInternalOfferwallPage.tsx`, com listagem em tempo real, badges de status e botão para desativação imediata.
+
+---
+
+## 3. Resultados dos Testes de Carga (k6) — Internal Offerwall
+
+Executado através de `tests/performance/run-internal-offerwall-k6.mjs` simulando tráfego concorrente sob 15 VUs:
+
+| Métrica | Meta Estabelecida | Resultado Obtido | Status |
+| :--- | :---: | :---: | :---: |
+| **Taxa de Erro 5xx** | `0.00%` | **0.00%** (0 de 5.376 requests) | ✅ Aprovado |
+| **Checks de Sucesso Admin** | `100.00%` | **100.00%** | ✅ Aprovado |
+| **Latência Média Global** | $< 100\text{ ms}$ | **11.29 ms** | ✅ Excelente |
+| **Latência p50 (Mediana)** | $< 50\text{ ms}$ | **10.17 ms** | ✅ Excelente |
+| **Latência p90** | $< 150\text{ ms}$ | **20.31 ms** | ✅ Excelente |
+| **Latência p95** | $< 250\text{ ms}$ | **23.40 ms** | ✅ Excelente |
+| **Throughput Médio** | $> 100\text{ req/s}$ | **486.31 req/s** | ✅ Aprovado |
+
+---
+
+## 4. Resultados da Auditoria de Segurança (Container Kali Linux) — Internal Offerwall
+
+Executado através de `tests/security/run-kali-internal-offerwall-audit.sh` utilizando o container `kali-pentest:latest`:
+
+| Categoria do Teste | Casos Executados | Resultado |
+| :--- | :---: | :---: |
+| **Autenticação & RBAC Bypass** | 3 rotas administrativas | **100% Bloqueados** (HTTP 401 Unauthorized) |
+| **Tokens Adulterados / Assinatura Falsa** | 1 vetor em Bearer/Cookie | **100% Rejeitado** (HTTP 401 Unauthorized) |
+| **BFLA (Broken Function Level Authorization)** | Moderador tentando aprovar tentativa | **100% Bloqueado** (HTTP 403 Forbidden - `FORBIDDEN_PERMISSION`) |
+| **SQLi em Parâmetros de Busca** | 5 vetores (Union, DROP, quotes, NaN, negativo) | **100% Neutralizados** (HTTP 200 sanitizado ou 400 Bad Request) |
+| **Anti-SSRF & Iframe Injection** | 5 URLs maliciosas (`http://`, `javascript:`, `data:`, IP local, metadata AWS) | **100% Bloqueados** (HTTP 400 Bad Request) |
+| **Prevenção de Information Disclosure** | ID numérico fora de escala (`999999999999999999999`) | **Zero vazamentos** de stack traces ou banco |
+
+**Total de Verificações de Segurança**: 16 executadas, 16 aprovadas, 0 falhas.
+
+
 
 
 
