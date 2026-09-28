@@ -37,17 +37,17 @@ WHERE NOT EXISTS (SELECT 1 FROM "ptc_ad_tiers" WHERE "label" = 'POL Premium 60s'
 
 -- BLK Tiers
 INSERT INTO "ptc_ad_tiers" ("label", "ad_type", "duration_seconds", "price_per_view_shib", "reward_per_view_shib", "currency", "is_active", "sort_order")
-SELECT 'BLK Rápido 5s', 'window', 5, 0.02, 0.016, 'BLK', true, 20
+SELECT 'BLK Rápido 5s', 'window', 5, 0.000060, 0.000050, 'BLK', true, 20
 WHERE NOT EXISTS (SELECT 1 FROM "ptc_ad_tiers" WHERE "label" = 'BLK Rápido 5s');
 
 INSERT INTO "ptc_ad_tiers" ("label", "ad_type", "duration_seconds", "price_per_view_shib", "reward_per_view_shib", "currency", "is_active", "sort_order")
-SELECT 'BLK Padrão 15s', 'window', 15, 0.06, 0.050, 'BLK', true, 22
+SELECT 'BLK Padrão 15s', 'window', 15, 0.000150, 0.000120, 'BLK', true, 22
 WHERE NOT EXISTS (SELECT 1 FROM "ptc_ad_tiers" WHERE "label" = 'BLK Padrão 15s');
 
 INSERT INTO "ptc_ad_tiers" ("label", "ad_type", "duration_seconds", "price_per_view_shib", "reward_per_view_shib", "currency", "is_active", "sort_order")
-SELECT 'BLK Destaque 30s', 'window', 30, 0.10, 0.080, 'BLK', true, 23
+SELECT 'BLK Destaque 30s', 'window', 30, 0.000280, 0.000220, 'BLK', true, 23
 WHERE NOT EXISTS (SELECT 1 FROM "ptc_ad_tiers" WHERE "label" = 'BLK Destaque 30s');
 
 INSERT INTO "ptc_ad_tiers" ("label", "ad_type", "duration_seconds", "price_per_view_shib", "reward_per_view_shib", "currency", "is_active", "sort_order")
-SELECT 'BLK Premium 60s', 'window', 60, 0.20, 0.160, 'BLK', true, 24
+SELECT 'BLK Premium 60s', 'window', 60, 0.000500, 0.000400, 'BLK', true, 24
 WHERE NOT EXISTS (SELECT 1 FROM "ptc_ad_tiers" WHERE "label" = 'BLK Premium 60s');

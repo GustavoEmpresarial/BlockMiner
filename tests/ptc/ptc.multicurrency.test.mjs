@@ -57,8 +57,8 @@ test("PTC Multi-Currency Test Suite (POL, BLK, SHIB)", async (t) => {
       label: `BLK Test 5s ${timestamp}`,
       adType: "window",
       durationSeconds: 1,
-      pricePerViewShib: 0.05, // 0.05 BLK/view
-      rewardPerViewShib: 0.04, // 0.04 BLK/view
+      pricePerViewShib: 0.000060, // 0.000060 BLK/view (0.06 BLK / 1k views)
+      rewardPerViewShib: 0.000050, // 0.000050 BLK/view (0.05 BLK / 1k views)
       currency: "BLK",
       isActive: true,
       sortOrder: 20,
@@ -126,7 +126,7 @@ test("PTC Multi-Currency Test Suite (POL, BLK, SHIB)", async (t) => {
 
     // ── BLK Campaign Flow ──────────────────────────────────────────────────────
     await t.test("createCampaign (BLK): sucesso com débito em blkBalance e rejectCampaign com estorno em blkBalance", async () => {
-      // 100 views * 0.05 = 5.00000000 BLK
+      // 100 views * 0.000060 = 0.006 BLK
       blkAd = await svc.createCampaign(advUser.id, {
         title: "Campanha BLK Rejeição",
         description: "desc",
@@ -137,12 +137,12 @@ test("PTC Multi-Currency Test Suite (POL, BLK, SHIB)", async (t) => {
 
       assert.equal(blkAd.asset, "BLK");
       let adv = await prisma.user.findUnique({ where: { id: advUser.id } });
-      assert.equal(Number(adv.blkBalance), 45.0); // 50.0 - 5.0 = 45.0
+      assert.equal(Number(adv.blkBalance), 49.994); // 50.0 - 0.006 = 49.994
 
       // Admin rejeita e estorna BLK
       await svc.rejectCampaign(blkAd.id, "Conteúdo fora das diretrizes");
       adv = await prisma.user.findUnique({ where: { id: advUser.id } });
-      assert.equal(Number(adv.blkBalance), 50.0); // 45.0 + 5.0 = 50.0
+      assert.equal(Number(adv.blkBalance), 50.0); // 49.994 + 0.006 = 50.0
 
       const rejectedAd = await prisma.ptpAd.findUnique({ where: { id: blkAd.id } });
       assert.equal(rejectedAd.status, "rejected");

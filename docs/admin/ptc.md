@@ -29,11 +29,11 @@ O módulo **PTC (Paid-to-Click)** do BlockMiner opera como um marketplace descen
 | **POL** | POL Padrão 15s | 15s | 0.006000 POL | 0.005000 POL | window | 12 |
 | **POL** | POL Destaque 30s | 30s | 0.010000 POL | 0.008000 POL | window | 13 |
 | **POL** | POL Premium 60s | 60s | 0.020000 POL | 0.016000 POL | window | 14 |
-| **BLK** | BLK Rápido 5s | 5s | 0.020000 BLK | 0.016000 BLK | window | 20 |
-| **BLK** | BLK Básico 10s | 10s | 0.040000 BLK | 0.032000 BLK | window | 21 |
-| **BLK** | BLK Padrão 15s | 15s | 0.060000 BLK | 0.050000 BLK | window | 22 |
-| **BLK** | BLK Destaque 30s | 30s | 0.100000 BLK | 0.080000 BLK | window | 23 |
-| **BLK** | BLK Premium 60s | 60s | 0.200000 BLK | 0.160000 BLK | window | 24 |
+| **BLK** | BLK Rápido 5s | 5s | 0.000060 BLK | 0.000050 BLK | window | 20 |
+| **BLK** | BLK Básico 10s | 10s | 0.000100 BLK | 0.000080 BLK | window | 21 |
+| **BLK** | BLK Padrão 15s | 15s | 0.000150 BLK | 0.000120 BLK | window | 22 |
+| **BLK** | BLK Destaque 30s | 30s | 0.000280 BLK | 0.000220 BLK | window | 23 |
+| **BLK** | BLK Premium 60s | 60s | 0.000500 BLK | 0.000400 BLK | window | 24 |
 
 ### Notificação Obrigatória no Telegram (Adendo Operacional)
 Toda vez que uma nova campanha é submetida por um anunciante via `POST /api/ptc/campaigns`:
