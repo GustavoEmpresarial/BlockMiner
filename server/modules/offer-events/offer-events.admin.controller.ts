@@ -505,17 +505,21 @@ export async function adminListEventPurchases(req: Request, res: Response): Prom
             where: { id: { in: userIds } },
             select: { id: true, email: true, username: true, name: true },
           })
-        : Promise.resolve([]),
+        : Promise.resolve([] as Array<{ id: number; email: string; username: string | null; name: string | null }>),
       minerIds.length
         ? prisma.eventMiner.findMany({
             where: { id: { in: minerIds } },
             select: { id: true, name: true },
           })
-        : Promise.resolve([]),
+        : Promise.resolve([] as Array<{ id: number; name: string }>),
     ]);
 
-    const userById = new Map(users.map((u) => [u.id, u]));
-    const minerById = new Map(miners.map((m) => [m.id, m]));
+    const userById = new Map<number, { id: number; email: string; username: string | null; name: string | null }>(
+      users.map((u) => [u.id, u]),
+    );
+    const minerById = new Map<number, { id: number; name: string }>(
+      miners.map((m) => [m.id, m]),
+    );
 
     res.json({
       ok: true,
