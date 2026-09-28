@@ -24,11 +24,11 @@ O módulo **PTC (Paid-to-Click)** do BlockMiner opera como um marketplace descen
 | **SHIB** | SHIB Padrão 15s | 15s | 35.000000 SHIB | 30.000000 SHIB | window | 3 |
 | **SHIB** | SHIB Destaque 30s | 30s | 60.000000 SHIB | 50.000000 SHIB | window | 4 |
 | **SHIB** | SHIB Premium 60s | 60s | 100.000000 SHIB | 85.000000 SHIB | window | 5 |
-| **POL** | POL Rápido 5s | 5s | 0.002000 POL | 0.001600 POL | window | 10 |
-| **POL** | POL Básico 10s | 10s | 0.004000 POL | 0.003200 POL | window | 11 |
-| **POL** | POL Padrão 15s | 15s | 0.006000 POL | 0.005000 POL | window | 12 |
-| **POL** | POL Destaque 30s | 30s | 0.010000 POL | 0.008000 POL | window | 13 |
-| **POL** | POL Premium 60s | 60s | 0.020000 POL | 0.016000 POL | window | 14 |
+| **POL** | POL Rápido 5s | 5s | 0.000200 POL | 0.000160 POL | window | 10 |
+| **POL** | POL Básico 10s | 10s | 0.000350 POL | 0.000280 POL | window | 11 |
+| **POL** | POL Padrão 15s | 15s | 0.000500 POL | 0.000400 POL | window | 12 |
+| **POL** | POL Destaque 30s | 30s | 0.000900 POL | 0.000750 POL | window | 13 |
+| **POL** | POL Premium 60s | 60s | 0.001600 POL | 0.000130 POL | window | 14 |
 | **BLK** | BLK Rápido 5s | 5s | 0.000060 BLK | 0.000050 BLK | window | 20 |
 | **BLK** | BLK Básico 10s | 10s | 0.000100 BLK | 0.000080 BLK | window | 21 |
 | **BLK** | BLK Padrão 15s | 15s | 0.000150 BLK | 0.000120 BLK | window | 22 |
