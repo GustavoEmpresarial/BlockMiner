@@ -72,6 +72,30 @@ function isP2002(e: unknown): boolean {
   return e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002";
 }
 
+function logMiniPassMutation(
+  req: Request,
+  action: string,
+  resource: string,
+  resourceId: string | number,
+  oldValue: unknown,
+  newValue: unknown,
+) {
+  void logAdminAction({
+    adminId: req.admin?.adminId ?? null,
+    adminEmail: req.admin?.email ?? null,
+    sessionId: req.admin?.sessionId ?? null,
+    action,
+    module: "mini_pass",
+    resource,
+    resourceId: String(resourceId),
+    oldValue: oldValue ?? undefined,
+    newValue: newValue ?? undefined,
+    ipAddress: req.ip,
+    userAgent: req.headers["user-agent"],
+    success: true,
+  });
+}
+
 export async function adminListMiniPassSeasons(_req: Request, res: Response): Promise<void> {
   try {
     const rows = await prisma.miniPassSeason.findMany({
@@ -178,19 +202,7 @@ export async function adminCreateMiniPassSeason(req: Request, res: Response): Pr
       },
     });
 
-    void logAdminAction({
-      adminId: req.admin?.adminId ?? null,
-      adminEmail: req.admin?.email ?? null,
-      sessionId: req.admin?.sessionId ?? null,
-      action: "ADMIN_MINI_PASS_SEASON_CREATE",
-      module: "mini_pass",
-      resource: "MiniPassSeason",
-      resourceId: String(row.id),
-      newValue: row,
-      ipAddress: req.ip,
-      userAgent: req.headers["user-agent"],
-      success: true,
-    });
+    logMiniPassMutation(req, "ADMIN_MINI_PASS_SEASON_CREATE", "MiniPassSeason", row.id, null, row);
 
     res.status(201).json({ ok: true, season: row });
   } catch (e: unknown) {
@@ -274,20 +286,7 @@ export async function adminUpdateMiniPassSeason(req: Request, res: Response): Pr
       data,
     });
 
-    void logAdminAction({
-      adminId: req.admin?.adminId ?? null,
-      adminEmail: req.admin?.email ?? null,
-      sessionId: req.admin?.sessionId ?? null,
-      action: "ADMIN_MINI_PASS_SEASON_UPDATE",
-      module: "mini_pass",
-      resource: "MiniPassSeason",
-      resourceId: String(id),
-      oldValue: existing,
-      newValue: updated,
-      ipAddress: req.ip,
-      userAgent: req.headers["user-agent"],
-      success: true,
-    });
+    logMiniPassMutation(req, "ADMIN_MINI_PASS_SEASON_UPDATE", "MiniPassSeason", id, existing, updated);
 
     res.json({ ok: true, season: updated });
   } catch (e: unknown) {
@@ -316,18 +315,7 @@ export async function adminSoftDeleteMiniPassSeason(req: Request, res: Response)
       data: { deletedAt: new Date(), isActive: false },
     });
 
-    void logAdminAction({
-      adminId: req.admin?.adminId ?? null,
-      adminEmail: req.admin?.email ?? null,
-      sessionId: req.admin?.sessionId ?? null,
-      action: "ADMIN_MINI_PASS_SEASON_DELETE",
-      module: "mini_pass",
-      resource: "MiniPassSeason",
-      resourceId: String(id),
-      ipAddress: req.ip,
-      userAgent: req.headers["user-agent"],
-      success: true,
-    });
+    logMiniPassMutation(req, "ADMIN_MINI_PASS_SEASON_DELETE", "MiniPassSeason", id, existing, { deletedAt: new Date(), isActive: false });
 
     res.json({ ok: true });
   } catch (e: unknown) {
@@ -336,23 +324,36 @@ export async function adminSoftDeleteMiniPassSeason(req: Request, res: Response)
   }
 }
 
+async function loadSeasonAndOptionalSubId(
+  req: Request,
+  res: Response,
+  subParamName: string,
+  subLabel: string,
+) {
+  const seasonId = parsePositiveIntId(req.params.seasonId, res, "season id");
+  if (seasonId === null) return null;
+
+  const idRaw = req.params[subParamName];
+  let subId: number | null = null;
+  if (idRaw !== undefined && idRaw !== "" && idRaw != null) {
+    subId = parsePositiveIntId(idRaw, res, subLabel);
+    if (subId === null) return null;
+  }
+
+  const season = await prisma.miniPassSeason.findFirst({ where: { id: seasonId, deletedAt: null } });
+  if (!season) {
+    res.status(404).json({ ok: false, message: "Season not found." });
+    return null;
+  }
+
+  return { seasonId, subId, season };
+}
+
 export async function adminUpsertLevelReward(req: Request, res: Response): Promise<void> {
   try {
-    const seasonId = parsePositiveIntId(req.params.seasonId, res, "season id");
-    if (seasonId === null) return;
-
-    const idRaw = req.params.rewardId;
-    let rewardId: number | null = null;
-    if (idRaw !== undefined && idRaw !== "" && idRaw != null) {
-      rewardId = parsePositiveIntId(idRaw, res, "reward id");
-      if (rewardId === null) return;
-    }
-
-    const season = await prisma.miniPassSeason.findFirst({ where: { id: seasonId, deletedAt: null } });
-    if (!season) {
-      res.status(404).json({ ok: false, message: "Season not found." });
-      return;
-    }
+    const loaded = await loadSeasonAndOptionalSubId(req, res, "rewardId", "reward id");
+    if (!loaded) return;
+    const { seasonId, subId: rewardId, season } = loaded;
 
     const b = (req.body && typeof req.body === "object" && !Array.isArray(req.body) ? req.body : {}) as Record<string, unknown>;
     const level = Math.max(1, Math.min(500, parseInt(String(b.level), 10) || 1));
@@ -450,36 +451,11 @@ export async function adminUpsertLevelReward(req: Request, res: Response): Promi
         data: updatePayload,
       });
 
-      void logAdminAction({
-        adminId: req.admin?.adminId ?? null,
-        adminEmail: req.admin?.email ?? null,
-        sessionId: req.admin?.sessionId ?? null,
-        action: "ADMIN_MINI_PASS_REWARD_UPDATE",
-        module: "mini_pass",
-        resource: "MiniPassLevelReward",
-        resourceId: String(rewardId),
-        oldValue: existing,
-        newValue: row,
-        ipAddress: req.ip,
-        userAgent: req.headers["user-agent"],
-        success: true,
-      });
+      logMiniPassMutation(req, "ADMIN_MINI_PASS_REWARD_UPDATE", "MiniPassLevelReward", rewardId, existing, row);
     } else {
       row = await prisma.miniPassLevelReward.create({ data: createPayload });
 
-      void logAdminAction({
-        adminId: req.admin?.adminId ?? null,
-        adminEmail: req.admin?.email ?? null,
-        sessionId: req.admin?.sessionId ?? null,
-        action: "ADMIN_MINI_PASS_REWARD_CREATE",
-        module: "mini_pass",
-        resource: "MiniPassLevelReward",
-        resourceId: String(row.id),
-        newValue: row,
-        ipAddress: req.ip,
-        userAgent: req.headers["user-agent"],
-        success: true,
-      });
+      logMiniPassMutation(req, "ADMIN_MINI_PASS_REWARD_CREATE", "MiniPassLevelReward", row.id, null, row);
     }
 
     res.json({ ok: true, reward: row });
@@ -508,19 +484,7 @@ export async function adminDeleteLevelReward(req: Request, res: Response): Promi
 
     await prisma.miniPassLevelReward.delete({ where: { id: rewardId } });
 
-    void logAdminAction({
-      adminId: req.admin?.adminId ?? null,
-      adminEmail: req.admin?.email ?? null,
-      sessionId: req.admin?.sessionId ?? null,
-      action: "ADMIN_MINI_PASS_REWARD_DELETE",
-      module: "mini_pass",
-      resource: "MiniPassLevelReward",
-      resourceId: String(rewardId),
-      oldValue: existing,
-      ipAddress: req.ip,
-      userAgent: req.headers["user-agent"],
-      success: true,
-    });
+    logMiniPassMutation(req, "ADMIN_MINI_PASS_REWARD_DELETE", "MiniPassLevelReward", rewardId, existing, null);
 
     res.json({ ok: true });
   } catch (e: unknown) {
@@ -531,21 +495,9 @@ export async function adminDeleteLevelReward(req: Request, res: Response): Promi
 
 export async function adminUpsertMission(req: Request, res: Response): Promise<void> {
   try {
-    const seasonId = parsePositiveIntId(req.params.seasonId, res, "season id");
-    if (seasonId === null) return;
-
-    const idRaw = req.params.missionId;
-    let missionId: number | null = null;
-    if (idRaw !== undefined && idRaw !== "" && idRaw != null) {
-      missionId = parsePositiveIntId(idRaw, res, "mission id");
-      if (missionId === null) return;
-    }
-
-    const season = await prisma.miniPassSeason.findFirst({ where: { id: seasonId, deletedAt: null } });
-    if (!season) {
-      res.status(404).json({ ok: false, message: "Season not found." });
-      return;
-    }
+    const loaded = await loadSeasonAndOptionalSubId(req, res, "missionId", "mission id");
+    if (!loaded) return;
+    const { seasonId, subId: missionId, season } = loaded;
 
     const b = (req.body && typeof req.body === "object" && !Array.isArray(req.body) ? req.body : {}) as Record<string, unknown>;
     const cadence = String(b.cadence || "").toUpperCase();
@@ -614,36 +566,11 @@ export async function adminUpsertMission(req: Request, res: Response): Promise<v
         data: missionUpdate,
       });
 
-      void logAdminAction({
-        adminId: req.admin?.adminId ?? null,
-        adminEmail: req.admin?.email ?? null,
-        sessionId: req.admin?.sessionId ?? null,
-        action: "ADMIN_MINI_PASS_MISSION_UPDATE",
-        module: "mini_pass",
-        resource: "MiniPassMission",
-        resourceId: String(missionId),
-        oldValue: existing,
-        newValue: row,
-        ipAddress: req.ip,
-        userAgent: req.headers["user-agent"],
-        success: true,
-      });
+      logMiniPassMutation(req, "ADMIN_MINI_PASS_MISSION_UPDATE", "MiniPassMission", missionId, existing, row);
     } else {
       row = await prisma.miniPassMission.create({ data: missionPayload });
 
-      void logAdminAction({
-        adminId: req.admin?.adminId ?? null,
-        adminEmail: req.admin?.email ?? null,
-        sessionId: req.admin?.sessionId ?? null,
-        action: "ADMIN_MINI_PASS_MISSION_CREATE",
-        module: "mini_pass",
-        resource: "MiniPassMission",
-        resourceId: String(row.id),
-        newValue: row,
-        ipAddress: req.ip,
-        userAgent: req.headers["user-agent"],
-        success: true,
-      });
+      logMiniPassMutation(req, "ADMIN_MINI_PASS_MISSION_CREATE", "MiniPassMission", row.id, null, row);
     }
 
     res.json({ ok: true, mission: row });
@@ -668,19 +595,7 @@ export async function adminDeleteMission(req: Request, res: Response): Promise<v
 
     await prisma.miniPassMission.delete({ where: { id: missionId } });
 
-    void logAdminAction({
-      adminId: req.admin?.adminId ?? null,
-      adminEmail: req.admin?.email ?? null,
-      sessionId: req.admin?.sessionId ?? null,
-      action: "ADMIN_MINI_PASS_MISSION_DELETE",
-      module: "mini_pass",
-      resource: "MiniPassMission",
-      resourceId: String(missionId),
-      oldValue: existing,
-      ipAddress: req.ip,
-      userAgent: req.headers["user-agent"],
-      success: true,
-    });
+    logMiniPassMutation(req, "ADMIN_MINI_PASS_MISSION_DELETE", "MiniPassMission", missionId, existing, null);
 
     res.json({ ok: true });
   } catch (e: unknown) {

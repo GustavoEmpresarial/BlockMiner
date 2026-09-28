@@ -3,7 +3,7 @@
  * applyUserBalanceDelta skipped — DB balance is source of truth.
  */
 import { Prisma } from "@prisma/client";
-import prisma from "../../core/database/prisma.js";
+import prisma, { type TxClient } from "../../core/database/prisma.js";
 import { logger } from "../../core/logger/index.js";
 import { PURCHASE_BUY_LEVEL, PURCHASE_COMPLETE_PASS, XP_SOURCE_PURCHASE } from "./mini-pass.constants.js";
 import { xpRemainingToCap } from "./mini-pass.level-math.js";
@@ -49,26 +49,32 @@ function mapPurchaseError(e: unknown) {
   return null;
 }
 
+async function loadUserAndLiveSeason(tx: TxClient, userId: number, seasonId: number, now: Date) {
+  const user = await tx.user.findUnique({ where: { id: userId } });
+  if (!user?.id || user.isBanned) {
+    throw Object.assign(new Error("USER_BLOCKED"), { code: "FORBIDDEN" });
+  }
+
+  const season = await tx.miniPassSeason.findFirst({
+    where: { id: seasonId, deletedAt: null, isActive: true },
+  });
+  if (!season) {
+    throw Object.assign(new Error("SEASON_NOT_FOUND"), { code: "NOT_FOUND" });
+  }
+  if (!isMiniPassSeasonLive(season, now)) {
+    throw Object.assign(new Error("SEASON_NOT_LIVE"), { code: "NOT_LIVE" });
+  }
+
+  return { user, season };
+}
+
 export async function purchaseMiniPassLevels(userId: number, seasonId: number, quantity = 1) {
   const q = Math.min(50, Math.max(1, Math.floor(Number(quantity) || 1)));
   const now = new Date();
 
   try {
     const result = await prisma.$transaction(async (tx) => {
-      const user = await tx.user.findUnique({ where: { id: userId } });
-      if (!user?.id || user.isBanned) {
-        throw Object.assign(new Error("USER_BLOCKED"), { code: "FORBIDDEN" });
-      }
-
-      const season = await tx.miniPassSeason.findFirst({
-        where: { id: seasonId, deletedAt: null, isActive: true },
-      });
-      if (!season) {
-        throw Object.assign(new Error("SEASON_NOT_FOUND"), { code: "NOT_FOUND" });
-      }
-      if (!isMiniPassSeasonLive(season, now)) {
-        throw Object.assign(new Error("SEASON_NOT_LIVE"), { code: "NOT_LIVE" });
-      }
+      const { user, season } = await loadUserAndLiveSeason(tx, userId, seasonId, now);
 
       const priceEach = Number(new Prisma.Decimal(season.buyLevelPricePol.toString()));
       if (!Number.isFinite(priceEach) || priceEach <= 0) {
@@ -162,20 +168,7 @@ export async function purchaseMiniPassComplete(userId: number, seasonId: number)
 
   try {
     const result = await prisma.$transaction(async (tx) => {
-      const user = await tx.user.findUnique({ where: { id: userId } });
-      if (!user?.id || user.isBanned) {
-        throw Object.assign(new Error("USER_BLOCKED"), { code: "FORBIDDEN" });
-      }
-
-      const season = await tx.miniPassSeason.findFirst({
-        where: { id: seasonId, deletedAt: null, isActive: true },
-      });
-      if (!season) {
-        throw Object.assign(new Error("SEASON_NOT_FOUND"), { code: "NOT_FOUND" });
-      }
-      if (!isMiniPassSeasonLive(season, now)) {
-        throw Object.assign(new Error("SEASON_NOT_LIVE"), { code: "NOT_LIVE" });
-      }
+      const { user, season } = await loadUserAndLiveSeason(tx, userId, seasonId, now);
 
       const price = new Prisma.Decimal(season.completePassPricePol.toString());
       if (price.lte(0)) {

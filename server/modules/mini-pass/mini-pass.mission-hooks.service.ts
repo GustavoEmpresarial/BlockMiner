@@ -124,25 +124,47 @@ async function bumpMissionProgress(
   });
 }
 
+async function dispatchMissionProgressHook({
+  userId,
+  missionType,
+  dedupeKey,
+  delta,
+  filterMission,
+}: {
+  userId: number;
+  missionType: string;
+  dedupeKey: string;
+  delta: number;
+  filterMission?: (mission: MiniPassMission) => boolean;
+}): Promise<void> {
+  const seasons = await loadLiveSeasonsWithMissions(missionType);
+  const now = new Date();
+  for (const season of seasons) {
+    if (!isMiniPassSeasonLive(season, now)) continue;
+    for (const mission of season.missions) {
+      if (filterMission && !filterMission(mission)) continue;
+      const periodKey = resolveMissionPeriodKey(mission.cadence, mission.missionType, now);
+      await prisma.$transaction(async (tx) => {
+        const ok = await tryConsumeDedupe(tx, mission.id, dedupeKey);
+        if (!ok) return;
+        await bumpMissionProgress(tx, { userId, season, mission, delta, periodKey });
+      });
+    }
+  }
+}
+
 export async function notifyMiniPassGamePlayed(
   userId: number,
   { userPowerGameId, gameSlug }: { userPowerGameId: number; gameSlug?: string | null },
 ): Promise<void> {
   if (!userId || !userPowerGameId) return;
-  const seasons = await loadLiveSeasonsWithMissions(MISSION_PLAY_GAMES);
-  for (const season of seasons) {
-    if (!isMiniPassSeasonLive(season)) continue;
-    for (const mission of season.missions) {
-      if (mission.gameSlug && mission.gameSlug !== gameSlug) continue;
-      const periodKey = resolveMissionPeriodKey(mission.cadence, mission.missionType, new Date());
-      const dedupeKey = `game-${userPowerGameId}`;
-      await prisma.$transaction(async (tx) => {
-        const ok = await tryConsumeDedupe(tx, mission.id, dedupeKey);
-        if (!ok) return;
-        await bumpMissionProgress(tx, { userId, season, mission, delta: 1, periodKey });
-      });
-    }
-  }
+  await dispatchMissionProgressHook({
+    userId,
+    missionType: MISSION_PLAY_GAMES,
+    dedupeKey: `game-${userPowerGameId}`,
+    delta: 1,
+    filterMission: (m) => !m.gameSlug || m.gameSlug === gameSlug,
+  });
 }
 
 export async function notifyMiniPassBlkReward(
@@ -153,90 +175,50 @@ export async function notifyMiniPassBlkReward(
   if (!userId || !blkRewardLogId) return;
   const amt = Number(amountBlk);
   if (!Number.isFinite(amt) || amt <= 0) return;
-
-  const seasons = await loadLiveSeasonsWithMissions(MISSION_MINE_BLK);
-  for (const season of seasons) {
-    if (!isMiniPassSeasonLive(season)) continue;
-    for (const mission of season.missions) {
-      const periodKey = resolveMissionPeriodKey(mission.cadence, mission.missionType, new Date());
-      const dedupeKey = `blklog-${blkRewardLogId}`;
-      await prisma.$transaction(async (tx) => {
-        const ok = await tryConsumeDedupe(tx, mission.id, dedupeKey);
-        if (!ok) return;
-        await bumpMissionProgress(tx, { userId, season, mission, delta: amt, periodKey });
-      });
-    }
-  }
+  await dispatchMissionProgressHook({
+    userId,
+    missionType: MISSION_MINE_BLK,
+    dedupeKey: `blklog-${blkRewardLogId}`,
+    delta: amt,
+  });
 }
 
 export async function notifyMiniPassLoginDay(userId: number, checkinDateKey: string): Promise<void> {
   if (!userId || !checkinDateKey) return;
-  const seasons = await loadLiveSeasonsWithMissions(MISSION_LOGIN_DAY);
-  const now = new Date();
-  for (const season of seasons) {
-    if (!isMiniPassSeasonLive(season)) continue;
-    for (const mission of season.missions) {
-      const periodKey = resolveMissionPeriodKey(mission.cadence, mission.missionType, now);
-      const dedupeKey = `login-${checkinDateKey}`;
-      await prisma.$transaction(async (tx) => {
-        const ok = await tryConsumeDedupe(tx, mission.id, dedupeKey);
-        if (!ok) return;
-        await bumpMissionProgress(tx, { userId, season, mission, delta: 1, periodKey });
-      });
-    }
-  }
+  await dispatchMissionProgressHook({
+    userId,
+    missionType: MISSION_LOGIN_DAY,
+    dedupeKey: `login-${checkinDateKey}`,
+    delta: 1,
+  });
 }
 
 export async function notifyMiniPassYoutubeWatch(userId: number, youtubeWatchHistoryId: number): Promise<void> {
   if (!userId || !youtubeWatchHistoryId) return;
-  const seasons = await loadLiveSeasonsWithMissions(MISSION_WATCH_YOUTUBE);
-  const now = new Date();
-  for (const season of seasons) {
-    if (!isMiniPassSeasonLive(season)) continue;
-    for (const mission of season.missions) {
-      const periodKey = resolveMissionPeriodKey(mission.cadence, mission.missionType, now);
-      const dedupeKey = `yt-${youtubeWatchHistoryId}`;
-      await prisma.$transaction(async (tx) => {
-        const ok = await tryConsumeDedupe(tx, mission.id, dedupeKey);
-        if (!ok) return;
-        await bumpMissionProgress(tx, { userId, season, mission, delta: 1, periodKey });
-      });
-    }
-  }
+  await dispatchMissionProgressHook({
+    userId,
+    missionType: MISSION_WATCH_YOUTUBE,
+    dedupeKey: `yt-${youtubeWatchHistoryId}`,
+    delta: 1,
+  });
 }
 
 export async function notifyMiniPassAutoMiningTurbo(userId: number, turboGrantId: number): Promise<void> {
   if (!userId || !turboGrantId) return;
-  const seasons = await loadLiveSeasonsWithMissions(MISSION_AUTO_MINING_TURBO);
-  const now = new Date();
-  for (const season of seasons) {
-    if (!isMiniPassSeasonLive(season)) continue;
-    for (const mission of season.missions) {
-      const periodKey = resolveMissionPeriodKey(mission.cadence, mission.missionType, now);
-      const dedupeKey = `turbo-${turboGrantId}`;
-      await prisma.$transaction(async (tx) => {
-        const ok = await tryConsumeDedupe(tx, mission.id, dedupeKey);
-        if (!ok) return;
-        await bumpMissionProgress(tx, { userId, season, mission, delta: 1, periodKey });
-      });
-    }
-  }
+  await dispatchMissionProgressHook({
+    userId,
+    missionType: MISSION_AUTO_MINING_TURBO,
+    dedupeKey: `turbo-${turboGrantId}`,
+    delta: 1,
+  });
 }
 
 export async function notifyMiniPassInternalOfferwall(userId: number, attemptId: number): Promise<void> {
   if (!userId || !attemptId) return;
-  const seasons = await loadLiveSeasonsWithMissions(MISSION_INTERNAL_OFFERWALL);
-  const now = new Date();
-  for (const season of seasons) {
-    if (!isMiniPassSeasonLive(season)) continue;
-    for (const mission of season.missions) {
-      const periodKey = resolveMissionPeriodKey(mission.cadence, mission.missionType, now);
-      const dedupeKey = `iof-${attemptId}`;
-      await prisma.$transaction(async (tx) => {
-        const ok = await tryConsumeDedupe(tx, mission.id, dedupeKey);
-        if (!ok) return;
-        await bumpMissionProgress(tx, { userId, season, mission, delta: 1, periodKey });
-      });
-    }
-  }
+  await dispatchMissionProgressHook({
+    userId,
+    missionType: MISSION_INTERNAL_OFFERWALL,
+    dedupeKey: `iof-${attemptId}`,
+    delta: 1,
+  });
 }

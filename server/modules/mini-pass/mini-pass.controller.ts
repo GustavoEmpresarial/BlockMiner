@@ -13,6 +13,15 @@ function langFromReq(req: Request): string {
   return typeof raw === "string" ? raw : "en";
 }
 
+function parseSeasonIdParam(req: Request, res: Response): number | null {
+  const id = parseInt(String(req.params.seasonId), 10);
+  if (!id || id <= 0) {
+    res.status(400).json({ ok: false, code: "invalid_season", message: "Invalid season." });
+    return null;
+  }
+  return id;
+}
+
 export async function listMiniPassSeasons(req: Request, res: Response): Promise<void> {
   try {
     const user = requireSessionUser(req, res);
@@ -29,11 +38,9 @@ export async function getMiniPassSeason(req: Request, res: Response): Promise<vo
   try {
     const user = requireSessionUser(req, res);
     if (!user) return;
-    const seasonId = parseInt(String(req.params.seasonId), 10);
-    if (!seasonId || seasonId <= 0) {
-      res.status(400).json({ ok: false, code: "invalid_season", message: "Invalid season." });
-      return;
-    }
+    const seasonId = parseSeasonIdParam(req, res);
+    if (seasonId === null) return;
+
     const data = await getMiniPassSeasonDashboard(user.id, seasonId, langFromReq(req));
     if (!data.ok) {
       res.status(data.status ?? 500).json({ ok: false, code: data.code, message: data.code });
@@ -51,9 +58,10 @@ export async function postClaimMiniPassReward(req: Request, res: Response): Prom
   try {
     const user = requireSessionUser(req, res);
     if (!user) return;
-    const seasonId = parseInt(String(req.params.seasonId), 10);
+    const seasonId = parseSeasonIdParam(req, res);
+    if (seasonId === null) return;
     const levelRewardId = parseInt(String(req.params.levelRewardId), 10);
-    if (!seasonId || !levelRewardId || seasonId <= 0 || levelRewardId <= 0) {
+    if (!levelRewardId || levelRewardId <= 0) {
       res.status(400).json({ ok: false, code: "invalid_params", message: "Invalid params." });
       return;
     }
@@ -78,12 +86,9 @@ export async function postBuyMiniPassLevels(req: Request, res: Response): Promis
   try {
     const user = requireSessionUser(req, res);
     if (!user) return;
-    const seasonId = parseInt(String(req.params.seasonId), 10);
+    const seasonId = parseSeasonIdParam(req, res);
+    if (seasonId === null) return;
     const quantity = Math.floor(Number(req.body?.quantity ?? 1));
-    if (!seasonId || seasonId <= 0) {
-      res.status(400).json({ ok: false, code: "invalid_season", message: "Invalid season." });
-      return;
-    }
     const r = await purchaseMiniPassLevels(user.id, seasonId, quantity);
     if (!r.ok) {
       const err = r as { status: number; code: string };
@@ -101,11 +106,8 @@ export async function postCompleteMiniPass(req: Request, res: Response): Promise
   try {
     const user = requireSessionUser(req, res);
     if (!user) return;
-    const seasonId = parseInt(String(req.params.seasonId), 10);
-    if (!seasonId || seasonId <= 0) {
-      res.status(400).json({ ok: false, code: "invalid_season", message: "Invalid season." });
-      return;
-    }
+    const seasonId = parseSeasonIdParam(req, res);
+    if (seasonId === null) return;
     const r = await purchaseMiniPassComplete(user.id, seasonId);
     if (!r.ok) {
       const err = r as { status: number; code: string };
