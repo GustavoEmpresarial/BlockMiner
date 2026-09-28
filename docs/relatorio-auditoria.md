@@ -444,7 +444,25 @@ Executado através de `tests/security/run-kali-ptc-audit.sh` utilizando o contai
 | **Fuzzing de Regras e Limites Numéricos** | Valores negativos para durações e tarifas | **100% Rejeitados** (HTTP 400 Bad Request) |
 | **Prevenção de Information Disclosure** | Injeção de JSON corrompido em rotas PTC | **Zero vazamentos** de stack traces ou Prisma |
 
-**Total de Verificações de Segurança**: 30 executadas, 30 aprovadas, 0 falhas.
+## 5. Expansão Multi-Moeda (POL, BLK, SHIB) e Tiers Parametrizados (Fases 1-7)
+
+**Data**: 28 de Setembro de 2026  
+**Superfície**: `server/modules/ptc/`, `client/src/features/ptc/`, `client/src/features/admin/ptc/`
+
+### 1. Resumo dos Ajustes Arquiteturais
+
+| ID | Descrição do Ajuste | Severidade | Impacto | Status |
+| :---: | :--- | :---: | :--- | :---: |
+| **FEAT-01** | **Suporte Multi-Moeda em Tiers:** Adição de coluna `currency` (`SHIB`, `POL`, `BLK`) em `ptc_ad_tiers` com migração e seed padronizado. | **ALTA** | Flexibilidade econômica | ✅ **Concluído** |
+| **FEAT-02** | **Débito e Recompensa Dinâmica por Carteira:** Mapeamento dinâmico em `ptc.service.ts` para debitar anunciantes e creditar visualizadores na moeda correspondente (`shibBalance`, `polBalance`, `blkBalance`). | **CRÍTICA** | Integridade financeira | ✅ **Concluído** |
+| **CLEAN-01** | **Remoção de Arquivo Órfão:** Exclusão de `client/src/features/ptc/lib/ptcSession.store.tsx` (arquivo morto de 1 linha). | **BAIXA** | Higiene de código | ✅ **Concluído** |
+| **DEDUP-01** | **Centralização de Helpers de Controller:** Criação de `server/modules/ptc/ptc.controller-helpers.ts` unificando `err`, `errorMessage`, `parsePositiveIntId` e `sendServiceError`. | **MÉDIA** | DRY & Manutenibilidade | ✅ **Concluído** |
+
+### 2. Resultados dos Testes de Carga & Segurança Pós-Expansão
+- **Testes Unitários / Integração:** 5/5 testes no novo `tests/ptc/ptc.multicurrency.test.mjs` passando com validação atômica de saldo em POL e BLK.
+- **k6 Load Test:** 4.736 requests, 0% 5xx, p95 < 13ms (Admin) e p95 < 5ms (Público).
+- **Kali Pentest:** 30/30 verificações passando com 0 falhas (BFLA, SQLi, XSS, Fuzzing e Information Disclosure bloqueados).
+
 
 
 
