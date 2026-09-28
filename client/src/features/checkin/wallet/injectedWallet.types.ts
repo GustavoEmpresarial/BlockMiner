@@ -6,17 +6,21 @@ export type Eip1193Provider = {
 
 export type InjectedWalletProviderInfo = {
   provider: Eip1193Provider;
+  id?: string;
+  name: string;
+  rdns?: string;
+  source?: string;
   info?: {
     uuid?: string;
     name?: string;
     icon?: string;
     rdns?: string;
   };
-  source?: string;
 };
 
 export type InjectedWalletConnection = {
   address: `0x${string}`;
   chainId: number;
   provider: Eip1193Provider;
+  providerName?: string;
 };

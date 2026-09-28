@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import prisma from "../../core/database/prisma.js";
 import type { TxClient } from "../../core/database/prisma.js";
 import {
@@ -49,7 +50,7 @@ export async function writeDailyCheckinForDay(
     });
   }
   return tx.dailyCheckin.create({
-    data: { userId, checkinDate: normalized, ...data },
+    data: { userId, checkinDate: normalized, ...data } as Prisma.DailyCheckinUncheckedCreateInput,
   });
 }
 

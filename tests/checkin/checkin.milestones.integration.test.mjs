@@ -42,6 +42,8 @@ async function makeConfirmedCheckin(userId, dayKey, i) {
 }
 
 async function makeMilestone(data) {
+  await prisma.userCheckinStreakReward.deleteMany({ where: { milestone: { dayThreshold: data.dayThreshold } } });
+  await prisma.checkinStreakMilestone.deleteMany({ where: { dayThreshold: data.dayThreshold } });
   const m = await prisma.checkinStreakMilestone.create({
     data: {
       dayThreshold: data.dayThreshold,
