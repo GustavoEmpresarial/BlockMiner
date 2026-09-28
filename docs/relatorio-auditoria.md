@@ -734,6 +734,81 @@ Executado através de `tests/security/run-kali-offer-events-audit.sh` utilizando
 
 **Total de Verificações de Segurança**: 15 executadas, 15 aprovadas, 0 falhas.
 
+---
+
+# PARTE XI: MÓDULO DE MARCOS DE CHECK-IN (`/admin/checkin-milestones`)
+
+## 1. Resumo Executivo dos Achados — Check-in Milestones
+
+| ID | Descrição do Achado | Severidade | CWE / OWASP | Arquivo e Linha Original | Status da Correção |
+| :---: | :--- | :---: | :---: | :--- | :---: |
+| **SEC-25** | **BFLA (Broken Function Level Authorization):** Rotas administrativas de `/admin/checkin-milestones` sem checagem de permissão granular (`requireAdminPermission`), permitindo que qualquer perfil administrativo (mesmo operadores de suporte ou finanças) executasse criação, alteração e exclusão de marcos. | **CRÍTICA** | CWE-285 / OWASP A1 | `server/modules/checkin/checkin.admin.routes.ts:14` | ✅ **Corrigido** |
+| **SEC-26** | **Fuzzing de Duração de Recompensa & Fallback Silencioso:** Quando enviado um valor negativo para `durationHours` na criação de marco de poder temporário, o sistema silenciosamente engolia o erro e aplicava um fallback de 24 horas, criando o registro com HTTP 201 em vez de rejeitar a requisição maliciosa. | **ALTA** | CWE-20 / OWASP A4 | `server/modules/checkin/checkin.milestones.ts:142` | ✅ **Corrigido** |
+| **AUDIT-06** | **Ausência de Trilha de Auditoria Administrativa:** Criação, edição e exclusão de marcos de check-in não eram registradas em `admin_audit_logs`. | **ALTA** | CWE-778 / OWASP A9 | `server/modules/checkin/checkin.admin.controller.ts:58` | ✅ **Corrigido** |
+| **UI-04** | **Página Administrativa em Estado de Stub:** A página `/admin/checkin-milestones` renderizava um dump de JSON bruto (`<pre>{JSON.stringify(...)}</pre>`), sem formulários de criação, edição ou gerenciamento visual de recompensas. | **MÉDIA** | Usabilidade & Frontend | `client/src/features/admin/checkin/AdminCheckinMilestonesPage.tsx:25` | ✅ **Redesenhado do Zero** |
+| **TYPE-08** | **Erros Ativos de Tipagem TypeScript:** Erro de inferência no repositório de checkin (`data: { userId, checkinDate, ...data }`) e propriedades ausentes nos tipos de carteiras injetadas (`id`, `name`, `rdns`, `providerName`). | **BAIXA** | Qualidade Estática | `server/modules/checkin/checkin.repository.ts:52` | ✅ **Corrigido** |
+
+---
+
+## 2. Detalhamento das Mitigações Aplicadas — Check-in Milestones
+
+### SEC-25: Implementação de RBAC Granular & Distributed Rate Limiting — CRÍTICA
+- **Descrição**: O roteador administrativo utilizava apenas `requireAdminAuth` e `createRateLimiter` em memória. Administradores sem permissões de engajamento podiam excluir marcos ou alterar prêmios em POL.
+- **Correção Aplicada**: Registradas as permissões `checkin` e `checkin.view` em `server/modules/admin/admin.permissions.ts`. As rotas de leitura foram vinculadas ao `viewGuard` (`requireAdminPermission("checkin.view", "checkin")`) e as rotas de mutação foram protegidas com `manageGuard` (`requireAdminPermission("checkin")`), além de rate limiting distribuído a 300 req/min.
+- **Testes de Verificação**: `tests/checkin/checkin.rbac.test.mjs` (7 testes aprovados).
+
+### SEC-26: Validação Estrita de `durationHours` no Parse de Recompensas — ALTA
+- **Descrição**: A detecção automatizada do Kali Linux flagrou que `durationHours = -24` criava o marco com sucesso devido ao fallback `Math.max(1, validityDays) * 24`.
+- **Correção Aplicada**: Validação explícita adicionada em `parseMilestoneBody` e `checkin.schemas.ts`, exigindo que qualquer `durationHours` fornecido seja estritamente finito e positivo (> 0), lançando erro HTTP 400 caso contrário.
+
+### AUDIT-06: Rastreabilidade Total de Operações de Marcos — ALTA
+- **Descrição**: Alterações em regras de retenção e distribuição de recompensas financeiras não deixavam rastro de auditoria.
+- **Correção Aplicada**: Integrada a função `logAdminAction` em `createCheckinMilestone`, `updateCheckinMilestone` e `deleteCheckinMilestone`, registrando autor, IDs, valores anteriores/posteriores, IP e User-Agent.
+
+### UI-04: Redesign Profissional do Painel Administrativo — MÉDIA
+- **Descrição**: A página administrativa original era apenas um rascunho de depuração com JSON bruto.
+- **Correção Aplicada**: Construída uma interface completa e responsiva:
+  - Cards de métricas no topo (Total de Marcos, Marcos Ativos, POL Acumulado, Máquinas e Poder).
+  - Tabela com badges coloridos por tipo de recompensa, visualização de imagens de máquinas e switches de ativação em 1 clique.
+  - Slide-over com validação inline e seletor integrado com o catálogo de mineradoras (`/admin/miners`).
+  - Painel de diagnóstico em tempo real de anomalias de streak (`/api/admin/checkin-streak-anomalies`).
+  - Modais inline de confirmação de exclusão (sem `window.confirm`).
+
+---
+
+## 3. Resultados dos Testes de Carga (k6) — Check-in Milestones
+
+Executado através de `tests/performance/run-checkin-milestones-k6.mjs` simulando tráfego concorrente sob 15 VUs:
+
+| Métrica | Meta Estabelecida | Resultado Obtido | Status |
+| :--- | :---: | :---: | :---: |
+| **Taxa de Erro 5xx** | `0.00%` | **0.00%** (0 de 2.940 requests) | ✅ Aprovado |
+| **Checks de Sucesso Admin** | `100.00%` | **100.00%** (2.940 de 2.940) | ✅ Aprovado |
+| **Latência Média Global** | $< 100\text{ ms}$ | **18.45 ms** | ✅ Excelente |
+| **Latência p50 (Mediana)** | $< 50\text{ ms}$ | **7.87 ms** | ✅ Excelente |
+| **Latência p90** | $< 150\text{ ms}$ | **26.76 ms** | ✅ Excelente |
+| **Latência p95** | $< 250\text{ ms}$ | **106.77 ms** | ✅ Excelente |
+| **Throughput Médio** | $> 100\text{ req/s}$ | **267.14 req/s** | ✅ Aprovado |
+
+---
+
+## 4. Resultados da Auditoria de Segurança (Container Kali Linux) — Check-in Milestones
+
+Executado através de `tests/security/run-kali-checkin-milestones-audit.sh` utilizando o container `kali-pentest:latest`:
+
+| Categoria do Teste | Casos Executados | Resultado |
+| :--- | :---: | :---: |
+| **Autenticação & RBAC Bypass** | 2 rotas administrativas | **100% Bloqueados** (HTTP 401 Unauthorized) |
+| **Tokens Adulterados / Assinatura Falsa** | 1 vetor em Bearer/Cookie | **100% Rejeitado** (HTTP 401 Unauthorized) |
+| **BFLA (Broken Function Level Authorization)** | Moderador tentando criar/deletar marcos | **100% Bloqueado** (HTTP 403 Forbidden - `FORBIDDEN_PERMISSION`) |
+| **SQLi em Parâmetros de Rota (`:id`)** | 5 vetores (Union, DROP, quotes, NaN, negativo) | **100% Neutralizados** (HTTP 400 Bad Request via `idParamSchema`) |
+| **Fuzzing de `dayThreshold` Negativo** | Payload com dia negativo | **100% Bloqueado** (HTTP 400 Bad Request) |
+| **Fuzzing de Máquina sem `minerId`** | Recompensa de máquina sem ID de catálogo | **100% Bloqueado** (HTTP 400 Bad Request) |
+| **Fuzzing de `durationHours` Negativo** | Payload de poder temporário com duração negativa | **100% Bloqueado** (HTTP 400 Bad Request) |
+| **Prevenção de Information Disclosure & 32-bit Clamping** | ID fora de escala (`999999999999999999999`) | **Zero vazamentos** de stack traces ou erros Prisma |
+
+**Total de Verificações de Segurança**: 14 executadas, 14 aprovadas, 0 falhas.
+
 
 
 
