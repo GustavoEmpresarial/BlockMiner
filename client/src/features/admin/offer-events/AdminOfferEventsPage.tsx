@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Calendar,
   CheckCircle2,
@@ -400,9 +400,12 @@ function CreateSlideOver({
 /* ── main page ────────────────────────────────────────────────────────── */
 
 export default function AdminOfferEventsPage() {
+  const navigate = useNavigate();
   const [rows, setRows] = useState<EventRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -432,20 +435,28 @@ export default function AdminOfferEventsPage() {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!window.confirm('Deletar este evento? (soft delete — reversível via banco)')) return;
+  const handleDelete = (id: number) => {
+    setDeleteConfirmId(id);
+  };
+
+  const confirmDelete = async () => {
+    if (deleteConfirmId === null) return;
+    setDeleting(true);
     try {
-      await deleteAdminOfferEvent(id);
+      await deleteAdminOfferEvent(deleteConfirmId);
       toast.success('Evento deletado');
+      setDeleteConfirmId(null);
       void load();
     } catch (err) {
       toast.error(readAxiosResponseMessage(err) ?? 'Erro ao deletar');
+    } finally {
+      setDeleting(false);
     }
   };
 
   const handleCreated = (id: number) => {
     setShowCreate(false);
-    window.location.href = `/admin/offer-events/${id}?tab=miners`;
+    navigate(`/admin/offer-events/${id}?tab=miners`);
   };
 
   const activeCount = rows.filter((r) => r.isActive && !r.deletedAt).length;
@@ -545,6 +556,36 @@ export default function AdminOfferEventsPage() {
         onClose={() => setShowCreate(false)}
         onCreated={handleCreated}
       />
+
+      {deleteConfirmId !== null ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
+            <h3 className="text-base font-bold text-white">Confirmar exclusão de evento</h3>
+            <p className="mt-2 text-xs text-slate-400">
+              Tem certeza que deseja deletar este evento de oferta? A exclusão é um soft-delete (reversível no banco de dados).
+            </p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmId(null)}
+                disabled={deleting}
+                className="rounded-xl border border-slate-700 bg-slate-800 px-4 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-700 disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => void confirmDelete()}
+                disabled={deleting}
+                className="inline-flex items-center gap-2 rounded-xl bg-red-500 px-4 py-2 text-xs font-bold text-white hover:bg-red-600 disabled:opacity-50"
+              >
+                {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                Deletar Evento
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }

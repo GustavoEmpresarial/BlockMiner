@@ -476,6 +476,8 @@ export default function AdminOfferEventManage() {
   const [editingMinerId, setEditingMinerId] = useState<number | null>(null);
   const [minerForm, setMinerForm] = useState<AdminOfferEventMinerFormState>(defaultMinerForm());
   const [purchaseSearch, setPurchaseSearch] = useState('');
+  const [minerDeleteConfirmId, setMinerDeleteConfirmId] = useState<number | null>(null);
+  const [removingMiner, setRemovingMiner] = useState(false);
 
   /* loaders */
   const loadEvent = useCallback(async () => {
@@ -623,14 +625,22 @@ export default function AdminOfferEventManage() {
     }
   };
 
-  const removeMiner = async (minerId: number) => {
-    if (!window.confirm('Remover este miner do evento?')) return;
+  const removeMiner = (minerId: number) => {
+    setMinerDeleteConfirmId(minerId);
+  };
+
+  const confirmRemoveMiner = async () => {
+    if (minerDeleteConfirmId === null) return;
+    setRemovingMiner(true);
     try {
-      await deleteAdminOfferEventMiner(routeId, minerId);
+      await deleteAdminOfferEventMiner(routeId, minerDeleteConfirmId);
       toast.success('Miner removido');
+      setMinerDeleteConfirmId(null);
       void loadMiners();
     } catch {
       toast.error('Erro ao remover');
+    } finally {
+      setRemovingMiner(false);
     }
   };
 
@@ -977,6 +987,36 @@ export default function AdminOfferEventManage() {
           setMinerForm(defaultMinerForm());
         }}
       />
+
+      {minerDeleteConfirmId !== null ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
+            <h3 className="text-base font-bold text-white">Confirmar remoção de miner</h3>
+            <p className="mt-2 text-xs text-slate-400">
+              Tem certeza que deseja remover este miner do evento? Se já houver compras registradas, o miner será apenas desativado.
+            </p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setMinerDeleteConfirmId(null)}
+                disabled={removingMiner}
+                className="rounded-xl border border-slate-700 bg-slate-800 px-4 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-700 disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => void confirmRemoveMiner()}
+                disabled={removingMiner}
+                className="inline-flex items-center gap-2 rounded-xl bg-red-500 px-4 py-2 text-xs font-bold text-white hover:bg-red-600 disabled:opacity-50"
+              >
+                {removingMiner ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                Remover Miner
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }

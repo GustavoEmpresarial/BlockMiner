@@ -6,6 +6,7 @@ import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import prisma from "../../core/database/prisma.js";
 import { logger } from "../../core/logger/index.js";
+import { logAdminAction } from "../admin/index.js";
 import { toDecimalPrice } from "./offer-events.helpers.js";
 import {
   ADMIN_OFFER_EVENT_PURCHASES_PAGE_SIZE_DEFAULT,
@@ -149,6 +150,20 @@ export async function adminCreateOfferEvent(req: Request, res: Response): Promis
       },
     });
 
+    void logAdminAction({
+      adminId: req.admin?.adminId ?? null,
+      adminEmail: req.admin?.email ?? null,
+      sessionId: req.admin?.sessionId ?? null,
+      action: "ADMIN_OFFER_EVENT_CREATE",
+      module: "offer_events",
+      resource: "OfferEvent",
+      resourceId: String(event.id),
+      newValue: event,
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"],
+      success: true,
+    });
+
     res.json({ ok: true, event });
   } catch (e) {
     handleAdminError(res, e, "adminCreateOfferEvent", "Error creating event.");
@@ -212,6 +227,21 @@ export async function adminUpdateOfferEvent(req: Request, res: Response): Promis
       },
     });
 
+    void logAdminAction({
+      adminId: req.admin?.adminId ?? null,
+      adminEmail: req.admin?.email ?? null,
+      sessionId: req.admin?.sessionId ?? null,
+      action: "ADMIN_OFFER_EVENT_UPDATE",
+      module: "offer_events",
+      resource: "OfferEvent",
+      resourceId: String(id),
+      oldValue: existing,
+      newValue: event,
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"],
+      success: true,
+    });
+
     res.json({ ok: true, event });
   } catch (e) {
     handleAdminError(res, e, "adminUpdateOfferEvent", "Error updating event.");
@@ -227,6 +257,20 @@ export async function adminSoftDeleteOfferEvent(req: Request, res: Response): Pr
       where: { id },
       data: { deletedAt: new Date(), isActive: false },
     });
+
+    void logAdminAction({
+      adminId: req.admin?.adminId ?? null,
+      adminEmail: req.admin?.email ?? null,
+      sessionId: req.admin?.sessionId ?? null,
+      action: "ADMIN_OFFER_EVENT_DELETE",
+      module: "offer_events",
+      resource: "OfferEvent",
+      resourceId: String(id),
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"],
+      success: true,
+    });
+
     res.json({ ok: true });
   } catch (e) {
     log.error("adminSoftDeleteOfferEvent", { error: String(e) });
@@ -287,6 +331,20 @@ export async function adminCreateEventMiner(req: Request, res: Response): Promis
         isFree: d.isFree === true,
         claimLimitPerUser: d.claimLimitPerUser ?? 1,
       },
+    });
+
+    void logAdminAction({
+      adminId: req.admin?.adminId ?? null,
+      adminEmail: req.admin?.email ?? null,
+      sessionId: req.admin?.sessionId ?? null,
+      action: "ADMIN_OFFER_EVENT_MINER_CREATE",
+      module: "offer_events",
+      resource: "EventMiner",
+      resourceId: String(miner.id),
+      newValue: miner,
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"],
+      success: true,
     });
 
     res.json({ ok: true, miner });
@@ -352,6 +410,21 @@ export async function adminUpdateEventMiner(req: Request, res: Response): Promis
       }
     }
 
+    void logAdminAction({
+      adminId: req.admin?.adminId ?? null,
+      adminEmail: req.admin?.email ?? null,
+      sessionId: req.admin?.sessionId ?? null,
+      action: "ADMIN_OFFER_EVENT_MINER_UPDATE",
+      module: "offer_events",
+      resource: "EventMiner",
+      resourceId: String(minerId),
+      oldValue: existing,
+      newValue: miner,
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"],
+      success: true,
+    });
+
     res.json({ ok: true, miner });
   } catch (e) {
     handleAdminError(res, e, "adminUpdateEventMiner", "Error updating miner.");
@@ -379,11 +452,40 @@ export async function adminRemoveEventMiner(req: Request, res: Response): Promis
         where: { id: minerId },
         data: { isActive: false },
       });
+
+      void logAdminAction({
+        adminId: req.admin?.adminId ?? null,
+        adminEmail: req.admin?.email ?? null,
+        sessionId: req.admin?.sessionId ?? null,
+        action: "ADMIN_OFFER_EVENT_MINER_DEACTIVATE",
+        module: "offer_events",
+        resource: "EventMiner",
+        resourceId: String(minerId),
+        newValue: { isActive: false },
+        ipAddress: req.ip,
+        userAgent: req.headers["user-agent"],
+        success: true,
+      });
+
       res.json({ ok: true, deactivated: true });
       return;
     }
 
     await prisma.eventMiner.delete({ where: { id: minerId } });
+
+    void logAdminAction({
+      adminId: req.admin?.adminId ?? null,
+      adminEmail: req.admin?.email ?? null,
+      sessionId: req.admin?.sessionId ?? null,
+      action: "ADMIN_OFFER_EVENT_MINER_DELETE",
+      module: "offer_events",
+      resource: "EventMiner",
+      resourceId: String(minerId),
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"],
+      success: true,
+    });
+
     res.json({ ok: true, deleted: true });
   } catch (e) {
     log.error("adminRemoveEventMiner", { error: String(e) });

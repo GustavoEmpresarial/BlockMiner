@@ -38,7 +38,7 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<AdminRole, string[]> = {
     "tasks",
     "internal_offerwall",
   ],
-  moderator: ["dashboard", "users.view", "users.ban", "support", "logs.view", "creators.view", "banners.view", "tournaments.view", "faucet.view", "read_earn.view", "ptc.view", "tasks.view", "offerwall.view", "internal_offerwall.view"],
+  moderator: ["dashboard", "users.view", "users.ban", "support", "logs.view", "creators.view", "banners.view", "tournaments.view", "faucet.view", "read_earn.view", "ptc.view", "tasks.view", "offerwall.view", "internal_offerwall.view", "events.view"],
 
   finance: ["dashboard", "users.view", "payments", "withdrawals", "deposits"],
   support: ["dashboard", "users.view", "support"],
@@ -64,6 +64,8 @@ export const AVAILABLE_PERMISSIONS: PermissionDefinition[] = [
   { key: "mining", label: "Motor de Mineração & Salas", category: "Mineração" },
   { key: "inventory", label: "Inventário & Racks", category: "Mineração" },
   { key: "store", label: "Loja & Ofertas Internas", category: "Monetização" },
+  { key: "events", label: "Gestão Completa de Ofertas & Eventos", category: "Monetização" },
+  { key: "events.view", label: "Visualizar Ofertas & Eventos (Leitura)", category: "Monetização" },
   { key: "offerwall", label: "Offerwalls & Eventos Externos", category: "Monetização" },
   { key: "offerwall.view", label: "Visualizar Offerwalls & Analytics (Leitura)", category: "Monetização" },
   { key: "internal_offerwall", label: "Gestão do Offerwall Interno", category: "Monetização" },
