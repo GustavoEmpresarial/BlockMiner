@@ -86,6 +86,13 @@ export async function getActiveTiers() {
   return repo.getActiveTiers();
 }
 
+export function getPtcBalanceField(asset?: string | null): "shibBalance" | "polBalance" | "blkBalance" {
+  const norm = String(asset || "").toUpperCase();
+  if (norm === "POL") return "polBalance";
+  if (norm === "BLK") return "blkBalance";
+  return "shibBalance";
+}
+
 export async function createTier(data: CreateTierInput) {
   return repo.createTier({
     label: data.label,
@@ -93,6 +100,7 @@ export async function createTier(data: CreateTierInput) {
     durationSeconds: data.durationSeconds,
     pricePerViewShib: data.pricePerViewShib,
     rewardPerViewShib: data.rewardPerViewShib,
+    currency: data.currency ?? "SHIB",
     isActive: data.isActive ?? true,
     sortOrder: data.sortOrder ?? 0,
   });
@@ -122,8 +130,10 @@ export async function createCampaign(userId: number, input: CreateCampaignInput)
     throw new Error(`Views must be between ${minViews} and ${maxViews}`);
   }
 
+  const currency = ((tier as any).currency || "SHIB").toUpperCase();
+  const balanceField = getPtcBalanceField(currency);
   const pricePerView = new Decimal(tier.pricePerViewShib.toString());
-  const costShib = pricePerView.mul(input.targetViews);
+  const cost = pricePerView.mul(input.targetViews);
   const rewardPerViewShib = new Decimal(tier.rewardPerViewShib.toString());
 
   let createdAd: any = null;
@@ -132,16 +142,17 @@ export async function createCampaign(userId: number, input: CreateCampaignInput)
   await prisma.$transaction(async (tx) => {
     const user = await tx.user.findUnique({
       where: { id: userId },
-      select: { id: true, username: true, email: true, shibBalance: true },
+      select: { id: true, username: true, email: true, shibBalance: true, polBalance: true, blkBalance: true },
     });
     if (!user) throw new Error(PTC_ERROR_MESSAGE.USER_NOT_FOUND);
 
-    if (new Decimal(user.shibBalance.toString()).lt(costShib)) {
-      throw new Error(PTC_ERROR_MESSAGE.INSUFFICIENT_BALANCE);
+    const userBal = new Decimal(user[balanceField].toString());
+    if (userBal.lt(cost)) {
+      throw new Error(currency === "SHIB" ? PTC_ERROR_MESSAGE.INSUFFICIENT_BALANCE : `Insufficient ${currency} balance`);
     }
 
     advertiserUsername = user.username ?? null;
-    await tx.user.update({ where: { id: userId }, data: { shibBalance: { decrement: costShib } } });
+    await tx.user.update({ where: { id: userId }, data: { [balanceField]: { decrement: cost } } });
 
     const hash = randomHash();
     createdAd = await tx.ptpAd.create({
@@ -155,8 +166,9 @@ export async function createCampaign(userId: number, input: CreateCampaignInput)
         adType: tier.adType,
         durationSeconds: tier.durationSeconds,
         targetViews: input.targetViews,
-        costShib,
+        costShib: cost,
         rewardPerViewShib,
+        asset: currency,
         status: "pending_approval",
       },
     });
@@ -238,19 +250,24 @@ export async function addViews(userId: number, adId: number, extraViews: number)
         : new Decimal(settings.pricePerViewShib.toString());
   }
 
-  const costShib = pricePerView.mul(extraViews);
+  const cost = pricePerView.mul(extraViews);
+  const currency = ad.asset || "SHIB";
+  const balanceField = getPtcBalanceField(currency);
 
   await prisma.$transaction(async (tx) => {
-    const user = await tx.user.findUnique({ where: { id: userId } });
+    const user = await tx.user.findUnique({
+      where: { id: userId },
+      select: { id: true, shibBalance: true, polBalance: true, blkBalance: true },
+    });
     if (!user) throw new Error(PTC_ERROR_MESSAGE.USER_NOT_FOUND);
-    if (new Decimal(user.shibBalance.toString()).lt(costShib)) {
-      throw new Error(PTC_ERROR_MESSAGE.INSUFFICIENT_BALANCE);
+    if (new Decimal(user[balanceField].toString()).lt(cost)) {
+      throw new Error(currency === "SHIB" ? PTC_ERROR_MESSAGE.INSUFFICIENT_BALANCE : `Insufficient ${currency} balance`);
     }
 
-    await tx.user.update({ where: { id: userId }, data: { shibBalance: { decrement: costShib } } });
+    await tx.user.update({ where: { id: userId }, data: { [balanceField]: { decrement: cost } } });
     await tx.ptpAd.update({
       where: { id: adId },
-      data: { targetViews: { increment: extraViews }, costShib: { increment: costShib } },
+      data: { targetViews: { increment: extraViews }, costShib: { increment: cost } },
     });
   });
 }
@@ -274,13 +291,15 @@ export async function removeViews(userId: number, adId: number, reduceViews: num
     ad.targetViews > 0
       ? new Decimal(ad.costShib.toString()).div(ad.targetViews)
       : new Decimal(settings.pricePerViewShib.toString());
-  const refundShib = pricePerView.mul(reduceViews);
+  const refund = pricePerView.mul(reduceViews);
+  const currency = ad.asset || "SHIB";
+  const balanceField = getPtcBalanceField(currency);
 
   await prisma.$transaction(async (tx) => {
-    await tx.user.update({ where: { id: userId }, data: { shibBalance: { increment: refundShib } } });
+    await tx.user.update({ where: { id: userId }, data: { [balanceField]: { increment: refund } } });
     await tx.ptpAd.update({
       where: { id: adId },
-      data: { targetViews: { decrement: reduceViews }, costShib: { decrement: refundShib } },
+      data: { targetViews: { decrement: reduceViews }, costShib: { decrement: refund } },
     });
   });
 }
@@ -300,13 +319,15 @@ export async function rejectCampaign(adId: number, reason: string) {
   if (ad.status !== "pending_approval") throw new Error(PTC_ERROR_MESSAGE.NOT_PENDING_APPROVAL);
 
   const undelivered = ad.targetViews - ad.views;
-  const refundShib =
+  const refund =
     ad.targetViews > 0
       ? new Decimal(ad.costShib.toString()).div(ad.targetViews).mul(undelivered)
       : new Decimal(0);
+  const currency = ad.asset || "SHIB";
+  const balanceField = getPtcBalanceField(currency);
 
   await prisma.$transaction(async (tx) => {
-    await tx.user.update({ where: { id: ad.userId }, data: { shibBalance: { increment: refundShib } } });
+    await tx.user.update({ where: { id: ad.userId }, data: { [balanceField]: { increment: refund } } });
     await tx.ptpAd.update({ where: { id: adId }, data: { status: "rejected", rejectionReason: reason } });
   });
 }
@@ -451,20 +472,22 @@ export async function claimSession(sessionId: string, userId: number) {
       throw new Error(PTC_ERROR_MESSAGE.AD_NO_LONGER_AVAILABLE);
     }
 
-    const earnedShib = new Decimal(ad.rewardPerViewShib.toString());
+    const earned = new Decimal(ad.rewardPerViewShib.toString());
+    const currency = ad.asset || "SHIB";
+    const balanceField = getPtcBalanceField(currency);
     const newViews = ad.views + 1;
     const isCompleted = newViews >= ad.targetViews;
 
-    await repo.recordView(tx, session.adId, session.viewerHash, Number(earnedShib.toString()), now);
+    await repo.recordView(tx, session.adId, session.viewerHash, Number(earned.toString()), now);
     await tx.ptpAd.update({
       where: { id: session.adId },
       data: { views: newViews, status: isCompleted ? "completed" : "active" },
     });
-    await tx.ptpEarning.create({ data: { userId, adId: session.adId, amountShib: earnedShib } });
-    await tx.user.update({ where: { id: userId }, data: { shibBalance: { increment: earnedShib } } });
+    await tx.ptpEarning.create({ data: { userId, adId: session.adId, amountShib: currency === "SHIB" ? earned : 0 } });
+    await tx.user.update({ where: { id: userId }, data: { [balanceField]: { increment: earned } } });
     await tx.ptpSession.update({ where: { id: sessionId }, data: { status: "claimed", claimedAt: now } });
 
-    log.info("reward_claimed", { userId, sessionId, earnedShib: earnedShib.toString() });
+    log.info("reward_claimed", { userId, sessionId, earned: earned.toString(), currency });
   });
 }
 

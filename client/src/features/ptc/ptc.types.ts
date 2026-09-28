@@ -3,6 +3,9 @@
  * Mirrors server/modules/ptc/ptc.types.ts.
  */
 
+export type PtcCurrency = 'SHIB' | 'POL' | 'BLK';
+export const PTC_SUPPORTED_CURRENCIES: readonly PtcCurrency[] = ['SHIB', 'POL', 'BLK'] as const;
+
 export interface PtcSettings {
   pricePerViewShib: string | number;
   rewardPerViewShib: string | number;
@@ -20,6 +23,7 @@ export interface PtcTier {
   durationSeconds: number;
   pricePerViewShib: string | number;
   rewardPerViewShib: string | number;
+  currency?: PtcCurrency;
   isActive: boolean;
   sortOrder: number;
 }
@@ -44,6 +48,7 @@ export interface PtcCampaign {
   targetViews: number;
   costShib: string;
   rewardPerViewShib: string;
+  asset?: PtcCurrency | string;
   createdAt: string;
   user?: PtcCampaignUser;
 }

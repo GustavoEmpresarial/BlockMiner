@@ -31,6 +31,7 @@ const EMPTY_TIER = {
   durationSeconds: 10,
   pricePerViewShib: '',
   rewardPerViewShib: '',
+  currency: 'SHIB' as 'SHIB' | 'POL' | 'BLK',
   isActive: true,
   sortOrder: 0,
 };
@@ -164,6 +165,7 @@ export default function AdminPtc() {
             durationSeconds: t.durationSeconds,
             pricePerViewShib: String(t.pricePerViewShib ?? ''),
             rewardPerViewShib: String(t.rewardPerViewShib ?? ''),
+            currency: (t.currency as 'SHIB' | 'POL' | 'BLK') ?? 'SHIB',
             isActive: t.isActive,
             sortOrder: t.sortOrder,
         });
@@ -341,13 +343,22 @@ export default function AdminPtc() {
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1.5 block">{t('adminPtc.tier_advertiser_cost', 'Custo anunciante (SHIB/view)')}</label>
+                                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1.5 block">Moeda / Ativo</label>
+                                    <select value={tierForm.currency} onChange={(e) => setTierForm({ ...tierForm, currency: e.target.value as 'SHIB' | 'POL' | 'BLK' })}
+                                        className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-orange-500 transition-colors">
+                                        <option value="SHIB">SHIB (Shiba Inu)</option>
+                                        <option value="POL">POL (Polygon)</option>
+                                        <option value="BLK">BLK (BlockMiner Token)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1.5 block">{`Custo anunciante (${tierForm.currency}/view)`}</label>
                                     <input type="number" step="0.000001" min="0" value={tierForm.pricePerViewShib} onChange={(e) => setTierForm({ ...tierForm, pricePerViewShib: e.target.value })} required
                                         placeholder="0.000000"
                                         className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm font-mono focus:outline-none focus:border-orange-500 transition-colors" />
                                 </div>
                                 <div>
-                                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1.5 block">{t('adminPtc.tier_viewer_reward', 'Recompensa viewer (SHIB/view)')}</label>
+                                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1.5 block">{`Recompensa viewer (${tierForm.currency}/view)`}</label>
                                     <input type="number" step="0.000001" min="0" value={tierForm.rewardPerViewShib} onChange={(e) => setTierForm({ ...tierForm, rewardPerViewShib: e.target.value })} required
                                         placeholder="0.000000"
                                         className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm font-mono focus:outline-none focus:border-orange-500 transition-colors" />
@@ -398,11 +409,16 @@ export default function AdminPtc() {
                                                 {t.isActive ? 'ativo' : 'inativo'}
                                             </span>
                                         </div>
-                                        <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-[9px] text-gray-500 font-medium">
+                                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[9px] text-gray-500 font-medium">
                                             <span>⏱ {t.durationSeconds}s</span>
                                             <span className="text-sky-400 font-black uppercase">{t.adType ?? 'window'}</span>
-                                            <span>Custo: <span className="text-orange-300 font-black">{Number(t.pricePerViewShib).toLocaleString(undefined, { maximumFractionDigits: 6 })} SHIB/view</span></span>
-                                            <span>Recompensa: <span className="text-emerald-400 font-black">{Number(t.rewardPerViewShib).toLocaleString(undefined, { maximumFractionDigits: 6 })} SHIB/view</span></span>
+                                            <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase ${
+                                                t.currency === 'POL' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' :
+                                                t.currency === 'BLK' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
+                                                'bg-orange-500/20 text-orange-400 border border-orange-500/30'
+                                            }`}>{t.currency || 'SHIB'}</span>
+                                            <span>Custo: <span className="text-orange-300 font-black">{Number(t.pricePerViewShib).toLocaleString(undefined, { maximumFractionDigits: 6 })} {t.currency || 'SHIB'}/view</span></span>
+                                            <span>Recompensa: <span className="text-emerald-400 font-black">{Number(t.rewardPerViewShib).toLocaleString(undefined, { maximumFractionDigits: 6 })} {t.currency || 'SHIB'}/view</span></span>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2 shrink-0">

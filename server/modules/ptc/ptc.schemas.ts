@@ -59,6 +59,7 @@ export const adminCreateTierSchema = z
     durationSeconds: z.coerce.number().int().positive(),
     pricePerViewShib: z.coerce.number().finite().nonnegative(),
     rewardPerViewShib: z.coerce.number().finite().nonnegative(),
+    currency: z.enum(["SHIB", "POL", "BLK"]).default("SHIB"),
     isActive: z.coerce.boolean().default(true),
     sortOrder: z.coerce.number().int().default(0),
 })
@@ -70,6 +71,7 @@ export const adminUpdateTierSchema = z
     durationSeconds: z.coerce.number().int().positive().optional(),
     pricePerViewShib: z.coerce.number().finite().nonnegative().optional(),
     rewardPerViewShib: z.coerce.number().finite().nonnegative().optional(),
+    currency: z.enum(["SHIB", "POL", "BLK"]).optional(),
     isActive: z.coerce.boolean().optional(),
     sortOrder: z.coerce.number().int().optional(),
 })

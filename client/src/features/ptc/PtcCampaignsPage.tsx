@@ -246,7 +246,7 @@ export default function PtcCampaignsPage() {
                                         className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-orange-500 transition-colors">
                                         {tiers.map((tier) => (
                                             <option key={tier.id} value={tier.id}>
-                                                {tier.label} — {tier.durationSeconds}s · {tier.adType} · {Number(tier.pricePerViewShib).toLocaleString(undefined, { maximumFractionDigits: 6 })} SHIB/view
+                                                {tier.label} — {tier.durationSeconds}s · {tier.adType} · {Number(tier.pricePerViewShib).toLocaleString(undefined, { maximumFractionDigits: 6 })} {tier.currency || 'SHIB'}/view
                                             </option>
                                         ))}
                                     </select>
@@ -254,7 +254,7 @@ export default function PtcCampaignsPage() {
                                 {selectedTier && (
                                     <p className="text-[9px] text-gray-500 mt-1.5 font-medium">
                                         {t('ptc.viewer_earns_prefix')}{' '}
-                                        <span className="text-emerald-400 font-black">{Number(selectedTier.rewardPerViewShib).toLocaleString(undefined, { maximumFractionDigits: 6 })} SHIB</span>
+                                        <span className="text-emerald-400 font-black">{Number(selectedTier.rewardPerViewShib).toLocaleString(undefined, { maximumFractionDigits: 6 })} {selectedTier.currency || 'SHIB'}</span>
                                         {t('ptc.viewer_earns_suffix')}
                                     </p>
                                 )}
@@ -272,10 +272,10 @@ export default function PtcCampaignsPage() {
 
                         {/* Cost preview */}
                         <div className="flex items-center gap-3 p-4 bg-orange-500/5 border border-orange-500/15 rounded-xl">
-                            <img src="/media/brand/shib.webp" alt="" className="w-5 h-5 rounded-full" onError={(e) => { (e.target as HTMLImageElement).style.display='none'; }} />
+                            <img src={`/media/brand/${(selectedTier?.currency || 'shib').toLowerCase()}.webp`} alt="" className="w-5 h-5 rounded-full" onError={(e) => { (e.target as HTMLImageElement).style.display='none'; }} />
                             <div>
                                 <p className="text-[9px] text-gray-500 font-black uppercase tracking-widest">{t('ptc.estimated_cost')}</p>
-                                <p className="text-orange-300 font-black text-lg">{costPreview} SHIB</p>
+                                <p className="text-orange-300 font-black text-lg">{costPreview} {selectedTier?.currency || 'SHIB'}</p>
                             </div>
                         </div>
 
@@ -327,9 +327,13 @@ export default function PtcCampaignsPage() {
                                     </div>
                                     <div className="text-right shrink-0 space-y-1">
                                         <p className="text-[9px] text-gray-600 font-bold uppercase tracking-widest">{c.views.toLocaleString()} / {c.targetViews.toLocaleString()} views</p>
-                                        <div className="flex items-center gap-1.5">
-                                            <img src="/media/brand/shib.webp" alt="" className="w-3.5 h-3.5 rounded-full" onError={(e) => { (e.target as HTMLImageElement).style.display='none'; }} />
-                                            <span className="text-orange-300 font-black text-xs">{Number(c.costShib).toLocaleString(undefined, { maximumFractionDigits: 2 })} SHIB</span>
+                                        <div className="flex items-center justify-end gap-1.5">
+                                            <span className={`px-1.5 py-0.2 rounded text-[7px] font-black uppercase ${
+                                                c.asset === 'POL' ? 'bg-purple-500/20 text-purple-400' :
+                                                c.asset === 'BLK' ? 'bg-amber-500/20 text-amber-400' :
+                                                'bg-orange-500/20 text-orange-400'
+                                            }`}>{c.asset || 'SHIB'}</span>
+                                            <span className="text-orange-300 font-black text-xs">{Number(c.costShib).toLocaleString(undefined, { maximumFractionDigits: 6 })}</span>
                                         </div>
                                     </div>
                                     {expanded ? <ChevronUp className="w-4 h-4 text-gray-600 shrink-0" /> : <ChevronDown className="w-4 h-4 text-gray-600 shrink-0" />}

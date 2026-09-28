@@ -41,12 +41,16 @@ export type UpdateSettingsInput = {
   isEnabled?: boolean;
 };
 
+export type PtcCurrency = "SHIB" | "POL" | "BLK";
+export const PTC_SUPPORTED_CURRENCIES: readonly PtcCurrency[] = ["SHIB", "POL", "BLK"] as const;
+
 export type CreateTierInput = {
   label: string;
   adType?: string;
   durationSeconds: number;
   pricePerViewShib: number;
   rewardPerViewShib: number;
+  currency?: PtcCurrency;
   isActive?: boolean;
   sortOrder?: number;
 };
@@ -73,6 +77,7 @@ export interface PtcTierDto {
   durationSeconds: number;
   pricePerViewShib: string | number;
   rewardPerViewShib: string | number;
+  currency: PtcCurrency;
   isActive: boolean;
   sortOrder: number;
 }
@@ -100,6 +105,7 @@ export interface PtcCampaignDto {
   targetViews: number;
   costShib: string | number;
   rewardPerViewShib: string | number;
+  asset: PtcCurrency | string;
   user?: PtcCampaignUserSnippet;
 }
 

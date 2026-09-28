@@ -137,13 +137,13 @@ export const AdCard = memo(function AdCard({
           )}
           <div className="flex items-center gap-1 bg-orange-500/10 border border-orange-500/20 rounded-lg px-2 py-1 ml-auto">
             <img
-              src="/media/brand/shib.webp"
+              src={`/media/brand/${(ad.asset || 'shib').toLowerCase()}.webp`}
               alt=""
               className="w-3 h-3 rounded-full"
               onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
             />
             <span className="text-orange-300 font-black text-[10px] tabular-nums">
-              +{Number(ad.rewardPerViewShib).toLocaleString(undefined, { maximumFractionDigits: 0 })} SHIB
+              +{Number(ad.rewardPerViewShib).toLocaleString(undefined, { maximumFractionDigits: 6 })} {ad.asset || 'SHIB'}
             </span>
           </div>
         </div>

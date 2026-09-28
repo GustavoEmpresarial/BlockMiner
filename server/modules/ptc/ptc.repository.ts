@@ -156,6 +156,7 @@ export async function getAdsForViewer(userId: number, now: Date = new Date()) {
         adType: true,
         durationSeconds: true,
         rewardPerViewShib: true,
+        asset: true,
         views: true,
         targetViews: true,
       },
