@@ -240,7 +240,26 @@ export function putAdminFaucetConfig(body: import('../faucet/adminFaucet.types')
 }
 
 export function listAdminCheckinMilestones() {
-  return api.get('/admin/checkin-milestones');
+  return api.get<import('../checkin/adminCheckinMilestones.types').AdminCheckinMilestonesResponse>('/admin/checkin-milestones');
+}
+
+export function createAdminCheckinMilestone(data: import('../checkin/adminCheckinMilestones.types').AdminCheckinMilestoneInput) {
+  return api.post<{ ok: boolean; milestone: import('../checkin/adminCheckinMilestones.types').AdminCheckinMilestone }>('/admin/checkin-milestones', data);
+}
+
+export function updateAdminCheckinMilestone(
+  id: number,
+  data: Partial<import('../checkin/adminCheckinMilestones.types').AdminCheckinMilestoneInput>
+) {
+  return api.patch<{ ok: boolean; milestone: import('../checkin/adminCheckinMilestones.types').AdminCheckinMilestone }>(`/admin/checkin-milestones/${id}`, data);
+}
+
+export function deleteAdminCheckinMilestone(id: number) {
+  return api.delete<{ ok: boolean }>(`/admin/checkin-milestones/${id}`);
+}
+
+export function listAdminCheckinStreakAnomalies() {
+  return api.get<import('../checkin/adminCheckinMilestones.types').AdminStreakAnomaliesResponse>('/admin/checkin-streak-anomalies');
 }
 
 export function listAdmins() {

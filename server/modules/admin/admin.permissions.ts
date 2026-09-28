@@ -38,7 +38,7 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<AdminRole, string[]> = {
     "tasks",
     "internal_offerwall",
   ],
-  moderator: ["dashboard", "users.view", "users.ban", "support", "logs.view", "creators.view", "banners.view", "tournaments.view", "faucet.view", "read_earn.view", "ptc.view", "tasks.view", "offerwall.view", "internal_offerwall.view", "events.view"],
+  moderator: ["dashboard", "users.view", "users.ban", "support", "logs.view", "creators.view", "banners.view", "tournaments.view", "faucet.view", "read_earn.view", "ptc.view", "tasks.view", "offerwall.view", "internal_offerwall.view", "events.view", "checkin.view"],
 
   finance: ["dashboard", "users.view", "payments", "withdrawals", "deposits"],
   support: ["dashboard", "users.view", "support"],
@@ -74,7 +74,8 @@ export const AVAILABLE_PERMISSIONS: PermissionDefinition[] = [
   { key: "ptc.view", label: "Visualizar PTC (Leitura)", category: "Monetização" },
   { key: "shortlinks", label: "Shortlinks & Faucets", category: "Monetização" },
 
-  { key: "checkin", label: "Marcos de Check-in", category: "Engajamento" },
+  { key: "checkin", label: "Gestão Completa de Marcos de Check-in", category: "Engajamento" },
+  { key: "checkin.view", label: "Visualizar Marcos de Check-in (Leitura)", category: "Engajamento" },
   { key: "tournaments", label: "Torneios & Ligas", category: "Engajamento" },
   { key: "tournaments.view", label: "Visualizar Torneios (Leitura)", category: "Engajamento" },
   { key: "banners", label: "Gestão de Banners do Dashboard", category: "Monetização" },
