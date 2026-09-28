@@ -19,11 +19,11 @@ O módulo **PTC (Paid-to-Click)** do BlockMiner opera como um marketplace descen
 
 | Moeda | Label | Duração | Custo Anunciante | Recompensa Viewer | Tipo | Ordem |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **SHIB** | SHIB Rápido 5s | 5s | 15.000000 SHIB | 12.000000 SHIB | window | 1 |
-| **SHIB** | SHIB Básico 10s | 10s | 25.000000 SHIB | 20.000000 SHIB | window | 2 |
-| **SHIB** | SHIB Padrão 15s | 15s | 35.000000 SHIB | 30.000000 SHIB | window | 3 |
-| **SHIB** | SHIB Destaque 30s | 30s | 60.000000 SHIB | 50.000000 SHIB | window | 4 |
-| **SHIB** | SHIB Premium 60s | 60s | 100.000000 SHIB | 85.000000 SHIB | window | 5 |
+| **SHIB** | SHIB Rápido 5s | 5s | 4.000000 SHIB | 3.000000 SHIB | window | 1 |
+| **SHIB** | SHIB Básico 10s | 10s | 6.000000 SHIB | 5.000000 SHIB | window | 2 |
+| **SHIB** | SHIB Padrão 15s | 15s | 10.000000 SHIB | 8.000000 SHIB | window | 3 |
+| **SHIB** | SHIB Destaque 30s | 30s | 18.000000 SHIB | 15.000000 SHIB | window | 4 |
+| **SHIB** | SHIB Premium 60s | 60s | 35.000000 SHIB | 30.000000 SHIB | window | 5 |
 | **POL** | POL Rápido 5s | 5s | 0.000200 POL | 0.000160 POL | window | 10 |
 | **POL** | POL Básico 10s | 10s | 0.000350 POL | 0.000280 POL | window | 11 |
 | **POL** | POL Padrão 15s | 15s | 0.000500 POL | 0.000400 POL | window | 12 |

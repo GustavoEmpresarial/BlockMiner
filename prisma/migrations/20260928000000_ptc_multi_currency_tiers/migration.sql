@@ -3,19 +3,23 @@ ALTER TABLE "ptc_ad_tiers" ADD COLUMN IF NOT EXISTS "currency" TEXT NOT NULL DEF
 
 -- Seed default tiers for SHIB, POL and BLK if not already present
 INSERT INTO "ptc_ad_tiers" ("label", "ad_type", "duration_seconds", "price_per_view_shib", "reward_per_view_shib", "currency", "is_active", "sort_order")
-SELECT 'SHIB Rápido 5s', 'window', 5, 15, 12, 'SHIB', true, 1
+SELECT 'SHIB Rápido 5s', 'window', 5, 4, 3, 'SHIB', true, 1
 WHERE NOT EXISTS (SELECT 1 FROM "ptc_ad_tiers" WHERE "label" = 'SHIB Rápido 5s');
 
 INSERT INTO "ptc_ad_tiers" ("label", "ad_type", "duration_seconds", "price_per_view_shib", "reward_per_view_shib", "currency", "is_active", "sort_order")
-SELECT 'SHIB Padrão 15s', 'window', 15, 35, 30, 'SHIB', true, 3
+SELECT 'SHIB Básico 10s', 'window', 10, 6, 5, 'SHIB', true, 2
+WHERE NOT EXISTS (SELECT 1 FROM "ptc_ad_tiers" WHERE "label" = 'SHIB Básico 10s');
+
+INSERT INTO "ptc_ad_tiers" ("label", "ad_type", "duration_seconds", "price_per_view_shib", "reward_per_view_shib", "currency", "is_active", "sort_order")
+SELECT 'SHIB Padrão 15s', 'window', 15, 10, 8, 'SHIB', true, 3
 WHERE NOT EXISTS (SELECT 1 FROM "ptc_ad_tiers" WHERE "label" = 'SHIB Padrão 15s');
 
 INSERT INTO "ptc_ad_tiers" ("label", "ad_type", "duration_seconds", "price_per_view_shib", "reward_per_view_shib", "currency", "is_active", "sort_order")
-SELECT 'SHIB Destaque 30s', 'window', 30, 60, 50, 'SHIB', true, 4
+SELECT 'SHIB Destaque 30s', 'window', 30, 18, 15, 'SHIB', true, 4
 WHERE NOT EXISTS (SELECT 1 FROM "ptc_ad_tiers" WHERE "label" = 'SHIB Destaque 30s');
 
 INSERT INTO "ptc_ad_tiers" ("label", "ad_type", "duration_seconds", "price_per_view_shib", "reward_per_view_shib", "currency", "is_active", "sort_order")
-SELECT 'SHIB Premium 60s', 'window', 60, 100, 85, 'SHIB', true, 5
+SELECT 'SHIB Premium 60s', 'window', 60, 35, 30, 'SHIB', true, 5
 WHERE NOT EXISTS (SELECT 1 FROM "ptc_ad_tiers" WHERE "label" = 'SHIB Premium 60s');
 
 -- POL Tiers
