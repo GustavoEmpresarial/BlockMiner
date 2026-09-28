@@ -31,7 +31,6 @@ import AdminBannersPage from './banners/AdminBannersPage';
 import AdminCreatorsPage from './creators/AdminCreatorsPage';
 import AdminLogsPage from './logs/AdminLogsPage';
 import AdminMinersPage from './miners/AdminMinersPage';
-import AdminSalaPage from './sala/AdminSalaPage';
 import AdminFaucetPage from './faucet/AdminFaucetPage';
 import AdminUsersPage from './users/AdminUsersPage';
 import AdminUserDetailPage from './users/AdminUserDetailPage';
@@ -72,7 +71,6 @@ export const adminFeatureRoutes: ReactNode = (
     <Route path="/admin/creators" element={<AdminCreatorsPage />} />
     <Route path="/admin/logs" element={<AdminLogsPage />} />
     <Route path="/admin/miners" element={<AdminMinersPage />} />
-    <Route path="/admin/sala" element={<AdminSalaPage />} />
     <Route path="/admin/faucet" element={<AdminFaucetPage />} />
   </>
 );

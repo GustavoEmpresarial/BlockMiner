@@ -115,7 +115,6 @@ const ADMIN_MENU_SECTIONS: AdminMenuSection[] = [
     icon: Pickaxe,
     items: [
       { icon: Cpu, labelKey: 'adminSidebar.nav.miners', path: '/admin/miners' },
-      { icon: Boxes, labelKey: 'adminSidebar.nav.sala', path: '/admin/sala' },
       { icon: Layers, labelKey: 'adminSidebar.nav.mini_pass', path: '/admin/mini-pass' },
       { icon: CalendarRange, labelKey: 'adminSidebar.nav.checkin_milestones', path: '/admin/checkin-milestones' },
     ],

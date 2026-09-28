@@ -67,7 +67,6 @@ import { sidebarNavRouter, sidebarNavAdminRouter } from "../modules/sidebar-nav/
 import { statsRouter } from "../modules/stats/index.js";
 import { analyticsAdminRouter } from "../modules/analytics/index.js";
 import { antibotRouter, antibotAdminRouter } from "../modules/antibot/index.js";
-import { salaAdminRouter } from "../modules/sala/index.js";
 import { createRateLimiter } from "../core/http/middleware/rateLimit.js";
 import { createSiteMaintenanceMiddleware } from "../core/http/middleware/siteMaintenance.js";
 import { startMiningCron } from "../cron/mining.cron.js";
@@ -219,7 +218,6 @@ export function createApp() {
     // see server/modules/antibot/antibot.service.ts for the scope-reduction rationale).
     app.use("/api/antibot", antibotRouter);
     app.use("/api/admin/antibot", antibotAdminRouter);
-    app.use("/api/admin/sala", salaAdminRouter);
     app.use("/api/admin", autoMiningAdminRouter);
     // All uploaded images/media are served from the persistent uploads/media/<category>/ tree —
     // see server/modules/media/media.config.ts for the on-disk resolution.
