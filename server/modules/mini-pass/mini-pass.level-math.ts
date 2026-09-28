@@ -2,9 +2,11 @@
  * Level is 1-based. At 0 XP user is level 1 until they cross the first threshold.
  */
 export function computePassLevel(totalXp: number, xpPerLevel: number, maxLevel: number): number {
-  const step = Math.max(1, xpPerLevel);
-  const lvl = 1 + Math.floor(Math.max(0, totalXp) / step);
-  return Math.min(Math.max(1, maxLevel), Math.max(1, lvl));
+  const xp = Number.isFinite(totalXp) ? Math.max(0, totalXp) : 0;
+  const step = Number.isFinite(xpPerLevel) && xpPerLevel > 0 ? xpPerLevel : 1;
+  const max = Number.isFinite(maxLevel) && maxLevel > 0 ? maxLevel : 1;
+  const lvl = 1 + Math.floor(xp / step);
+  return Math.min(max, Math.max(1, lvl));
 }
 
 /** XP total needed to sit at max tier (same progression rule as computePassLevel). */
