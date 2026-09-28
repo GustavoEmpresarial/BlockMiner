@@ -37,7 +37,7 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<AdminRole, string[]> = {
     "read_earn",
     "tasks",
   ],
-  moderator: ["dashboard", "users.view", "users.ban", "support", "logs.view", "creators.view", "banners.view", "tournaments.view", "faucet.view", "read_earn.view", "ptc.view", "tasks.view"],
+  moderator: ["dashboard", "users.view", "users.ban", "support", "logs.view", "creators.view", "banners.view", "tournaments.view", "faucet.view", "read_earn.view", "ptc.view", "tasks.view", "offerwall.view"],
 
   finance: ["dashboard", "users.view", "payments", "withdrawals", "deposits"],
   support: ["dashboard", "users.view", "support"],
@@ -64,6 +64,7 @@ export const AVAILABLE_PERMISSIONS: PermissionDefinition[] = [
   { key: "inventory", label: "Inventário & Racks", category: "Mineração" },
   { key: "store", label: "Loja & Ofertas Internas", category: "Monetização" },
   { key: "offerwall", label: "Offerwalls & Eventos Externos", category: "Monetização" },
+  { key: "offerwall.view", label: "Visualizar Offerwalls & Analytics (Leitura)", category: "Monetização" },
   { key: "ptc", label: "Gestão Completa de PTC & Anúncios", category: "Monetização" },
   { key: "ptc.view", label: "Visualizar PTC (Leitura)", category: "Monetização" },
   { key: "shortlinks", label: "Shortlinks & Faucets", category: "Monetização" },

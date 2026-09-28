@@ -1,15 +1,20 @@
 /**
- * Ported from legacy/server/modules/offerwall/offerwall.admin.routes.ts.
- * Admin analytics for offerwall conversions (internal + offerwall.me + Zerads).
- * Mounted inside the shared /api/admin prefix → inherits requireAdminAuth (see wallet.admin.routes.ts
- * for the identical `.use(requireAdminAuth)` pattern this module follows).
+ * Offerwall Admin Routes — cross-provider analytics reporting.
+ * Mounted under /api/admin.
  */
 import express from "express";
-import { requireAdminAuth } from "../admin/index.js";
+import { requireAdminAuth } from "../admin/admin.auth.middleware.js";
+import { requireAdminPermission } from "../admin/admin.permissions.js";
+import { createRateLimiter } from "../../core/http/middleware/rateLimit.js";
 import { getOfferwallAnalytics } from "./offerwall.admin.controller.js";
 
 export const offerwallAdminRouter = express.Router();
 
-offerwallAdminRouter.use(requireAdminAuth);
+const adminLimiter = createRateLimiter({ windowMs: 60_000, max: 300 });
+offerwallAdminRouter.use(requireAdminAuth, adminLimiter);
 
-offerwallAdminRouter.get("/offerwall/analytics", getOfferwallAnalytics);
+offerwallAdminRouter.get(
+  "/offerwall/analytics",
+  requireAdminPermission("offerwall.view", "offerwall"),
+  getOfferwallAnalytics,
+);
