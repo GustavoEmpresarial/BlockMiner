@@ -14,21 +14,18 @@ export const purchaseSchema = z
   })
   .strict();
 
-/** Shape only — env `FAN_MAX_BULK_QUANTITY` is enforced in the controller. */
-export const purchaseFanSchema = z
+export const purchaseGearSchema = z
   .object({
     sku: z.string().trim().min(1).max(80),
     quantity: z.coerce.number().int().min(1),
   })
   .strict();
 
+/** Shape only — env `FAN_MAX_BULK_QUANTITY` is enforced in the controller. */
+export const purchaseFanSchema = purchaseGearSchema;
+
 /** Shape only — env `RACK_MAX_BULK_QUANTITY` is enforced in the controller. */
-export const purchaseRackSchema = z
-  .object({
-    sku: z.string().trim().min(1).max(80),
-    quantity: z.coerce.number().int().min(1),
-  })
-  .strict();
+export const purchaseRackSchema = purchaseGearSchema;
 
 export const eventCreateSchema = z
   .object({
@@ -43,6 +40,8 @@ export const eventCreateSchema = z
 
 export const eventUpdateSchema = eventCreateSchema.partial();
 
+export const offerCurrencyEnumSchema = z.enum(["POL", "BLK", "BTC", "ETH", "USDT", "USDC", "ZER"]);
+
 export const minerCreateSchema = z
   .object({
     name: z.string().trim().min(1).max(200),
@@ -50,7 +49,7 @@ export const minerCreateSchema = z
     imageUrl: z.string().trim().max(2000).optional().nullable(),
     price: z.union([z.number().min(0), z.string().regex(/^\d+(\.\d+)?$/)]),
     hashRate: z.number().positive(),
-    currency: z.enum(["POL", "BLK", "BTC", "ETH", "USDT", "USDC", "ZER"]).optional(),
+    currency: offerCurrencyEnumSchema.optional(),
     stockUnlimited: z.boolean(),
     stockCount: z.number().int().positive().optional().nullable(),
     slotSize: z.coerce.number().int().pipe(z.union([z.literal(1), z.literal(2)])).optional(),
@@ -70,7 +69,7 @@ export const minerUpdateSchema = z
     imageUrl: z.string().trim().max(2000).optional().nullable(),
     price: z.union([z.number().min(0), z.string().regex(/^\d+(\.\d+)?$/)]).optional(),
     hashRate: z.number().positive().optional(),
-    currency: z.enum(["POL", "BLK", "BTC", "ETH", "USDT", "USDC", "ZER"]).optional(),
+    currency: offerCurrencyEnumSchema.optional(),
     stockUnlimited: z.boolean().optional(),
     stockCount: z.number().int().positive().optional().nullable(),
     slotSize: z.coerce.number().int().pipe(z.union([z.literal(1), z.literal(2)])).optional(),

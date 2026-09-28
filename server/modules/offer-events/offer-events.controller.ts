@@ -154,15 +154,34 @@ function mapRackPurchaseError(res: import("express").Response, msg: string): boo
   return false;
 }
 
-export async function purchaseFanOffer(req: import("express").Request, res: import("express").Response): Promise<void> {
+async function executeGearPurchase(
+  req: import("express").Request,
+  res: import("express").Response,
+  config: {
+    invalidSkuCode: string;
+    getMaxBulk: () => number;
+    purchaseFn: (userId: number, sku: string, quantity: number, channel: "offer", now: Date) => Promise<{
+      quantity: number;
+      creditsGranted: number;
+      newBalance: unknown;
+      fanCredits?: unknown;
+      rackCredits?: unknown;
+    }>;
+    errorMapper: (res: import("express").Response, msg: string) => boolean;
+    successMessageKey: string;
+    successMessage: (qty: number) => string;
+    creditField: "fanCredits" | "rackCredits";
+    logName: string;
+  },
+): Promise<void> {
   try {
     const user = requireSessionUser(req, res);
     if (!user) return;
     const sku = typeof req.body?.sku === "string" ? req.body.sku.trim() : "";
     const quantity = Number(req.body?.quantity || 1);
-    const maxBulk = readFanMaxBulkQuantity();
+    const maxBulk = config.getMaxBulk();
     if (!sku) {
-      res.status(400).json({ ok: false, code: "FAN_INVALID_SKU", message: "Invalid fan product." });
+      res.status(400).json({ ok: false, code: config.invalidSkuCode, message: "Invalid product." });
       return;
     }
     if (!Number.isInteger(quantity) || quantity < 1 || quantity > maxBulk) {
@@ -173,14 +192,14 @@ export async function purchaseFanOffer(req: import("express").Request, res: impo
     if (!idem) return;
     const { lease, ci } = idem;
     try {
-      const result = await purchaseFansForUser(user.id, sku, quantity, "offer", new Date());
-      const payload = {
+      const result = await config.purchaseFn(user.id, sku, quantity, "offer", new Date());
+      const payload: Record<string, unknown> = {
         ok: true,
-        messageKey: "fans.purchase_success_detail",
+        messageKey: config.successMessageKey,
         messageParams: { count: result.quantity, credits: result.creditsGranted },
-        message: `${result.quantity} fan unit(s) added to your inventory!`,
+        message: config.successMessage(result.quantity),
         newBalance: result.newBalance,
-        fanCredits: result.fanCredits,
+        [config.creditField]: result[config.creditField],
       };
       await finalizeCriticalMutationSuccess(lease, {
         requestHash: ci.requestHash,
@@ -190,7 +209,7 @@ export async function purchaseFanOffer(req: import("express").Request, res: impo
     } catch (inner) {
       await cancelCriticalMutation(lease);
       const msg = inner instanceof Error ? inner.message : String(inner);
-      if (mapFanPurchaseError(res, msg)) return;
+      if (config.errorMapper(res, msg)) return;
       if (readErrorCode(inner) === "DISTRIBUTED_LOCK_BUSY") {
         res.status(409).json({
           ok: false,
@@ -202,60 +221,33 @@ export async function purchaseFanOffer(req: import("express").Request, res: impo
       throw inner;
     }
   } catch (e) {
-    log.error("purchaseFanOffer", { error: String(e) });
+    log.error(config.logName, { error: String(e) });
     res.status(500).json({ ok: false, message: "Purchase failed." });
   }
 }
 
+export async function purchaseFanOffer(req: import("express").Request, res: import("express").Response): Promise<void> {
+  return executeGearPurchase(req, res, {
+    invalidSkuCode: "FAN_INVALID_SKU",
+    getMaxBulk: readFanMaxBulkQuantity,
+    purchaseFn: purchaseFansForUser,
+    errorMapper: mapFanPurchaseError,
+    successMessageKey: "fans.purchase_success_detail",
+    successMessage: (qty: number) => `${qty} fan unit(s) added to your inventory!`,
+    creditField: "fanCredits",
+    logName: "purchaseFanOffer",
+  });
+}
+
 export async function purchaseRackOffer(req: import("express").Request, res: import("express").Response): Promise<void> {
-  try {
-    const user = requireSessionUser(req, res);
-    if (!user) return;
-    const sku = typeof req.body?.sku === "string" ? req.body.sku.trim() : "";
-    const quantity = Number(req.body?.quantity || 1);
-    const maxBulk = readRackMaxBulkQuantity();
-    if (!sku) {
-      res.status(400).json({ ok: false, code: "RACK_INVALID_SKU", message: "Invalid rack product." });
-      return;
-    }
-    if (!Number.isInteger(quantity) || quantity < 1 || quantity > maxBulk) {
-      res.status(400).json({ ok: false, message: `Quantity must be between 1 and ${maxBulk}.` });
-      return;
-    }
-    const idem = await resolveCriticalMutation(req, res);
-    if (!idem) return;
-    const { lease, ci } = idem;
-    try {
-      const result = await purchaseRacksForUser(user.id, sku, quantity, "offer", new Date());
-      const payload = {
-        ok: true,
-        messageKey: "racks.purchase_success_detail",
-        messageParams: { count: result.quantity, credits: result.creditsGranted },
-        message: `${result.quantity} rack(s) added to your inventory!`,
-        newBalance: result.newBalance,
-        rackCredits: result.rackCredits,
-      };
-      await finalizeCriticalMutationSuccess(lease, {
-        requestHash: ci.requestHash,
-        responseJson: payload,
-      });
-      res.json(payload);
-    } catch (inner) {
-      await cancelCriticalMutation(lease);
-      const msg = inner instanceof Error ? inner.message : String(inner);
-      if (mapRackPurchaseError(res, msg)) return;
-      if (readErrorCode(inner) === "DISTRIBUTED_LOCK_BUSY") {
-        res.status(409).json({
-          ok: false,
-          code: "RACE_CONDITION_DETECTED",
-          message: "This action conflicted with another request. Refresh the page and try again.",
-        });
-        return;
-      }
-      throw inner;
-    }
-  } catch (e) {
-    log.error("purchaseRackOffer", { error: String(e) });
-    res.status(500).json({ ok: false, message: "Purchase failed." });
-  }
+  return executeGearPurchase(req, res, {
+    invalidSkuCode: "RACK_INVALID_SKU",
+    getMaxBulk: readRackMaxBulkQuantity,
+    purchaseFn: purchaseRacksForUser,
+    errorMapper: mapRackPurchaseError,
+    successMessageKey: "racks.purchase_success_detail",
+    successMessage: (qty: number) => `${qty} rack(s) added to your inventory!`,
+    creditField: "rackCredits",
+    logName: "purchaseRackOffer",
+  });
 }

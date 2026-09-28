@@ -28,6 +28,24 @@ import {
 
 const log = logger.child("offer-events.admin");
 
+function parsePositiveIntId(raw: unknown, res: Response, label: string): number | null {
+  const id = Number(raw);
+  if (!Number.isInteger(id) || id <= 0) {
+    res.status(400).json({ ok: false, message: `Invalid ${label}.` });
+    return null;
+  }
+  return id;
+}
+
+function handleAdminError(res: Response, e: unknown, logName: string, fallbackMessage: string): void {
+  if (e instanceof z.ZodError) {
+    res.status(400).json({ ok: false, message: "Invalid data.", errors: e.issues });
+    return;
+  }
+  log.error(logName, { error: String(e) });
+  res.status(500).json({ ok: false, message: fallbackMessage });
+}
+
 export async function adminListOfferEvents(req: Request, res: Response): Promise<void> {
   try {
     const q = listEventsQuerySchema.safeParse(req.query || {});
@@ -133,22 +151,15 @@ export async function adminCreateOfferEvent(req: Request, res: Response): Promis
 
     res.json({ ok: true, event });
   } catch (e) {
-    if (e instanceof z.ZodError) {
-      res.status(400).json({ ok: false, message: "Invalid data.", errors: e.issues });
-      return;
-    }
-    log.error("adminCreateOfferEvent", { error: String(e) });
-    res.status(500).json({ ok: false, message: "Error creating event." });
+    handleAdminError(res, e, "adminCreateOfferEvent", "Error creating event.");
   }
 }
 
 export async function adminGetOfferEvent(req: Request, res: Response): Promise<void> {
   try {
-    const id = Number(req.params.id);
-    if (!Number.isInteger(id) || id <= 0) {
-      res.status(400).json({ ok: false, message: "Invalid id." });
-      return;
-    }
+    const id = parsePositiveIntId(req.params.id, res, "id");
+    if (id === null) return;
+
     const event = await prisma.offerEvent.findFirst({
       where: { id },
       include: { _count: { select: { miners: true, purchases: true } } },
@@ -166,11 +177,9 @@ export async function adminGetOfferEvent(req: Request, res: Response): Promise<v
 
 export async function adminUpdateOfferEvent(req: Request, res: Response): Promise<void> {
   try {
-    const id = Number(req.params.id);
-    if (!Number.isInteger(id) || id <= 0) {
-      res.status(400).json({ ok: false, message: "Invalid id." });
-      return;
-    }
+    const id = parsePositiveIntId(req.params.id, res, "id");
+    if (id === null) return;
+
     const d = eventUpdateSchema.parse(req.body);
     const existing = await prisma.offerEvent.findFirst({ where: { id } });
     if (!existing) {
@@ -205,22 +214,15 @@ export async function adminUpdateOfferEvent(req: Request, res: Response): Promis
 
     res.json({ ok: true, event });
   } catch (e) {
-    if (e instanceof z.ZodError) {
-      res.status(400).json({ ok: false, message: "Invalid data.", errors: e.issues });
-      return;
-    }
-    log.error("adminUpdateOfferEvent", { error: String(e) });
-    res.status(500).json({ ok: false, message: "Error updating event." });
+    handleAdminError(res, e, "adminUpdateOfferEvent", "Error updating event.");
   }
 }
 
 export async function adminSoftDeleteOfferEvent(req: Request, res: Response): Promise<void> {
   try {
-    const id = Number(req.params.id);
-    if (!Number.isInteger(id) || id <= 0) {
-      res.status(400).json({ ok: false, message: "Invalid id." });
-      return;
-    }
+    const id = parsePositiveIntId(req.params.id, res, "id");
+    if (id === null) return;
+
     await prisma.offerEvent.update({
       where: { id },
       data: { deletedAt: new Date(), isActive: false },
@@ -234,11 +236,9 @@ export async function adminSoftDeleteOfferEvent(req: Request, res: Response): Pr
 
 export async function adminListEventMiners(req: Request, res: Response): Promise<void> {
   try {
-    const eventId = Number(req.params.eventId);
-    if (!Number.isInteger(eventId) || eventId <= 0) {
-      res.status(400).json({ ok: false, message: "Invalid event id." });
-      return;
-    }
+    const eventId = parsePositiveIntId(req.params.eventId, res, "event id");
+    if (eventId === null) return;
+
     const event = await prisma.offerEvent.findFirst({ where: { id: eventId } });
     if (!event) {
       res.status(404).json({ ok: false, message: "Event not found." });
@@ -259,11 +259,9 @@ export async function adminListEventMiners(req: Request, res: Response): Promise
 
 export async function adminCreateEventMiner(req: Request, res: Response): Promise<void> {
   try {
-    const eventId = Number(req.params.eventId);
-    if (!Number.isInteger(eventId) || eventId <= 0) {
-      res.status(400).json({ ok: false, message: "Invalid event id." });
-      return;
-    }
+    const eventId = parsePositiveIntId(req.params.eventId, res, "event id");
+    if (eventId === null) return;
+
     const event = await prisma.offerEvent.findFirst({ where: { id: eventId } });
     if (!event) {
       res.status(404).json({ ok: false, message: "Event not found." });
@@ -293,23 +291,16 @@ export async function adminCreateEventMiner(req: Request, res: Response): Promis
 
     res.json({ ok: true, miner });
   } catch (e) {
-    if (e instanceof z.ZodError) {
-      res.status(400).json({ ok: false, message: "Invalid data.", errors: e.issues });
-      return;
-    }
-    log.error("adminCreateEventMiner", { error: String(e) });
-    res.status(500).json({ ok: false, message: "Error creating miner." });
+    handleAdminError(res, e, "adminCreateEventMiner", "Error creating miner.");
   }
 }
 
 export async function adminUpdateEventMiner(req: Request, res: Response): Promise<void> {
   try {
-    const eventId = Number(req.params.eventId);
-    const minerId = Number(req.params.minerId);
-    if (!Number.isInteger(eventId) || !Number.isInteger(minerId)) {
-      res.status(400).json({ ok: false, message: "Invalid ids." });
-      return;
-    }
+    const eventId = parsePositiveIntId(req.params.eventId, res, "event id");
+    if (eventId === null) return;
+    const minerId = parsePositiveIntId(req.params.minerId, res, "miner id");
+    if (minerId === null) return;
 
     const existing = await prisma.eventMiner.findFirst({
       where: { id: minerId, eventId },
@@ -363,19 +354,17 @@ export async function adminUpdateEventMiner(req: Request, res: Response): Promis
 
     res.json({ ok: true, miner });
   } catch (e) {
-    if (e instanceof z.ZodError) {
-      res.status(400).json({ ok: false, message: "Invalid data.", errors: e.issues });
-      return;
-    }
-    log.error("adminUpdateEventMiner", { error: String(e) });
-    res.status(500).json({ ok: false, message: "Error updating miner." });
+    handleAdminError(res, e, "adminUpdateEventMiner", "Error updating miner.");
   }
 }
 
 export async function adminRemoveEventMiner(req: Request, res: Response): Promise<void> {
   try {
-    const eventId = Number(req.params.eventId);
-    const minerId = Number(req.params.minerId);
+    const eventId = parsePositiveIntId(req.params.eventId, res, "event id");
+    if (eventId === null) return;
+    const minerId = parsePositiveIntId(req.params.minerId, res, "miner id");
+    if (minerId === null) return;
+
     const existing = await prisma.eventMiner.findFirst({
       where: { id: minerId, eventId },
       include: { _count: { select: { purchases: true } } },
@@ -404,7 +393,9 @@ export async function adminRemoveEventMiner(req: Request, res: Response): Promis
 
 export async function adminListEventPurchases(req: Request, res: Response): Promise<void> {
   try {
-    const eventId = Number(req.params.id);
+    const eventId = parsePositiveIntId(req.params.id, res, "event id");
+    if (eventId === null) return;
+
     const q = listPurchasesQuerySchema.safeParse(req.query || {});
     if (!q.success) {
       res.status(400).json({ ok: false, message: "Invalid query.", errors: q.error.issues });
