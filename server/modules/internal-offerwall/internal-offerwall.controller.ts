@@ -10,6 +10,15 @@ import { classifyInfrastructureError } from "../../shared/errors/prismaHttpError
 
 const log = logger.child("internal-offerwall.controller");
 
+function parseAttemptIdParam(req: Request, res: Response): number | null {
+  const parsedParams = attemptIdParamSchema.safeParse(req.params);
+  if (!parsedParams.success) {
+    res.status(400).json({ ok: false, message: "Invalid attempt id." });
+    return null;
+  }
+  return parsedParams.data.attemptId;
+}
+
 export async function getOffers(req: Request, res: Response): Promise<void> {
   try {
     const user = requireSessionUser(req, res);
@@ -68,12 +77,8 @@ export async function postPartnerOpened(req: Request, res: Response): Promise<vo
   try {
     const user = requireSessionUser(req, res);
     if (!user) return;
-    const parsedParams = attemptIdParamSchema.safeParse(req.params);
-    if (!parsedParams.success) {
-      res.status(400).json({ ok: false, message: "Invalid attempt id." });
-      return;
-    }
-    const { attemptId } = parsedParams.data;
+    const attemptId = parseAttemptIdParam(req, res);
+    if (attemptId === null) return;
 
     const idem = await resolveCriticalMutation(req, res);
     if (!idem) return;
@@ -104,12 +109,8 @@ export async function postAbandon(req: Request, res: Response): Promise<void> {
   try {
     const user = requireSessionUser(req, res);
     if (!user) return;
-    const parsedParams = attemptIdParamSchema.safeParse(req.params);
-    if (!parsedParams.success) {
-      res.status(400).json({ ok: false, message: "Invalid attempt id." });
-      return;
-    }
-    const { attemptId } = parsedParams.data;
+    const attemptId = parseAttemptIdParam(req, res);
+    if (attemptId === null) return;
 
     const idem = await resolveCriticalMutation(req, res);
     if (!idem) return;
@@ -140,12 +141,8 @@ export async function postSubmit(req: Request, res: Response): Promise<void> {
   try {
     const user = requireSessionUser(req, res);
     if (!user) return;
-    const parsedParams = attemptIdParamSchema.safeParse(req.params);
-    if (!parsedParams.success) {
-      res.status(400).json({ ok: false, message: "Invalid attempt id." });
-      return;
-    }
-    const { attemptId } = parsedParams.data;
+    const attemptId = parseAttemptIdParam(req, res);
+    if (attemptId === null) return;
 
     const idem = await resolveCriticalMutation(req, res);
     if (!idem) return;

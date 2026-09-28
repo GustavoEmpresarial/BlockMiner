@@ -689,39 +689,63 @@ export async function userSubmitAttempt(
     throw e;
   }
 
+  await dispatchCompletionHooks({
+    userId,
+    attemptId,
+    offerId: attempt.offerId,
+    offerKind: attempt.offer.kind,
+    rewardKind: attempt.offer.rewardKind,
+    now,
+    event: "INTERNAL_OFFERWALL_SELF_CLAIM_COMPLETED",
+  });
+
+  log.info("internal_offerwall_attempt_completed", { userId, attemptId, offerId: attempt.offerId });
+  return { ok: true, status: "COMPLETED", message: "Reward granted." };
+}
+
+async function dispatchCompletionHooks(args: {
+  userId: number;
+  attemptId: number;
+  offerId: number;
+  offerKind: string;
+  rewardKind: string | null | undefined;
+  now: Date;
+  event: string;
+  approvedByAdmin?: boolean;
+}): Promise<void> {
+  const { userId, attemptId, offerId, offerKind, rewardKind, now, event, approvedByAdmin } = args;
+
   void recordTournamentAction({
     userId,
     provider: TOURNAMENT_ACTION_PROVIDER.INTERNAL,
     actionCount: 1,
     executedAtUTC: now,
     providerEventId: String(attemptId),
-    metadata: { offerId: attempt.offerId, timestampSource: "completed_at" },
+    metadata: { offerId, ...(approvedByAdmin ? { approvedByAdmin: true } : {}), timestampSource: "completed_at" },
   }).catch((err) => log.warn("tournament.action.failed", { attemptId, error: String(err) }));
 
   void notifyMiniPassInternalOfferwall(userId, attemptId).catch((err) =>
     log.warn("mini_pass.hook.failed", { attemptId, error: String(err) }),
   );
-  void notifyDailyTaskInternalOfferwallCompleted(userId, attemptId, attempt.offerId).catch((err) =>
+  void notifyDailyTaskInternalOfferwallCompleted(userId, attemptId, offerId).catch((err) =>
     log.warn("daily_task.hook.failed", { attemptId, error: String(err) }),
   );
 
-  if (String(attempt.offer.rewardKind).toUpperCase() === REWARD_HASHRATE_TEMP) {
+  if (String(rewardKind || "").toUpperCase() === REWARD_HASHRATE_TEMP) {
     await syncUserBaseHashRate(userId).catch((err) => {
       log.warn("internal_offerwall.sync_hashrate_failed", { userId, attemptId, error: String(err) });
     });
   }
 
   notifyInternalOfferwallCompletion({
-    event: "INTERNAL_OFFERWALL_SELF_CLAIM_COMPLETED",
-    attemptId: attempt.id,
+    event,
+    attemptId,
     userId,
-    offerId: attempt.offerId,
-    offerKind: attempt.offer.kind,
+    offerId,
+    offerKind,
     completedAtIso: now.toISOString(),
   });
-
-  log.info("internal_offerwall_attempt_completed", { userId, attemptId, offerId: attempt.offerId });
-  return { ok: true, status: "COMPLETED", message: "Reward granted." };
+}
 }
 
 // ---------------------------------------------------------------------------
@@ -985,35 +1009,15 @@ export async function adminApproveAttempt(attemptId: number): Promise<AdminOpera
     throw e;
   }
 
-  void recordTournamentAction({
+  await dispatchCompletionHooks({
     userId: attempt.userId,
-    provider: TOURNAMENT_ACTION_PROVIDER.INTERNAL,
-    actionCount: 1,
-    executedAtUTC: now,
-    providerEventId: String(attemptId),
-    metadata: { offerId: attempt.offerId, approvedByAdmin: true, timestampSource: "completed_at" },
-  }).catch((err) => log.warn("tournament.action.failed", { attemptId, error: String(err) }));
-
-  void notifyMiniPassInternalOfferwall(attempt.userId, attemptId).catch((err) =>
-    log.warn("mini_pass.hook.failed", { attemptId, error: String(err) }),
-  );
-  void notifyDailyTaskInternalOfferwallCompleted(attempt.userId, attemptId, attempt.offerId).catch((err) =>
-    log.warn("daily_task.hook.failed", { attemptId, error: String(err) }),
-  );
-
-  if (String(attempt.offer.rewardKind).toUpperCase() === REWARD_HASHRATE_TEMP) {
-    await syncUserBaseHashRate(attempt.userId).catch((err) => {
-      log.warn("internal_offerwall.sync_hashrate_failed", { userId: attempt.userId, attemptId, error: String(err) });
-    });
-  }
-
-  notifyInternalOfferwallCompletion({
-    event: "INTERNAL_OFFERWALL_ADMIN_APPROVED",
-    attemptId: attempt.id,
-    userId: attempt.userId,
+    attemptId,
     offerId: attempt.offerId,
     offerKind: attempt.offer.kind,
-    completedAtIso: now.toISOString(),
+    rewardKind: attempt.offer.rewardKind,
+    now,
+    event: "INTERNAL_OFFERWALL_ADMIN_APPROVED",
+    approvedByAdmin: true,
   });
 
   log.info("internal_offerwall_attempt_admin_approved", {
