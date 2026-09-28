@@ -72,12 +72,16 @@ export async function listOrphanMachineTypes(prisma: AppPrisma, limit = 60): Pro
     ORDER BY COUNT(*) DESC
     LIMIT ${limit}
   `;
+  interface SimpleNamedItem {
+    id: number;
+    name: string;
+  }
   const [eventMiners, catalogMiners] = await Promise.all([
     prisma.eventMiner.findMany({ select: { id: true, name: true }, orderBy: { updatedAt: "desc" } }),
     prisma.miner.findMany({ select: { id: true, name: true }, orderBy: { updatedAt: "desc" } }),
   ]);
-  const eventByName = new Map(eventMiners.map((miner) => [miner.name.trim().toLowerCase(), miner]));
-  const catalogByName = new Map(catalogMiners.map((miner) => [miner.name.trim().toLowerCase(), miner]));
+  const eventByName = new Map<string, SimpleNamedItem>(eventMiners.map((miner) => [miner.name.trim().toLowerCase(), miner]));
+  const catalogByName = new Map<string, SimpleNamedItem>(catalogMiners.map((miner) => [miner.name.trim().toLowerCase(), miner]));
 
   return rows.flatMap((row) => {
     const minerName = String(row.miner_name ?? "").trim();
@@ -152,7 +156,7 @@ export async function relinkOrphanMachineTypeToCatalog(prisma: AppPrisma, minerN
 
   const where = { minerId: null, eventMinerId: null, minerName: label };
   const ownedIds = (await prisma.userOwnedMachine.findMany({ where, select: { id: true } })).map((row) => row.id);
-  const counts = await prisma.$transaction(async (tx) => {
+  const counts: { inventory: number; racks: number; vault: number; ownedMachines: number } = await prisma.$transaction(async (tx) => {
     const data = { minerId: catalog.id, minerName: catalog.name };
     const [inventory, vault, ownedMachines] = await Promise.all([
       tx.userInventory.updateMany({ where: { minerId: null, minerName: label }, data }),
@@ -164,7 +168,8 @@ export async function relinkOrphanMachineTypeToCatalog(prisma: AppPrisma, minerN
       : { count: 0 };
     return { inventory: inventory.count, racks: racks.count, vault: vault.count, ownedMachines: ownedMachines.count };
   });
-  const total = Object.values(counts).reduce((sum, count) => sum + count, 0);
+  const countNumbers: number[] = [counts.inventory, counts.racks, counts.vault, counts.ownedMachines];
+  const total = countNumbers.reduce((sum, count) => sum + count, 0);
   return {
     ok: total > 0, minerName: label, catalogMinerId: catalog.id, catalogMinerName: catalog.name, counts,
     message: total ? `${total} machine instance(s) linked to ${catalog.name}.` : "No orphan instances found for this name.",
