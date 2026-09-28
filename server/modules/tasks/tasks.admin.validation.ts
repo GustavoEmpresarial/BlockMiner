@@ -177,9 +177,13 @@ export function parseCreateDailyTaskDefinition(body: unknown): ParseCreateDailyT
     return { ok: false, status: 400, message: "Invalid task type." };
   }
 
-  const resetCadence = normalizeDailyTaskResetCadence(b.resetCadence);
-  if (!(DAILY_TASK_RESET_CADENCES as readonly string[]).includes(resetCadence)) {
-    return { ok: false, status: 400, message: "Invalid reset cadence." };
+  let resetCadence = "DAILY";
+  if (b.resetCadence !== undefined && b.resetCadence !== null && String(b.resetCadence).trim() !== "") {
+    const raw = String(b.resetCadence).trim().toUpperCase();
+    if (!(DAILY_TASK_RESET_CADENCES as readonly string[]).includes(raw)) {
+      return { ok: false, status: 400, message: "Invalid reset cadence." };
+    }
+    resetCadence = raw;
   }
 
   const targetRaw = b.targetValue;
