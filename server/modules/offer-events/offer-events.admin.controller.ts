@@ -31,7 +31,7 @@ const log = logger.child("offer-events.admin");
 
 function parsePositiveIntId(raw: unknown, res: Response, label: string): number | null {
   const id = Number(raw);
-  if (!Number.isInteger(id) || id <= 0) {
+  if (!Number.isInteger(id) || id <= 0 || id > 2_147_483_647) {
     res.status(400).json({ ok: false, message: `Invalid ${label}.` });
     return null;
   }
