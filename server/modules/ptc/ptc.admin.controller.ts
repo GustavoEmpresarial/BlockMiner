@@ -9,21 +9,9 @@ import {
   adminUpdateTierSchema,
   adminRejectCampaignSchema,
 } from "./ptc.schemas.js";
+import { err, errorMessage, parsePositiveIntId } from "./ptc.controller-helpers.js";
 
 const log = logger.child("ptc.admin.controller");
-
-function err(res: Response, status: number, msg: string): void {
-  res.status(status).json({ ok: false, message: msg });
-}
-
-function errorMessage(e: unknown): string {
-  return e instanceof Error ? e.message : "Server error";
-}
-
-function parsePositiveIntId(val: unknown): number | null {
-  const n = Number(val);
-  return Number.isInteger(n) && n > 0 ? n : null;
-}
 
 export async function getSettings(_req: Request, res: Response): Promise<void> {
   try {
