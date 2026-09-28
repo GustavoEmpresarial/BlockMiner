@@ -47,7 +47,7 @@ export async function tryConsumeDedupe(tx: TxClient, taskDefinitionId: number, d
     await tx.userDailyTaskDedupeTick.create({ data: { taskDefinitionId, dedupeKey } });
     return true;
   } catch (e: unknown) {
-    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") return false;
+    if (e && typeof e === "object" && "code" in e && (e as { code?: string }).code === "P2002") return false;
     throw e;
   }
 }
@@ -134,7 +134,10 @@ export async function findInternalOfferwallOfferById(id: number) {
   return prisma.internalOfferwallOffer.findUnique({ where: { id } });
 }
 
-export async function updateDailyTaskDefinition(id: number, data: Prisma.DailyTaskDefinitionUpdateInput) {
+export async function updateDailyTaskDefinition(
+  id: number,
+  data: Prisma.DailyTaskDefinitionUpdateInput | Prisma.DailyTaskDefinitionUncheckedUpdateInput,
+) {
   return prisma.dailyTaskDefinition.update({ where: { id }, data });
 }
 

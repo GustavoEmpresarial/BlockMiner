@@ -15,7 +15,7 @@
  * increment hook — same shape mismatch already documented in other Fase 7+ ports. Not wired here;
  * left as a follow-up for whoever extends tournaments/ with a generic score hook.
  */
-import { Prisma } from "@prisma/client";
+import { Prisma, type DailyTaskDefinition, type UserDailyTaskProgress } from "@prisma/client";
 import prisma from "../../core/database/prisma.js";
 import { createRewardInboxEntry, type InboxRewardPayload } from "../notifications/index.js";
 import { isSidebarPathVisible, sidebarRegistryPath, SIDEBAR_ITEM_REGISTRY } from "../sidebar-nav/index.js";
@@ -175,7 +175,7 @@ export async function getDailyTasksDashboard(userId: number): Promise<DailyTaskD
   const now = new Date();
   const defaultPeriodKey = getDailyTaskPeriodKey(now);
   const defsRaw = await repo.findActiveDefinitions(now);
-  const defs = await filterDailyTaskDefsForSidebar(defsRaw);
+  const defs = await filterDailyTaskDefsForSidebar<DailyTaskDefinition>(defsRaw);
 
   const periodByDef = new Map<number, string>();
   const periodKeys = new Set<string>();
@@ -193,7 +193,7 @@ export async function getDailyTasksDashboard(userId: number): Promise<DailyTaskD
   }
 
   const progressRows = await repo.findProgressForUserInPeriods(userId, Array.from(periodKeys));
-  const byDefPeriod = new Map(progressRows.map((p) => [`${p.taskDefinitionId}:${p.periodKey}`, p]));
+  const byDefPeriod = new Map<string, UserDailyTaskProgress>(progressRows.map((p) => [`${p.taskDefinitionId}:${p.periodKey}`, p]));
 
   const tasks = defs.map((def) => {
     const periodKey = periodByDef.get(def.id) || defaultPeriodKey;

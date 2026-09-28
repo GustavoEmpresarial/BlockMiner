@@ -1,5 +1,7 @@
 export type TaskStatus = 'available' | 'in_progress' | 'completed' | 'claimed';
 
+export type DailyTasksTranslate = (key: string, options?: Record<string, unknown>) => string;
+
 export type DailyTaskReward = {
   kind?: string | null;
   amount?: string | number | null;
