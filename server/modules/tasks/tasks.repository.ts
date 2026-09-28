@@ -1,24 +1,25 @@
 import { Prisma } from "@prisma/client";
 import prisma, { type TxClient } from "../../core/database/prisma.js";
 
+function dateWindowFilter(now: Date): Prisma.DailyTaskDefinitionWhereInput["AND"] {
+  return [
+    { OR: [{ validFrom: null }, { validFrom: { lte: now } }] },
+    { OR: [{ validUntil: null }, { validUntil: { gte: now } }] },
+  ];
+}
+
 export function activeDefinitionWhere(taskType: string, now: Date): Prisma.DailyTaskDefinitionWhereInput {
   return {
     isActive: true,
     taskType,
-    AND: [
-      { OR: [{ validFrom: null }, { validFrom: { lte: now } }] },
-      { OR: [{ validUntil: null }, { validUntil: { gte: now } }] },
-    ],
+    AND: dateWindowFilter(now),
   };
 }
 
 export function activeDefinitionsInWindowWhere(now: Date): Prisma.DailyTaskDefinitionWhereInput {
   return {
     isActive: true,
-    AND: [
-      { OR: [{ validFrom: null }, { validFrom: { lte: now } }] },
-      { OR: [{ validUntil: null }, { validUntil: { gte: now } }] },
-    ],
+    AND: dateWindowFilter(now),
   };
 }
 

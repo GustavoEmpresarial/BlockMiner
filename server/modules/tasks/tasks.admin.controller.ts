@@ -26,6 +26,26 @@ function prismaErrCode(e: unknown): string | undefined {
   return undefined;
 }
 
+async function checkForeignKeyDependencies(deps: {
+  rewardMinerId?: number | null;
+  rewardEventMinerId?: number | null;
+  internalOfferwallOfferId?: number | null;
+}): Promise<string | null> {
+  if (deps.rewardMinerId != null) {
+    const miner = await repo.findMinerById(deps.rewardMinerId);
+    if (!miner) return "rewardMinerId does not exist.";
+  }
+  if (deps.rewardEventMinerId != null) {
+    const em = await repo.findEventMinerById(deps.rewardEventMinerId);
+    if (!em) return "rewardEventMinerId does not exist.";
+  }
+  if (deps.internalOfferwallOfferId != null) {
+    const offer = await repo.findInternalOfferwallOfferById(deps.internalOfferwallOfferId);
+    if (!offer) return "internalOfferwallOfferId does not exist.";
+  }
+  return null;
+}
+
 export async function listDefinitions(_req: Request, res: Response): Promise<void> {
   try {
     const rows = await repo.listDailyTaskDefinitions();
@@ -46,28 +66,10 @@ export async function createDefinition(req: Request, res: Response): Promise<voi
 
     const { data, autoSortOrder } = parsed;
 
-    if (data.rewardMinerId) {
-      const miner = await repo.findMinerById(data.rewardMinerId);
-      if (!miner) {
-        res.status(400).json({ ok: false, message: "rewardMinerId does not exist." });
-        return;
-      }
-    }
-
-    if (data.rewardEventMinerId) {
-      const em = await repo.findEventMinerById(data.rewardEventMinerId);
-      if (!em) {
-        res.status(400).json({ ok: false, message: "rewardEventMinerId does not exist." });
-        return;
-      }
-    }
-
-    if (data.internalOfferwallOfferId) {
-      const offer = await repo.findInternalOfferwallOfferById(data.internalOfferwallOfferId);
-      if (!offer) {
-        res.status(400).json({ ok: false, message: "internalOfferwallOfferId does not exist." });
-        return;
-      }
+    const fkError = await checkForeignKeyDependencies(data);
+    if (fkError) {
+      res.status(400).json({ ok: false, message: fkError });
+      return;
     }
 
     if (autoSortOrder) {
@@ -122,28 +124,14 @@ export async function patchDefinition(req: Request, res: Response): Promise<void
 
     const { data, needsMinerId, needsEventMinerId, needsOfferwallId } = parsed;
 
-    if (needsMinerId != null) {
-      const miner = await repo.findMinerById(needsMinerId);
-      if (!miner) {
-        res.status(400).json({ ok: false, message: "rewardMinerId does not exist." });
-        return;
-      }
-    }
-
-    if (needsEventMinerId != null) {
-      const em = await repo.findEventMinerById(needsEventMinerId);
-      if (!em) {
-        res.status(400).json({ ok: false, message: "rewardEventMinerId does not exist." });
-        return;
-      }
-    }
-
-    if (needsOfferwallId != null) {
-      const offer = await repo.findInternalOfferwallOfferById(needsOfferwallId);
-      if (!offer) {
-        res.status(400).json({ ok: false, message: "internalOfferwallOfferId does not exist." });
-        return;
-      }
+    const fkError = await checkForeignKeyDependencies({
+      rewardMinerId: needsMinerId,
+      rewardEventMinerId: needsEventMinerId,
+      internalOfferwallOfferId: needsOfferwallId,
+    });
+    if (fkError) {
+      res.status(400).json({ ok: false, message: fkError });
+      return;
     }
 
     const oldRow = await repo.findDailyTaskDefinitionById(id);
