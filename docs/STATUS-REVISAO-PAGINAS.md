@@ -25,7 +25,7 @@ Documento central de controle de qualidade e auditoria das páginas da aplicaç�
 ### 2. Categoria: Ganhar (`earn`)
 - [ ] **Torneios** (`/tournaments`)
 - [ ] **Check-in Diário** (`/checkin`)
-- [ ] **Tarefas Diárias** (`/tasks`)
+- [x] **Tarefas Diárias** (`/tasks` e `/admin/daily-tasks`) — ✅ **Revisado & Documentado**: Eliminação de `@ts-nocheck`, reescrita do controller administrativo em TypeScript estrito, RBAC granular (`tasks` e `tasks.view`), auditoria completa com `logAdminAction`, validação de dependências de chaves estrangeiras, documentação OpenAPI completa em `docs/admin/tasks.md`.
 - [ ] **Mini Pass** (`/mini-pass`)
 - [x] **Eventos de Queima** (`/burn`) — ✅ **Concluído**: Agrupamento de máquinas idênticas com contadores `+`/`-`/`Max`, ordenação estrita por menor poder para maior poder (`hashRate` ASC), botão inteligente de auto-seleção rápida, taxa de queima atômica com seleção entre SHIB (20), POL (0.01) ou BLK (0.001) e advisory locks no backend. 19 testes automatizados (12 backend + 7 Vitest) cobrindo o fluxo.
 - [ ] **Jogos** (`/games` e `/games/game-2048`)
