@@ -1,11 +1,39 @@
-# Documentação Técnica: Gestão de PTC (`/admin/ptc` & `/ptc`)
+# Documentação Técnica: Gestão de PTC Multi-Moeda (`/admin/ptc` & `/ptc`)
 
-## 1. Visão Geral e Arquitetura do Domínio
+## 1. Visão Geral e Arquitetura Multi-Moeda (POL, BLK, SHIB)
 
-O módulo **PTC (Paid-to-Click)** do BlockMiner é um marketplace bidirecional de anúncios:
-- **Anunciantes**: Criam campanhas publicitárias pagando em **SHIB** debitado do saldo (`PtpAd` nasce com status `pending_approval`).
-- **Administradores**: Revisam, aprovam ou rejeitam campanhas (com estorno pro-rata de SHIB das visualizações não entregues), gerenciam *tiers* de duração e configuram parâmetros globais de exibição.
-- **Jogadores**: Visualizam os anúncios em sessões cronometradas com anti-cheat (`PtpSession` com heartbeat a cada 15s) e recebem recompensas em SHIB.
+O módulo **PTC (Paid-to-Click)** do BlockMiner opera como um marketplace descentralizado e flexível de anúncios com liquidação multi-ativo:
+- **Anunciantes**: Criam campanhas publicitárias pagando em **POL**, **BLK** ou **SHIB**, debitado instantaneamente da carteira correspondente (`user.polBalance`, `user.blkBalance` ou `user.shibBalance`).
+- **Administradores**: Revisam, aprovam ou rejeitam campanhas (com estorno pro-rata automático na moeda original para visualizações não entregues), gerenciam *tiers* parametrizados por tempo (5s, 10s, 15s, 30s, 60s) e moeda (SHIB, POL, BLK).
+- **Jogadores**: Visualizam os anúncios em sessões cronometradas com anti-cheat (`PtpSession` com heartbeat a cada 15s) e recebem recompensas creditadas diretamente na moeda configurada pelo anunciante.
+
+### Matriz de Mapeamento de Saldos por Moeda
+
+| Moeda / Ativo | Coluna de Saldo no Usuário | Precisão Decimal | Tipo de Débito / Crédito |
+| :--- | :--- | :--- | :--- |
+| **SHIB** | `user.shibBalance` | `Decimal(30, 8)` | Transação atômica Prisma |
+| **POL** | `user.polBalance` | `Decimal(20, 8)` | Transação atômica Prisma |
+| **BLK** | `user.blkBalance` | `Decimal(20, 8)` | Transação atômica Prisma |
+
+### Catálogo de Tiers Padronizados (Duração & Moeda)
+
+| Moeda | Label | Duração | Custo Anunciante | Recompensa Viewer | Tipo | Ordem |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **SHIB** | SHIB Rápido 5s | 5s | 15.000000 SHIB | 12.000000 SHIB | window | 1 |
+| **SHIB** | SHIB Básico 10s | 10s | 25.000000 SHIB | 20.000000 SHIB | window | 2 |
+| **SHIB** | SHIB Padrão 15s | 15s | 35.000000 SHIB | 30.000000 SHIB | window | 3 |
+| **SHIB** | SHIB Destaque 30s | 30s | 60.000000 SHIB | 50.000000 SHIB | window | 4 |
+| **SHIB** | SHIB Premium 60s | 60s | 100.000000 SHIB | 85.000000 SHIB | window | 5 |
+| **POL** | POL Rápido 5s | 5s | 0.002000 POL | 0.001600 POL | window | 10 |
+| **POL** | POL Básico 10s | 10s | 0.004000 POL | 0.003200 POL | window | 11 |
+| **POL** | POL Padrão 15s | 15s | 0.006000 POL | 0.005000 POL | window | 12 |
+| **POL** | POL Destaque 30s | 30s | 0.010000 POL | 0.008000 POL | window | 13 |
+| **POL** | POL Premium 60s | 60s | 0.020000 POL | 0.016000 POL | window | 14 |
+| **BLK** | BLK Rápido 5s | 5s | 0.020000 BLK | 0.016000 BLK | window | 20 |
+| **BLK** | BLK Básico 10s | 10s | 0.040000 BLK | 0.032000 BLK | window | 21 |
+| **BLK** | BLK Padrão 15s | 15s | 0.060000 BLK | 0.050000 BLK | window | 22 |
+| **BLK** | BLK Destaque 30s | 30s | 0.100000 BLK | 0.080000 BLK | window | 23 |
+| **BLK** | BLK Premium 60s | 60s | 0.200000 BLK | 0.160000 BLK | window | 24 |
 
 ### Notificação Obrigatória no Telegram (Adendo Operacional)
 Toda vez que uma nova campanha é submetida por um anunciante via `POST /api/ptc/campaigns`:
@@ -303,10 +331,15 @@ paths:
                   example: 10
                 pricePerViewShib:
                   type: number
-                  example: 1.0
+                  example: 0.002
                 rewardPerViewShib:
                   type: number
-                  example: 0.5
+                  example: 0.0016
+                currency:
+                  type: string
+                  enum: [SHIB, POL, BLK]
+                  default: SHIB
+                  example: POL
       responses:
         '200':
           description: Tier criado com sucesso
