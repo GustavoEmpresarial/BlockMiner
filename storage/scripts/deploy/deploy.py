@@ -171,7 +171,7 @@ def _preserve_runtime_artifacts(container_app: str) -> str:
     """Keep untracked build/runtime dirs across git reset (dist is gitignored)."""
     return f'''
 BM_KEEP="$(mktemp -d /tmp/bm-keep-XXXXXX)"
-for path in dist client/dist storage/uploads storage/backups; do
+for path in dist client/dist storage/uploads; do
   if [[ -e "$APP_ROOT/$path" ]]; then
     mkdir -p "$BM_KEEP/$(dirname "$path")"
     cp -a "$APP_ROOT/$path" "$BM_KEEP/$path"
@@ -210,7 +210,7 @@ elif [[ -d "$BM_KEEP/client/dist" ]]; then
   rm -rf "$APP_ROOT/client/dist"
   mv "$BM_KEEP/client/dist" "$APP_ROOT/client/dist"
 fi
-for path in storage/uploads storage/backups; do
+for path in storage/uploads; do
   if [[ -d "$BM_KEEP/$path" ]]; then
     mkdir -p "$APP_ROOT/$(dirname "$path")"
     rm -rf "$APP_ROOT/$path"
