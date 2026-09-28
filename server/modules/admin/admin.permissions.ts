@@ -35,8 +35,9 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<AdminRole, string[]> = {
     "admins",
     "faucet",
     "read_earn",
+    "tasks",
   ],
-  moderator: ["dashboard", "users.view", "users.ban", "support", "logs.view", "creators.view", "banners.view", "tournaments.view", "faucet.view", "read_earn.view", "ptc.view"],
+  moderator: ["dashboard", "users.view", "users.ban", "support", "logs.view", "creators.view", "banners.view", "tournaments.view", "faucet.view", "read_earn.view", "ptc.view", "tasks.view"],
 
   finance: ["dashboard", "users.view", "payments", "withdrawals", "deposits"],
   support: ["dashboard", "users.view", "support"],
@@ -86,6 +87,8 @@ export const AVAILABLE_PERMISSIONS: PermissionDefinition[] = [
   { key: "broadcast", label: "Notificações & Anúncios Broadcast", category: "Engajamento" },
   { key: "creators", label: "Gestão de Criadores & Social YouTube", category: "Engajamento" },
   { key: "creators.view", label: "Visualizar Criadores & Vídeos", category: "Engajamento" },
+  { key: "tasks", label: "Gestão Completa de Tarefas & Missões", category: "Engajamento" },
+  { key: "tasks.view", label: "Visualizar Tarefas (Leitura)", category: "Engajamento" },
 ];
 
 export function resolvePermissions(role: string, permissionsOverride?: unknown): string[] {
