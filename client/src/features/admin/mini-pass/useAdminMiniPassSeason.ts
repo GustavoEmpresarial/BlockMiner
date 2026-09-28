@@ -312,7 +312,6 @@ export function useAdminMiniPassSeason() {
   };
 
   const deleteReward = async (id: number) => {
-    if (!window.confirm(t('adminMiniPass.confirm_delete_reward'))) return;
     try {
       await api.delete(`/admin/mini-pass/seasons/${seasonId}/level-rewards/${id}`);
       toast.success(t('adminMiniPass.deleted'));
@@ -374,7 +373,6 @@ export function useAdminMiniPassSeason() {
   };
 
   const deleteMission = async (id: number) => {
-    if (!window.confirm(t('adminMiniPass.confirm_delete_mission'))) return;
     try {
       await api.delete(`/admin/mini-pass/seasons/${seasonId}/missions/${id}`);
       toast.success(t('adminMiniPass.deleted'));

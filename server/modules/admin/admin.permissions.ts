@@ -37,8 +37,9 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<AdminRole, string[]> = {
     "read_earn",
     "tasks",
     "internal_offerwall",
+    "mini_pass",
   ],
-  moderator: ["dashboard", "users.view", "users.ban", "support", "logs.view", "creators.view", "banners.view", "tournaments.view", "faucet.view", "read_earn.view", "ptc.view", "tasks.view", "offerwall.view", "internal_offerwall.view", "events.view", "checkin.view"],
+  moderator: ["dashboard", "users.view", "users.ban", "support", "logs.view", "creators.view", "banners.view", "tournaments.view", "faucet.view", "read_earn.view", "ptc.view", "tasks.view", "offerwall.view", "internal_offerwall.view", "events.view", "checkin.view", "mini_pass.view"],
 
   finance: ["dashboard", "users.view", "payments", "withdrawals", "deposits"],
   support: ["dashboard", "users.view", "support"],
@@ -96,6 +97,8 @@ export const AVAILABLE_PERMISSIONS: PermissionDefinition[] = [
   { key: "creators.view", label: "Visualizar Criadores & Vídeos", category: "Engajamento" },
   { key: "tasks", label: "Gestão Completa de Tarefas & Missões", category: "Engajamento" },
   { key: "tasks.view", label: "Visualizar Tarefas (Leitura)", category: "Engajamento" },
+  { key: "mini_pass", label: "Gestão de Temporadas do Mini Pass", category: "Engajamento" },
+  { key: "mini_pass.view", label: "Visualizar Mini Pass (Leitura)", category: "Engajamento" },
 ];
 
 export function resolvePermissions(role: string, permissionsOverride?: unknown): string[] {
