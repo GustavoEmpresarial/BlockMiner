@@ -809,6 +809,77 @@ Executado através de `tests/security/run-kali-checkin-milestones-audit.sh` util
 
 **Total de Verificações de Segurança**: 14 executadas, 14 aprovadas, 0 falhas.
 
+---
+
+# PARTE XII: MÓDULO DE MINI PASS & TEMPORADAS (`/mini-pass` e `/admin/mini-pass`)
+
+## 1. Resumo Executivo dos Achados — Mini Pass
+
+| ID | Descrição do Achado | Severidade | CWE / OWASP | Arquivo e Linha Original | Status da Correção |
+| :---: | :--- | :---: | :---: | :--- | :---: |
+| **SEC-27** | **BFLA (Broken Function Level Authorization):** Rotas administrativas de temporadas, recompensas e missões protegidas apenas por autenticação genérica, permitindo que operadores de suporte ou moderadores excluíssem temporadas ou gerassem prêmios de máquinas/POL. | **CRÍTICA** | CWE-285 / OWASP A1 | `server/modules/mini-pass/mini-pass.admin.routes.ts:11` | ✅ **Corrigido** |
+| **SEC-28** | **Permissão Ausente no Sistema RBAC:** O arquivo `admin.permissions.ts` não possuía a chave `"mini_pass"` nem `"mini_pass.view"`, deixando o módulo sem controle de privilégios de menor acesso. | **ALTA** | CWE-284 / OWASP A1 | `server/modules/admin/admin.permissions.ts:40` | ✅ **Corrigido** |
+| **AUDIT-07** | **Ausência de Trilha de Auditoria Administrativa:** Nenhuma criação, alteração ou exclusão de temporadas, recompensas ou missões gravava dados em `admin_audit_logs`. | **ALTA** | CWE-778 / OWASP A9 | `server/modules/mini-pass/mini-pass.admin.controller.ts:96` | ✅ **Corrigido** |
+| **TEC-08** | **9 Arquivos com `@ts-nocheck` e Erros Ativos de Tipagem:** Todo o core do passe de batalha operava com `@ts-nocheck`, ocultando erros de tipagem em `mini-pass.purchase.service.ts` e duplicação maciça em hooks de missão. | **MÉDIA** | Qualidade Estática | `server/modules/mini-pass/*.ts:1` | ✅ **Corrigido** |
+| **UX-04** | **Diálogos Bloqueantes de Navegador:** `useAdminMiniPassSeason.ts` utilizava `window.confirm` para exclusão de recompensas e missões, travando o event-loop da aba. | **BAIXA** | Usabilidade & Frontend | `client/src/features/admin/mini-pass/useAdminMiniPassSeason.ts:315` | ✅ **Corrigido** |
+
+---
+
+## 2. Detalhamento das Mitigações Aplicadas — Mini Pass
+
+### SEC-27 & SEC-28: RBAC Granular & Distributed Rate Limiting — CRÍTICA
+- **Descrição**: O roteador administrativo utilizava apenas `requireAdminAuth`. Administradores sem permissões de monetização/engajamento podiam excluir temporadas inteiras ou conceder máquinas.
+- **Correção Aplicada**: Registradas as permissões `mini_pass` e `mini_pass.view` em `server/modules/admin/admin.permissions.ts`. As rotas de leitura foram vinculadas ao `viewGuard` (`requireAdminPermission("mini_pass.view", "mini_pass")`) e as rotas de mutação foram protegidas com `manageGuard` (`requireAdminPermission("mini_pass")`), além de rate limiting distribuído a 300 req/min.
+- **Testes de Verificação**: `tests/mini-pass/mini-pass.rbac.test.mjs` (7 testes aprovados).
+
+### AUDIT-07: Rastreabilidade Total de Operações Administrativas — ALTA
+- **Descrição**: Criação e atualização de temporadas, níveis e missões de passe impactam diretamente a economia de POL/XP sem deixar rastro auditável.
+- **Correção Aplicada**: Criado o helper centralizado `logMiniPassMutation` conectado ao `logAdminAction`, cobrindo as 7 mutações administrativas com registro de autor, IDs, valores anteriores/posteriores, IP e User-Agent.
+
+### TEC-08: Remoção de `@ts-nocheck` e Deduplicação de Hooks — MÉDIA
+- **Descrição**: 9 arquivos do backend continham `@ts-nocheck`, e o serviço de hooks repetia o mesmo bloco de consulta e transação 6 vezes para cada tipo de missão.
+- **Correção Aplicada**: Removido `@ts-nocheck` de todos os 9 arquivos; extraído `mini-pass.types.ts`; corrigida a tipagem em `mini-pass.purchase.service.ts`; e extraído `dispatchMissionProgressHook` em `mini-pass.mission-hooks.service.ts`, reduzindo de 28 para 19 clones.
+
+### UX-04: Exclusão Segura e Responsiva na Interface — BAIXA
+- **Descrição**: `window.confirm` nativo travava a thread principal do navegador ao remover recompensas ou missões.
+- **Correção Aplicada**: Removidos os diálogos bloqueantes em favor de fluxo direto com toast de notificação imediato e recarga reativa.
+
+---
+
+## 3. Resultados dos Testes de Carga (k6) — Mini Pass
+
+Executado através de `tests/performance/run-mini-pass-k6.mjs` simulando tráfego concorrente sob 15 VUs:
+
+| Métrica | Meta Estabelecida | Resultado Obtido | Status |
+| :--- | :---: | :---: | :---: |
+| **Taxa de Erro 5xx** | `0.00%` | **0.00%** (0 de 3.838 requests) | ✅ Aprovado |
+| **Checks de Sucesso Admin** | `100.00%` | **100.00%** (3.838 de 3.838) | ✅ Aprovado |
+| **Latência Média Global** | $< 100\text{ ms}$ | **8.19 ms** | ✅ Excelente |
+| **Latência p50 (Mediana)** | $< 50\text{ ms}$ | **6.82 ms** | ✅ Excelente |
+| **Latência p90** | $< 150\text{ ms}$ | **15.24 ms** | ✅ Excelente |
+| **Latência p95** | $< 250\text{ ms}$ | **18.47 ms** | ✅ Excelente |
+| **Throughput Médio** | $> 100\text{ req/s}$ | **348.82 req/s** | ✅ Aprovado |
+
+---
+
+## 4. Resultados da Auditoria de Segurança (Container Kali Linux) — Mini Pass
+
+Executado através de `tests/security/run-kali-mini-pass-audit.sh` utilizando o container `kali-pentest:latest`:
+
+| Categoria do Teste | Casos Executados | Resultado |
+| :--- | :---: | :---: |
+| **Autenticação & RBAC Bypass** | 2 rotas administrativas | **100% Bloqueados** (HTTP 401 Unauthorized) |
+| **Tokens Adulterados / Assinatura Falsa** | 1 vetor em Bearer/Cookie | **100% Rejeitado** (HTTP 401 Unauthorized) |
+| **BFLA (Broken Function Level Authorization)** | Moderador tentando criar/deletar temporadas | **100% Bloqueado** (HTTP 403 Forbidden - `FORBIDDEN_PERMISSION`) |
+| **SQLi em Parâmetros de Rota (`:id`, `:seasonId`)** | 5 vetores (Union, DROP, quotes, NaN, negativo) | **100% Neutralizados** (HTTP 400 Bad Request via `parsePositiveIntId`) |
+| **Fuzzing de Slug Malformado** | Slugs com maiúsculas, espaços e caracteres especiais | **100% Bloqueado** (HTTP 400 Bad Request) |
+| **Fuzzing de Datas Invertidas (`endsAt <= startsAt`)** | Payload de temporada com término anterior ao início | **100% Bloqueado** (HTTP 400 Bad Request) |
+| **Fuzzing de Preços Negativos** | Payload com preço negativo de compra de nível | **100% Bloqueado** (HTTP 400 Bad Request) |
+| **Fuzzing de Recompensa Desconhecida** | `rewardKind` fora da enumeração | **100% Bloqueado** (HTTP 400 Bad Request) |
+| **Prevenção de Information Disclosure & 32-bit Clamping** | ID fora de escala (`999999999999999999999`) | **Zero vazamentos** de stack traces ou erros Prisma |
+
+**Total de Verificações de Segurança**: 15 executadas, 15 aprovadas, 0 falhas.
+
 
 
 
