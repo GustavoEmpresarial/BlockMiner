@@ -463,6 +463,71 @@ Executado através de `tests/security/run-kali-ptc-audit.sh` utilizando o contai
 - **k6 Load Test:** 4.736 requests, 0% 5xx, p95 < 13ms (Admin) e p95 < 5ms (Público).
 - **Kali Pentest:** 30/30 verificações passando com 0 falhas (BFLA, SQLi, XSS, Fuzzing e Information Disclosure bloqueados).
 
+---
+
+# PARTE VII: MÓDULO DE TAREFAS DIÁRIAS (`/admin/daily-tasks` & `/tasks`)
+
+## 1. Resumo Executivo dos Achados — Daily Tasks
+
+| ID | Descrição do Achado | Severidade | CWE / OWASP | Arquivo e Linha Original | Status da Correção |
+| :---: | :--- | :---: | :---: | :--- | :---: |
+| **SEC-20** | **BFLA (Broken Function Level Authorization):** Rotas administrativas `/api/admin/daily-tasks/definitions` sem verificação de permissão granular. Papéis restritos (`finance`, `support`, `readonly`) podiam criar, alterar e excluir missões. | **CRÍTICA** | CWE-285 / OWASP A1 | `server/modules/tasks/tasks.admin.routes.ts:16-19` | ✅ **Corrigido** |
+| **SEC-21** | **Ausência de Trilha de Auditoria:** Criação, edição e exclusão de definições de tarefas não gravavam registros na tabela `admin_audit_logs`. | **ALTA** | CWE-778 / OWASP A9 | `server/modules/tasks/tasks.admin.controller.ts` | ✅ **Corrigido** |
+| **TEC-03** | **Controlador Admin em Código Reconstruído com `@ts-nocheck`:** O arquivo `tasks.admin.controller.ts` não possuía código-fonte original em TypeScript tipado. | **ALTA** | Qualidade Estática | `server/modules/tasks/tasks.admin.controller.ts:1` | ✅ **Reescrito do zero** |
+| **TEC-04** | **Tipo `DailyTasksTranslate` Inexistente no Client:** Import órfão causando quebra potencial no build e typecheck do frontend. | **MÉDIA** | Tipagem Estática | `client/src/features/tasks/lib/dailyTasksHelpers.ts:1` | ✅ **Corrigido** |
+| **BUG-03** | **Mascaramento de Cadência Inválida em Criação:** `parseCreateDailyTaskDefinition` degradava silenciosamente cadências desconhecidas para `DAILY` em vez de rejeitar. | **BAIXA** | Regra de Negócio | `server/modules/tasks/tasks.admin.validation.ts:180` | ✅ **Corrigido** |
+
+---
+
+## 2. Detalhamento das Mitigações Aplicadas — Daily Tasks
+
+### SEC-20: BFLA nas Rotas Administrativas — CRÍTICA
+- **Descrição**: Administradores com papéis restritos conseguiam manipular todas as missões e distribuir prêmios na economia do jogo.
+- **Correção Aplicada**: Registradas as permissões `tasks` e `tasks.view` em `admin.permissions.ts`. As rotas administrativas agora exigem `requireAdminPermission("tasks.view", "tasks")` para listagem e `requireAdminPermission("tasks")` para criação, edição e exclusão.
+- **Testes de Verificação**: `tests/tasks/tasks.rbac.test.mjs` (11 testes 100% aprovados).
+
+### SEC-21: Trilha de Auditoria Administrativa — ALTA
+- **Descrição**: Mutações administrativas não deixavam rastro no banco de auditoria.
+- **Correção Aplicada**: Integrada chamada a `logAdminAction` registrando `TASK_DEFINITION_CREATE`, `TASK_DEFINITION_UPDATE` e `TASK_DEFINITION_DELETE` com snapshots de `oldValue` e `newValue`, IP e user-agent.
+- **Testes de Verificação**: `tests/tasks/tasks.admin.controller.test.mjs`.
+
+### TEC-03: Reescrita do Controlador em TypeScript Estrito — ALTA
+- **Descrição**: O controlador usava anotação `@ts-nocheck` e código gerado por transpilação antiga.
+- **Correção Aplicada**: Reescrito do zero em TypeScript estrito, com validações de ID, tratamento de códigos de erro Prisma (`P2002`, `P2025`, `P2003`) e tipos explícitos sem `any`.
+
+---
+
+## 3. Resultados dos Testes de Carga (k6) — Daily Tasks
+
+Executado através de `tests/performance/run-tasks-k6.mjs` simulando tráfego concorrente sob 15 VUs:
+
+| Métrica | Meta Estabelecida | Resultado Obtido | Status |
+| :--- | :---: | :---: | :---: |
+| **Taxa de Erro 5xx** | `0.00%` | **0.00%** (0 de 5.382 requests) | ✅ Aprovado |
+| **Checks Totais** | `100.00%` | **100.00%** (5.382 de 5.382) | ✅ Aprovado |
+| **Latência Usuário GET (`/api/daily-tasks`) p50** | $< 100\text{ ms}$ | **4.55 ms** | ✅ Excelente |
+| **Latência Usuário GET (`/api/daily-tasks`) p95** | $< 200\text{ ms}$ | **19.06 ms** | ✅ Excelente |
+| **Latência Admin GET (`/definitions`) p50** | $< 150\text{ ms}$ | **5.15 ms** | ✅ Excelente |
+| **Latência Admin GET (`/definitions`) p95** | $< 300\text{ ms}$ | **21.81 ms** | ✅ Excelente |
+| **Throughput Médio** | $> 100\text{ req/s}$ | **487.61 req/s** | ✅ Aprovado |
+
+---
+
+## 4. Resultados da Auditoria de Segurança (Container Kali Linux) — Daily Tasks
+
+Executado através de `tests/security/run-kali-tasks-audit.sh` utilizando o container `kali-pentest:latest`:
+
+| Categoria do Teste | Casos Executados | Resultado |
+| :--- | :---: | :---: |
+| **Autenticação & RBAC Bypass** | 4 rotas administrativas | **100% Bloqueados** (HTTP 401 Unauthorized) |
+| **Tokens Adulterados / Alg: None / SQLi** | 4 vetores de injeção em Bearer | **100% Rejeitados** (HTTP 401 Unauthorized) |
+| **SQLi & Path Traversal em IDs de Tarefa** | 5 vetores (Union, DROP, `../`, NaN, negativo) | **100% Neutralizados** (HTTP 400/404 via `parsePositiveIntId`) |
+| **Fuzzing Numérico & Payload Boundaries** | Slugs com espaço, tipos desconhecidos, metas negativas | **100% Rejeitados** (HTTP 400 Bad Request) |
+| **Prevenção de Information Disclosure** | Injeção de JSON corrompido em rotas | **Zero vazamentos** de stack traces ou Prisma |
+
+**Total de Verificações de Segurança**: 19 executadas, 19 aprovadas, 0 falhas.
+
+
 
 
 
