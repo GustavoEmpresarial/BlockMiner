@@ -666,6 +666,75 @@ Executado através de `tests/security/run-kali-internal-offerwall-audit.sh` util
 
 **Total de Verificações de Segurança**: 16 executadas, 16 aprovadas, 0 falhas.
 
+---
+
+# PARTE X: MÓDULO DE OFERTAS & EVENTOS (`/offers` e `/admin/offer-events`)
+
+## 1. Resumo Executivo dos Achados — Offer Events
+
+| ID | Descrição do Achado | Severidade | CWE / OWASP | Arquivo e Linha Original | Status da Correção |
+| :---: | :--- | :---: | :---: | :--- | :---: |
+| **SEC-24** | **BFLA (Broken Function Level Authorization):** Rotas administrativas de `/admin/offer-events` sem checagem de permissão granular (`requireAdminPermission`), permitindo que qualquer administrador (inclusive moderadores e operadores de leitura) executasse mutações e deleções. | **CRÍTICA** | CWE-285 / OWASP A1 | `server/modules/offer-events/offer-events.admin.routes.ts:11` | ✅ **Corrigido** |
+| **AUDIT-05** | **Ausência de Trilha de Auditoria Administrativa:** Nenhuma criação, alteração ou exclusão de eventos e mineradoras era registrada em `admin_audit_logs`. | **ALTA** | CWE-778 / OWASP A9 | `server/modules/offer-events/offer-events.admin.controller.ts:113` | ✅ **Corrigido** |
+| **TEC-07** | **Erros Ativos de Compilação TS & Diretiva `@ts-nocheck`:** Roteador administrativo com `@ts-nocheck` e 3 erros de tipagem em `adminListEventPurchases` no controller. | **MÉDIA** | Qualidade Estática | `server/modules/offer-events/*.ts:1` | ✅ **Corrigido** |
+| **UX-03** | **Quebra de Estado SPA & Modais Bloqueantes do Navegador:** `window.location.href = ...` forçava reload completo do navegador na criação de eventos, e `window.confirm` bloqueava a UI e testes automatizados. | **MÉDIA** | Usabilidade & Frontend | `client/src/features/admin/offer-events/*.tsx` | ✅ **Corrigido** |
+
+---
+
+## 2. Detalhamento das Mitigações Aplicadas — Offer Events
+
+### SEC-24: Implementação de RBAC Granular & Rate Limiting — CRÍTICA
+- **Descrição**: O roteador administrativo utilizava apenas `requireAdminAuth`. Usuários com papéis de suporte, financeiro ou moderadores de leitura podiam cadastrar e deletar eventos ou mineradoras.
+- **Correção Aplicada**: Registradas as permissões `events` e `events.view` em `server/modules/admin/admin.permissions.ts`. As rotas de leitura foram vinculadas ao `viewGuard` (`requireAdminPermission("events.view", "events")`) e as rotas de mutação foram protegidas com `manageGuard` (`requireAdminPermission("events")`), além de rate limiting dedicado a 300 req/min.
+- **Testes de Verificação**: `tests/offer-events/offer-events.rbac.test.mjs` (7 testes aprovados).
+
+### AUDIT-05: Rastreabilidade Total de Operações Administrativas — ALTA
+- **Descrição**: Eventos promocionais impactam diretamente a economia do jogo e estoque de máquinas, mas não geravam registros de auditoria.
+- **Correção Aplicada**: Integrada a função `logAdminAction` em `adminCreateOfferEvent`, `adminUpdateOfferEvent`, `adminSoftDeleteOfferEvent`, `adminCreateEventMiner`, `adminUpdateEventMiner` e `adminRemoveEventMiner`, registrando o autor, ação, recursos afetados, payloads anteriores/posteriores, IP e User-Agent.
+
+### TEC-07: Remoção de `@ts-nocheck` e Correção de Tipos — MÉDIA
+- **Descrição**: Diretiva `@ts-nocheck` presente no roteador e erros de tipagem em `Map(users)` causados por inferência incorreta em `Promise.resolve([])`.
+- **Correção Aplicada**: Removido `@ts-nocheck`, adicionadas tipagens explícitas nos arrays de usuários e mineradoras em `adminListEventPurchases`. Duplicação de código no módulo reduzida para 1.87% através de helpers extraídos (`parsePositiveIntId`, `handleAdminError`, `executeGearPurchase`).
+
+### UX-03: Modernização de Navegação e Diálogos de Confirmação — MÉDIA
+- **Descrição**: `window.location.href` forçava recarga da página após criação de evento; `window.confirm` nativo causava travamento no navegador e bloqueava automações.
+- **Correção Aplicada**: Migração para `navigate(...)` do `react-router-dom`; substituição dos `window.confirm` por modais inline com backdrop blur e botões de ação dedicados.
+
+---
+
+## 3. Resultados dos Testes de Carga (k6) — Offer Events
+
+Executado através de `tests/performance/run-offer-events-k6.mjs` simulando tráfego concorrente sob 15 VUs:
+
+| Métrica | Meta Estabelecida | Resultado Obtido | Status |
+| :--- | :---: | :---: | :---: |
+| **Taxa de Erro 5xx** | `0.00%` | **0.00%** (0 de 3.796 requests) | ✅ Aprovado |
+| **Checks de Sucesso Admin** | `100.00%` | **100.00%** (3.796 de 3.796) | ✅ Aprovado |
+| **Latência Média Global** | $< 100\text{ ms}$ | **21.25 ms** | ✅ Excelente |
+| **Latência p50 (Mediana)** | $< 50\text{ ms}$ | **20.12 ms** | ✅ Excelente |
+| **Latência p90** | $< 150\text{ ms}$ | **32.05 ms** | ✅ Excelente |
+| **Latência p95** | $< 250\text{ ms}$ | **38.68 ms** | ✅ Excelente |
+| **Throughput Médio** | $> 100\text{ req/s}$ | **343.16 req/s** | ✅ Aprovado |
+
+---
+
+## 4. Resultados da Auditoria de Segurança (Container Kali Linux) — Offer Events
+
+Executado através de `tests/security/run-kali-offer-events-audit.sh` utilizando o container `kali-pentest:latest`:
+
+| Categoria do Teste | Casos Executados | Resultado |
+| :--- | :---: | :---: |
+| **Autenticação & RBAC Bypass** | 4 rotas administrativas | **100% Bloqueados** (HTTP 401 Unauthorized) |
+| **Tokens Adulterados / Assinatura Falsa** | 1 vetor em Bearer/Cookie | **100% Rejeitado** (HTTP 401 Unauthorized) |
+| **BFLA (Broken Function Level Authorization)** | Moderador tentando criar/deletar eventos | **100% Bloqueado** (HTTP 403 Forbidden - `FORBIDDEN_PERMISSION`) |
+| **SQLi em Parâmetros de Rota e Busca** | 5 vetores (Union, DROP, quotes, NaN, negativo) | **100% Neutralizados** (HTTP 400 Bad Request via `parsePositiveIntId`) |
+| **Fuzzing de Datas Invertidas (`endsAt <= startsAt`)** | Payload com término anterior ao início | **100% Bloqueado** (HTTP 400 Bad Request) |
+| **Fuzzing de Preços Negativos** | Payload de mineradora com preço negativo | **100% Bloqueado** (HTTP 400 Bad Request) |
+| **Prevenção de Information Disclosure & 32-bit Clamping** | ID fora de escala (`999999999999999999999`) | **Zero vazamentos** de stack traces ou erros Prisma |
+
+**Total de Verificações de Segurança**: 15 executadas, 15 aprovadas, 0 falhas.
+
+
 
 
 
