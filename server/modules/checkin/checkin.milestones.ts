@@ -138,8 +138,13 @@ export function parseMilestoneBody(body: unknown): ParsedMilestoneInput {
     if (!(rewardValue > 0)) throw new Error("POL milestone requires rewardValue > 0.");
     if (minerId != null) throw new Error("POL milestone cannot include minerId.");
   } else if (rewardType === REWARD_TEMPORARY_POWER) {
-    durationHours = Number(b.durationHours ?? 0);
-    if (!Number.isFinite(durationHours) || durationHours <= 0) {
+    if (b.durationHours !== undefined) {
+      const dh = Number(b.durationHours);
+      if (!Number.isFinite(dh) || dh <= 0) {
+        throw new Error("temporary_power milestone requires durationHours > 0.");
+      }
+      durationHours = Math.floor(dh);
+    } else {
       const fallbackDays = Math.max(1, Number(b.validityDays ?? 0));
       durationHours = fallbackDays > 0 ? fallbackDays * 24 : 0;
     }
