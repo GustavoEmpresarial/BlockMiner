@@ -118,3 +118,79 @@ export interface CreateExternalInvestmentInput {
 }
 
 export type UpdateExternalInvestmentInput = Partial<CreateExternalInvestmentInput>;
+
+export interface CreateTransparencyEntryInput {
+  type?: TransparencyType;
+  category?: string;
+  incomeCategory?: string | null;
+  name: string;
+  description?: string | null;
+  provider?: string | null;
+  providerUrl?: string | null;
+  imageUrl?: string | null;
+  amountUsd: number;
+  amountOriginal?: number | null;
+  currencyCode?: string;
+  fxRateUsd?: number | null;
+  period?: TransparencyPeriod | string;
+  entryDate?: string | null;
+  direction?: 'in' | 'out' | null;
+  blockchain?: string | null;
+  walletAddress?: string | null;
+  txHash?: string | null;
+  referenceUrl?: string | null;
+  isOnChain?: boolean;
+  isPaid?: boolean;
+  isActive?: boolean;
+  notes?: string | null;
+  sortOrder?: number;
+}
+
+export type UpdateTransparencyEntryInput = Partial<CreateTransparencyEntryInput>;
+
+export interface CreateTrackedWalletInput {
+  label: string;
+  address: string;
+  chain?: string;
+  assetSymbol?: string;
+  explorerBaseUrl?: string | null;
+  isActive?: boolean;
+  isPublic?: boolean;
+  includeInTotals?: boolean;
+  displayMode?: string;
+  sortOrder?: number;
+  manualUsdValue?: number | null;
+  manualValueNote?: string | null;
+}
+
+export type UpdateTrackedWalletInput = Partial<CreateTrackedWalletInput>;
+
+export interface UpdateWalletSettingsInput {
+  address: string;
+}
+
+export interface CreateHardwareAssetInput {
+  name: string;
+  manufacturer?: string | null;
+  description?: string | null;
+  status?: 'running' | 'maintenance' | 'retired' | string;
+  statusLabel?: string | null;
+  purchaseCostUsd: number;
+  transitWeeks?: number | null;
+  purchaseNote?: string | null;
+  specs?: Array<{ label: string; value: string }> | unknown;
+  model3dUrl?: string | null;
+  sortOrder?: number;
+  isActive?: boolean;
+}
+
+export type UpdateHardwareAssetInput = Partial<CreateHardwareAssetInput>;
+
+export interface CreateHardwareProfitLogInput {
+  earnedAt: string;
+  satoshiAmount: string | number;
+  btcUsdPrice: number;
+  notes?: string | null;
+}
+
+export type UpdateHardwareProfitLogInput = Partial<CreateHardwareProfitLogInput>;

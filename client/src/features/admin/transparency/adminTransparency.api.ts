@@ -4,8 +4,19 @@ import type {
   CreateExternalInvestmentInput,
   UpdateExternalInvestmentInput,
   TransparencyEntryRow,
+  CreateTransparencyEntryInput,
+  UpdateTransparencyEntryInput,
   TrackedWalletRow,
+  CreateTrackedWalletInput,
+  UpdateTrackedWalletInput,
+  UpdateWalletSettingsInput,
   HardwareAssetRow,
+  CreateHardwareAssetInput,
+  UpdateHardwareAssetInput,
+  HardwareProfitLogRow,
+  HardwareRoiSummary,
+  CreateHardwareProfitLogInput,
+  UpdateHardwareProfitLogInput,
 } from './components/adminTransparency.types';
 
 export const adminTransparencyApi = {
@@ -50,9 +61,31 @@ export const adminTransparencyApi = {
     return data.url;
   },
 
-  // Transparency Entries
+  // Transparency Entries (Balanço: Despesas & Receitas)
   listEntries: () =>
     api.get<{ ok?: boolean; entries?: TransparencyEntryRow[]; message?: string }>('/admin/transparency'),
+
+  createEntry: (body: CreateTransparencyEntryInput) =>
+    api.post<{ ok: boolean; entry?: TransparencyEntryRow; message?: string }>('/admin/transparency', body),
+
+  updateEntry: (id: number, body: UpdateTransparencyEntryInput) =>
+    api.put<{ ok: boolean; entry?: TransparencyEntryRow; message?: string }>(`/admin/transparency/${id}`, body),
+
+  deleteEntry: (id: number) =>
+    api.delete<{ ok: boolean; message?: string }>(`/admin/transparency/${id}`),
+
+  // Main Wallet Settings & Live Activity
+  getWalletSettings: () =>
+    api.get<{ ok: boolean; address: string | null; message?: string }>('/admin/transparency/wallet/settings'),
+
+  updateWalletSettings: (body: UpdateWalletSettingsInput) =>
+    api.put<{ ok: boolean; address: string | null; message?: string }>(
+      '/admin/transparency/wallet/settings',
+      body,
+    ),
+
+  getWalletActivity: () =>
+    api.get<{ ok: boolean; activity?: unknown; message?: string }>('/admin/transparency/wallet/activity'),
 
   // Tracked Wallets
   listTrackedWallets: () =>
@@ -60,9 +93,70 @@ export const adminTransparencyApi = {
       '/admin/transparency/tracked-wallets',
     ),
 
-  // Hardware Assets
+  createTrackedWallet: (body: CreateTrackedWalletInput) =>
+    api.post<{ ok: boolean; wallet?: TrackedWalletRow; message?: string }>(
+      '/admin/transparency/tracked-wallets',
+      body,
+    ),
+
+  updateTrackedWallet: (id: number, body: UpdateTrackedWalletInput) =>
+    api.put<{ ok: boolean; wallet?: TrackedWalletRow; message?: string }>(
+      `/admin/transparency/tracked-wallets/${id}`,
+      body,
+    ),
+
+  deleteTrackedWallet: (id: number) =>
+    api.delete<{ ok: boolean; message?: string }>(`/admin/transparency/tracked-wallets/${id}`),
+
+  // Hardware Assets (Mineração Física ASIC)
   listHardwareAssets: () =>
     api.get<{ ok: boolean; assets: HardwareAssetRow[]; message?: string }>(
       '/admin/transparency/hardware-assets',
+    ),
+
+  createHardwareAsset: (body: CreateHardwareAssetInput) =>
+    api.post<{ ok: boolean; asset?: HardwareAssetRow; message?: string }>(
+      '/admin/transparency/hardware-assets',
+      body,
+    ),
+
+  updateHardwareAsset: (id: number, body: UpdateHardwareAssetInput) =>
+    api.put<{ ok: boolean; asset?: HardwareAssetRow; message?: string }>(
+      `/admin/transparency/hardware-assets/${id}`,
+      body,
+    ),
+
+  deleteHardwareAsset: (id: number) =>
+    api.delete<{ ok: boolean; message?: string }>(`/admin/transparency/hardware-assets/${id}`),
+
+  // Hardware Profit Logs & BTC Price
+  getBtcUsdPrice: () =>
+    api.get<{ ok: boolean; priceUsd: number; source?: string; message?: string }>(
+      '/admin/transparency/btc-usd-price',
+    ),
+
+  listProfitLogs: (assetId: number) =>
+    api.get<{
+      ok: boolean;
+      profitSummary: HardwareRoiSummary;
+      profitLogs: HardwareProfitLogRow[];
+      message?: string;
+    }>(`/admin/transparency/hardware-assets/${assetId}/profit-logs`),
+
+  createProfitLog: (assetId: number, body: CreateHardwareProfitLogInput) =>
+    api.post<{ ok: boolean; profitLog?: HardwareProfitLogRow; message?: string }>(
+      `/admin/transparency/hardware-assets/${assetId}/profit-logs`,
+      body,
+    ),
+
+  updateProfitLog: (assetId: number, id: number, body: UpdateHardwareProfitLogInput) =>
+    api.put<{ ok: boolean; profitLog?: HardwareProfitLogRow; message?: string }>(
+      `/admin/transparency/hardware-assets/${assetId}/profit-logs/${id}`,
+      body,
+    ),
+
+  deleteProfitLog: (assetId: number, id: number) =>
+    api.delete<{ ok: boolean; message?: string }>(
+      `/admin/transparency/hardware-assets/${assetId}/profit-logs/${id}`,
     ),
 };

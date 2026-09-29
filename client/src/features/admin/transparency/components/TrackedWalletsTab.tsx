@@ -14,7 +14,7 @@ import {
   DollarSign,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { api } from '../../../../shared/auth/auth.store';
+import { adminTransparencyApi } from '../adminTransparency.api';
 import { readAxiosResponseMessage } from '../../lib/admin.api';
 import type { TrackedWalletRow } from './adminTransparency.types';
 
@@ -49,8 +49,8 @@ export default function TrackedWalletsTab() {
     setLoading(true);
     try {
       const [walletsRes, settingsRes] = await Promise.all([
-        api.get<{ ok: boolean; wallets: TrackedWalletRow[] }>('/admin/transparency/tracked-wallets'),
-        api.get<{ ok: boolean; address: string | null }>('/admin/transparency/wallet/settings'),
+        adminTransparencyApi.listTrackedWallets(),
+        adminTransparencyApi.getWalletSettings(),
       ]);
       if (walletsRes.data.ok) setWallets(walletsRes.data.wallets || []);
       if (settingsRes.data.ok && settingsRes.data.address) setMainWallet(settingsRes.data.address);
@@ -68,7 +68,7 @@ export default function TrackedWalletsTab() {
   async function handleSaveMainWallet() {
     setSavingMainWallet(true);
     try {
-      const res = await api.put<{ ok: boolean; address: string | null }>('/admin/transparency/wallet/settings', {
+      const res = await adminTransparencyApi.updateWalletSettings({
         address: mainWallet.trim(),
       });
       if (res.data.ok) {
@@ -147,10 +147,10 @@ export default function TrackedWalletsTab() {
       };
 
       if (editingWallet) {
-        await api.put(`/admin/transparency/tracked-wallets/${editingWallet.id}`, payload);
+        await adminTransparencyApi.updateTrackedWallet(editingWallet.id, payload);
         toast.success('Carteira atualizada com sucesso!');
       } else {
-        await api.post('/admin/transparency/tracked-wallets', payload);
+        await adminTransparencyApi.createTrackedWallet(payload);
         toast.success('Nova carteira adicionada!');
       }
       setModalOpen(false);
@@ -164,7 +164,7 @@ export default function TrackedWalletsTab() {
 
   async function handleDelete(id: number) {
     try {
-      await api.delete(`/admin/transparency/tracked-wallets/${id}`);
+      await adminTransparencyApi.deleteTrackedWallet(id);
       toast.success('Carteira removida com sucesso!');
       setConfirmDeleteId(null);
       void loadData();
@@ -175,7 +175,7 @@ export default function TrackedWalletsTab() {
 
   async function handleToggleActive(wallet: TrackedWalletRow) {
     try {
-      await api.put(`/admin/transparency/tracked-wallets/${wallet.id}`, { isActive: !wallet.isActive });
+      await adminTransparencyApi.updateTrackedWallet(wallet.id, { isActive: !wallet.isActive });
       toast.success(wallet.isActive ? 'Carteira desativada' : 'Carteira ativada');
       void loadData();
     } catch (err) {

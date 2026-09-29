@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { RefreshCw, Receipt, Wallet, Cpu, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
-import { api } from '../../../shared/auth/auth.store';
+import { adminTransparencyApi } from './adminTransparency.api';
 import { readAxiosResponseMessage } from '../lib/admin.api';
 import type { TransparencyEntryRow } from './components/adminTransparency.types';
 import TransparencyEntriesTab from './components/TransparencyEntriesTab';
@@ -18,7 +18,7 @@ export default function AdminTransparencyPage() {
   const loadEntries = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get<{ ok?: boolean; entries?: TransparencyEntryRow[] }>('/admin/transparency');
+      const res = await adminTransparencyApi.listEntries();
       if (res.data.ok) {
         setEntries(res.data.entries ?? []);
       }

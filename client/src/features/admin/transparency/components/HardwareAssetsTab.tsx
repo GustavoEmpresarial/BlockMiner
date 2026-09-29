@@ -13,7 +13,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { api } from '../../../../shared/auth/auth.store';
+import { adminTransparencyApi } from '../adminTransparency.api';
 import { readAxiosResponseMessage } from '../../lib/admin.api';
 import type {
   HardwareAssetRow,
@@ -56,9 +56,7 @@ export default function HardwareAssetsTab() {
   const loadAssets = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get<{ ok: boolean; assets: HardwareAssetRow[] }>(
-        '/admin/transparency/hardware-assets',
-      );
+      const res = await adminTransparencyApi.listHardwareAssets();
       if (res.data.ok) {
         const list = res.data.assets || [];
         setAssets(list);
@@ -76,11 +74,7 @@ export default function HardwareAssetsTab() {
   const loadProfitLogs = useCallback(async (assetId: number) => {
     setLoadingLogs(true);
     try {
-      const res = await api.get<{
-        ok: boolean;
-        profitSummary: HardwareRoiSummary;
-        profitLogs: HardwareProfitLogRow[];
-      }>(`/admin/transparency/hardware-assets/${assetId}/profit-logs`);
+      const res = await adminTransparencyApi.listProfitLogs(assetId);
       if (res.data.ok) {
         setProfitSummary(res.data.profitSummary);
         setProfitLogs(res.data.profitLogs || []);
@@ -105,12 +99,10 @@ export default function HardwareAssetsTab() {
   async function handleFetchBtcPrice() {
     setFetchingBtcPrice(true);
     try {
-      const res = await api.get<{ ok: boolean; btcUsdPrice: number | null }>(
-        '/admin/transparency/btc-usd-price',
-      );
-      if (res.data.ok && res.data.btcUsdPrice) {
-        setBtcUsdPriceInput(String(res.data.btcUsdPrice));
-        toast.success(`Cotação BTC atualizada: $${res.data.btcUsdPrice.toLocaleString('en-US')}`);
+      const res = await adminTransparencyApi.getBtcUsdPrice();
+      if (res.data.ok && res.data.priceUsd) {
+        setBtcUsdPriceInput(String(res.data.priceUsd));
+        toast.success(`Cotação BTC atualizada: $${res.data.priceUsd.toLocaleString('en-US')}`);
       } else {
         toast.error('Não foi possível obter a cotação automática. Digite manualmente.');
       }
@@ -141,11 +133,11 @@ export default function HardwareAssetsTab() {
       };
 
       if (editingLogId) {
-        await api.put(`/admin/transparency/hardware-assets/${selectedAssetId}/profit-logs/${editingLogId}`, payload);
+        await adminTransparencyApi.updateProfitLog(selectedAssetId, editingLogId, payload);
         toast.success('Lançamento atualizado!');
         setEditingLogId(null);
       } else {
-        await api.post(`/admin/transparency/hardware-assets/${selectedAssetId}/profit-logs`, payload);
+        await adminTransparencyApi.createProfitLog(selectedAssetId, payload);
         toast.success('Lucro lançado com sucesso!');
       }
 
@@ -176,7 +168,7 @@ export default function HardwareAssetsTab() {
   async function handleDeleteProfitLog(logId: number) {
     if (!selectedAssetId) return;
     try {
-      await api.delete(`/admin/transparency/hardware-assets/${selectedAssetId}/profit-logs/${logId}`);
+      await adminTransparencyApi.deleteProfitLog(selectedAssetId, logId);
       toast.success('Lançamento removido.');
       setConfirmDeleteLogId(null);
       void loadProfitLogs(selectedAssetId);
@@ -224,10 +216,10 @@ export default function HardwareAssetsTab() {
       };
 
       if (editingAsset) {
-        await api.put(`/admin/transparency/hardware-assets/${editingAsset.id}`, payload);
+        await adminTransparencyApi.updateHardwareAsset(editingAsset.id, payload);
         toast.success('Equipamento atualizado!');
       } else {
-        await api.post('/admin/transparency/hardware-assets', payload);
+        await adminTransparencyApi.createHardwareAsset(payload);
         toast.success('Equipamento cadastrado com sucesso!');
       }
       setAssetModalOpen(false);

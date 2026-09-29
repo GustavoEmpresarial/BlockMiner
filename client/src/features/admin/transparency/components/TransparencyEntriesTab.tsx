@@ -14,7 +14,7 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { api } from '../../../../shared/auth/auth.store';
+import { adminTransparencyApi } from '../adminTransparency.api';
 import { readAxiosResponseMessage } from '../../lib/admin.api';
 import type { TransparencyEntryRow, TransparencyPeriod, TransparencyType } from './adminTransparency.types';
 
@@ -145,15 +145,9 @@ export default function TransparencyEntriesTab({ entries, loading, onRefresh }: 
     }
     setUploadingImage(true);
     try {
-      const fd = new FormData();
-      fd.append('image', file);
-      const res = await api.post<{ ok: boolean; url: string }>('/admin/upload-image', fd);
-      if (res.data.ok && res.data.url) {
-        setFormImageUrl(res.data.url);
-        toast.success('Imagem enviada com sucesso!');
-      } else {
-        toast.error('Falha no upload da imagem.');
-      }
+      const url = await adminTransparencyApi.uploadImage(file);
+      setFormImageUrl(url);
+      toast.success('Imagem enviada com sucesso!');
     } catch (err) {
       toast.error(readAxiosResponseMessage(err) ?? 'Erro no upload.');
     } finally {
@@ -193,10 +187,10 @@ export default function TransparencyEntriesTab({ entries, loading, onRefresh }: 
       };
 
       if (editingEntry) {
-        await api.put(`/admin/transparency/${editingEntry.id}`, payload);
+        await adminTransparencyApi.updateEntry(editingEntry.id, payload);
         toast.success('Entrada atualizada com sucesso!');
       } else {
-        await api.post('/admin/transparency', payload);
+        await adminTransparencyApi.createEntry(payload);
         toast.success('Nova entrada cadastrada!');
       }
       setModalOpen(false);
@@ -210,7 +204,7 @@ export default function TransparencyEntriesTab({ entries, loading, onRefresh }: 
 
   async function handleToggleActive(entry: TransparencyEntryRow) {
     try {
-      await api.put(`/admin/transparency/${entry.id}`, { isActive: !entry.isActive });
+      await adminTransparencyApi.updateEntry(entry.id, { isActive: !entry.isActive });
       toast.success(entry.isActive ? 'Entrada desativada' : 'Entrada ativada');
       onRefresh();
     } catch (err) {
@@ -220,7 +214,7 @@ export default function TransparencyEntriesTab({ entries, loading, onRefresh }: 
 
   async function handleDelete(id: number) {
     try {
-      await api.delete(`/admin/transparency/${id}`);
+      await adminTransparencyApi.deleteEntry(id);
       toast.success('Entrada removida com sucesso!');
       setConfirmDeleteId(null);
       onRefresh();
