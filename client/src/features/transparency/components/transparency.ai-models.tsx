@@ -21,18 +21,19 @@ export interface SubscriptionModelItem {
 export const SUBSCRIPTION_MODELS: SubscriptionModelItem[] = [
   {
     id: 'claude',
-    name: 'Claude Code',
+    name: 'Claude Code (Clawd)',
     provider: 'Anthropic',
     providerUrl: 'https://anthropic.com/claude',
     category: 'Ferramentas & Programação',
     monthlyCostUsd: 20.0,
     description:
-      'Inteligência Artificial de ponta utilizada na engenharia de software, refatoração de código, testes de segurança automatizados e arquitetura do BlockMiner.',
+      'Clawd — O mascote laranja oficial do Claude Code pela Anthropic em 3D. Inteligência Artificial de ponta utilizada na engenharia de software, refatoração de código, testes de segurança automatizados e arquitetura do BlockMiner.',
     model3dUrl: '/media/transparency/claude.glb',
     imageUrl: '/media/transparency/claude.png',
     accentColor: '#D97757',
     glowColor: 'rgba(217, 119, 87, 0.25)',
     specs: [
+      { label: 'Personagem', value: 'Mascote Clawd (3D Original)' },
       { label: 'Modelo de IA', value: 'Claude 3.7 Sonnet / Opus' },
       { label: 'Aplicação', value: 'Engenharia de Software & QA' },
       { label: 'Empresa', value: 'Anthropic PBC' },
