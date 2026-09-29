@@ -364,20 +364,38 @@ export default function TransparencyEntriesTab({ entries, loading, onRefresh }: 
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      <div className="font-bold text-white flex items-center gap-2">
-                        {e.name}
-                        {e.providerUrl && (
-                          <a
-                            href={e.providerUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-slate-500 hover:text-primary"
-                          >
-                            <ExternalLink className="w-3.5 h-3.5" />
-                          </a>
+                      <div className="flex items-center gap-3">
+                        {e.imageUrl ? (
+                          <img
+                            src={e.imageUrl}
+                            alt={e.name}
+                            className="w-8 h-8 rounded-lg object-contain bg-slate-950/60 p-1 border border-white/10 shrink-0 shadow-sm"
+                            onError={(ev) => {
+                              ev.currentTarget.style.display = 'none';
+                            }}
+                          />
+                        ) : (
+                          <div className="w-8 h-8 rounded-lg bg-slate-800/80 border border-white/5 flex items-center justify-center shrink-0 text-slate-500">
+                            <Receipt className="w-4 h-4" />
+                          </div>
                         )}
+                        <div>
+                          <div className="font-bold text-white flex items-center gap-2">
+                            {e.name}
+                            {e.providerUrl && (
+                              <a
+                                href={e.providerUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-slate-500 hover:text-primary"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                              </a>
+                            )}
+                          </div>
+                          {e.provider && <p className="text-[11px] text-slate-400 mt-0.5">{e.provider}</p>}
+                        </div>
                       </div>
-                      {e.provider && <p className="text-[11px] text-slate-400 mt-0.5">{e.provider}</p>}
                     </td>
                     <td className="px-4 py-3 text-xs text-slate-300">
                       {isExpense

@@ -259,9 +259,20 @@ export function EntryRow({ entry }: { entry: TransparencyEntry }) {
     <tr className="border-b border-white/[0.04] hover:bg-white/[0.025] transition-colors" data-testid="entry-row">
       <td className="py-3 px-4">
         <div className="flex items-center gap-3">
-          <span className={`w-7 h-7 shrink-0 flex items-center justify-center rounded-xl ${style.bg}`}>
-            <Icon className={`w-3.5 h-3.5 ${style.tw}`} aria-hidden="true" />
-          </span>
+          {entry.imageUrl ? (
+            <img
+              src={entry.imageUrl}
+              alt={entry.name}
+              className="w-7 h-7 rounded-xl object-contain bg-black/40 p-0.5 border border-white/10 shrink-0"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+              }}
+            />
+          ) : (
+            <span className={`w-7 h-7 shrink-0 flex items-center justify-center rounded-xl ${style.bg}`}>
+              <Icon className={`w-3.5 h-3.5 ${style.tw}`} aria-hidden="true" />
+            </span>
+          )}
           <div>
             <p className="text-sm font-bold text-white leading-tight">{entry.name}</p>
             {entry.description && <p className="text-[11px] text-gray-500 leading-tight mt-0.5">{entry.description}</p>}
