@@ -1,4 +1,5 @@
 import type { Request, Response } from "express";
+import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 import * as transparencyRepo from "./transparency.repository.js";
 import {
@@ -303,7 +304,9 @@ export async function adminCreate(req: Request, res: Response) {
     return;
   }
   try {
-    const entry = await transparencyRepo.createTransparencyEntry(parsed.data as any);
+    const entry = await transparencyRepo.createTransparencyEntry(
+      parsed.data as unknown as Prisma.TransparencyEntryCreateInput,
+    );
     void logAdminAction({
       ...getAdminContext(req),
       action: "TRANSPARENCY_ENTRY_CREATE",
@@ -335,7 +338,10 @@ export async function adminUpdate(req: Request, res: Response) {
       res.status(404).json({ ok: false, message: "Entrada não encontrada." });
       return;
     }
-    const entry = await transparencyRepo.updateTransparencyEntry(id, parsed.data as any);
+    const entry = await transparencyRepo.updateTransparencyEntry(
+      id,
+      parsed.data as unknown as Prisma.TransparencyEntryUpdateInput,
+    );
     void logAdminAction({
       ...getAdminContext(req),
       action: "TRANSPARENCY_ENTRY_UPDATE",
@@ -586,7 +592,9 @@ export async function adminHardwareAssetCreate(req: Request, res: Response) {
     return;
   }
   try {
-    const asset = await transparencyRepo.createHardwareAsset(parsed.data as any);
+    const asset = await transparencyRepo.createHardwareAsset(
+      parsed.data as unknown as Prisma.TransparencyHardwareAssetCreateInput,
+    );
     void logAdminAction({
       ...getAdminContext(req),
       action: "TRANSPARENCY_HARDWARE_CREATE",
@@ -618,7 +626,10 @@ export async function adminHardwareAssetUpdate(req: Request, res: Response) {
       res.status(404).json({ ok: false, message: "Ativo não encontrado." });
       return;
     }
-    const asset = await transparencyRepo.updateHardwareAsset(id, parsed.data as any);
+    const asset = await transparencyRepo.updateHardwareAsset(
+      id,
+      parsed.data as unknown as Prisma.TransparencyHardwareAssetUpdateInput,
+    );
     void logAdminAction({
       ...getAdminContext(req),
       action: "TRANSPARENCY_HARDWARE_UPDATE",

@@ -4,6 +4,7 @@ import express from 'express';
 import jwt from 'jsonwebtoken';
 import { transparencyRouter } from '../../server/modules/transparency/transparency.routes.js';
 import { transparencyAdminRouter } from '../../server/modules/transparency/transparency.admin.routes.js';
+import prisma from '../../server/core/database/prisma.js';
 
 let app;
 let server;
@@ -39,6 +40,11 @@ test.before(async () => {
 
   app = express();
   app.use(express.json());
+
+  // Clean up any stale test wallet if left from an interrupted run
+  await prisma.transparencyTrackedWallet.deleteMany({
+    where: { address: '0x9999999999999999999999999999999999999999' },
+  }).catch(() => null);
 
   // Public transparency endpoints
   app.use('/api/transparency', transparencyRouter);

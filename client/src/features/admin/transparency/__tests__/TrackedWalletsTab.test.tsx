@@ -1,3 +1,4 @@
+/** @vitest-environment jsdom */
 import '@testing-library/jest-dom/vitest';
 import { describe, expect, it, vi, afterEach, beforeEach } from 'vitest';
 import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react';
