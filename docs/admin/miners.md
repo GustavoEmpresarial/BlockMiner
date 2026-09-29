@@ -10,6 +10,11 @@ O módulo de **Mineradoras (Catálogo e Máquinas)** é o núcleo da infraestrut
   - `UserOwnedMachine`: Registro canônico de propriedade da máquina (identidade única, nível, hashrate atualizado e localização: `RACK`, `INVENTORY`, `WAREHOUSE`).
   - `UserMiner`: Representação da máquina instalada fisicamente em um slot de rack na sala de mineração (`slotIndex`, `isActive`).
   - `UserInventory`: Representação da máquina na mochila do usuário aguardando instalação.
+- **Interface Administrativa (`/admin/miners`)**:
+  - Cards de KPI em tempo real (Total de modelos cadastrados, máquinas ativas, disponíveis na loja e poder médio do catálogo).
+  - Modal moderno de criação e edição (`MinerFormModal`) com upload de imagem via API (`/admin/upload-image?category=miners`) ou URL direta, preview ao vivo (`AdminMinerImage`), seletor de tier (comum, raro, épico, lendário), slots e ordenação.
+  - Tabela com miniaturas visuais, badges de tier, toggle instantâneo de visibilidade na loja (`showInShop`) e ativação/desativação.
+  - Painel expansível de diagnóstico e reparo de máquinas órfãs e inconsistências de catalogação (`AdminBrokenMachinesPanel`).
 - **Sincronização em Tempo Real com o Motor de Mineração**:
   - Qualquer mutação em rack (`toggleMachineForUser`, `removeMachineToInventory`, `moveMachineForUser`, `placeIntoRackSlotTx`) aciona `resyncEngine(userId)` chamando `miningEngine.reloadMinerProfile(userId)` para manter os ganhos matemáticos de blocos 100% atualizados.
 - **Sistema de Diagnóstico e Reparo de Máquinas Órfãs (`miners.admin.repair.ts`)**:
