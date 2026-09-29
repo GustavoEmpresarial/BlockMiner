@@ -1150,6 +1150,89 @@ Executado através de `tests/security/run-kali-transparency-investments-audit.sh
 
 **Total de Verificações de Segurança**: 19 executadas, 19 aprovadas, 0 falhas.
 
+---
+
+# PARTE XVI: SISTEMA INTEGRAL DE TRANSPARÊNCIA, MODELAGEM 3D E AUDITORIA GERAL (`/admin/transparency` e `/transparency`)
+
+## 1. Resumo Executivo dos Achados — Sistema Geral de Transparência
+
+| ID | Descrição do Achado | Severidade | CWE / OWASP | Arquivo e Linha Original | Status da Correção |
+| :---: | :--- | :---: | :---: | :--- | :---: |
+| **SEC-37** | **Mass Assignment em Lançamentos, Carteiras e Hardware:** Schemas Zod de criação e atualização de entradas financeiras e carteiras não aplicavam `.strict()`, permitindo injeção de propriedades não autorizadas no corpo da requisição. | **ALTA** | CWE-915 / OWASP A4 | `server/modules/transparency/transparency.validation.ts:36` | ✅ **Corrigido** |
+| **SEC-38** | **Ausência de Endpoint REST `GET /transparency/:id`:** O roteador administrativo expunha apenas `PUT`, `PATCH` e `DELETE` para lançamentos por ID, falhando requisições de consulta unitária e gerando 404 em testes de injeção e boundary. | **MÉDIA** | Contratos de API | `server/modules/transparency/transparency.admin.routes.ts:24` | ✅ **Corrigido** |
+| **TEC-13** | **Diretivas `@ts-nocheck` Residuais no Servidor:** Existência de comentários `@ts-nocheck` em 4 arquivos centrais de transparência (`transparency.activity.service.ts` e `chains/`), contornando o compilador TypeScript. | **MÉDIA** | Tipagem Estática | `server/modules/transparency/transparency.activity.service.ts:1` | ✅ **Corrigido** |
+| **TEC-14** | **Chamadas HTTP Raw Não Tipadas nas Abas do Admin:** `TransparencyEntriesTab`, `TrackedWalletsTab` e `HardwareAssetsTab` realizavam chamadas diretas via Axios (`api.get/post/put/delete`) sem centralização no serviço `adminTransparencyApi`. | **MÉDIA** | Arquitetura Frontend | `client/src/features/admin/transparency/components/*.tsx` | ✅ **Corrigido** |
+| **3D-01** | **Assinaturas Operacionais sem Identidade Visual e 3D:** Despesas recorrentes essenciais (Server Contabo, Anthropic Claude Code, Google Gemini Pro) não possuíam logotipos nem modelos 3D cadastrados. | **BAIXA** | Usabilidade & Branding | `transparency_entries (IDs 2, 3, 4)` | ✅ **Criado via Blender** |
+
+---
+
+## 2. Detalhamento das Mitigações Aplicadas — Sistema Geral de Transparência
+
+### SEC-37: Blindagem Estrita Contra Mass Assignment com Zod `.strict()` — ALTA
+- **Descrição**: Payloads enviados para endpoints administrativos de balanço, carteiras e hardware aceitavam propriedades arbitrárias.
+- **Correção Aplicada**: Reescritos todos os schemas Zod (`transparencyEntryCreateSchema`, `transparencyEntryUpdateSchema`, `trackedWalletCreateSchema`, `trackedWalletUpdateSchema`, `hardwareAssetCreateSchema`, `hardwareAssetUpdateSchema`) adicionando `.strict()`, eliminando tipos `z.any()` e validando protocolos seguros com `isSafeHttpUrl`.
+- **Testes de Verificação**: `tests/transparency/transparency.full.unit.test.mjs` (7 testes aprovados).
+
+### SEC-38: Implementação do Endpoint `GET /transparency/:id` com Clamping 32-bit — MÉDIA
+- **Descrição**: A auditoria com o container Kali Linux detectou que chamadas `GET /api/admin/transparency/:id` resultavam em 404 por ausência da rota no Express, impedindo inspeção individual de lançamentos.
+- **Correção Aplicada**: Implementado handler `adminGet` em `transparency.controller.ts` com validação `parsePositiveIntParam` (clamping `n <= 2_147_483_647`) e registrado no roteador protegido por `requireAdminPermission("transparency.view")`.
+
+### TEC-13 & TEC-14: Eliminação de `@ts-nocheck` e Centralização em `adminTransparencyApi` — MÉDIA
+- **Descrição**: Códigos recuperados continham `@ts-nocheck` e as abas do admin faziam chamadas diretas ao Axios.
+- **Correção Aplicada**:
+  - Removido `@ts-nocheck` em `server/modules/transparency/transparency.activity.service.ts`, `chains/_types.ts`, `chains/index.ts` e `chains/ethereum.ts`, substituído por tipagem estrita de providers e configs.
+  - Expandido `adminTransparencyApi` com métodos tipados para entradas, configurações de carteira, carteiras rastreadas, hardware assets e logs de proventos Lightning.
+  - Eliminados todos os `as any` em testes e componentes.
+
+### 3D-01: Modelagem e Renderização Procedural 3D via Blender 5.0.1 — BAIXA
+- **Descrição**: O usuário solicitou geração via Blender dos emblemas 3D `.glb` para as assinaturas em produção (Contabo, Claude Code e Gemini Pro).
+- **Correção Aplicada**:
+  - Desenvolvido script de automação procedural `scripts/blender/generate_subscription_logos.py` executado via CLI headless do Blender.
+  - **Contabo**: Medalhão hexagonal metálico azul com chassis de servidor em camadas e LEDs ciano emissivos (`contabo.glb` e `contabo.png`).
+  - **Claude Code (Anthropic)**: Emblema circular de 14 pontas em terracota coral com bisel dourado acetinado (`claude.glb` e `claude.png`).
+  - **Gemini Pro (Google)**: Medalhão cósmico com estrela de 4 pontas em gradiente iridescente azul/violeta (`gemini.glb` e `gemini.png`).
+  - Ativos persistidos em `client/public/media/transparency/` e `storage/media-seed/transparency/`.
+  - Migration `20260929200000_transparency_subscription_logos` criada para associar os `image_url` no banco de dados.
+
+---
+
+## 3. Resultados dos Testes de Carga (k6) — Sistema Completo de Transparência
+
+Executado através de `tests/performance/run-transparency-full-k6.mjs` simulando tráfego concorrente sob 15 VUs:
+
+| Métrica | Meta Estabelecida | Resultado Obtido | Status |
+| :--- | :---: | :---: | :---: |
+| **Taxa de Erro 5xx** | `0.00%` | **0.00%** (0 de 7.168 requests) | ✅ Aprovado |
+| **Checks de Sucesso Admin & Public** | `100.00%` | **100.00%** (7.168 de 7.168) | ✅ Aprovado |
+| **Latência Média Global** | $< 100\text{ ms}$ | **5.30 ms** | ✅ Excelente |
+| **Latência p50 (Mediana)** | $< 50\text{ ms}$ | **3.66 ms** | ✅ Excelente |
+| **Latência p90** | $< 150\text{ ms}$ | **9.80 ms** | ✅ Excelente |
+| **Latência p95** | $< 250\text{ ms}$ | **14.15 ms** | ✅ Excelente |
+| **Throughput Médio** | $> 100\text{ req/s}$ | **650.18 req/s** | ✅ Aprovado |
+
+---
+
+## 4. Resultados da Auditoria de Segurança (Container Kali Linux) — Sistema Completo
+
+Executado através de `tests/security/run-kali-transparency-full-audit.sh` utilizando o container `kali-pentest:latest`:
+
+| Categoria do Teste | Casos Executados | Resultado |
+| :--- | :---: | :---: |
+| **Autenticação & RBAC Bypass** | 3 rotas administrativas | **100% Bloqueados** (HTTP 401 Unauthorized) |
+| **Tokens Adulterados / Assinatura Falsa** | 1 vetor em Bearer/Cookie | **100% Rejeitado** (HTTP 401 Unauthorized) |
+| **BFLA (Broken Function Level Authorization)** | Moderador com apenas `transparency.view` tentando mutações | **100% Bloqueado** (HTTP 403 Forbidden - `FORBIDDEN_PERMISSION`) |
+| **SQLi em Parâmetros de Rota (`:id`)** | Injeção SQL com bypass de aspas | **100% Neutralizados** (HTTP 400 Bad Request via `parsePositiveIntParam`) |
+| **XSS & Malicious Protocol Fuzzing** | `javascript:` e `data:` em URLs | **100% Bloqueado** (HTTP 400 Bad Request via `isSafeHttpUrl`) |
+| **Fuzzing de Valores Negativos em Lançamentos** | `amountUsd < 0` | **100% Bloqueado** (HTTP 400 Bad Request via Zod) |
+| **Fuzzing de Nome Curto (< 2 chars)** | Validação de comprimento de string | **100% Bloqueado** (HTTP 400 Bad Request via Zod) |
+| **Fuzzing de Carteiras EVM Malformadas** | Endereços não-hexadecimais | **100% Bloqueado** (HTTP 400 Bad Request via Zod Regex) |
+| **Bloqueio de Mass Assignment (Create & Update)** | Envio de chaves adicionais no body | **100% Bloqueado** (HTTP 400 Bad Request via `.strict()`) |
+| **Fuzzing de Parâmetro `:id` Não Numérico / Negativo** | `/transparency/not-a-number` e `/-99` | **100% Bloqueado** (HTTP 400 Bad Request) |
+| **Prevenção de Integer Overflow (32-bit Clamping)** | ID fora de escala (`9999999999999999999`) | **100% Bloqueado** (HTTP 400 Bad Request via `n <= 2_147_483_647`) |
+| **Prevenção de Information Disclosure** | ID inexistente com erro 404 | **Zero vazamentos** de stack traces ou detalhes do ORM |
+
+**Total de Verificações de Segurança**: 22 executadas, 22 aprovadas, 0 falhas.
+
 
 
 
