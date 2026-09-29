@@ -1,5 +1,11 @@
 import { api } from '../../../shared/auth/auth.store';
-import type { AdminMinersListResponse, AdminMinersQuery, AdminMinerListRow } from './adminMiners.types';
+import type {
+  AdminMinersListResponse,
+  AdminMinersQuery,
+  AdminMinerListRow,
+  CreateMinerInput,
+  UpdateMinerInput,
+} from './adminMiners.types';
 
 export const adminMinersApi = {
   list: (params?: { q?: string; includeArchived?: boolean }) => {
@@ -11,10 +17,14 @@ export const adminMinersApi = {
       `/admin/miners${suffix}`,
     );
   },
-  create: (body: unknown) => api.post('/admin/miners', body),
-  update: (id: number | string, body: unknown) => api.patch(`/admin/miners/${id}`, body),
-  toggleActive: (id: number | string) => api.post(`/admin/miners/${id}/toggle-active`),
-  toggleStore: (id: number | string) => api.post(`/admin/miners/${id}/toggle-store`),
+  create: (body: CreateMinerInput | Record<string, unknown>) =>
+    api.post<{ ok: boolean; miner?: AdminMinerListRow; message?: string }>('/admin/miners', body),
+  update: (id: number | string, body: UpdateMinerInput | Record<string, unknown>) =>
+    api.patch<{ ok: boolean; miner?: AdminMinerListRow; message?: string }>(`/admin/miners/${id}`, body),
+  toggleActive: (id: number | string) =>
+    api.post<{ ok: boolean; miner?: AdminMinerListRow; message?: string }>(`/admin/miners/${id}/toggle-active`),
+  toggleStore: (id: number | string) =>
+    api.post<{ ok: boolean; miner?: AdminMinerListRow; message?: string }>(`/admin/miners/${id}/toggle-store`),
   uploadImage: async (file: File) => {
     const fd = new FormData();
     fd.append('image', file);

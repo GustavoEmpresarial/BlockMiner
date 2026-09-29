@@ -32,6 +32,37 @@ export type AdminMinerListRow = {
   updatedAt?: string | null;
 };
 
+export interface CreateMinerInput {
+  name: string;
+  slug?: string;
+  description?: string | null;
+  baseHashRate: number;
+  price: number;
+  slotSize?: number;
+  imageUrl?: string | null;
+  tier?: string;
+  sourceType?: string;
+  isActive?: boolean;
+  showInShop?: boolean;
+  sortOrder?: number;
+}
+
+export interface UpdateMinerInput {
+  name?: string;
+  slug?: string;
+  description?: string | null;
+  baseHashRate?: number;
+  price?: number;
+  slotSize?: number;
+  imageUrl?: string | null;
+  tier?: string;
+  sourceType?: string;
+  isActive?: boolean;
+  showInShop?: boolean;
+  isArchived?: boolean;
+  sortOrder?: number;
+}
+
 export type AdminMinersQuery = {
   page: number;
   limit: number;
