@@ -1,55 +1,82 @@
-// @ts-nocheck
-// RECOVERED: this source file was missing from git history (never committed) while
-// production kept running off a stale compiled dist/ via Docker build cache.
-// Reconstructed verbatim from the last known-good compiled output on 2026-09-11.
-// TODO: remove @ts-nocheck once someone re-adds proper types for this file.
-function formatZodError(error) {
-    return error.issues.map((issue) => ({ path: issue.path.join("."), message: issue.message }));
+import type { Request, Response, NextFunction } from "express";
+import type { ZodSchema, ZodError } from "zod";
+
+function formatZodError(error: ZodError) {
+  return error.issues.map((issue) => ({ path: issue.path.join("."), message: issue.message }));
 }
-function deriveCodeFromZodFirstMessage(message) {
-    if (typeof message !== "string")
-        return undefined;
-    const prefix = "auth.register.errors.";
-    if (message.startsWith(prefix)) {
-        const tail = message.slice(prefix.length).replace(/[^a-z0-9_]/gi, "_");
-        return tail ? tail.toUpperCase() : undefined;
+
+function deriveCodeFromZodFirstMessage(message: unknown): string | undefined {
+  if (typeof message !== "string") return undefined;
+  const prefix = "auth.register.errors.";
+  if (message.startsWith(prefix)) {
+    const tail = message.slice(prefix.length).replace(/[^a-z0-9_]/gi, "_");
+    return tail ? tail.toUpperCase() : undefined;
+  }
+  return undefined;
+}
+
+export function validateBody<T>(schema: ZodSchema<T>) {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    const result = schema.safeParse(req.body ?? {});
+    if (!result.success) {
+      const errors = formatZodError(result.error);
+      const code = deriveCodeFromZodFirstMessage(errors[0]?.message) || "INVALID_BODY";
+      res.status(400).json({ ok: false, message: "Invalid request data.", errors, code });
+      return;
     }
-    return undefined;
+    req.body = result.data;
+    next();
+  };
 }
-export function validateBody(schema) {
-    return (req, res, next) => {
-        const result = schema.safeParse(req.body ?? {});
-        if (!result.success) {
-            const errors = formatZodError(result.error);
-            // Every rejection carries a stable code: without one these reached the admin
-            // error panel as an uncategorised 400 "Invalid request data." (15/09/2026).
-            const code = deriveCodeFromZodFirstMessage(errors[0]?.message) || "INVALID_BODY";
-            res.status(400).json({ ok: false, message: "Invalid request data.", errors, code });
-            return;
-        }
-        req.body = result.data;
-        next();
-    };
+
+export function validateQuery<T>(schema: ZodSchema<T>) {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    const result = schema.safeParse(req.query || {});
+    if (!result.success) {
+      res.status(400).json({
+        ok: false,
+        code: "INVALID_QUERY",
+        message: "Invalid query data.",
+        errors: formatZodError(result.error),
+      });
+      return;
+    }
+    try {
+      (req as unknown as { query: unknown }).query = result.data;
+    } catch {
+      Object.defineProperty(req, "query", {
+        value: result.data,
+        writable: true,
+        configurable: true,
+        enumerable: true,
+      });
+    }
+    next();
+  };
 }
-export function validateQuery(schema) {
-    return (req, res, next) => {
-        const result = schema.safeParse(req.query || {});
-        if (!result.success) {
-            res.status(400).json({ ok: false, code: "INVALID_QUERY", message: "Invalid query data.", errors: formatZodError(result.error) });
-            return;
-        }
-        req.query = result.data;
-        next();
-    };
-}
-export function validateParams(schema) {
-    return (req, res, next) => {
-        const result = schema.safeParse(req.params || {});
-        if (!result.success) {
-            res.status(400).json({ ok: false, code: "INVALID_PARAMS", message: "Invalid route parameters.", errors: formatZodError(result.error) });
-            return;
-        }
-        req.params = result.data;
-        next();
-    };
+
+export function validateParams<T>(schema: ZodSchema<T>) {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    const result = schema.safeParse(req.params || {});
+    if (!result.success) {
+      res.status(400).json({
+        ok: false,
+        code: "INVALID_PARAMS",
+        message: "Invalid route parameters.",
+        errors: formatZodError(result.error),
+      });
+      return;
+    }
+    try {
+      (req as unknown as { params: unknown }).params = result.data;
+    } catch {
+      Object.defineProperty(req, "params", {
+        value: result.data,
+        writable: true,
+        configurable: true,
+        enumerable: true,
+      });
+    }
+    next();
+  };
 }
