@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import { reportError } from "../../core/errors/error-reporter.js";
 import { logAdminAction } from "../admin/admin.audit-log.service.js";
 import { parseOptionalDate } from "./burn-events.helpers.js";
+import * as repo from "./burn-events.repository.js";
 import * as svc from "./burn-events.service.js";
 
 function sendAdminFailure(req: Request, res: Response, err: unknown, code: string, status = 400): void {
@@ -14,10 +15,17 @@ function sendAdminFailure(req: Request, res: Response, err: unknown, code: strin
     req,
   });
   const message = err instanceof Error ? err.message : String(err);
+  const isPrismaError = message.includes("prisma") || message.includes("Invocation:") || message.includes("P20");
+  const safeMessage = isPrismaError
+    ? "Database operation failed."
+    : status >= 500
+      ? "Admin burn-events request failed."
+      : message;
+
   res.status(status).json({
     ok: false,
     code,
-    message: status >= 500 ? "Admin burn-events request failed." : message,
+    message: safeMessage,
   });
 }
 
@@ -27,6 +35,24 @@ export async function listAll(req: Request, res: Response): Promise<void> {
     res.json({ ok: true, events });
   } catch (err) {
     sendAdminFailure(req, res, err, "BURN_EVENTS_ADMIN_LIST_FAILED", 500);
+  }
+}
+
+export async function getById(req: Request, res: Response): Promise<void> {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0 || id > 2_147_483_647) {
+    res.status(400).json({ ok: false, code: "VALIDATION_ERROR", message: "Invalid id" });
+    return;
+  }
+  try {
+    const event = await repo.findBurnEventById(id);
+    if (!event || event.deletedAt) {
+      res.status(404).json({ ok: false, code: "NOT_FOUND", message: "Event not found" });
+      return;
+    }
+    res.json({ ok: true, event });
+  } catch (err) {
+    sendAdminFailure(req, res, err, "BURN_EVENTS_ADMIN_GET_FAILED", 500);
   }
 }
 
@@ -61,8 +87,13 @@ export async function create(req: Request, res: Response): Promise<void> {
 
 export async function update(req: Request, res: Response): Promise<void> {
   const id = Number(req.params.id);
-  if (!Number.isInteger(id) || id <= 0) {
+  if (!Number.isInteger(id) || id <= 0 || id > 2_147_483_647) {
     res.status(400).json({ ok: false, code: "VALIDATION_ERROR", message: "Invalid id" });
+    return;
+  }
+  const existing = await repo.findBurnEventById(id);
+  if (!existing || existing.deletedAt) {
+    res.status(404).json({ ok: false, code: "NOT_FOUND", message: "Event not found" });
     return;
   }
   const b = req.body as Record<string, unknown>;
@@ -87,6 +118,7 @@ export async function update(req: Request, res: Response): Promise<void> {
       module: "burn_events",
       resource: "BurnEvent",
       resourceId: String(id),
+      oldValue: { title: existing.title, requiredHashRate: existing.requiredHashRate },
       newValue: patch,
     });
     res.json({ ok: true, event });
@@ -97,8 +129,13 @@ export async function update(req: Request, res: Response): Promise<void> {
 
 export async function remove(req: Request, res: Response): Promise<void> {
   const id = Number(req.params.id);
-  if (!Number.isInteger(id) || id <= 0) {
+  if (!Number.isInteger(id) || id <= 0 || id > 2_147_483_647) {
     res.status(400).json({ ok: false, code: "VALIDATION_ERROR", message: "Invalid id" });
+    return;
+  }
+  const existing = await repo.findBurnEventById(id);
+  if (!existing || existing.deletedAt) {
+    res.status(404).json({ ok: false, code: "NOT_FOUND", message: "Event not found" });
     return;
   }
   try {
@@ -119,7 +156,7 @@ export async function remove(req: Request, res: Response): Promise<void> {
 export async function claims(req: Request, res: Response): Promise<void> {
   const id = Number(req.params.id);
   const page = Number(req.query.page ?? "1");
-  if (!Number.isInteger(id) || id <= 0) {
+  if (!Number.isInteger(id) || id <= 0 || id > 2_147_483_647) {
     res.status(400).json({ ok: false, code: "VALIDATION_ERROR", message: "Invalid id" });
     return;
   }

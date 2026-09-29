@@ -33,6 +33,13 @@ const writeLimiter = createDistributedRateLimiter({
 });
 
 burnEventsAdminRouter.get("/", readLimiter, requireAdminPermission("burn_events.view"), ctrl.listAll);
+burnEventsAdminRouter.get(
+  "/:id",
+  readLimiter,
+  requireAdminPermission("burn_events.view"),
+  validateParams(eventIdParamSchema),
+  ctrl.getById,
+);
 burnEventsAdminRouter.post(
   "/",
   writeLimiter,

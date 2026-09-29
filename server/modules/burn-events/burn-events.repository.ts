@@ -27,6 +27,16 @@ export async function findMinerById(id: number) {
   return prisma.miner.findUnique({ where: { id } });
 }
 
+export async function findBurnEventById(id: number) {
+  return prisma.burnEvent.findUnique({
+    where: { id },
+    include: {
+      rewardMiner: { select: rewardMinerSelect },
+      _count: { select: { claims: true } },
+    },
+  });
+}
+
 export async function createBurnEvent(data: {
   title: string;
   description?: string | null;

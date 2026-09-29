@@ -6,7 +6,7 @@ import {
 
 export const eventIdParamSchema = z
   .object({
-    id: z.coerce.number().int().positive(),
+    id: z.coerce.number().int().positive().max(2_147_483_647, "ID exceeds maximum 32-bit integer"),
   })
   .strict();
 
@@ -33,12 +33,12 @@ export const adminCreateBurnEventSchema = z
     title: z.string().trim().min(1).max(200),
     description: z.union([z.string().trim().max(20000), z.null()]).optional(),
     imageUrl: nullableTrimmedString,
-    requiredHashRate: z.coerce.number().positive(),
-    rewardMinerId: z.coerce.number().int().positive(),
+    requiredHashRate: z.coerce.number().positive().max(10_000_000_000),
+    rewardMinerId: z.coerce.number().int().positive().max(2_147_483_647),
     /** Per-player burn completions. Default applied in service if omitted. */
     claimLimitPerUser: z.coerce.number().int().min(1).max(MAX_BURN_CLAIM_LIMIT_PER_USER).optional(),
     /** Global pool. null / omitted = unlimited. Not the per-user limit. */
-    stockTotal: z.union([z.coerce.number().int().min(1), z.null()]).optional(),
+    stockTotal: z.union([z.coerce.number().int().min(1).max(2_147_483_647), z.null()]).optional(),
     startsAt: z.union([z.string(), z.null()]).optional(),
     endsAt: z.union([z.string(), z.null()]).optional(),
     isActive: z.boolean().optional(),
@@ -50,10 +50,10 @@ export const adminUpdateBurnEventSchema = z
     title: z.string().trim().min(1).max(200).optional(),
     description: z.union([z.string().trim().max(20000), z.null()]).optional(),
     imageUrl: nullableTrimmedString,
-    requiredHashRate: z.coerce.number().positive().optional(),
-    rewardMinerId: z.coerce.number().int().positive().optional(),
+    requiredHashRate: z.coerce.number().positive().max(10_000_000_000).optional(),
+    rewardMinerId: z.coerce.number().int().positive().max(2_147_483_647).optional(),
     claimLimitPerUser: z.coerce.number().int().min(1).max(MAX_BURN_CLAIM_LIMIT_PER_USER).optional(),
-    stockTotal: z.union([z.coerce.number().int().min(1), z.null()]).optional(),
+    stockTotal: z.union([z.coerce.number().int().min(1).max(2_147_483_647), z.null()]).optional(),
     startsAt: z.union([z.string(), z.null()]).optional(),
     endsAt: z.union([z.string(), z.null()]).optional(),
     isActive: z.boolean().optional(),
