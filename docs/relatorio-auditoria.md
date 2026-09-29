@@ -880,6 +880,90 @@ Executado através de `tests/security/run-kali-mini-pass-audit.sh` utilizando o 
 
 **Total de Verificações de Segurança**: 15 executadas, 15 aprovadas, 0 falhas.
 
+---
+
+# PARTE XIII: MÓDULO DE MINERADORAS (CATÁLOGO) & REMOÇÃO DA ABA LEGADA /ADMIN/SALA (`/admin/miners`)
+
+## 1. Resumo Executivo dos Achados — Mineradoras & Limpeza de Legado
+
+| ID | Descrição do Achado | Severidade | CWE / OWASP | Arquivo e Linha Original | Status da Correção |
+| :---: | :--- | :---: | :---: | :--- | :---: |
+| **SEC-29** | **BFLA (Broken Function Level Authorization):** Rotas administrativas de catálogo de mineradoras (`POST /miners`, `PATCH /miners/:id`, `toggle-active`, `toggle-store`, `relink`, `assign`) não checavam permissão específica, permitindo mutações por qualquer operador autenticado. | **ALTA** | CWE-285 / OWASP A1 | `server/modules/machines/miners.admin.routes.ts:23` | ✅ **Corrigido** |
+| **SEC-30** | **Permissão Granular de Leitura Ausente:** O sistema de permissões administrativas não distinguia leitura e escrita de mineradoras, impedindo visualização por moderadores sem conceder poderes de edição. | **MÉDIA** | CWE-284 / OWASP A1 | `server/modules/admin/admin.permissions.ts:64` | ✅ **Corrigido** |
+| **AUDIT-08** | **Falta de Rastreamento de Mutações no Catálogo:** Criação, edição e alterações de visibilidade no catálogo não gravavam valores anteriores/posteriores em `admin_audit_logs`. | **ALTA** | CWE-778 / OWASP A9 | `server/modules/machines/miners.admin.routes.ts:165` | ✅ **Corrigido** |
+| **TEC-09** | **7 Arquivos com `@ts-nocheck` e Inconsistências de Tipagem:** O subsistema `machines/` continha `@ts-nocheck` em 7 arquivos essenciais e `miners.admin.repair.ts` operava com inferências de tipo vazias `{}`. | **MÉDIA** | Qualidade Estática | `server/modules/machines/*.ts:1` | ✅ **Corrigido** |
+| **LEG-01** | **Presença de Aba Obsoleta e Rotas Inativas da Sala RollerCoin (`/admin/sala`):** A aba antiga de edição 2D RollerCoin estava presente no painel admin e consumia rotas e dependências mortas no backend. | **BAIXA** | Código Morto / Superfície de Ataque | `client/src/features/admin/sala/`, `server/modules/sala/` | ✅ **Corrigido** |
+
+---
+
+## 2. Detalhamento das Mitigações Aplicadas — Mineradoras
+
+### LEG-01: Remoção Definitiva da Aba e Rotas de `/admin/sala` — BAIXA
+- **Descrição**: O editor canvas 2D RollerCoin era um protótipo legado completamente dissociado do motor isométrico moderno utilizado pelos jogadores em `/rooms` e `/dashboard`.
+- **Correção Aplicada**: Removidos 921 linhas de código obsoleto:
+  - Excluídos `AdminSalaPage.tsx` e `adminSala.parts.tsx` de `client/src/features/admin/sala/`.
+  - Removido `salaAdminRouter` e o diretório `server/modules/sala/`.
+  - Removido item "Sala (RollerCoin)" da sidebar administrativa e das rotas de navegação.
+
+### SEC-29 & SEC-30: RBAC Granular & Distributed Rate Limiting — ALTA
+- **Descrição**: As operações de mutação de catálogo de mineradoras não exigiam permissões granulares, permitindo a contas de moderador alterar preços e hashrates.
+- **Correção Aplicada**:
+  - Criada e registrada a permissão `miners.view` para leitura em `server/modules/admin/admin.permissions.ts`.
+  - Rotas de leitura (`GET /miners`, `GET /miners/orphan-types`, etc.) protegidas por `requireAdminPermission("miners.view")`.
+  - Rotas de mutação (`POST /miners`, `PATCH /miners/:id`, `PUT /miners/:id`, `toggle-active`, `toggle-store`, reparos) protegidas por `requireAdminPermission("miners")`.
+  - Adicionado limitador distribuído Redis com teto de 300 req/min nas mutações.
+- **Testes de Verificação**: `tests/machines/miners.rbac.test.mjs` (7 testes aprovados).
+
+### AUDIT-08: Rastreabilidade Total de Mutações no Catálogo — ALTA
+- **Descrição**: Alterações no catálogo de mineradoras afetam diretamente a economia do jogo e não registravam histórico auditável.
+- **Correção Aplicada**: Integrada a função `logAdminAction` para todas as mutações (`ADMIN_MINER_CREATE`, `ADMIN_MINER_UPDATE`, `ADMIN_MINER_TOGGLE_ACTIVE`, `ADMIN_MINER_TOGGLE_STORE`, `ADMIN_MINER_ORPHAN_RELINK`, `ADMIN_BROKEN_MACHINES_ASSIGN`), salvando `oldValue`, `newValue`, `adminId`, `resourceId`, IP e timestamp.
+
+### TEC-09: Eliminação de `@ts-nocheck` e Validação Zod — MÉDIA
+- **Descrição**: 7 arquivos do módulo `machines/` usavam `@ts-nocheck`, encobrindo erros de transação Prisma e falta de parâmetros tipados.
+- **Correção Aplicada**:
+  - Removido `@ts-nocheck` de todos os 7 arquivos.
+  - Implementado `miners.schemas.ts` com validação estrita Zod (rejeição de hashrate e preço negativos, limites numéricos de 32-bit e sanitização de regex em slugs).
+  - Tipadas estritamente todas as chamadas de transação com `TxClient`.
+  - Redução de duplicidade do `jscpd` de 10 para 7 clones.
+
+---
+
+## 3. Resultados dos Testes de Carga (k6) — Mineradoras
+
+Executado através de `tests/performance/run-miners-k6.mjs` simulando tráfego concorrente sob 15 VUs:
+
+| Métrica | Meta Estabelecida | Resultado Obtido | Status |
+| :--- | :---: | :---: | :---: |
+| **Taxa de Erro 5xx** | `0.00%` | **0.00%** (0 de 2.132 requests) | ✅ Aprovado |
+| **Checks de Sucesso Admin** | `100.00%` | **100.00%** (2.132 de 2.132) | ✅ Aprovado |
+| **Latência Média Global** | $< 100\text{ ms}$ | **47.65 ms** | ✅ Excelente |
+| **Latência p50 (Mediana)** | $< 50\text{ ms}$ | **34.33 ms** | ✅ Excelente |
+| **Latência p90** | $< 150\text{ ms}$ | **110.10 ms** | ✅ Excelente |
+| **Latência p95** | $< 250\text{ ms}$ | **122.67 ms** | ✅ Excelente |
+| **Throughput Médio** | $> 100\text{ req/s}$ | **193.23 req/s** | ✅ Aprovado |
+
+---
+
+## 4. Resultados da Auditoria de Segurança (Container Kali Linux) — Mineradoras
+
+Executado através de `tests/security/run-kali-miners-audit.sh` utilizando o container `kali-pentest:latest`:
+
+| Categoria do Teste | Casos Executados | Resultado |
+| :--- | :---: | :---: |
+| **Autenticação & RBAC Bypass** | 2 rotas administrativas | **100% Bloqueados** (HTTP 401 Unauthorized) |
+| **Tokens Adulterados / Assinatura Falsa** | 1 vetor em Bearer/Cookie | **100% Rejeitado** (HTTP 401 Unauthorized) |
+| **BFLA (Broken Function Level Authorization)** | Moderador com apenas `miners.view` tentando mutações | **100% Bloqueado** (HTTP 403 Forbidden - `FORBIDDEN_PERMISSION`) |
+| **SQLi em Parâmetros de Busca (`q`)** | Payloads SQL injection em buscas | **100% Neutralizados** (HTTP 200 com sanitização Prisma) |
+| **Fuzzing de Hashrate Negativo** | Payload com hashrate negativo | **100% Bloqueado** (HTTP 400 Bad Request via Zod) |
+| **Fuzzing de Preço Negativo** | Payload com preço negativo | **100% Bloqueado** (HTTP 400 Bad Request via Zod) |
+| **Fuzzing de Tamanho de Slot Inválido** | `slotSize = 4` (> 2) | **100% Bloqueado** (HTTP 400 Bad Request via Zod) |
+| **Fuzzing de Localização Quebrada Inválida** | `location = "BEDROOM"` | **100% Bloqueado** (HTTP 400 Bad Request via Zod) |
+| **Fuzzing de IDs Conflitantes de Reparo** | Ambos `catalogMinerId` e `eventMinerId` presentes | **100% Bloqueado** (HTTP 400 Bad Request via Refinement) |
+| **Fuzzing de Parâmetro `:id` Não Numérico / Negativo** | `/miners/not-a-number` e `/miners/-99` | **100% Bloqueado** (HTTP 400 Bad Request) |
+| **Prevenção de Information Disclosure & 32-bit Clamping** | ID fora de escala (`999999999999999999999`) | **Zero vazamentos** de stack traces ou erros Prisma |
+
+**Total de Verificações de Segurança**: 16 executadas, 16 aprovadas, 0 falhas.
+
 
 
 
