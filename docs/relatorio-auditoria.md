@@ -964,6 +964,24 @@ Executado através de `tests/security/run-kali-miners-audit.sh` utilizando o con
 
 **Total de Verificações de Segurança**: 16 executadas, 16 aprovadas, 0 falhas.
 
+---
+
+## 5. Modernização da Interface de Mineradoras & Componente `MinerFormModal`
+
+Para além da conformidade técnica do backend, a camada de apresentação (`/admin/miners`) recebeu um redesign completo com foco em ergonomia, observabilidade imediata e segurança operacional:
+- **Componente Modal/Drawer (`MinerFormModal.tsx`)**:
+  - Permite criar ou atualizar mineradoras com validação visual imediata.
+  - Suporte a upload de arquivo de imagem via multipart (`/api/admin/upload-image?category=miners`) com preview integrado usando `AdminMinerImage`.
+  - Configuração granular de raridade (Common, Rare, Epic, Legendary), tipo de fonte (store, event, faucet, reward), slots de rack (1 ou 2) e ordenação.
+- **Painel de Métricas e KPIs no Topo**:
+  - Cards com Total de Modelos, Máquinas Ativas, Máquinas Visíveis na Loja e Hashrate Médio do Catálogo com formatação automática de escala (H/s, KH/s, MH/s, GH/s, TH/s).
+- **Tabela de Dados Aprimorada**:
+  - Coluna visual com miniaturas reais das máquinas (`AdminMinerImage variant="table"`).
+  - Badges coloridos por tier de raridade.
+  - Ações diretas e reativas: Botão "Editar" abrindo o modal com os dados preenchidos, toggle direto de visibilidade na loja (`showInShop`) e alternância de status ativo/inativo.
+- **Harmonização de DTOs e Tipagem Estrita**:
+  - Eliminação de tipos obsoletos (`AdminMinerApiRow`), consolidação de `AdminMinerListRow` e tipagem estrita de payloads em `adminMinersApi.create` e `adminMinersApi.update`.
+
 
 
 
