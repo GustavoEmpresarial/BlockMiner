@@ -10,20 +10,20 @@ import type {
 
 export const adminBurnEventsApi = {
   listAll: () =>
-    api.get<AdminBurnEventsListResponse>('/api/admin/burn-events'),
+    api.get<AdminBurnEventsListResponse>('/admin/burn-events'),
 
   create: (body: AdminCreateBurnEventPayload) =>
-    api.post<AdminBurnEventDetailResponse>('/api/admin/burn-events', body),
+    api.post<AdminBurnEventDetailResponse>('/admin/burn-events', body),
 
   update: (id: number, body: AdminUpdateBurnEventPayload) =>
-    api.patch<AdminBurnEventDetailResponse>(`/api/admin/burn-events/${id}`, body),
+    api.patch<AdminBurnEventDetailResponse>(`/admin/burn-events/${id}`, body),
 
   remove: (id: number) =>
-    api.delete<{ ok: boolean; message?: string }>(`/api/admin/burn-events/${id}`),
+    api.delete<{ ok: boolean; message?: string }>(`/admin/burn-events/${id}`),
 
   listClaims: (id: number, page = 1) =>
-    api.get<AdminBurnEventClaimsResponse>(`/api/admin/burn-events/${id}/claims?page=${page}`),
+    api.get<AdminBurnEventClaimsResponse>(`/admin/burn-events/${id}/claims?page=${page}`),
 
   listCatalogMiners: () =>
-    api.get<{ ok: boolean; miners?: CatalogMiner[]; message?: string }>('/api/admin/miners'),
+    api.get<{ ok: boolean; miners?: CatalogMiner[]; message?: string }>('/admin/miners'),
 };
