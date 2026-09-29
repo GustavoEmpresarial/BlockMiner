@@ -33,34 +33,36 @@ export function parsePositiveIntParam(raw: unknown): number | null {
 
 // ─── Transparency Entries (Despesas & Receitas) ──────────────────────────────
 
-export const transparencyEntryCreateSchema = z.object({
-  type: z.enum(["expense", "income"]).default("expense"),
-  category: z.string().trim().min(1).max(50).default("misc"),
-  incomeCategory: z.string().trim().max(50).nullable().optional(),
-  name: z.string().trim().min(2, "Nome deve ter no mínimo 2 caracteres").max(150),
-  description: z.string().trim().max(2000).nullable().optional(),
-  provider: z.string().trim().max(100).nullable().optional(),
-  providerUrl: z.string().trim().refine(isSafeHttpUrl, "URL do provedor deve ser http(s)://").nullable().optional(),
-  imageUrl: z.string().trim().refine(isSafeHttpUrl, "URL da imagem/comprovante inválida").nullable().optional(),
-  amountUsd: z.coerce.number().min(0, "Valor em USD não pode ser negativo"),
-  amountOriginal: z.coerce.number().min(0).nullable().optional(),
-  currencyCode: z.string().trim().min(2).max(10).default("USD"),
-  fxRateUsd: z.coerce.number().positive().nullable().optional(),
-  period: z.enum(["monthly", "annual", "one_time", "daily"]).default("monthly"),
-  entryDate: z.coerce.date().nullable().optional(),
-  direction: z.enum(["in", "out"]).nullable().optional(),
-  blockchain: z.string().trim().max(50).nullable().optional(),
-  walletAddress: z.string().trim().max(100).nullable().optional(),
-  txHash: z.string().trim().max(150).nullable().optional(),
-  referenceUrl: z.string().trim().refine(isSafeHttpUrl, "URL de referência deve ser http(s)://").nullable().optional(),
-  isOnChain: z.boolean().default(false),
-  isPaid: z.boolean().default(true),
-  isActive: z.boolean().default(true),
-  notes: z.string().trim().max(2000).nullable().optional(),
-  sortOrder: z.coerce.number().int().default(0),
-});
+export const transparencyEntryCreateSchema = z
+  .object({
+    type: z.enum(["expense", "income"]).default("expense"),
+    category: z.string().trim().min(1).max(50).default("misc"),
+    incomeCategory: z.string().trim().max(50).nullable().optional(),
+    name: z.string().trim().min(2, "Nome deve ter no mínimo 2 caracteres").max(150),
+    description: z.string().trim().max(2000).nullable().optional(),
+    provider: z.string().trim().max(100).nullable().optional(),
+    providerUrl: z.string().trim().refine(isSafeHttpUrl, "URL do provedor deve ser http(s)://").nullable().optional(),
+    imageUrl: z.string().trim().refine(isSafeHttpUrl, "URL da imagem/comprovante inválida").nullable().optional(),
+    amountUsd: z.coerce.number().min(0, "Valor em USD não pode ser negativo"),
+    amountOriginal: z.coerce.number().min(0).nullable().optional(),
+    currencyCode: z.string().trim().min(2).max(10).default("USD"),
+    fxRateUsd: z.coerce.number().positive().nullable().optional(),
+    period: z.enum(["monthly", "annual", "one_time", "daily"]).default("monthly"),
+    entryDate: z.coerce.date().nullable().optional(),
+    direction: z.enum(["in", "out"]).nullable().optional(),
+    blockchain: z.string().trim().max(50).nullable().optional(),
+    walletAddress: z.string().trim().max(100).nullable().optional(),
+    txHash: z.string().trim().max(150).nullable().optional(),
+    referenceUrl: z.string().trim().refine(isSafeHttpUrl, "URL de referência deve ser http(s)://").nullable().optional(),
+    isOnChain: z.boolean().default(false),
+    isPaid: z.boolean().default(true),
+    isActive: z.boolean().default(true),
+    notes: z.string().trim().max(2000).nullable().optional(),
+    sortOrder: z.coerce.number().int().default(0),
+  })
+  .strict();
 
-export const transparencyEntryUpdateSchema = transparencyEntryCreateSchema.partial();
+export const transparencyEntryUpdateSchema = transparencyEntryCreateSchema.partial().strict();
 
 // ─── External Investments ("Outros Investimentos") ───────────────────────────
 
@@ -120,43 +122,47 @@ export const externalInvestmentUpdateSchema = z
 
 // ─── Tracked Wallets (Carteiras da Tesouraria) ────────────────────────────────
 
-export const trackedWalletCreateSchema = z.object({
-  label: z.string().trim().min(2, "Rótulo deve ter no mínimo 2 caracteres").max(100),
-  address: z.string().trim().min(20).max(100).refine((addr) => EVM_ADDRESS_REGEX.test(addr), {
-    message: "Endereço EVM inválido (formato esperado: 0x seguido de 40 dígitos hexadecimais)",
-  }),
-  chain: z.string().trim().min(1).max(50).default("polygon"),
-  assetSymbol: z.string().trim().min(1).max(20).default("POL"),
-  explorerBaseUrl: z.string().trim().refine(isSafeHttpUrl, "URL do explorer inválida").nullable().optional(),
-  isActive: z.boolean().default(true),
-  isPublic: z.boolean().default(true),
-  includeInTotals: z.boolean().default(true),
-  displayMode: z.string().trim().max(50).default("total_received"),
-  sortOrder: z.coerce.number().int().default(0),
-  manualUsdValue: z.coerce.number().min(0, "Valor manual em USD deve ser maior ou igual a zero").nullable().optional(),
-  manualValueNote: z.string().trim().max(255).nullable().optional(),
-});
+export const trackedWalletCreateSchema = z
+  .object({
+    label: z.string().trim().min(2, "Rótulo deve ter no mínimo 2 caracteres").max(100),
+    address: z.string().trim().min(20).max(100).refine((addr) => EVM_ADDRESS_REGEX.test(addr), {
+      message: "Endereço EVM inválido (formato esperado: 0x seguido de 40 dígitos hexadecimais)",
+    }),
+    chain: z.string().trim().min(1).max(50).default("polygon"),
+    assetSymbol: z.string().trim().min(1).max(20).default("POL"),
+    explorerBaseUrl: z.string().trim().refine(isSafeHttpUrl, "URL do explorer inválida").nullable().optional(),
+    isActive: z.boolean().default(true),
+    isPublic: z.boolean().default(true),
+    includeInTotals: z.boolean().default(true),
+    displayMode: z.string().trim().max(50).default("total_received"),
+    sortOrder: z.coerce.number().int().default(0),
+    manualUsdValue: z.coerce.number().min(0, "Valor manual em USD deve ser maior ou igual a zero").nullable().optional(),
+    manualValueNote: z.string().trim().max(255).nullable().optional(),
+  })
+  .strict();
 
-export const trackedWalletUpdateSchema = trackedWalletCreateSchema.partial();
+export const trackedWalletUpdateSchema = trackedWalletCreateSchema.partial().strict();
 
 // ─── Physical Hardware (ASIC / Mineração Física) ─────────────────────────────
 
-export const hardwareAssetCreateSchema = z.object({
-  name: z.string().trim().min(2, "Nome deve ter no mínimo 2 caracteres").max(100),
-  manufacturer: z.string().trim().max(100).nullable().optional(),
-  description: z.string().trim().max(2000).nullable().optional(),
-  status: z.enum(["running", "maintenance", "retired"]).default("running"),
-  statusLabel: z.string().trim().max(50).nullable().optional(),
-  purchaseCostUsd: z.coerce.number().min(0, "Custo de aquisição não pode ser negativo"),
-  transitWeeks: z.coerce.number().int().min(0).nullable().optional(),
-  purchaseNote: z.string().trim().max(2000).nullable().optional(),
-  specs: z.any().optional(),
-  model3dUrl: z.string().trim().refine(isSafeHttpUrl, "URL 3D inválida").nullable().optional(),
-  sortOrder: z.coerce.number().int().default(0),
-  isActive: z.boolean().default(true),
-});
+export const hardwareAssetCreateSchema = z
+  .object({
+    name: z.string().trim().min(2, "Nome deve ter no mínimo 2 caracteres").max(100),
+    manufacturer: z.string().trim().max(100).nullable().optional(),
+    description: z.string().trim().max(2000).nullable().optional(),
+    status: z.enum(["running", "maintenance", "retired"]).default("running"),
+    statusLabel: z.string().trim().max(50).nullable().optional(),
+    purchaseCostUsd: z.coerce.number().min(0, "Custo de aquisição não pode ser negativo"),
+    transitWeeks: z.coerce.number().int().min(0).nullable().optional(),
+    purchaseNote: z.string().trim().max(2000).nullable().optional(),
+    specs: z.unknown().optional(),
+    model3dUrl: z.string().trim().refine(isSafeHttpUrl, "URL 3D inválida").nullable().optional(),
+    sortOrder: z.coerce.number().int().default(0),
+    isActive: z.boolean().default(true),
+  })
+  .strict();
 
-export const hardwareAssetUpdateSchema = hardwareAssetCreateSchema.partial();
+export const hardwareAssetUpdateSchema = hardwareAssetCreateSchema.partial().strict();
 
 // ─── Hardware Profit Logs (Lançamento de Lucros em Satoshis) ──────────────────
 
