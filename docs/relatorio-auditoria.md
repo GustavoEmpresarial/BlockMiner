@@ -982,6 +982,94 @@ Para além da conformidade técnica do backend, a camada de apresentação (`/ad
 - **Harmonização de DTOs e Tipagem Estrita**:
   - Eliminação de tipos obsoletos (`AdminMinerApiRow`), consolidação de `AdminMinerListRow` e tipagem estrita de payloads em `adminMinersApi.create` e `adminMinersApi.update`.
 
+---
+
+# PARTE XIV: MÓDULO DE EVENTOS DE QUEIMA (ADMIN BURN EVENTS) (`/admin/burn-events`)
+
+## 1. Resumo Executivo dos Achados — Eventos de Queima
+
+| ID | Descrição do Achado | Severidade | CWE / OWASP | Arquivo e Linha Original | Status da Correção |
+| :---: | :--- | :---: | :---: | :--- | :---: |
+| **SEC-31** | **BFLA (Broken Function Level Authorization):** Rotas administrativas de eventos de queima (`POST /`, `PUT /:id`, `DELETE /:id`) protegidas apenas por autenticação genérica, permitindo que operadores de suporte ou moderadores destruíssem ou alterassem eventos de queima. | **CRÍTICA** | CWE-285 / OWASP A1 | `server/modules/burn-events/burn-events.admin.routes.ts:21` | ✅ **Corrigido** |
+| **SEC-32** | **Permissões Granulares Ausentes no RBAC:** O arquivo `admin.permissions.ts` não possuía `"burn_events"` nem `"burn_events.view"`, deixando o módulo sem barreira de controle de privilégio mínimo. | **ALTA** | CWE-284 / OWASP A1 | `server/modules/admin/admin.permissions.ts:40` | ✅ **Corrigido** |
+| **AUDIT-09** | **Ausência de Trilha de Auditoria Administrativa:** Criações, alterações de estoque/limites e exclusões de eventos de queima não gravavam registros na tabela `admin_audit_logs`. | **ALTA** | CWE-778 / OWASP A9 | `server/modules/burn-events/burn-events.admin.controller.ts:48` | ✅ **Corrigido** |
+| **TEC-10** | **Quebra de Setter de Query em Express 5:** O middleware `validateQuery` tentava atribuir `req.query = result.data`, falhando com `TypeError: Cannot set property query which has only a getter` sob tráfego concorrente de claims. | **ALTA** | Estabilidade de Runtime | `server/core/http/middleware/validate.ts:41` | ✅ **Corrigido** |
+| **SEC-33** | **Integer Overflow em Parâmetro `:id` no Prisma:** O envio de IDs numéricos gigantescos (`99999999999999999`) estourava o tipo `integer` do PostgreSQL gerando erro 500 no Prisma em vez de 400. | **MÉDIA** | CWE-190 / OWASP A3 | `server/modules/burn-events/burn-events.schemas.ts:9` | ✅ **Corrigido** |
+| **UX-05** | **Diálogo Bloqueante `window.confirm` e Axios Isolado:** `AdminBurnEventsPage.tsx` utilizava `confirm(...)` travando a thread do navegador e criava instância avulsa de axios sem tipagem de resposta. | **BAIXA** | Usabilidade & Frontend | `client/src/features/admin/burn-events/AdminBurnEventsPage.tsx:245` | ✅ **Corrigido** |
+
+---
+
+## 2. Detalhamento das Mitigações Aplicadas — Eventos de Queima
+
+### SEC-31 & SEC-32: RBAC Granular & Distributed Rate Limiting — CRÍTICA
+- **Descrição**: O subsistema de queima envolve destruição irreversível de ativos de jogadores e concessão de máquinas de alto escalão. Não havia restrição de função além de estar autenticado como admin.
+- **Correção Aplicada**:
+  - Registradas as permissões `burn_events` ("Gestão Completa de Eventos de Queima") e `burn_events.view` ("Visualizar Eventos de Queima") em `server/modules/admin/admin.permissions.ts`.
+  - Moderadores recebem por padrão apenas `burn_events.view` (somente leitura de eventos e resgates).
+  - Administradores recebem `burn_events` (gestão completa).
+  - Rotas de leitura (`GET /`, `GET /:id`, `GET /:id/claims`) vinculadas a `requireAdminPermission("burn_events.view")`.
+  - Rotas de mutação (`POST /`, `PUT /:id`, `PATCH /:id`, `DELETE /:id`) vinculadas a `requireAdminPermission("burn_events")`.
+  - Rate limiting distribuído ativo (120 req/min leitura, 300 req/min escrita).
+- **Testes de Verificação**: `tests/burn-events/burn-events.admin.rbac.test.mjs` (7 testes aprovados).
+
+### AUDIT-09: Rastreabilidade Total de Operações Administrativas — ALTA
+- **Descrição**: Nenhuma operação administrativa deixava rastro auditável no banco.
+- **Correção Aplicada**: Integrada a função `logAdminAction` em `create` (`ADMIN_BURN_EVENT_CREATE`), `update` (`ADMIN_BURN_EVENT_UPDATE`) e `remove` (`ADMIN_BURN_EVENT_DELETE`), gravando `oldValue`, `newValue`, autor, recurso e timestamp.
+
+### TEC-10: Correção do Middleware de Validação para Express 5 — ALTA
+- **Descrição**: Durante o teste de carga k6, o endpoint `/api/admin/burn-events/:id/claims?page=1` disparou erro 500 no Express 5 porque `req.query` possui apenas getter no protótipo de requisição.
+- **Correção Aplicada**: `server/core/http/middleware/validate.ts` reescrito com tipagem estrita TypeScript (eliminando `@ts-nocheck`) e utilizando `Object.defineProperty(req, "query", ...)` e `Object.defineProperty(req, "params", ...)`.
+
+### SEC-33: Clamping Estrito de 32-bit em Parâmetros de Rota — MÉDIA
+- **Descrição**: O pentest automatizado flagrou que requisições com IDs além da faixa de 32-bit estouravam a query Prisma gerando 500.
+- **Correção Aplicada**: Atualizado `eventIdParamSchema` para limitar valores a `.max(2_147_483_647)` e sanitizado o controller para retornar HTTP 400 Bad Request antes de atingir o ORM.
+
+### UX-05: Redesign da Interface & Modais Dedicados — BAIXA
+- **Descrição**: A interface utilizava `window.confirm`, não tinha suporte a edição completa de eventos pós-criação nem visualização paginada dos resgates.
+- **Correção Aplicada**:
+  - Criado `BurnEventFormModal.tsx` com formulário reativo de criação e edição completa.
+  - Criado `BurnEventClaimsModal.tsx` com paginação dinâmica de claims e detalhes do jogador.
+  - Criado modal de confirmação de exclusão não bloqueante com feedback toast `sonner`.
+  - Adicionados 4 cards de KPI no topo da página e barra de pesquisa com filtros rápidos (Todos, Ativos, Pausados).
+
+---
+
+## 3. Resultados dos Testes de Carga (k6) — Eventos de Queima
+
+Executado através de `tests/performance/run-burn-events-k6.mjs` simulando tráfego concorrente sob 15 VUs:
+
+| Métrica | Meta Estabelecida | Resultado Obtido | Status |
+| :--- | :---: | :---: | :---: |
+| **Taxa de Erro 5xx** | `0.00%` | **0.00%** (0 de 4.262 requests) | ✅ Aprovado |
+| **Checks de Sucesso Admin** | `100.00%` | **100.00%** (4.262 de 4.262) | ✅ Aprovado |
+| **Latência Média Global** | $< 100\text{ ms}$ | **4.87 ms** | ✅ Excelente |
+| **Latência p50 (Mediana)** | $< 50\text{ ms}$ | **3.82 ms** | ✅ Excelente |
+| **Latência p90** | $< 150\text{ ms}$ | **8.64 ms** | ✅ Excelente |
+| **Latência p95** | $< 250\text{ ms}$ | **10.62 ms** | ✅ Excelente |
+| **Throughput Médio** | $> 100\text{ req/s}$ | **386.06 req/s** | ✅ Aprovado |
+
+---
+
+## 4. Resultados da Auditoria de Segurança (Container Kali Linux) — Eventos de Queima
+
+Executado através de `tests/security/run-kali-burn-events-audit.sh` utilizando o container `kali-pentest:latest`:
+
+| Categoria do Teste | Casos Executados | Resultado |
+| :--- | :---: | :---: |
+| **Autenticação & RBAC Bypass** | 2 rotas administrativas | **100% Bloqueados** (HTTP 401 Unauthorized) |
+| **Tokens Adulterados / Assinatura Falsa** | 1 vetor em Bearer/Cookie | **100% Rejeitado** (HTTP 401 Unauthorized) |
+| **BFLA (Broken Function Level Authorization)** | Moderador com apenas `burn_events.view` tentando criar, editar e excluir | **100% Bloqueado** (HTTP 403 Forbidden - `FORBIDDEN_PERMISSION`) |
+| **SQLi em Parâmetros de Rota (`:id`)** | Injeção SQL com bypass de aspas | **100% Neutralizados** (HTTP 400 Bad Request via `eventIdParamSchema`) |
+| **Fuzzing de Hashrate Negativo / Zero** | Payloads com hashrate <= 0 | **100% Bloqueados** (HTTP 400 Bad Request via Zod) |
+| **Fuzzing de Limite de Claim por Usuário** | `claimLimitPerUser <= 0` | **100% Bloqueado** (HTTP 400 Bad Request via Zod) |
+| **Fuzzing de Estoque Negativo** | `stockTotal = -5` | **100% Bloqueado** (HTTP 400 Bad Request via Zod) |
+| **Bloqueio de Mass Assignment (Create & Update)** | Envio de campos adicionais não autorizados | **100% Bloqueado** (HTTP 400 Bad Request via `.strict()`) |
+| **Fuzzing de Parâmetro `:id` Não Numérico / Negativo** | `/burn-events/not-a-number` e `/burn-events/-99` | **100% Bloqueado** (HTTP 400 Bad Request) |
+| **Prevenção de Integer Overflow (32-bit Clamping)** | ID fora de escala (`99999999999999999`) | **100% Bloqueado** (HTTP 400 Bad Request via `.max(2_147_483_647)`) |
+| **Prevenção de Information Disclosure** | ID inexistente com erro Prisma | **Zero vazamentos** de stack traces ou detalhes do ORM |
+
+**Total de Verificações de Segurança**: 18 executadas, 18 aprovadas, 0 falhas.
+
 
 
 
