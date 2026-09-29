@@ -104,3 +104,17 @@ export type ExternalInvestmentRow = {
   createdAt?: string;
   updatedAt?: string;
 };
+
+export interface CreateExternalInvestmentInput {
+  name: string;
+  description?: string | null;
+  imageUrl?: string | null;
+  linkUrl?: string | null;
+  amountInvestedUsd?: number;
+  amountWithdrawnUsd?: number;
+  roiForecast?: string | null;
+  isActive?: boolean;
+  sortOrder?: number;
+}
+
+export type UpdateExternalInvestmentInput = Partial<CreateExternalInvestmentInput>;
