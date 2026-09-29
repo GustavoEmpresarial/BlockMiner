@@ -205,6 +205,24 @@ export async function adminExternalInvestmentList(_req: Request, res: Response) 
   }
 }
 
+export async function adminExternalInvestmentGet(req: Request, res: Response) {
+  const id = parsePositiveIntParam(req.params.id);
+  if (!id) {
+    res.status(400).json({ ok: false, message: "ID inválido." });
+    return;
+  }
+  try {
+    const investment = await transparencyRepo.findExternalInvestmentById(id);
+    if (!investment) {
+      res.status(404).json({ ok: false, message: "Investimento não encontrado." });
+      return;
+    }
+    res.json({ ok: true, investment });
+  } catch {
+    res.status(500).json({ ok: false, message: "Erro ao buscar investimento." });
+  }
+}
+
 export async function adminExternalInvestmentCreate(req: Request, res: Response) {
   const parsed = externalInvestmentCreateSchema.safeParse(req.body);
   if (!parsed.success) {

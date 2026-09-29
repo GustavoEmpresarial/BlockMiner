@@ -117,6 +117,12 @@ transparencyAdminRouter.get(
   requireAdminPermission("transparency.view"),
   transparencyController.adminExternalInvestmentList,
 );
+transparencyAdminRouter.get(
+  "/transparency/external-investments/:id",
+  readLimiter,
+  requireAdminPermission("transparency.view"),
+  transparencyController.adminExternalInvestmentGet,
+);
 transparencyAdminRouter.post(
   "/transparency/external-investments",
   writeLimiter,
