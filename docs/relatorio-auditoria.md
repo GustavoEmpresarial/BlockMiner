@@ -1070,6 +1070,86 @@ Executado através de `tests/security/run-kali-burn-events-audit.sh` utilizando 
 
 **Total de Verificações de Segurança**: 18 executadas, 18 aprovadas, 0 falhas.
 
+---
+
+# PARTE XV: MÓDULO DE TRANSPARÊNCIA & INVESTIMENTOS EXTERNOS (`/admin/transparency/investments` e `/api/admin/transparency/external-investments`)
+
+## 1. Resumo Executivo dos Achados — Investimentos Externos
+
+| ID | Descrição do Achado | Severidade | CWE / OWASP | Arquivo e Linha Original | Status da Correção |
+| :---: | :--- | :---: | :---: | :--- | :---: |
+| **SEC-34** | **BFLA (Broken Function Level Authorization):** Rotas administrativas de transparência (`POST`, `PUT`, `DELETE` em `/transparency/external-investments`) protegidas apenas por autenticação genérica, permitindo que operadores de suporte ou moderadores gerassem, alterassem ou excluíssem alocações financeiras da tesouraria. | **CRÍTICA** | CWE-285 / OWASP A1 | `server/modules/transparency/transparency.admin.routes.ts:7` | ✅ **Corrigido** |
+| **SEC-35** | **Permissões Granulares Ausentes no Sistema RBAC:** As chaves de permissão `transparency` e `transparency.view` não existiam em `server/modules/admin/admin.permissions.ts`, impedindo restrição por princípio do menor privilégio. | **ALTA** | CWE-284 / OWASP A1 | `server/modules/admin/admin.permissions.ts:40` | ✅ **Corrigido** |
+| **SEC-36** | **Ausência de Rate Limiting Distribuído no Admin:** Endpoints administrativos de transparência e investimentos estavam expostos sem teto de requisições por minuto no cluster. | **ALTA** | CWE-770 / OWASP A4 | `server/modules/transparency/transparency.admin.routes.ts:7` | ✅ **Corrigido** |
+| **TEC-11** | **Suporte Incompleto a Verbos REST (Falta de PATCH):** O roteador administrativo expunha apenas `PUT` para `/transparency/external-investments/:id`, gerando 404 em chamadas padrão `PATCH`. | **MÉDIA** | Contratos de API | `server/modules/transparency/transparency.admin.routes.ts:24` | ✅ **Corrigido** |
+| **TEC-12** | **Casts Inseguros `as any` no Controller de Transparência:** `transparency.controller.ts` possuía 4 conversões `as any` contornando a checagem de tipos do TypeScript na criação e edição de lançamentos e ativos. | **MÉDIA** | Tipagem Estática | `server/modules/transparency/transparency.controller.ts:306,338,589,621` | ✅ **Corrigido** |
+| **TEST-03** | **Falha de Ambiente JSDOM em 16 Testes Vitest do Client:** Os testes de transparência falhavam com `ReferenceError: document is not defined` por falta da diretiva de ambiente de teste. | **MÉDIA** | Qualidade de Testes | `client/src/features/admin/transparency/__tests__/*.test.tsx:1` | ✅ **Corrigido** |
+
+---
+
+## 2. Detalhamento das Mitigações Aplicadas — Investimentos Externos
+
+### SEC-34 & SEC-35: RBAC Granular & Distributed Rate Limiting — CRÍTICA
+- **Descrição**: O portal de transparência e alocações de capital de terceiros não possuía validação de papéis em rotas de mutação, permitindo manipulação indevida de dados financeiros da plataforma.
+- **Correção Aplicada**:
+  - Registradas as permissões `transparency` ("Gestão da Transparência & Investimentos") e `transparency.view` ("Visualizar Transparência (Leitura)") na categoria "Economia" em `server/modules/admin/admin.permissions.ts`.
+  - Moderadores recebem por padrão `transparency.view` (somente leitura).
+  - Administradores recebem `transparency` (gestão completa).
+  - Rotas de leitura vinculadas a `requireAdminPermission("transparency.view")`.
+  - Rotas de mutação vinculadas a `requireAdminPermission("transparency")`.
+  - Rate limiting distribuído ativo (120 req/min para leitura, 300 req/min para escrita).
+- **Testes de Verificação**: `tests/transparency/transparency.rbac.test.mjs` (7 testes aprovados).
+
+### TEC-11 & TEC-12: Suporte a PATCH, Eliminação de `as any` e Clamping de 32-bit — MÉDIA
+- **Descrição**: O controlador utilizava casts `as any` e não suportava PATCH, além de `parsePositiveIntParam` aceitar inteiros gigantescos que estouravam o tipo 32-bit no PostgreSQL.
+- **Correção Aplicada**:
+  - Habilitado `PATCH /transparency/external-investments/:id` (e também para lançamentos, carteiras e ativos).
+  - Eliminados todos os 4 `as any` em `server/modules/transparency/transparency.controller.ts`, substituídos por tipagem estrita Prisma.
+  - Atualizado `parsePositiveIntParam` com clamping numérico estrito `n <= 2_147_483_647` (evitando erro 500 no ORM).
+  - Schemas Zod atualizados com `.strict()` e limites de teto de valores (`max(100_000_000_000)`).
+
+### TEST-03: Correção do Ambiente Vitest no Client — MÉDIA
+- **Descrição**: Os 4 arquivos de teste de frontend de transparência não executavam no Vitest por falta da declaração `@vitest-environment jsdom`.
+- **Correção Aplicada**: Adicionado o cabeçalho jsdom nos 4 arquivos; todos os 16 testes unitários do client passaram com sucesso instantaneamente.
+
+---
+
+## 3. Resultados dos Testes de Carga (k6) — Investimentos Externos
+
+Executado através de `tests/performance/run-transparency-investments-k6.mjs` simulando tráfego concorrente sob 15 VUs:
+
+| Métrica | Meta Estabelecida | Resultado Obtido | Status |
+| :--- | :---: | :---: | :---: |
+| **Taxa de Erro 5xx** | `0.00%` | **0.00%** (0 de 4.568 requests) | ✅ Aprovado |
+| **Checks de Sucesso Admin & Public** | `100.00%` | **100.00%** (4.568 de 4.568) | ✅ Aprovado |
+| **Latência Média Global** | $< 100\text{ ms}$ | **2.87 ms** | ✅ Excelente |
+| **Latência p50 (Mediana)** | $< 50\text{ ms}$ | **1.96 ms** | ✅ Excelente |
+| **Latência p90** | $< 150\text{ ms}$ | **6.64 ms** | ✅ Excelente |
+| **Latência p95** | $< 250\text{ ms}$ | **8.49 ms** | ✅ Excelente |
+| **Throughput Médio** | $> 100\text{ req/s}$ | **413.53 req/s** | ✅ Aprovado |
+
+---
+
+## 4. Resultados da Auditoria de Segurança (Container Kali Linux) — Investimentos Externos
+
+Executado através de `tests/security/run-kali-transparency-investments-audit.sh` utilizando o container `kali-pentest:latest`:
+
+| Categoria do Teste | Casos Executados | Resultado |
+| :--- | :---: | :---: |
+| **Autenticação & RBAC Bypass** | 2 rotas administrativas | **100% Bloqueados** (HTTP 401 Unauthorized) |
+| **Tokens Adulterados / Assinatura Falsa** | 1 vetor em Bearer/Cookie | **100% Rejeitado** (HTTP 401 Unauthorized) |
+| **BFLA (Broken Function Level Authorization)** | Moderador com apenas `transparency.view` tentando mutações | **100% Bloqueado** (HTTP 403 Forbidden - `FORBIDDEN_PERMISSION`) |
+| **SQLi em Parâmetros de Rota (`:id`)** | Injeção SQL com bypass de aspas | **100% Neutralizados** (HTTP 400 Bad Request via `parsePositiveIntParam`) |
+| **XSS & Malicious Protocol Fuzzing** | `javascript:` e `data:` em URLs | **100% Bloqueado** (HTTP 400 Bad Request via `isSafeHttpUrl`) |
+| **Fuzzing de Valores Negativos em Investimentos** | `amountInvestedUsd` e `amountWithdrawnUsd` negativos | **100% Bloqueado** (HTTP 400 Bad Request via Zod) |
+| **Fuzzing de Nome Curto (< 2 chars)** | Validação de comprimento de string | **100% Bloqueado** (HTTP 400 Bad Request via Zod) |
+| **Bloqueio de Mass Assignment (Create & Update)** | Envio de chaves adicionais no body | **100% Bloqueado** (HTTP 400 Bad Request via `.strict()`) |
+| **Fuzzing de Parâmetro `:id` Não Numérico / Negativo** | `/external-investments/not-a-number` e `/-99` | **100% Bloqueado** (HTTP 400 Bad Request) |
+| **Prevenção de Integer Overflow (32-bit Clamping)** | ID fora de escala (`99999999999999999`) | **100% Bloqueado** (HTTP 400 Bad Request via `n <= 2_147_483_647`) |
+| **Prevenção de Information Disclosure** | ID inexistente com erro 404 | **Zero vazamentos** de stack traces ou detalhes do ORM |
+
+**Total de Verificações de Segurança**: 19 executadas, 19 aprovadas, 0 falhas.
+
 
 
 
