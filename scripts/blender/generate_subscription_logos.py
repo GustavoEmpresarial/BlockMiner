@@ -266,9 +266,21 @@ def build_claude_scene():
     rim_obj.location = (-1.0, 3.0, 2.5)
     scene.collection.objects.link(rim_obj)
 
-    # Materials: Authentic Anthropic Vibrant Orange & Deep Pixel Black
-    mat_orange = create_pbr_material("ClawdBody", (0.98, 0.42, 0.12, 1.0), metallic=0.03, roughness=0.28)
-    mat_black = create_pbr_material("ClawdEyes", (0.02, 0.02, 0.03, 1.0), metallic=0.1, roughness=0.15)
+    # Materials: Vivid, rich, saturated Anthropic Orange with warm glowing emission
+    mat_orange = create_pbr_material(
+        "ClawdBody",
+        (1.0, 0.075, 0.002, 1.0),
+        metallic=0.0,
+        roughness=0.22,
+        emission=(1.0, 0.15, 0.01, 1.0),
+        emission_strength=0.35
+    )
+    mat_black = create_pbr_material(
+        "ClawdEyes",
+        (0.01, 0.01, 0.015, 1.0),
+        metallic=0.0,
+        roughness=0.08
+    )
 
     # 1. Body Mesh
     mesh_body = bpy.data.meshes.new("ClawdBodyMesh")
@@ -411,6 +423,7 @@ def main():
     print("\n[+] Building Claude Code Clawd Mascot 3D Character...")
     build_claude_scene()
     export_and_render("claude", output_dirs)
+    export_and_render("claude-mascot", output_dirs)
 
     # 3. Gemini Pro (Google)
     print("\n[+] Building Gemini Pro 3D Logo...")

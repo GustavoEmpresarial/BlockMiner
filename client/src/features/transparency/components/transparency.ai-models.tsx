@@ -86,6 +86,45 @@ function ensureModelViewer(): Promise<void> {
   return modelViewerPromise;
 }
 
+function applyMascotMaterialFix(mv: HTMLElement): void {
+  type TexSlot = { setTexture?: (tex: unknown) => void };
+  type Pbr = {
+    setBaseColorFactor?: (factor: [number, number, number, number]) => void;
+    setMetallicFactor?: (factor: number) => void;
+    setRoughnessFactor?: (factor: number) => void;
+    baseColorTexture?: TexSlot;
+  };
+  type Mat = {
+    name?: string;
+    pbrMetallicRoughness?: Pbr;
+    setEmissiveFactor?: (factor: [number, number, number]) => void;
+  };
+
+  const model = (mv as HTMLElement & { model?: { materials?: Mat[] } }).model;
+  const materials = model?.materials;
+  if (!Array.isArray(materials)) return;
+
+  for (const mat of materials) {
+    const name = String(mat.name || '');
+    if (name === 'ClawdBody') {
+      const pbr = mat.pbrMetallicRoughness;
+      if (pbr) {
+        // Vibrant vivid cartoon warm orange
+        pbr.setBaseColorFactor?.([1.0, 0.32, 0.05, 1.0]);
+        pbr.setRoughnessFactor?.(0.22);
+        pbr.setMetallicFactor?.(0.0);
+      }
+      mat.setEmissiveFactor?.([0.38, 0.08, 0.01]);
+    } else if (name === 'ClawdEyes') {
+      const pbr = mat.pbrMetallicRoughness;
+      if (pbr) {
+        pbr.setBaseColorFactor?.([0.02, 0.02, 0.025, 1.0]);
+        pbr.setRoughnessFactor?.(0.08);
+      }
+    }
+  }
+}
+
 export function Generic3DViewer({ src, fallbackImg, alt }: { src: string; fallbackImg: string; alt: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [hasError, setHasError] = useState(false);
@@ -101,9 +140,9 @@ export function Generic3DViewer({ src, fallbackImg, alt }: { src: string; fallba
     mv.setAttribute('camera-controls', '');
     mv.setAttribute('auto-rotate', '');
     mv.setAttribute('rotation-per-second', '24deg');
-    mv.setAttribute('shadow-intensity', '1.2');
-    mv.setAttribute('shadow-softness', '0.6');
-    mv.setAttribute('exposure', '1.05');
+    mv.setAttribute('shadow-intensity', '1.0');
+    mv.setAttribute('shadow-softness', '0.5');
+    mv.setAttribute('exposure', '1.1');
     mv.setAttribute('environment-image', 'neutral');
     mv.setAttribute('interaction-prompt', 'none');
     mv.setAttribute('loading', 'eager');
@@ -117,12 +156,16 @@ export function Generic3DViewer({ src, fallbackImg, alt }: { src: string; fallba
     mv.style.setProperty('--poster-color', 'transparent');
 
     const onError = () => setHasError(true);
+    const onLoad = () => applyMascotMaterialFix(mv);
+
     mv.addEventListener('error', onError);
+    mv.addEventListener('load', onLoad);
     container.innerHTML = '';
     container.appendChild(mv);
 
     return () => {
       mv.removeEventListener('error', onError);
+      mv.removeEventListener('load', onLoad);
       mv.remove();
     };
   }, [src, alt]);
