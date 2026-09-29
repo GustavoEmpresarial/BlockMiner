@@ -27,6 +27,12 @@ transparencyAdminRouter.get(
   requireAdminPermission("transparency.view"),
   transparencyController.adminList,
 );
+transparencyAdminRouter.get(
+  "/transparency/:id",
+  readLimiter,
+  requireAdminPermission("transparency.view"),
+  transparencyController.adminGet,
+);
 transparencyAdminRouter.post(
   "/transparency",
   writeLimiter,

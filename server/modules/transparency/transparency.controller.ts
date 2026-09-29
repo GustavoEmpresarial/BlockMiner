@@ -339,6 +339,24 @@ export async function adminCreate(req: Request, res: Response) {
   }
 }
 
+export async function adminGet(req: Request, res: Response) {
+  const id = parsePositiveIntParam(req.params.id);
+  if (!id) {
+    res.status(400).json({ ok: false, message: "ID inválido." });
+    return;
+  }
+  try {
+    const entry = await transparencyRepo.findTransparencyEntryById(id);
+    if (!entry) {
+      res.status(404).json({ ok: false, message: "Entrada não encontrada." });
+      return;
+    }
+    res.json({ ok: true, entry });
+  } catch {
+    res.status(500).json({ ok: false, message: "Erro ao buscar entrada." });
+  }
+}
+
 export async function adminUpdate(req: Request, res: Response) {
   const id = parsePositiveIntParam(req.params.id);
   if (!id) {
