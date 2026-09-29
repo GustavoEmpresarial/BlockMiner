@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchAdminMiners } from './adminMiners.api';
-import type { AdminMinerApiRow, AdminMinersQuery } from './adminMiners.types';
+import type { AdminMinerListRow, AdminMinersQuery } from './adminMiners.types';
 import { adminMinersListErrorMessage, isAdminMinersSchemaOutOfDate } from './adminMiners.validation';
 
 type UseAdminMinersListOptions = {
@@ -13,7 +13,7 @@ type UseAdminMinersListOptions = {
 };
 
 export function useAdminMinersList({ page, limit, filter, sort, q, debounceMs = 250 }: UseAdminMinersListOptions) {
-  const [miners, setMiners] = useState<AdminMinerApiRow[]>([]);
+  const [miners, setMiners] = useState<AdminMinerListRow[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [listError, setListError] = useState<string | null>(null);

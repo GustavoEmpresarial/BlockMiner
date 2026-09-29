@@ -32,9 +32,6 @@ export type AdminMinerListRow = {
   updatedAt?: string | null;
 };
 
-/** @deprecated Use AdminMinerListRow */
-export type AdminMinerApiRow = AdminMinerListRow & Record<string, unknown>;
-
 export type AdminMinersQuery = {
   page: number;
   limit: number;

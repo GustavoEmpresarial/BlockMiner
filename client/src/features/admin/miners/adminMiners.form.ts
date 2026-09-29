@@ -1,5 +1,5 @@
 import { toast } from 'sonner';
-import type { AdminMinerApiRow } from './adminMiners.types';
+import type { AdminMinerListRow } from './adminMiners.types';
 import { normalizePersistableMinerImageUrl } from './adminMiners.image';
 
 export type MinerFormState = {
@@ -51,7 +51,7 @@ export const EMPTY_FORM: MinerFormState = {
 
 export type DrawerMode = 'create' | 'edit' | null;
 
-export function normalizeMiner(m: AdminMinerApiRow): MinerFormState {
+export function normalizeMiner(m: AdminMinerListRow): MinerFormState {
   const id = typeof m.id === 'number' ? m.id : Number(m.id);
   return {
     ...EMPTY_FORM,
