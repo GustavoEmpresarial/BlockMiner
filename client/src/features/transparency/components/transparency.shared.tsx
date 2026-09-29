@@ -22,3 +22,4 @@ export {
 
 export { WalletsLiveSection } from './transparency.wallets';
 export { HardwareSection } from './transparency.hardware';
+export { AiInfrastructure3DSection, SUBSCRIPTION_MODELS } from './transparency.ai-models';

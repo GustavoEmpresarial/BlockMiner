@@ -23,6 +23,7 @@ import {
   AlertTriangle,
   Wallet,
   Info,
+  Receipt,
 } from 'lucide-react';
 import {
   CATEGORY_STYLE,
@@ -36,8 +37,10 @@ import {
   StatCard,
   CategoryBar,
   IncomeCard,
+  EntryRow,
   WalletsLiveSection,
   HardwareSection,
+  AiInfrastructure3DSection,
 } from './components/transparency.shared';
 import type { CategoryKey, TransparencyEntry, TransparencyApiResponse } from './components/transparency.shared';
 import type { TrackedWalletEntry, WalletsLiveResponse } from './components/transparency.base';
@@ -323,6 +326,43 @@ export default function Transparency() {
                     count={byCategory[c].length}
                   />
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── 3D AI & Infrastructure Models Showcase ───────────────── */}
+          <AiInfrastructure3DSection />
+
+          {/* ── Expense Breakdown Table ────────────────────────────────── */}
+          {expenses.length > 0 && (
+            <div className="rounded-2xl border border-white/8 bg-white/[0.02] overflow-hidden" data-testid="expenses-table-section">
+              <div className="px-6 py-4 border-b border-white/5 bg-white/[0.01] flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Receipt className="w-4 h-4 text-primary" aria-hidden="true" />
+                  <p className="text-xs font-black text-gray-400 uppercase tracking-widest">
+                    Detalhamento de Custos Operacionais & Assinaturas
+                  </p>
+                </div>
+                <span className="text-xs font-black text-white font-mono">
+                  {expenses.length} itens registrados
+                </span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="border-b border-white/5 bg-black/20 text-[10px] uppercase font-bold text-gray-400">
+                    <tr>
+                      <th className="py-2.5 px-4">Item / Descrição</th>
+                      <th className="py-2.5 px-4 hidden md:table-cell">Provedor</th>
+                      <th className="py-2.5 px-4 text-right">Valor USD</th>
+                      <th className="py-2.5 px-4 text-right">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {expenses.map((e) => (
+                      <EntryRow key={e.id} entry={e} />
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}
