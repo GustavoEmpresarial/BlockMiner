@@ -20,18 +20,12 @@ const writeLimiter = createDistributedRateLimiter({
   name: "transparency_admin_write",
 });
 
-// ─── Transparency Entries (Despesas & Receitas) ──────────────────────────────
+// ─── 1. Transparency Entries Root (Collection Level) ─────────────────────────
 transparencyAdminRouter.get(
   "/transparency",
   readLimiter,
   requireAdminPermission("transparency.view"),
   transparencyController.adminList,
-);
-transparencyAdminRouter.get(
-  "/transparency/:id",
-  readLimiter,
-  requireAdminPermission("transparency.view"),
-  transparencyController.adminGet,
 );
 transparencyAdminRouter.post(
   "/transparency",
@@ -39,26 +33,8 @@ transparencyAdminRouter.post(
   requireAdminPermission("transparency"),
   transparencyController.adminCreate,
 );
-transparencyAdminRouter.put(
-  "/transparency/:id",
-  writeLimiter,
-  requireAdminPermission("transparency"),
-  transparencyController.adminUpdate,
-);
-transparencyAdminRouter.patch(
-  "/transparency/:id",
-  writeLimiter,
-  requireAdminPermission("transparency"),
-  transparencyController.adminUpdate,
-);
-transparencyAdminRouter.delete(
-  "/transparency/:id",
-  writeLimiter,
-  requireAdminPermission("transparency"),
-  transparencyController.adminDelete,
-);
 
-// ─── Treasury Wallet Settings & Activity ────────────────────────────────────
+// ─── 2. Treasury Wallet Settings & Activity ──────────────────────────────────
 transparencyAdminRouter.get(
   "/transparency/wallet/settings",
   readLimiter,
@@ -78,7 +54,7 @@ transparencyAdminRouter.get(
   transparencyController.adminWalletGetActivity,
 );
 
-// ─── Tracked Wallets ────────────────────────────────────────────────────────
+// ─── 3. Tracked Wallets ──────────────────────────────────────────────────────
 transparencyAdminRouter.get(
   "/transparency/tracked-wallets",
   readLimiter,
@@ -116,7 +92,7 @@ transparencyAdminRouter.delete(
   transparencyController.adminTrackedWalletDelete,
 );
 
-// ─── External Investments ("Outros Investimentos") ───────────────────────────
+// ─── 4. External Investments ("Outros Investimentos") ─────────────────────────
 transparencyAdminRouter.get(
   "/transparency/external-investments",
   readLimiter,
@@ -154,7 +130,7 @@ transparencyAdminRouter.delete(
   transparencyController.adminExternalInvestmentDelete,
 );
 
-// ─── Hardware Assets (ASIC Mining) ──────────────────────────────────────────
+// ─── 5. Hardware Assets (ASIC Mining) ────────────────────────────────────────
 transparencyAdminRouter.get(
   "/transparency/hardware-assets",
   readLimiter,
@@ -186,7 +162,7 @@ transparencyAdminRouter.delete(
   transparencyController.adminHardwareAssetDelete,
 );
 
-// ─── Hardware Profit Logs & BTC Price ───────────────────────────────────────
+// ─── 6. Hardware Profit Logs & BTC Price ─────────────────────────────────────
 transparencyAdminRouter.get(
   "/transparency/btc-usd-price",
   readLimiter,
@@ -222,4 +198,31 @@ transparencyAdminRouter.delete(
   writeLimiter,
   requireAdminPermission("transparency"),
   transparencyController.adminHardwareProfitLogDelete,
+);
+
+// ─── 7. Parameterized Single Entry Routes (/transparency/:id) ─────────────────
+// Registered LAST so named sub-paths (e.g. /tracked-wallets, /hardware-assets) are never intercepted.
+transparencyAdminRouter.get(
+  "/transparency/:id",
+  readLimiter,
+  requireAdminPermission("transparency.view"),
+  transparencyController.adminGet,
+);
+transparencyAdminRouter.put(
+  "/transparency/:id",
+  writeLimiter,
+  requireAdminPermission("transparency"),
+  transparencyController.adminUpdate,
+);
+transparencyAdminRouter.patch(
+  "/transparency/:id",
+  writeLimiter,
+  requireAdminPermission("transparency"),
+  transparencyController.adminUpdate,
+);
+transparencyAdminRouter.delete(
+  "/transparency/:id",
+  writeLimiter,
+  requireAdminPermission("transparency"),
+  transparencyController.adminDelete,
 );
