@@ -97,7 +97,8 @@ export async function requireAdminAuth(req: Request, res: Response, next: NextFu
       void touchAdminSession(sessionId);
     } else {
       // Legacy env-var session (no DB-backed AdminUser row).
-      req.admin = { role: "admin", permissions: ["*"] };
+      const permissions = Array.isArray(payload["permissions"]) ? payload["permissions"] : ["*"];
+      req.admin = { role: "admin", permissions };
     }
 
     next();
