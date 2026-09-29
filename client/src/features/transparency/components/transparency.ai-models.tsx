@@ -28,8 +28,8 @@ export const SUBSCRIPTION_MODELS: SubscriptionModelItem[] = [
     monthlyCostUsd: 20.0,
     description:
       'Clawd — O mascote laranja oficial do Claude Code pela Anthropic em 3D. Inteligência Artificial de ponta utilizada na engenharia de software, refatoração de código, testes de segurança automatizados e arquitetura do BlockMiner.',
-    model3dUrl: '/media/transparency/claude.glb',
-    imageUrl: '/media/transparency/claude.png',
+    model3dUrl: '/media/transparency/claude-mascot.glb',
+    imageUrl: '/media/transparency/claude-mascot.png',
     accentColor: '#D97757',
     glowColor: 'rgba(217, 119, 87, 0.25)',
     specs: [
