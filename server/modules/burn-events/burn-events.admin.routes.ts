@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { requireAdminAuth } from "../admin/admin.auth.middleware.js";
+import { requireAdminPermission } from "../admin/admin.permissions.js";
 import { createDistributedRateLimiter } from "../../core/http/middleware/distributedRateLimit.js";
 import { validateBody, validateParams, validateQuery } from "../../core/http/middleware/validate.js";
 import {
@@ -31,11 +32,26 @@ const writeLimiter = createDistributedRateLimiter({
   name: "burn_events_admin_write",
 });
 
-burnEventsAdminRouter.get("/", readLimiter, ctrl.listAll);
-burnEventsAdminRouter.post("/", writeLimiter, validateBody(adminCreateBurnEventSchema), ctrl.create);
+burnEventsAdminRouter.get("/", readLimiter, requireAdminPermission("burn_events.view"), ctrl.listAll);
+burnEventsAdminRouter.post(
+  "/",
+  writeLimiter,
+  requireAdminPermission("burn_events"),
+  validateBody(adminCreateBurnEventSchema),
+  ctrl.create,
+);
 burnEventsAdminRouter.put(
   "/:id",
   writeLimiter,
+  requireAdminPermission("burn_events"),
+  validateParams(eventIdParamSchema),
+  validateBody(adminUpdateBurnEventSchema),
+  ctrl.update,
+);
+burnEventsAdminRouter.patch(
+  "/:id",
+  writeLimiter,
+  requireAdminPermission("burn_events"),
   validateParams(eventIdParamSchema),
   validateBody(adminUpdateBurnEventSchema),
   ctrl.update,
@@ -43,12 +59,14 @@ burnEventsAdminRouter.put(
 burnEventsAdminRouter.delete(
   "/:id",
   writeLimiter,
+  requireAdminPermission("burn_events"),
   validateParams(eventIdParamSchema),
   ctrl.remove,
 );
 burnEventsAdminRouter.get(
   "/:id/claims",
   readLimiter,
+  requireAdminPermission("burn_events.view"),
   validateParams(eventIdParamSchema),
   validateQuery(adminClaimsQuerySchema),
   ctrl.claims,

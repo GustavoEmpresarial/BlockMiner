@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import { reportError } from "../../core/errors/error-reporter.js";
+import { logAdminAction } from "../admin/admin.audit-log.service.js";
 import { parseOptionalDate } from "./burn-events.helpers.js";
 import * as svc from "./burn-events.service.js";
 
@@ -44,6 +45,14 @@ export async function create(req: Request, res: Response): Promise<void> {
       endsAt: parseOptionalDate(b.endsAt),
       isActive: b.isActive !== false,
     });
+    await logAdminAction({
+      adminId: req.admin?.adminId ?? null,
+      action: "ADMIN_BURN_EVENT_CREATE",
+      module: "burn_events",
+      resource: "BurnEvent",
+      resourceId: String(event.id),
+      newValue: { title: event.title, requiredHashRate: event.requiredHashRate, rewardMinerId: event.rewardMinerId },
+    });
     res.json({ ok: true, event });
   } catch (err) {
     sendAdminFailure(req, res, err, "BURN_EVENTS_ADMIN_CREATE_FAILED");
@@ -72,6 +81,14 @@ export async function update(req: Request, res: Response): Promise<void> {
     if (b.endsAt !== undefined) patch.endsAt = parseOptionalDate(b.endsAt);
     if (b.isActive !== undefined) patch.isActive = Boolean(b.isActive);
     const event = await svc.adminUpdateEvent(id, patch);
+    await logAdminAction({
+      adminId: req.admin?.adminId ?? null,
+      action: "ADMIN_BURN_EVENT_UPDATE",
+      module: "burn_events",
+      resource: "BurnEvent",
+      resourceId: String(id),
+      newValue: patch,
+    });
     res.json({ ok: true, event });
   } catch (err) {
     sendAdminFailure(req, res, err, "BURN_EVENTS_ADMIN_UPDATE_FAILED");
@@ -86,6 +103,13 @@ export async function remove(req: Request, res: Response): Promise<void> {
   }
   try {
     await svc.adminSoftDeleteEvent(id);
+    await logAdminAction({
+      adminId: req.admin?.adminId ?? null,
+      action: "ADMIN_BURN_EVENT_DELETE",
+      module: "burn_events",
+      resource: "BurnEvent",
+      resourceId: String(id),
+    });
     res.json({ ok: true });
   } catch (err) {
     sendAdminFailure(req, res, err, "BURN_EVENTS_ADMIN_DELETE_FAILED");
