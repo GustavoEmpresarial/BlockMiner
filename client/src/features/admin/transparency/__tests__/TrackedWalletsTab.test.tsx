@@ -39,16 +39,28 @@ const MOCK_WALLETS = [
   },
 ];
 
+import type { AxiosResponse, InternalAxiosRequestConfig } from 'axios';
+
+function mockAxiosRes<T>(data: T): AxiosResponse<T> {
+  return {
+    data,
+    status: 200,
+    statusText: 'OK',
+    headers: {},
+    config: { headers: {} } as InternalAxiosRequestConfig,
+  };
+}
+
 describe('TrackedWalletsTab', () => {
   beforeEach(() => {
     vi.spyOn(api, 'get').mockImplementation(async (url: string) => {
       if (url === '/admin/transparency/tracked-wallets') {
-        return { data: { ok: true, wallets: MOCK_WALLETS } } as any;
+        return mockAxiosRes({ ok: true, wallets: MOCK_WALLETS });
       }
       if (url === '/admin/transparency/wallet/settings') {
-        return { data: { ok: true, address: '0x1ca03755c5132e238ae4e0f50d4929ea0d58b897' } } as any;
+        return mockAxiosRes({ ok: true, address: '0x1ca03755c5132e238ae4e0f50d4929ea0d58b897' });
       }
-      return { data: { ok: true } } as any;
+      return mockAxiosRes({ ok: true });
     });
   });
 

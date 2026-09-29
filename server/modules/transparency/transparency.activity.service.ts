@@ -1,8 +1,3 @@
-// @ts-nocheck
-// RECOVERED: this source file was missing from git history (never committed) while
-// production kept running off a stale compiled dist/ via Docker build cache.
-// Reconstructed verbatim from the last known-good compiled output on 2026-09-11.
-// TODO: remove @ts-nocheck once someone re-adds proper types for this file.
 /**
  * Live on-chain wallet activity for the admin transparency panel.
  *
@@ -29,17 +24,39 @@
  */
 import { ethers } from "ethers";
 import { getSharedPolygonProvider } from "../../shared/blockchain/polygonProvider.js";
-const ZERO_SUMMARY = {
-    totalInPol: null,
-    totalOutPol: null,
-    totalInUsd: null,
-    totalOutUsd: null,
-    movementCount: 0,
+
+export type WalletActivitySummary = {
+  totalInPol: number | null;
+  totalOutPol: number | null;
+  totalInUsd: number | null;
+  totalOutUsd: number | null;
+  movementCount: number;
 };
+
+export type WalletNativeActivity = {
+  address: string;
+  apiKeyConfigured: boolean;
+  balancePol: number | null;
+  blockNumber: number | null;
+  note: string;
+  summary: WalletActivitySummary;
+  movements: unknown[];
+  error: string | null;
+};
+
+const ZERO_SUMMARY: WalletActivitySummary = {
+  totalInPol: null,
+  totalOutPol: null,
+  totalInUsd: null,
+  totalOutUsd: null,
+  movementCount: 0,
+};
+
 /** True when a (non-empty) Polygonscan/Etherscan API key is configured in this environment. */
-export function polygonscanApiKeyConfigured() {
-    return Boolean(String(process.env.POLYGONSCAN_API_KEY || "").trim());
+export function polygonscanApiKeyConfigured(): boolean {
+  return Boolean(String(process.env.POLYGONSCAN_API_KEY || "").trim());
 }
+
 /**
  * Fetch live native-activity data for a single wallet address.
  *
@@ -47,35 +64,51 @@ export function polygonscanApiKeyConfigured() {
  * transaction history: without POLYGONSCAN_API_KEY, `movements` stays empty and `summary`
  * stays zeroed/null, with `note` explaining why.
  */
-export async function fetchWalletNativeActivity(address, opts = {}) {
-    const provider = opts.provider ?? getSharedPolygonProvider();
-    const apiKeyConfigured = polygonscanApiKeyConfigured();
-    const note = apiKeyConfigured
-        ? "POLYGONSCAN_API_KEY is configured but historical tx-list aggregation was not ported in this phase; only live balance is fetched via RPC."
-        : "POLYGONSCAN_API_KEY is not configured — historical tx-list/movement data is unavailable. Only the current balance and block number were fetched via read-only RPC.";
-    try {
-        const [balanceWei, blockNumber] = await Promise.all([provider.getBalance(address), provider.getBlockNumber()]);
-        return {
-            address,
-            apiKeyConfigured,
-            balancePol: Number(ethers.formatEther(balanceWei)),
-            blockNumber,
-            note,
-            summary: ZERO_SUMMARY,
-            movements: [],
-            error: null,
-        };
-    }
-    catch {
-        return {
-            address,
-            apiKeyConfigured,
-            balancePol: null,
-            blockNumber: null,
-            note: `${note} (RPC call failed.)`,
-            summary: ZERO_SUMMARY,
-            movements: [],
-            error: "provider_error",
-        };
-    }
+export async function fetchWalletNativeActivity(
+  address: string,
+  opts: { provider?: ethers.Provider | null } = {},
+): Promise<WalletNativeActivity> {
+  const provider = opts.provider ?? getSharedPolygonProvider();
+  const apiKeyConfigured = polygonscanApiKeyConfigured();
+  const note = apiKeyConfigured
+    ? "POLYGONSCAN_API_KEY is configured but historical tx-list aggregation was not ported in this phase; only live balance is fetched via RPC."
+    : "POLYGONSCAN_API_KEY is not configured — historical tx-list/movement data is unavailable. Only the current balance and block number were fetched via read-only RPC.";
+
+  if (!provider) {
+    return {
+      address,
+      apiKeyConfigured,
+      balancePol: null,
+      blockNumber: null,
+      note: `${note} (RPC provider unavailable.)`,
+      summary: ZERO_SUMMARY,
+      movements: [],
+      error: "provider_error",
+    };
+  }
+
+  try {
+    const [balanceWei, blockNumber] = await Promise.all([provider.getBalance(address), provider.getBlockNumber()]);
+    return {
+      address,
+      apiKeyConfigured,
+      balancePol: Number(ethers.formatEther(balanceWei)),
+      blockNumber,
+      note,
+      summary: ZERO_SUMMARY,
+      movements: [],
+      error: null,
+    };
+  } catch {
+    return {
+      address,
+      apiKeyConfigured,
+      balancePol: null,
+      blockNumber: null,
+      note: `${note} (RPC call failed.)`,
+      summary: ZERO_SUMMARY,
+      movements: [],
+      error: "provider_error",
+    };
+  }
 }

@@ -1,8 +1,3 @@
-// @ts-nocheck
-// RECOVERED: this source file was missing from git history (never committed) while
-// production kept running off a stale compiled dist/ via Docker build cache.
-// Reconstructed verbatim from the last known-good compiled output on 2026-09-11.
-// TODO: remove @ts-nocheck once someone re-adds proper types for this file.
 /**
  * Chain registry for the multi-chain wallet snapshot — ported from
  * legacy/server/services/chains/index.ts. One file per network; a failure reading/calling one
@@ -19,8 +14,10 @@
 import ethereum from "./ethereum.js";
 import polygon from "./polygon.js";
 import bsc from "./bsc.js";
+import type { ChainConfig } from "./_types.js";
+
 export type { ChainConfig, KnownToken } from "./_types.js";
-export const CHAINS = [
+export const CHAINS: ChainConfig[] = [
     ethereum,
     polygon,
     bsc,
