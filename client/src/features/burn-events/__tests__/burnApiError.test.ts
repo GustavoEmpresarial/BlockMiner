@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AxiosError } from 'axios';
+import { AxiosError, AxiosHeaders } from 'axios';
 import { resolveBurnApiError } from '../lib/burnApiError';
 
 function t(key: string) {
@@ -15,7 +15,7 @@ describe('resolveBurnApiError', () => {
       status: 409,
       statusText: 'Conflict',
       headers: {},
-      config: { headers: {} },
+      config: { headers: new AxiosHeaders() },
     };
     expect(resolveBurnApiError(err, t, 'fallback')).toBe('Limite de queimas atingido.');
   });
@@ -27,7 +27,7 @@ describe('resolveBurnApiError', () => {
       status: 400,
       statusText: 'Bad Request',
       headers: {},
-      config: { headers: {} },
+      config: { headers: new AxiosHeaders() },
     };
     expect(resolveBurnApiError(err, t, 'fallback')).toBe('Server says no.');
   });
