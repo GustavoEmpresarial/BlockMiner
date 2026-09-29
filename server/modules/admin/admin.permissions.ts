@@ -38,8 +38,9 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<AdminRole, string[]> = {
     "tasks",
     "internal_offerwall",
     "mini_pass",
+    "miners",
   ],
-  moderator: ["dashboard", "users.view", "users.ban", "support", "logs.view", "creators.view", "banners.view", "tournaments.view", "faucet.view", "read_earn.view", "ptc.view", "tasks.view", "offerwall.view", "internal_offerwall.view", "events.view", "checkin.view", "mini_pass.view"],
+  moderator: ["dashboard", "users.view", "users.ban", "support", "logs.view", "creators.view", "banners.view", "tournaments.view", "faucet.view", "read_earn.view", "ptc.view", "tasks.view", "offerwall.view", "internal_offerwall.view", "events.view", "checkin.view", "mini_pass.view", "miners.view"],
 
   finance: ["dashboard", "users.view", "payments", "withdrawals", "deposits"],
   support: ["dashboard", "users.view", "support"],
@@ -62,6 +63,7 @@ export const AVAILABLE_PERMISSIONS: PermissionDefinition[] = [
   { key: "withdrawals", label: "Aprovar & Processar Saques", category: "Financeiro" },
   { key: "deposits", label: "Verificar Depósitos On-Chain", category: "Financeiro" },
   { key: "miners", label: "Gerenciar Mineradoras & Economia", category: "Mineração" },
+  { key: "miners.view", label: "Visualizar Mineradoras (Leitura)", category: "Mineração" },
   { key: "mining", label: "Motor de Mineração & Salas", category: "Mineração" },
   { key: "inventory", label: "Inventário & Racks", category: "Mineração" },
   { key: "store", label: "Loja & Ofertas Internas", category: "Monetização" },

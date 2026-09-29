@@ -28,6 +28,16 @@ export default function AdminMinersPage() {
     }
   };
 
+  const toggleStore = async (id: number | string) => {
+    try {
+      await adminMinersApi.toggleStore(id);
+      toast.success('Visibilidade na loja atualizada');
+      void reload();
+    } catch (err) {
+      toast.error(readAxiosResponseMessage(err) ?? 'Erro ao atualizar');
+    }
+  };
+
   return (
     <div className="space-y-8">
       <header className="flex flex-wrap items-end justify-between gap-3">
@@ -80,13 +90,14 @@ export default function AdminMinersPage() {
               <th className="px-4 py-3">H/s</th>
               <th className="px-4 py-3">Preço</th>
               <th className="px-4 py-3">Ativa</th>
-              <th className="px-4 py-3" />
+              <th className="px-4 py-3">Loja</th>
+              <th className="px-4 py-3 text-right">Ações</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={6} className="py-12 text-center text-slate-500">
+                <td colSpan={7} className="py-12 text-center text-slate-500">
                   <Loader2 className="mx-auto h-6 w-6 animate-spin" />
                 </td>
               </tr>
@@ -97,14 +108,27 @@ export default function AdminMinersPage() {
                   <td className="px-4 py-3 font-bold text-white">{m.name}</td>
                   <td className="px-4 py-3 font-mono text-slate-300">{m.baseHashRate ?? m.hashRate ?? '—'}</td>
                   <td className="px-4 py-3 font-mono text-emerald-400">{m.price ?? '—'}</td>
-                  <td className="px-4 py-3">{m.isActive ? 'Sim' : 'Não'}</td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold ${m.isActive ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}`}>
+                      {m.isActive ? 'Sim' : 'Não'}
+                    </span>
+                  </td>
                   <td className="px-4 py-3">
                     <button
                       type="button"
-                      onClick={() => void toggleActive(m.id)}
-                      className="text-xs font-bold text-amber-400 hover:text-amber-300"
+                      onClick={() => void toggleStore(m.id)}
+                      className={`text-xs font-bold ${m.showInShop ? 'text-emerald-400 hover:text-emerald-300' : 'text-slate-500 hover:text-slate-400'}`}
                     >
-                      Alternar
+                      {m.showInShop ? 'Visível' : 'Oculto'}
+                    </button>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <button
+                      type="button"
+                      onClick={() => void toggleActive(m.id)}
+                      className="inline-flex items-center px-2.5 py-1 rounded-lg border border-slate-700 text-xs font-bold text-amber-400 hover:bg-slate-800"
+                    >
+                      Alternar Ativa
                     </button>
                   </td>
                 </tr>
