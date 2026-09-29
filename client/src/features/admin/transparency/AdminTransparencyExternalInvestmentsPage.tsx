@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   TrendingUp,
   Plus,
@@ -14,11 +15,15 @@ import {
   ArrowDownLeft,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { api } from '../../../shared/auth/auth.store';
+import { adminTransparencyApi } from './adminTransparency.api';
 import { readAxiosResponseMessage } from '../lib/admin.api';
-import type { ExternalInvestmentRow } from './components/adminTransparency.types';
+import type {
+  ExternalInvestmentRow,
+  CreateExternalInvestmentInput,
+} from './components/adminTransparency.types';
 
 export default function AdminTransparencyExternalInvestmentsPage() {
+  const { t } = useTranslation();
   const [investments, setInvestments] = useState<ExternalInvestmentRow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -44,9 +49,7 @@ export default function AdminTransparencyExternalInvestmentsPage() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get<{ ok?: boolean; investments?: ExternalInvestmentRow[] }>(
-        '/admin/transparency/external-investments',
-      );
+      const res = await adminTransparencyApi.listExternalInvestments();
       if (res.data.ok) {
         setInvestments(res.data.investments || []);
       }
@@ -104,15 +107,9 @@ export default function AdminTransparencyExternalInvestmentsPage() {
     }
     setUploadingImage(true);
     try {
-      const fd = new FormData();
-      fd.append('image', file);
-      const res = await api.post<{ ok: boolean; url: string }>('/admin/upload-image', fd);
-      if (res.data.ok && res.data.url) {
-        setFormImageUrl(res.data.url);
-        toast.success('Logo enviada com sucesso!');
-      } else {
-        toast.error('Falha no upload da imagem.');
-      }
+      const url = await adminTransparencyApi.uploadImage(file);
+      setFormImageUrl(url);
+      toast.success('Logo enviada com sucesso!');
     } catch (err) {
       toast.error(readAxiosResponseMessage(err) ?? 'Erro no upload.');
     } finally {
@@ -134,7 +131,7 @@ export default function AdminTransparencyExternalInvestmentsPage() {
 
     setSaving(true);
     try {
-      const payload = {
+      const payload: CreateExternalInvestmentInput = {
         name,
         description: formDescription.trim() || null,
         linkUrl: formLinkUrl.trim() || null,
@@ -147,10 +144,10 @@ export default function AdminTransparencyExternalInvestmentsPage() {
       };
 
       if (editingItem) {
-        await api.put(`/admin/transparency/external-investments/${editingItem.id}`, payload);
+        await adminTransparencyApi.updateExternalInvestment(editingItem.id, payload);
         toast.success('Investimento atualizado!');
       } else {
-        await api.post('/admin/transparency/external-investments', payload);
+        await adminTransparencyApi.createExternalInvestment(payload);
         toast.success('Novo investimento cadastrado com sucesso!');
       }
       setModalOpen(false);
@@ -164,7 +161,7 @@ export default function AdminTransparencyExternalInvestmentsPage() {
 
   async function handleToggleActive(item: ExternalInvestmentRow) {
     try {
-      await api.put(`/admin/transparency/external-investments/${item.id}`, { isActive: !item.isActive });
+      await adminTransparencyApi.toggleExternalInvestment(item.id, !item.isActive);
       toast.success(item.isActive ? 'Investimento desativado' : 'Investimento ativado');
       void loadData();
     } catch (err) {
@@ -174,7 +171,7 @@ export default function AdminTransparencyExternalInvestmentsPage() {
 
   async function handleDelete(id: number) {
     try {
-      await api.delete(`/admin/transparency/external-investments/${id}`);
+      await adminTransparencyApi.deleteExternalInvestment(id);
       toast.success('Investimento excluído!');
       setConfirmDeleteId(null);
       void loadData();

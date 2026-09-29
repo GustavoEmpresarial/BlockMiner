@@ -28,7 +28,7 @@ export function parsePositiveIntParam(raw: unknown): number | null {
   const s = String(raw || "").trim();
   if (!/^\d+$/.test(s)) return null;
   const n = parseInt(s, 10);
-  return Number.isSafeInteger(n) && n > 0 ? n : null;
+  return Number.isSafeInteger(n) && n > 0 && n <= 2_147_483_647 ? n : null;
 }
 
 // ─── Transparency Entries (Despesas & Receitas) ──────────────────────────────
@@ -64,19 +64,59 @@ export const transparencyEntryUpdateSchema = transparencyEntryCreateSchema.parti
 
 // ─── External Investments ("Outros Investimentos") ───────────────────────────
 
-export const externalInvestmentCreateSchema = z.object({
-  name: z.string().trim().min(2, "Nome deve ter no mínimo 2 caracteres").max(100),
-  description: z.string().trim().max(2000).nullable().optional(),
-  imageUrl: z.string().trim().refine(isSafeHttpUrl, "URL da logo/imagem inválida").nullable().optional(),
-  linkUrl: z.string().trim().refine(isSafeHttpUrl, "Link do investimento deve ser uma URL segura (https://)").nullable().optional(),
-  amountInvestedUsd: z.coerce.number().min(0, "Valor investido não pode ser negativo").default(0),
-  amountWithdrawnUsd: z.coerce.number().min(0, "Valor resgatado não pode ser negativo").default(0),
-  roiForecast: z.string().trim().max(100).nullable().optional(),
-  isActive: z.boolean().default(true),
-  sortOrder: z.coerce.number().int().default(0),
-});
+export const externalInvestmentCreateSchema = z
+  .object({
+    name: z.string().trim().min(2, "Nome deve ter no mínimo 2 caracteres").max(100),
+    description: z.string().trim().max(2000).nullable().optional(),
+    imageUrl: z.string().trim().refine(isSafeHttpUrl, "URL da logo/imagem inválida").nullable().optional(),
+    linkUrl: z
+      .string()
+      .trim()
+      .refine(isSafeHttpUrl, "Link do investimento deve ser uma URL segura (https://)")
+      .nullable()
+      .optional(),
+    amountInvestedUsd: z.coerce
+      .number()
+      .min(0, "Valor investido não pode ser negativo")
+      .max(100_000_000_000, "Valor investido excede o limite")
+      .default(0),
+    amountWithdrawnUsd: z.coerce
+      .number()
+      .min(0, "Valor resgatado não pode ser negativo")
+      .max(100_000_000_000, "Valor resgatado excede o limite")
+      .default(0),
+    roiForecast: z.string().trim().max(100).nullable().optional(),
+    isActive: z.boolean().default(true),
+    sortOrder: z.coerce.number().int().min(0).max(100_000).default(0),
+  })
+  .strict();
 
-export const externalInvestmentUpdateSchema = externalInvestmentCreateSchema.partial();
+export const externalInvestmentUpdateSchema = z
+  .object({
+    name: z.string().trim().min(2, "Nome deve ter no mínimo 2 caracteres").max(100).optional(),
+    description: z.string().trim().max(2000).nullable().optional(),
+    imageUrl: z.string().trim().refine(isSafeHttpUrl, "URL da logo/imagem inválida").nullable().optional(),
+    linkUrl: z
+      .string()
+      .trim()
+      .refine(isSafeHttpUrl, "Link do investimento deve ser uma URL segura (https://)")
+      .nullable()
+      .optional(),
+    amountInvestedUsd: z.coerce
+      .number()
+      .min(0, "Valor investido não pode ser negativo")
+      .max(100_000_000_000, "Valor investido excede o limite")
+      .optional(),
+    amountWithdrawnUsd: z.coerce
+      .number()
+      .min(0, "Valor resgatado não pode ser negativo")
+      .max(100_000_000_000, "Valor resgatado excede o limite")
+      .optional(),
+    roiForecast: z.string().trim().max(100).nullable().optional(),
+    isActive: z.boolean().optional(),
+    sortOrder: z.coerce.number().int().min(0).max(100_000).optional(),
+  })
+  .strict();
 
 // ─── Tracked Wallets (Carteiras da Tesouraria) ────────────────────────────────
 

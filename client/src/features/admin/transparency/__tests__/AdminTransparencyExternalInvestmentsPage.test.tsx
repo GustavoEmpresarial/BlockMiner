@@ -11,8 +11,15 @@ vi.mock('../../../../shared/auth/auth.store', () => ({
     get: vi.fn(),
     post: vi.fn(),
     put: vi.fn(),
+    patch: vi.fn(),
     delete: vi.fn(),
   },
+}));
+
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (k: string, opts?: { defaultValue?: string }) => opts?.defaultValue ?? k,
+  }),
 }));
 
 vi.mock('sonner', () => ({
