@@ -236,6 +236,7 @@
   }
 
   function evaluateKick(reason) {
+    if (!USERSCRIPT_MANAGER_KICK_ENABLED) return false;
     checkHookBypass();
     var markers = probeManagerMarkers();
     var probe = {
