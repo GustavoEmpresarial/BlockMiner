@@ -13,10 +13,13 @@ import {
   Monitor,
   Fingerprint,
   Trash2,
+  X,
+  Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../../shared/auth/auth.store';
 import { readAxiosResponseMessage } from '../lib/admin.api';
+import { adminAntibotApi } from './adminAntibot.api';
 import {
   AlertsTab,
   DevicesTab,
@@ -34,7 +37,7 @@ import type {
   PagedResource,
   SessionRow,
   Tab,
-} from './adminAntibot.parts';
+} from './adminAntibot.types';
 
 export default function AdminAntibot() {
   const { t } = useTranslation();
@@ -43,11 +46,12 @@ export default function AdminAntibot() {
   const [overview, setOverview] = useState<OverviewData | null>(null);
   const [loadingOverview, setLoadingOverview] = useState(false);
   const [clearing, setClearing] = useState(false);
+  const [resetModalOpen, setResetModalOpen] = useState(false);
 
   const loadOverview = useCallback(async () => {
     setLoadingOverview(true);
     try {
-      const res = await api.get<OverviewData>('/admin/antibot/overview?limit=20');
+      const res = await adminAntibotApi.getOverview(20);
       setOverview(res.data);
     } catch (err) {
       toast.error(readAxiosResponseMessage(err) ?? t('admin_antibot.error_load'));
@@ -57,12 +61,12 @@ export default function AdminAntibot() {
   }, [t]);
 
   const handleClearAll = useCallback(async () => {
-    if (!window.confirm('Limpar TODA a base do antibot (evidências, alertas, sessões, dispositivos) e zerar todos os perfis? Ação irreversível.')) return;
     setClearing(true);
     try {
-      const res = await api.post<{ ok: boolean; evidenceDeleted?: number }>('/admin/antibot/reset');
+      const res = await adminAntibotApi.resetAll();
       if (res.data.ok) {
         toast.success(`Antibot limpo (${res.data.evidenceDeleted ?? 0} evidências removidas).`);
+        setResetModalOpen(false);
         void loadOverview();
       }
     } catch (err) {
@@ -108,83 +112,83 @@ export default function AdminAntibot() {
               disabled={loadingOverview}
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-700 bg-slate-800/80 text-slate-200 text-sm font-bold hover:bg-slate-800 disabled:opacity-50 transition-colors"
             >
-              <RefreshCw className={`w-4 h-4 ${loadingOverview ? 'animate-spin' : ''}`} aria-hidden />
+              <RefreshCw className={`w-4 h-4 ${loadingOverview ? 'animate-spin' : ''}`} />
               Atualizar
             </button>
             <button
               type="button"
-              onClick={() => void handleClearAll()}
-              disabled={clearing}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-red-800/60 bg-red-900/30 text-red-300 text-sm font-bold hover:bg-red-900/50 disabled:opacity-50 transition-colors"
+              onClick={() => setResetModalOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-red-500/30 bg-red-500/10 text-red-400 text-sm font-bold hover:bg-red-500/20 transition-colors"
             >
-              <Trash2 className={`w-4 h-4 ${clearing ? 'animate-pulse' : ''}`} aria-hidden />
-              {clearing ? 'Limpando…' : 'Limpar tudo'}
+              <Trash2 className="w-4 h-4" />
+              Limpar Base
             </button>
           </div>
         </div>
-      </div>
 
-      {/* Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          icon={<Users className="w-5 h-5 text-blue-400" />}
-          label="Perfis"
-          value={overview?.totals.profiles ?? '—'}
-          sub="usuários rastreados"
-          color="blue"
-          loading={loadingOverview && !overview}
-        />
-        <StatCard
-          icon={<Skull className="w-5 h-5 text-red-400" />}
-          label="Risco Máx"
-          value={overview?.totals.maxRisk ?? '—'}
-          sub={overview ? `banda: ${BAND_STYLE[bandForScore(overview.totals.maxRisk)].label}` : ''}
-          color="red"
-          loading={loadingOverview && !overview}
-        />
-        <StatCard
-          icon={<Activity className="w-5 h-5 text-amber-400" />}
-          label="Risco Médio"
-          value={overview?.totals.avgRisk ?? '—'}
-          sub="média da base"
-          color="amber"
-          loading={loadingOverview && !overview}
-        />
-        <StatCard
-          icon={<AlertTriangle className="w-5 h-5 text-orange-400" />}
-          label="Alertas Abertos"
-          value={overview?.openAlerts ?? '—'}
-          sub="aguardando revisão"
-          color={overview && overview.openAlerts > 0 ? 'orange' : 'slate'}
-          loading={loadingOverview && !overview}
-        />
+        {/* Global Summary Stats */}
+        {overview?.totals && (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6 pt-6 border-t border-slate-800/80">
+            <StatCard
+              icon={<Users className="w-4 h-4 text-blue-400" />}
+              label="Perfis Rastreados"
+              value={overview.totals.profiles}
+              color="blue"
+            />
+            <StatCard
+              icon={<AlertTriangle className="w-4 h-4 text-amber-400" />}
+              label="Alertas Abertos"
+              value={overview.openAlerts}
+              color={overview.openAlerts > 0 ? 'amber' : 'slate'}
+            />
+            <StatCard
+              icon={<Skull className="w-4 h-4 text-red-400" />}
+              label="Risco Máximo"
+              value={overview.totals.maxRisk}
+              sub={`Faixa: ${BAND_STYLE[bandForScore(overview.totals.maxRisk)].label}`}
+              color="red"
+            />
+            <StatCard
+              icon={<Activity className="w-4 h-4 text-purple-400" />}
+              label="Risco Médio"
+              value={`${overview.totals.avgRisk}/100`}
+              color="orange"
+            />
+          </div>
+        )}
       </div>
 
       {/* Tabs */}
-      <div className="flex flex-wrap gap-1 border-b border-slate-800">
-        {tabs.map(({ id, label, icon, badge }) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setTab(id)}
-            className={`relative inline-flex items-center gap-1.5 px-4 py-2.5 text-[11px] font-black uppercase tracking-widest rounded-t-xl transition-colors ${
-              tab === id
-                ? 'border-b-2 border-amber-500 bg-amber-500/10 text-amber-400'
-                : 'text-slate-500 hover:text-white hover:bg-slate-800/40'
-            }`}
-          >
-            {icon}
-            {label}
-            {badge != null && badge > 0 ? (
-              <span className="ml-1 inline-flex items-center justify-center w-4 h-4 rounded-full bg-red-500 text-white text-[9px] font-black">
-                {badge > 99 ? '99+' : badge}
-              </span>
-            ) : null}
-          </button>
-        ))}
+      <div className="border-b border-slate-800">
+        <nav className="flex gap-2 -mb-px overflow-x-auto">
+          {tabs.map((t) => {
+            const active = tab === t.id;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setTab(t.id)}
+                className={`inline-flex items-center gap-2 px-4 py-3 text-sm font-bold border-b-2 whitespace-nowrap transition-colors ${
+                  active
+                    ? 'border-red-500 text-white'
+                    : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-700'
+                }`}
+              >
+                {t.icon}
+                {t.label}
+                {typeof t.badge === 'number' && t.badge > 0 ? (
+                  <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                    {t.badge}
+                  </span>
+                ) : null}
+              </button>
+            );
+          })}
+        </nav>
       </div>
 
-      <div className="space-y-4">
+      {/* Tab Panels */}
+      <div>
         {tab === 'overview' ? (
           <OverviewTab
             overview={overview}
@@ -197,6 +201,58 @@ export default function AdminAntibot() {
         {tab === 'devices' ? <DevicesTabContainer /> : null}
         {tab === 'alerts' ? <AlertsTabContainer onResolved={loadOverview} /> : null}
       </div>
+
+      {/* Confirmation Modal for Resetting All AntiBot Data */}
+      {resetModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="w-full max-w-md rounded-2xl border border-red-500/30 bg-slate-900 p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400">
+                  <AlertTriangle className="w-6 h-6" />
+                </div>
+                <h3 className="text-lg font-black text-white">Zerar Base do AntiBot?</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setResetModalOpen(false)}
+                className="text-slate-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Esta ação é <strong className="text-red-400 font-bold">irreversível</strong>. Todos os registros de evidências,
+              alertas, sessões e fingerprints de dispositivos serão permanentemente excluídos e os perfis de risco serão zerados.
+            </p>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setResetModalOpen(false)}
+                disabled={clearing}
+                className="px-4 py-2 rounded-xl border border-slate-700 bg-slate-800 text-xs font-bold text-slate-300 hover:text-white"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleClearAll()}
+                disabled={clearing}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-red-500 bg-red-600 hover:bg-red-500 text-xs font-black text-white shadow-lg shadow-red-600/20 disabled:opacity-50"
+              >
+                {clearing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                Confirmar Limpeza
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -254,7 +310,7 @@ function AlertsTabContainer({ onResolved }: { onResolved: () => void }) {
   const updateStatus = async (id: number, status: string) => {
     setUpdating(id);
     try {
-      await api.patch(`/admin/antibot/alerts/${id}`, { status });
+      await adminAntibotApi.updateAlertStatus(id, status as 'open' | 'acknowledged' | 'resolved');
       await resource.reload();
       onResolved();
       toast.success(status === 'resolved' ? 'Alerta resolvido' : 'Status atualizado');

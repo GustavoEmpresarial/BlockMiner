@@ -13,6 +13,18 @@ import { applyAnonymousSessionEviction } from "../auth/login/login.anonymous-evi
 import { logAdminAction } from "../admin/index.js";
 import { bandForScore } from "./antibot.riskEngine.js";
 import {
+  antibotIdParamSchema,
+  antibotUserIdParamSchema,
+  adminAntibotOverviewQuerySchema,
+  adminAntibotListEvidenceQuerySchema,
+  adminAntibotListSessionsQuerySchema,
+  adminAntibotListDevicesQuerySchema,
+  adminAntibotListAlertsQuerySchema,
+  adminUpdateAlertSchema,
+  adminSetTrustedSchema,
+  adminUserProfileQuerySchema,
+} from "./antibot.schemas.js";
+import {
   collectTelemetry as collectTelemetryService,
   getAntibotAdminOverview,
   getAntibotUserProfile,
@@ -39,15 +51,15 @@ function sessionUserId(req: Request): number | null {
   return typeof id === "number" && Number.isFinite(id) ? id : null;
 }
 
+function adminActorId(req: Request): number | null {
+  const adm = (req as Request & { admin?: { adminId?: number } }).admin;
+  const id = adm?.adminId;
+  return typeof id === "number" && Number.isFinite(id) ? id : null;
+}
+
 function readUserAgent(req: Request): string {
   const raw = req.headers["user-agent"];
   return Array.isArray(raw) ? String(raw[0] ?? "") : String(raw ?? "");
-}
-
-function adminQueryInt(v: unknown, fallback: number, min: number, max: number): number {
-  const n = Number(String(v ?? "").trim());
-  if (!Number.isFinite(n)) return fallback;
-  return Math.max(min, Math.min(max, Math.round(n)));
 }
 
 /** POST /telemetry — auth optional. Always 200 { ok: true }. May include kick. */
@@ -108,8 +120,12 @@ export async function collectTelemetry(req: Request, res: Response): Promise<voi
 
 export async function adminOverview(req: Request, res: Response): Promise<void> {
   try {
-    const limit = adminQueryInt(req.query.limit, 20, 1, 100);
-    const data = await getAntibotAdminOverview(prisma, limit);
+    const parsed = adminAntibotOverviewQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+      res.status(400).json({ ok: false, code: "validation_error", errors: parsed.error.issues });
+      return;
+    }
+    const data = await getAntibotAdminOverview(prisma, parsed.data.limit);
     res.json({
       ok: true,
       topRisk: data.topRisk,
@@ -129,12 +145,12 @@ export async function adminOverview(req: Request, res: Response): Promise<void> 
 
 export async function adminListEvidence(req: Request, res: Response): Promise<void> {
   try {
-    const page = adminQueryInt(req.query.page, 1, 1, 100000);
-    const limit = adminQueryInt(req.query.limit, 50, 1, 200);
-    const userId = req.query.userId ? adminQueryInt(req.query.userId, 0, 0, 1e12) : undefined;
-    const detector = typeof req.query.detector === "string" ? req.query.detector : undefined;
-    const code = typeof req.query.code === "string" ? req.query.code : undefined;
-    const severity = typeof req.query.severity === "string" ? req.query.severity : undefined;
+    const parsed = adminAntibotListEvidenceQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+      res.status(400).json({ ok: false, code: "validation_error", errors: parsed.error.issues });
+      return;
+    }
+    const { page, limit, userId, detector, code, severity } = parsed.data;
     const { items, total } = await listAntibotEvidence(prisma, { userId, detector, code, severity }, page, limit);
     res.json({ ok: true, items, total, page, limit });
   } catch (err) {
@@ -145,11 +161,12 @@ export async function adminListEvidence(req: Request, res: Response): Promise<vo
 
 export async function adminListSessions(req: Request, res: Response): Promise<void> {
   try {
-    const page = adminQueryInt(req.query.page, 1, 1, 100000);
-    const limit = adminQueryInt(req.query.limit, 50, 1, 200);
-    const userId = req.query.userId ? adminQueryInt(req.query.userId, 0, 0, 1e12) : undefined;
-    const deviceId = typeof req.query.deviceId === "string" ? req.query.deviceId : undefined;
-    const ip = typeof req.query.ip === "string" ? req.query.ip : undefined;
+    const parsed = adminAntibotListSessionsQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+      res.status(400).json({ ok: false, code: "validation_error", errors: parsed.error.issues });
+      return;
+    }
+    const { page, limit, userId, deviceId, ip } = parsed.data;
     const { items, total } = await listAntibotSessions(prisma, { userId, deviceId, ip }, page, limit);
     res.json({ ok: true, items, total, page, limit });
   } catch (err) {
@@ -160,9 +177,12 @@ export async function adminListSessions(req: Request, res: Response): Promise<vo
 
 export async function adminListDevices(req: Request, res: Response): Promise<void> {
   try {
-    const page = adminQueryInt(req.query.page, 1, 1, 100000);
-    const limit = adminQueryInt(req.query.limit, 50, 1, 200);
-    const minAccounts = adminQueryInt(req.query.minAccounts, 0, 0, 100000);
+    const parsed = adminAntibotListDevicesQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+      res.status(400).json({ ok: false, code: "validation_error", errors: parsed.error.issues });
+      return;
+    }
+    const { page, limit, minAccounts } = parsed.data;
     const { items, total } = await listAntibotDevices(prisma, minAccounts, page, limit);
     res.json({ ok: true, items, total, page, limit });
   } catch (err) {
@@ -173,10 +193,12 @@ export async function adminListDevices(req: Request, res: Response): Promise<voi
 
 export async function adminListAlerts(req: Request, res: Response): Promise<void> {
   try {
-    const page = adminQueryInt(req.query.page, 1, 1, 100000);
-    const limit = adminQueryInt(req.query.limit, 50, 1, 200);
-    const status = typeof req.query.status === "string" ? req.query.status : undefined;
-    const severity = typeof req.query.severity === "string" ? req.query.severity : undefined;
+    const parsed = adminAntibotListAlertsQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+      res.status(400).json({ ok: false, code: "validation_error", errors: parsed.error.issues });
+      return;
+    }
+    const { page, limit, status, severity } = parsed.data;
     const { items, total } = await listAntibotAlerts(prisma, { status, severity }, page, limit);
     res.json({ ok: true, items, total, page, limit });
   } catch (err) {
@@ -187,13 +209,39 @@ export async function adminListAlerts(req: Request, res: Response): Promise<void
 
 export async function adminUpdateAlert(req: Request, res: Response): Promise<void> {
   try {
-    const id = adminQueryInt(req.params.id, 0, 1, 1e12);
-    const status = String(req.body?.status ?? "").trim();
-    if (!["open", "acknowledged", "resolved"].includes(status)) {
-      res.status(400).json({ ok: false, message: "Invalid status" });
+    const paramParsed = antibotIdParamSchema.safeParse(req.params);
+    if (!paramParsed.success) {
+      res.status(400).json({ ok: false, code: "invalid_id", errors: paramParsed.error.issues });
       return;
     }
+    const { id } = paramParsed.data;
+
+    const bodyParsed = adminUpdateAlertSchema.safeParse(req.body);
+    if (!bodyParsed.success) {
+      res.status(400).json({ ok: false, code: "validation_error", errors: bodyParsed.error.issues });
+      return;
+    }
+    const { status } = bodyParsed.data;
+
     const updated = await updateAntibotAlert(prisma, id, status);
+    if (!updated) {
+      res.status(404).json({ ok: false, code: "not_found", message: "Alert not found" });
+      return;
+    }
+
+    void logAdminAction({
+      adminId: adminActorId(req),
+      adminEmail: req.admin?.email ?? null,
+      sessionId: req.admin?.sessionId ?? null,
+      action: "ANTIBOT_UPDATE_ALERT",
+      module: "antibot",
+      resource: "antibot_alert",
+      resourceId: String(id),
+      newValue: { status },
+      ipAddress: getClientIp(req),
+      userAgent: readUserAgent(req),
+    });
+
     res.json({ ok: true, alert: updated });
   } catch (err) {
     log.error("update_alert_failed", { err: err instanceof Error ? err.message : String(err) });
@@ -203,16 +251,26 @@ export async function adminUpdateAlert(req: Request, res: Response): Promise<voi
 
 export async function adminSetTrusted(req: Request, res: Response): Promise<void> {
   try {
-    const userId = adminQueryInt(req.params.id, 0, 1, 1e12);
-    if (!userId) {
-      res.status(400).json({ ok: false, message: "Invalid user id" });
+    const paramParsed = antibotUserIdParamSchema.safeParse(req.params);
+    if (!paramParsed.success) {
+      res.status(400).json({ ok: false, code: "invalid_id", errors: paramParsed.error.issues });
       return;
     }
-    const trusted = req.body?.trusted !== false;
-    const reason = String(req.body?.reason ?? "").slice(0, 300) || null;
-    await setAntibotUserTrusted(prisma, userId, trusted, reason);
+    const { id: userId } = paramParsed.data;
+
+    const bodyParsed = adminSetTrustedSchema.safeParse(req.body);
+    if (!bodyParsed.success) {
+      res.status(400).json({ ok: false, code: "validation_error", errors: bodyParsed.error.issues });
+      return;
+    }
+    const { trusted, reason } = bodyParsed.data;
+
+    await setAntibotUserTrusted(prisma, userId, trusted, reason ?? null);
+
     void logAdminAction({
-      adminId: sessionUserId(req),
+      adminId: adminActorId(req),
+      adminEmail: req.admin?.email ?? null,
+      sessionId: req.admin?.sessionId ?? null,
       action: trusted ? "ANTIBOT_TRUST_USER" : "ANTIBOT_UNTRUST_USER",
       module: "antibot",
       resource: "antibot_profile",
@@ -221,6 +279,7 @@ export async function adminSetTrusted(req: Request, res: Response): Promise<void
       ipAddress: getClientIp(req),
       userAgent: readUserAgent(req),
     });
+
     res.json({ ok: true, userId, trusted });
   } catch (err) {
     log.error("set_trusted_failed", { err: err instanceof Error ? err.message : String(err) });
@@ -230,12 +289,28 @@ export async function adminSetTrusted(req: Request, res: Response): Promise<void
 
 export async function adminRecompute(req: Request, res: Response): Promise<void> {
   try {
-    const userId = adminQueryInt(req.params.id, 0, 1, 1e12);
-    if (!userId) {
-      res.status(400).json({ ok: false, message: "Invalid user id" });
+    const paramParsed = antibotUserIdParamSchema.safeParse(req.params);
+    if (!paramParsed.success) {
+      res.status(400).json({ ok: false, code: "invalid_id", errors: paramParsed.error.issues });
       return;
     }
+    const { id: userId } = paramParsed.data;
+
     const result = await recomputeAntibotUserScore(prisma, userId);
+
+    void logAdminAction({
+      adminId: adminActorId(req),
+      adminEmail: req.admin?.email ?? null,
+      sessionId: req.admin?.sessionId ?? null,
+      action: "ANTIBOT_RECOMPUTE_SCORE",
+      module: "antibot",
+      resource: "antibot_profile",
+      resourceId: String(userId),
+      newValue: result,
+      ipAddress: getClientIp(req),
+      userAgent: readUserAgent(req),
+    });
+
     res.json({ ok: true, userId, ...result });
   } catch (err) {
     log.error("recompute_failed", { err: err instanceof Error ? err.message : String(err) });
@@ -245,11 +320,23 @@ export async function adminRecompute(req: Request, res: Response): Promise<void>
 
 export async function adminUserProfile(req: Request, res: Response): Promise<void> {
   try {
-    const userId = adminQueryInt(req.params.id, 0, 1, 1e12);
-    const evidenceLimit = adminQueryInt(req.query.evidenceLimit, 100, 1, 500);
+    const paramParsed = antibotUserIdParamSchema.safeParse(req.params);
+    if (!paramParsed.success) {
+      res.status(400).json({ ok: false, code: "invalid_id", errors: paramParsed.error.issues });
+      return;
+    }
+    const { id: userId } = paramParsed.data;
+
+    const queryParsed = adminUserProfileQuerySchema.safeParse(req.query);
+    if (!queryParsed.success) {
+      res.status(400).json({ ok: false, code: "validation_error", errors: queryParsed.error.issues });
+      return;
+    }
+    const { evidenceLimit } = queryParsed.data;
+
     const data = await getAntibotUserProfile(prisma, userId, evidenceLimit);
     if (!data) {
-      res.status(404).json({ ok: false, message: "User not found" });
+      res.status(404).json({ ok: false, code: "not_found", message: "User not found" });
       return;
     }
     res.json({ ok: true, ...data });
@@ -263,10 +350,13 @@ export async function adminClearAntibot(req: Request, res: Response): Promise<vo
   try {
     const evidenceDeleted = await resetAntibot(prisma);
     void logAdminAction({
-      adminId: sessionUserId(req),
+      adminId: adminActorId(req),
+      adminEmail: req.admin?.email ?? null,
+      sessionId: req.admin?.sessionId ?? null,
       action: "ANTIBOT_CLEAR_ALL",
       module: "antibot",
       resource: "antibot_all",
+      resourceId: "all",
       newValue: { evidenceDeleted },
       ipAddress: getClientIp(req),
       userAgent: readUserAgent(req),
@@ -279,3 +369,4 @@ export async function adminClearAntibot(req: Request, res: Response): Promise<vo
 }
 
 export { sanitizeTelemetry, bandForScore };
+
