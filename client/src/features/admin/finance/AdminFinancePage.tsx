@@ -19,34 +19,10 @@ import {
   Zap,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import {
-  approveWithdrawal,
-  clearHotWalletCooldown,
-  completeWithdrawal,
-  fetchAdminHotWalletStatus,
-  listPendingWithdrawals,
-  readAxiosResponseMessage,
-  rejectWithdrawal,
-} from '../lib/admin.api';
-import type { AdminHotWalletStatus } from './adminFinance.types';
+import { adminFinanceApi } from './adminFinance.api';
+import { readAxiosResponseMessage } from '../lib/admin.api';
+import type { AdminHotWalletStatus, AdminWithdrawalRow } from './adminFinance.types';
 import { HotWalletStatusPanel } from './components/HotWalletStatusPanel';
-
-type WithdrawalRow = {
-  id: number | string;
-  userId?: number;
-  amount?: number | string;
-  address?: string | null;
-  status?: string;
-  type?: string;
-  txHash?: string | null;
-  createdAt?: string | null;
-  created_at?: string | null;
-  updatedAt?: string | null;
-  updated_at?: string | null;
-  completedAt?: string | null;
-  completed_at?: string | null;
-  user?: { username?: string | null; email?: string | null; name?: string | null };
-};
 
 const QUEUE_STATUSES = new Set(['pending', 'approved', 'processing']);
 const HISTORY_STATUSES = new Set(['completed', 'failed', 'rejected']);
@@ -88,7 +64,7 @@ function formatAmount(amount: number | string | undefined): string {
   return n.toLocaleString('pt-BR', { maximumFractionDigits: 8 });
 }
 
-function userLabel(w: WithdrawalRow): string {
+function userLabel(w: AdminWithdrawalRow): string {
   return w.user?.email || w.user?.username || w.user?.name || `user ${w.userId ?? '?'}`;
 }
 
@@ -222,19 +198,19 @@ function Kpi({
 }
 
 export default function AdminFinancePage() {
-  const [rows, setRows] = useState<WithdrawalRow[]>([]);
+  const [rows, setRows] = useState<AdminWithdrawalRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [txHash, setTxHash] = useState<Record<string, string>>({});
   const [busyId, setBusyId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [rejectModalTarget, setRejectModalTarget] = useState<WithdrawalRow | null>(null);
+  const [rejectModalTarget, setRejectModalTarget] = useState<AdminWithdrawalRow | null>(null);
   const [hotWallet, setHotWallet] = useState<AdminHotWalletStatus | null>(null);
   const [hotWalletLoading, setHotWalletLoading] = useState(false);
 
   const loadHotWallet = useCallback(async () => {
     setHotWalletLoading(true);
     try {
-      const res = await fetchAdminHotWalletStatus();
+      const res = await adminFinanceApi.getHotWalletStatus();
       if (res.data.ok && res.data.hotWallet) {
         setHotWallet(res.data.hotWallet);
       }
@@ -248,7 +224,7 @@ export default function AdminFinancePage() {
   const handleClearCooldown = useCallback(async () => {
     setHotWalletLoading(true);
     try {
-      const res = await clearHotWalletCooldown();
+      const res = await adminFinanceApi.clearHotWalletCooldown();
       if (res.data.ok) {
         setHotWallet(res.data.hotWallet);
         toast.success('Cooldown removido! O envio automático foi liberado.');
@@ -265,11 +241,12 @@ export default function AdminFinancePage() {
     setLoading(true);
     try {
       const [resWithdrawals] = await Promise.all([
-        listPendingWithdrawals(),
+        adminFinanceApi.listWithdrawals(),
         loadHotWallet(),
       ]);
-      const data = resWithdrawals.data as { ok?: boolean; withdrawals?: WithdrawalRow[] };
-      setRows(data.withdrawals ?? []);
+      if (resWithdrawals.data.ok) {
+        setRows(resWithdrawals.data.withdrawals || []);
+      }
     } catch (err) {
       toast.error(readAxiosResponseMessage(err) ?? 'Erro ao carregar saques');
     } finally {
@@ -364,11 +341,11 @@ export default function AdminFinancePage() {
     }
   };
 
-  const renderQueueRow = (w: WithdrawalRow) => {
+  const renderQueueRow = (w: AdminWithdrawalRow) => {
     const status = String(w.status || '').toLowerCase();
     const id = String(w.id);
     const busy = busyId === id;
-    const reqDate = parseDate(w.createdAt ?? w.created_at);
+    const reqDate = parseDate(w.createdAt);
     const curr = currencyLabel(w.type);
     const explorerUrl = w.address ? `https://polygonscan.com/address/${w.address}` : undefined;
 
@@ -464,7 +441,7 @@ export default function AdminFinancePage() {
               <button
                 type="button"
                 disabled={busy}
-                onClick={() => void act(w.id, () => approveWithdrawal(w.id), 'Saque aprovado!')}
+                onClick={() => void act(w.id, () => adminFinanceApi.approveWithdrawal(w.id), 'Saque aprovado!')}
                 className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500/20 border border-emerald-500/30 px-4 py-2 text-xs font-black text-emerald-300 transition-all hover:bg-emerald-500/30 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
@@ -526,7 +503,7 @@ export default function AdminFinancePage() {
                         toast.error('Informe o tx hash');
                         return;
                       }
-                      void act(w.id, () => completeWithdrawal(w.id, hash), 'Saque marcado como concluído!');
+                      void act(w.id, () => adminFinanceApi.completeWithdrawal(w.id, hash), 'Saque marcado como concluído!');
                     }}
                     className="inline-flex items-center gap-1.5 rounded-xl bg-sky-500/20 border border-sky-500/30 px-4 py-2 text-xs font-black text-sky-300 hover:bg-sky-500/30 transition-all active:scale-95 disabled:opacity-40"
                   >
@@ -676,9 +653,9 @@ export default function AdminFinancePage() {
                   </thead>
                   <tbody className="divide-y divide-slate-800/60">
                     {filteredHistory.map((w) => {
-                      const reqDate = parseDate(w.createdAt ?? w.created_at);
+                      const reqDate = parseDate(w.createdAt);
                       const finDate = parseDate(
-                        w.completedAt ?? w.completed_at ?? w.updatedAt ?? w.updated_at
+                        w.completedAt ?? w.updatedAt
                       );
                       const curr = currencyLabel(w.type);
                       const explorerAddr = w.address
@@ -820,7 +797,7 @@ export default function AdminFinancePage() {
                   setRejectModalTarget(null);
                   void act(
                     target.id,
-                    () => rejectWithdrawal(target.id),
+                    () => adminFinanceApi.rejectWithdrawal(target.id),
                     'Saque rejeitado e saldo estornado com sucesso!'
                   );
                 }}

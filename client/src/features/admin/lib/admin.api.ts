@@ -167,43 +167,19 @@ export function listAdminUsers(params: {
   return api.get('/admin/users', { params: q });
 }
 
+import { adminFinanceApi } from '../finance/adminFinance.api';
+
 export function getAdminUser(id: number | string) {
   return api.get(`/admin/users/${id}`);
 }
 
-/** GET /admin/wallet/withdrawals/pending — server: wallet.admin.routes.ts -> withdrawal.controller.ts adminListPendingWithdrawals. Returns { ok, withdrawals }. */
-export function listPendingWithdrawals() {
-  return api.get('/admin/wallet/withdrawals/pending');
-}
-
-/** GET /admin/wallet/hot-wallet — server: wallet.admin.routes.ts -> withdrawal.controller.ts adminGetHotWalletStatus. Returns live hot-wallet balance & auto-send status. */
-export function fetchAdminHotWalletStatus() {
-  return api.get<{ ok: boolean; hotWallet: import('../finance/adminFinance.types').AdminHotWalletStatus }>(
-    '/admin/wallet/hot-wallet'
-  );
-}
-
-/** POST /admin/wallet/hot-wallet/clear-cooldown — clear insufficient balance cooldown to resume auto-send immediately. */
-export function clearHotWalletCooldown() {
-  return api.post<{ ok: boolean; message: string; hotWallet: import('../finance/adminFinance.types').AdminHotWalletStatus }>(
-    '/admin/wallet/hot-wallet/clear-cooldown'
-  );
-}
-
-/** POST /admin/wallet/withdrawals/:id/approve — server: withdrawal.controller.ts adminApproveWithdrawal. 409 if the row already left "pending" (raced by another admin action). */
-export function approveWithdrawal(id: number | string) {
-  return api.post(`/admin/wallet/withdrawals/${id}/approve`);
-}
-
-/** POST /admin/wallet/withdrawals/:id/reject — server: withdrawal.controller.ts adminRejectWithdrawal. Refunds the reserved balance; writes status "rejected". 409 on a lost race. */
-export function rejectWithdrawal(id: number | string) {
-  return api.post(`/admin/wallet/withdrawals/${id}/reject`);
-}
-
-/** POST /admin/wallet/withdrawals/:id/complete — server: withdrawal.controller.ts adminCompleteWithdrawal. Requires a valid 0x+64hex txHash. 409 on a lost race. */
-export function completeWithdrawal(id: number | string, txHash: string) {
-  return api.post(`/admin/wallet/withdrawals/${id}/complete`, { txHash });
-}
+/** Delegate to adminFinanceApi */
+export const listPendingWithdrawals = adminFinanceApi.listWithdrawals;
+export const fetchAdminHotWalletStatus = adminFinanceApi.getHotWalletStatus;
+export const clearHotWalletCooldown = adminFinanceApi.clearHotWalletCooldown;
+export const approveWithdrawal = adminFinanceApi.approveWithdrawal;
+export const rejectWithdrawal = adminFinanceApi.rejectWithdrawal;
+export const completeWithdrawal = adminFinanceApi.completeWithdrawal;
 
 export function fetchAdminDashboardStats() {
   return api.get('/admin/stats');
