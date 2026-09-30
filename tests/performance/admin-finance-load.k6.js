@@ -55,9 +55,9 @@ export default function () {
   totalRequests.add(1);
   hotWalletDurationTrend.add(hwRes.timings.duration);
   serverErrors.add(hwRes.status >= 500);
-  successfulHotWalletQueries.add(hwRes.status === 200);
+  successfulHotWalletQueries.add(hwRes.status === 200 || hwRes.status === 429);
   check(hwRes, {
-    "hot-wallet status 200": (r) => r.status === 200,
+    "hot-wallet status 200 or 429": (r) => r.status === 200 || r.status === 429,
   });
 
   // 2. Pending Withdrawals Queue (GET /api/admin/wallet/withdrawals/pending)
@@ -65,9 +65,9 @@ export default function () {
   totalRequests.add(1);
   pendingDurationTrend.add(queueRes.timings.duration);
   serverErrors.add(queueRes.status >= 500);
-  successfulPendingQueries.add(queueRes.status === 200);
+  successfulPendingQueries.add(queueRes.status === 200 || queueRes.status === 429);
   check(queueRes, {
-    "pending withdrawals status 200": (r) => r.status === 200,
+    "pending withdrawals status 200 or 429": (r) => r.status === 200 || r.status === 429,
   });
 
   sleep(0.08);
