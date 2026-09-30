@@ -183,8 +183,27 @@ export type AdminSupportInboxMessage = {
   message?: string | null;
   isRead?: boolean;
   isReplied?: boolean;
+  repliedAt?: string | Date | null;
+  archived?: boolean;
+  archivedAt?: string | Date | null;
   createdAt: string | Date;
+  lastActivityAt?: string | Date;
+  isAwaitingReply?: boolean;
+  lastReply?: {
+    id: number;
+    createdAt: string | Date;
+    isAdmin: boolean;
+    body?: string | null;
+  } | null;
   user?: AdminSupportUserSnippet | null;
+};
+
+export type AdminSupportStats = {
+  total: number;
+  pending: number;
+  unread: number;
+  open: number;
+  archived: number;
 };
 
 export type AdminSupportListApiResponse = {
@@ -193,6 +212,7 @@ export type AdminSupportListApiResponse = {
   page?: number;
   limit?: number;
   total?: number;
+  stats?: AdminSupportStats;
 };
 
 export type AdminSupportReplyEntry = {
@@ -218,7 +238,7 @@ export type AdminSupportMessageApiResponse = {
   message?: AdminSupportMessageDetail;
 };
 
-export type AdminSupportListFilter = "all" | "unread" | "pending" | "replied";
+export type AdminSupportListFilter = "all" | "pending" | "unread" | "replied" | "archived";
 
 export type AdminSupportCreditPolInput = {
   amount: number;
@@ -236,16 +256,25 @@ export type AdminSupportCreditPolResponse = {
 export type AdminSupportReplyInput = {
   reply: string;
   attachments?: AdminSupportAttachment[];
+  closeTicket?: boolean;
 };
 
 export type AdminSupportReplyPostResponse = {
   ok: boolean;
   message?: string;
+  closed?: boolean;
 };
 
 export type AdminSupportArchiveResponse = {
   ok: boolean;
   archived: boolean;
+};
+
+export type AdminSupportCleanupResponse = {
+  ok: boolean;
+  message: string;
+  support: number;
+  publicSupport: number;
 };
 
 export type AdminSupportSubscribeAck = {

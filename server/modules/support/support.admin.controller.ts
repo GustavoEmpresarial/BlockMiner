@@ -32,10 +32,16 @@ export async function listMessages(req: Request, res: Response): Promise<void> {
       res.status(400).json({ ok: false, code: "validation_error", message: "Invalid query parameters", errors: parsedQuery.error.issues });
       return;
     }
-    const { page, limit, userId: validUserIdFilter, archived: archivedFilter } = parsedQuery.data;
+    const { page, limit, userId: validUserIdFilter, archived: archivedFilter, status: statusFilter } = parsedQuery.data;
     const skip = (page - 1) * limit;
-    const { messages, total } = await supportService.listMessagesForAdmin(validUserIdFilter, skip, limit, archivedFilter);
-    res.json({ ok: true, messages, page, limit, total });
+    const { messages, total, stats } = await supportService.listMessagesForAdmin(
+      validUserIdFilter,
+      skip,
+      limit,
+      archivedFilter,
+      statusFilter
+    );
+    res.json({ ok: true, messages, page, limit, total, stats });
   } catch (e: unknown) {
     log.error("Error listing messages", { error: String(e instanceof Error ? e.message : e) });
     res.status(500).json({ ok: false, message: "Error listing messages" });
@@ -214,6 +220,10 @@ export async function replyToMessage(req: Request, res: Response): Promise<void>
         attachments: parsed.data.attachments,
       });
 
+      if (parsed.data.closeTicket) {
+        await supportService.setTicketArchivedForAdmin(id, true);
+      }
+
       void logAdminAction({
         adminId: req.admin?.adminId ?? null,
         adminEmail: req.admin?.email ?? null,
@@ -225,10 +235,11 @@ export async function replyToMessage(req: Request, res: Response): Promise<void>
         newValue: {
           hasAttachments: (parsed.data.attachments?.length ?? 0) > 0,
           replyLength: text.length,
+          closedTicket: Boolean(parsed.data.closeTicket),
         },
       });
 
-      res.json({ ok: true, message: "Reply saved successfully", reply });
+      res.json({ ok: true, message: "Reply saved successfully", reply, closed: Boolean(parsed.data.closeTicket) });
     } catch (inner: unknown) {
       if (readErrorCode(inner) === SUPPORT_ERROR.NOT_FOUND || (inner instanceof Error && inner.message === "NOT_FOUND")) {
         res.status(404).json({ ok: false, message: "Message not found" });
@@ -239,6 +250,32 @@ export async function replyToMessage(req: Request, res: Response): Promise<void>
   } catch (e: unknown) {
     log.error("Error replying to message", { error: String(e instanceof Error ? e.message : e) });
     res.status(500).json({ ok: false, message: "Error sending reply" });
+  }
+}
+
+export async function cleanupRetention(req: Request, res: Response): Promise<void> {
+  try {
+    const result = await supportService.pruneExpiredSupportTickets(30);
+
+    void logAdminAction({
+      adminId: req.admin?.adminId ?? null,
+      adminEmail: req.admin?.email ?? null,
+      sessionId: req.admin?.sessionId ?? null,
+      action: "ADMIN_SUPPORT_CLEANUP_RETENTION",
+      module: "support",
+      resource: "SupportMessage",
+      resourceId: "batch",
+      newValue: result,
+    });
+
+    res.json({
+      ok: true,
+      message: "Tickets com mais de 30 dias foram limpos com sucesso.",
+      ...result,
+    });
+  } catch (e: unknown) {
+    log.error("Error cleaning up expired support tickets", { error: String(e instanceof Error ? e.message : e) });
+    res.status(500).json({ ok: false, message: "Error cleaning up expired tickets" });
   }
 }
 

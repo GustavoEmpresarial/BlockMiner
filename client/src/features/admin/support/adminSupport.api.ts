@@ -1,9 +1,11 @@
 import { api } from '../../../shared/auth/auth.store';
 import type {
   AdminSupportArchiveResponse,
+  AdminSupportCleanupResponse,
   AdminSupportCreditPolInput,
   AdminSupportCreditPolResponse,
   AdminSupportListApiResponse,
+  AdminSupportListFilter,
   AdminSupportMessageApiResponse,
   AdminSupportPlayerDossierBundle,
   AdminSupportPlayerDossierParams,
@@ -17,12 +19,13 @@ export const adminSupportApi = {
    * GET /api/admin/support
    * Listar tickets de suporte de jogadores autenticados.
    */
-  listMessages: (params?: { page?: number; limit?: number; userId?: number; archived?: boolean }) => {
+  listMessages: (params?: { page?: number; limit?: number; userId?: number; archived?: boolean; status?: AdminSupportListFilter }) => {
     const query: Record<string, string | number> = {};
     if (params?.page != null) query.page = params.page;
     if (params?.limit != null) query.limit = params.limit;
     if (params?.userId != null) query.userId = params.userId;
-    if (params?.archived) query.archived = '1';
+    if (params?.archived != null) query.archived = params.archived ? '1' : '0';
+    if (params?.status && params.status !== 'all') query.status = params.status;
     return api.get<AdminSupportListApiResponse>('/admin/support', { params: query });
   },
 
@@ -42,10 +45,17 @@ export const adminSupportApi = {
 
   /**
    * POST /api/admin/support/:id/archive
-   * Alternar estado de arquivamento do ticket.
+   * Alternar estado de arquivamento / fechamento do ticket.
    */
   setArchived: (ticketId: number, archived: boolean) =>
     api.post<AdminSupportArchiveResponse>(`/admin/support/${ticketId}/archive`, { archived }),
+
+  /**
+   * POST /api/admin/support/cleanup-retention
+   * Limpar tickets inativos com mais de 30 dias.
+   */
+  cleanupRetention: () =>
+    api.post<AdminSupportCleanupResponse>('/admin/support/cleanup-retention'),
 
   /**
    * GET /api/admin/support/:id/player-dossier

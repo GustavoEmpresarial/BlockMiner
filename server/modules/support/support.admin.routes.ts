@@ -65,6 +65,12 @@ supportAdminRouter.post(
   requireAdminPermission("support"),
   adminSupportController.creditPol
 );
+supportAdminRouter.post(
+  "/support/cleanup-retention",
+  writeLimiter,
+  requireAdminPermission("support"),
+  adminSupportController.cleanupRetention
+);
 
 supportAdminRouter.get(
   "/public-support/tickets",

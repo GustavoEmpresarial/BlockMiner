@@ -57,6 +57,7 @@ export const adminReplySchema = z
     reply: z.string().trim().min(1).max(12000).optional(),
     message: z.string().trim().min(1).max(12000).optional(),
     attachments: z.array(attachmentSchema).max(5).optional(),
+    closeTicket: z.boolean().optional().default(false),
   })
   .strict()
   .refine(
@@ -73,6 +74,7 @@ export const adminSupportListQuerySchema = z
     limit: z.coerce.number().int().positive().max(100).default(50),
     userId: z.coerce.number().int().positive().max(2_147_483_647).optional(),
     archived: z.union([z.boolean(), z.enum(["0", "1", "true", "false", ""])]).optional().default(""),
+    status: z.enum(["all", "pending", "unread", "replied", "archived"]).optional().default("all"),
   })
   .strict()
   .transform((data) => ({
@@ -80,6 +82,7 @@ export const adminSupportListQuerySchema = z
     limit: data.limit,
     userId: data.userId ?? null,
     archived: data.archived === true || data.archived === "1" || data.archived === "true",
+    status: data.status,
   }));
 
 export const adminSupportArchiveSchema = z

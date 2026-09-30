@@ -51,6 +51,11 @@ export async function listAdminSupportMessages(
     take: limit,
     include: {
       user: { select: { username: true, email: true } },
+      replies: {
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        select: { id: true, createdAt: true, isAdmin: true, message: true },
+      },
     },
   });
 }

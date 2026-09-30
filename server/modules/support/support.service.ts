@@ -10,6 +10,7 @@
  * - player-dossier: ported in support.dossier.service.ts (getSupportTicketPlayerDossier),
  *   minus the accountCollisions cross-reference (adminAccountCollisionService not ported).
  */
+import type { Prisma } from "@prisma/client";
 import prisma from "../../core/database/prisma.js";
 import { logger } from "../../core/logger/index.js";
 import { SupportNotFoundError } from "./support.errors.js";
@@ -22,6 +23,7 @@ import {
 import { emitSupportReply, emitUserNotification } from "./support.realtime.js";
 import { enrichTicket, type TicketRow } from "./support.schemas.js";
 import * as supportRepo from "./support.repository.js";
+import { pruneOldSupportTickets, DEFAULT_SUPPORT_RETENTION_DAYS } from "../../cron/support-retention.cron.js";
 import {
   TELEGRAM_EVENT_TYPES,
   createGenericTelegramOutboxEvent,
@@ -149,22 +151,79 @@ export async function listMessagesForAdmin(
   userIdFilter: number | null,
   skip: number,
   limit: number,
-  archivedFilter: boolean = false,
+  archivedFilter?: boolean | null,
+  statusFilter?: "all" | "pending" | "unread" | "replied" | "archived" | null,
 ) {
-  const where = { archived: archivedFilter, ...(userIdFilter != null ? { userId: userIdFilter } : {}) };
-  const [rows, total] = await Promise.all([
+  const baseWhere: Prisma.SupportMessageWhereInput = {};
+  if (userIdFilter != null) {
+    baseWhere.userId = userIdFilter;
+  }
+
+  let where: Prisma.SupportMessageWhereInput = { ...baseWhere };
+  if (statusFilter === "pending") {
+    where = { ...baseWhere, archived: false, isReplied: false };
+  } else if (statusFilter === "unread") {
+    where = { ...baseWhere, archived: false, isRead: false };
+  } else if (statusFilter === "replied") {
+    where = { ...baseWhere, archived: false, isReplied: true };
+  } else if (statusFilter === "archived") {
+    where = { ...baseWhere, archived: true };
+  } else if (archivedFilter != null) {
+    where = { ...baseWhere, archived: archivedFilter };
+  }
+
+  const [rows, total, pendingCount, unreadCount, openCount, archivedCount] = await Promise.all([
     supportRepo.listAdminSupportMessages(where, skip, limit),
     supportRepo.countAdminSupportMessages(where),
+    supportRepo.countAdminSupportMessages({ ...baseWhere, archived: false, isReplied: false }),
+    supportRepo.countAdminSupportMessages({ ...baseWhere, archived: false, isRead: false }),
+    supportRepo.countAdminSupportMessages({ ...baseWhere, archived: false }),
+    supportRepo.countAdminSupportMessages({ ...baseWhere, archived: true }),
   ]);
-  // List rows only need the preview text decoded (not full attachment payloads like the
-  // single-ticket enrichTicket() does) — without this, the ticket list showed the raw
-  // "__BM_SPT1__\n{...}" envelope as the preview snippet whenever a ticket had an image
-  // attached (PROGRESSO.txt item 51).
+
   const messages = rows.map((row) => {
     const { body } = parseSupportPayload(row.message);
-    return { ...row, message: body };
+    const lastReply = row.replies?.[0] ?? null;
+    const lastReplyBody = lastReply ? parseSupportPayload(lastReply.message).body : null;
+    const lastActivityAt = lastReply?.createdAt ? lastReply.createdAt : row.createdAt;
+    const isAwaitingReply = !row.isReplied && !row.archived;
+    return {
+      ...row,
+      message: body,
+      lastActivityAt,
+      isAwaitingReply,
+      lastReply: lastReply ? {
+        id: lastReply.id,
+        createdAt: lastReply.createdAt,
+        isAdmin: lastReply.isAdmin,
+        body: lastReplyBody,
+      } : null,
+    };
   });
-  return { messages, total };
+
+  messages.sort((a, b) => {
+    if (a.isAwaitingReply && !b.isAwaitingReply) return -1;
+    if (!a.isAwaitingReply && b.isAwaitingReply) return 1;
+    const timeA = new Date(a.lastActivityAt).getTime();
+    const timeB = new Date(b.lastActivityAt).getTime();
+    return timeB - timeA;
+  });
+
+  return {
+    messages,
+    total,
+    stats: {
+      total: openCount + archivedCount,
+      pending: pendingCount,
+      unread: unreadCount,
+      open: openCount,
+      archived: archivedCount,
+    },
+  };
+}
+
+export async function pruneExpiredSupportTickets(days: number = DEFAULT_SUPPORT_RETENTION_DAYS) {
+  return pruneOldSupportTickets(days);
 }
 
 export async function setTicketArchivedForAdmin(id: number, archived: boolean): Promise<boolean> {

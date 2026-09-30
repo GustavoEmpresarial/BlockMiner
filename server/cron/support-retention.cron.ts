@@ -13,10 +13,12 @@ const DEFAULT_BATCH = 200;
 const DEFAULT_BATCHES_PER_TICK = 10;
 const PAUSE_BETWEEN_BATCHES_MS = 300;
 
+export const DEFAULT_SUPPORT_RETENTION_DAYS = 30;
+
 export async function pruneOldSupportTickets(
-  retentionDays: number,
-  batchSize: number,
-  maxBatches: number,
+  retentionDays: number = DEFAULT_SUPPORT_RETENTION_DAYS,
+  batchSize: number = DEFAULT_BATCH,
+  maxBatches: number = DEFAULT_BATCHES_PER_TICK,
 ): Promise<{ support: number; publicSupport: number }> {
   const cutoff = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000);
   let support = 0;
@@ -43,7 +45,7 @@ export async function pruneOldSupportTickets(
 
 export function startSupportRetentionCron(): { stop: () => void } {
   const intervalMs = Math.max(60_000, Number(process.env.SUPPORT_RETENTION_CRON_MS) || 6 * 60 * 60 * 1000);
-  const retentionDays = Math.max(14, Number(process.env.SUPPORT_RETENTION_DAYS) || 90);
+  const retentionDays = Math.max(7, Number(process.env.SUPPORT_RETENTION_DAYS) || DEFAULT_SUPPORT_RETENTION_DAYS);
   const batchSize = Math.min(2_000, Math.max(50, Number(process.env.SUPPORT_RETENTION_BATCH) || DEFAULT_BATCH));
   const maxBatches = Math.max(1, Number(process.env.SUPPORT_RETENTION_BATCHES_PER_TICK) || DEFAULT_BATCHES_PER_TICK);
 
