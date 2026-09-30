@@ -113,24 +113,24 @@ export function uploadAdminSupportImage(file: File) {
   });
 }
 
+export { adminPublicSupportApi } from '../support/adminPublicSupport.api';
+
 export function listAdminPublicSupportTickets(params: { status: AdminPublicSupportStatusFilter; page: number }) {
-  const status = params.status === 'all' ? undefined : params.status;
-  return api.get<AdminPublicSupportTicketsResponse>('/admin/public-support/tickets', {
-    params: { status, page: params.page },
-  });
+  return adminPublicSupportApi.listTickets(params);
 }
 
 export function getAdminPublicSupportTicket(ticketId: number) {
-  return api.get<AdminPublicSupportTicketResponse>(`/admin/public-support/ticket/${ticketId}`);
+  return adminPublicSupportApi.getTicket(ticketId);
 }
 
 export function replyAdminPublicSupportTicket(ticketId: number, body: { message: string; imageUrl?: string | null }) {
-  return api.post<AdminPublicSupportReplyResponse>(`/admin/public-support/ticket/${ticketId}/message`, body);
+  return adminPublicSupportApi.replyTicket(ticketId, body);
 }
 
 export function setAdminPublicSupportTicketStatus(ticketId: number, status: 'open' | 'closed') {
-  return api.patch<{ ok?: boolean }>(`/admin/public-support/ticket/${ticketId}/status`, { status });
+  return adminPublicSupportApi.setStatus(ticketId, status);
 }
+
 
 /** GET /admin/client-errors */
 export function listAdminClientErrors(limit = 500) {

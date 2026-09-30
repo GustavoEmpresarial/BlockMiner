@@ -13,14 +13,13 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { resolveApiErrorMessage } from '../../../shared/utils/apiErrorI18n';
-import {
-  getAdminPublicSupportTicket,
-  listAdminPublicSupportTickets,
-  replyAdminPublicSupportTicket,
-  setAdminPublicSupportTicketStatus,
-  uploadAdminSupportImage,
-} from '../lib/admin.api';
-import type { AdminPublicSupportMessage, AdminPublicSupportStatusFilter, AdminPublicSupportTicket } from '../lib/admin.types';
+import { uploadAdminSupportImage } from '../lib/admin.api';
+import { adminPublicSupportApi } from './adminPublicSupport.api';
+import type {
+  AdminPublicSupportMessage,
+  AdminPublicSupportStatusFilter,
+  AdminPublicSupportTicket,
+} from './adminPublicSupport.types';
 import {
   ADMIN_PUBLIC_SUPPORT_TICKETS_PAGE_SIZE,
   ADMIN_SUPPORT_ALLOWED_IMAGE_MIME,
@@ -51,7 +50,7 @@ export default function AdminPublicSupportPage() {
   const fetchTickets = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await listAdminPublicSupportTickets({ status: filter, page });
+      const res = await adminPublicSupportApi.listTickets({ status: filter, page });
       setTickets(res.data.tickets ?? []);
       setTotal(res.data.total ?? 0);
     } catch (err) {
@@ -68,7 +67,7 @@ export default function AdminPublicSupportPage() {
   async function openTicket(id: number) {
     setLoadingTicket(true);
     try {
-      const res = await getAdminPublicSupportTicket(id);
+      const res = await adminPublicSupportApi.getTicket(id);
       setSelected(res.data.ticket);
     } catch (err) {
       toast.error(resolveApiErrorMessage(err, t('adminPublicSupport.load_error')));
@@ -116,7 +115,7 @@ export default function AdminPublicSupportPage() {
     try {
       let imageUrl: string | null = null;
       if (replyImage) imageUrl = await uploadImage(replyImage);
-      const res = await replyAdminPublicSupportTicket(selected.id, {
+      const res = await adminPublicSupportApi.replyTicket(selected.id, {
         message: reply,
         imageUrl,
       });
@@ -135,7 +134,7 @@ export default function AdminPublicSupportPage() {
   async function setStatus(status: 'open' | 'closed') {
     if (!selected) return;
     try {
-      await setAdminPublicSupportTicketStatus(selected.id, status);
+      await adminPublicSupportApi.setStatus(selected.id, status);
       setSelected((tk) => (tk ? { ...tk, status } : tk));
       setTickets((ts) => ts.map((tk) => (tk.id === selected.id ? { ...tk, status } : tk)));
       toast.success(t('adminPublicSupport.status_updated'));
