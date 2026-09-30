@@ -146,12 +146,19 @@ export function clearAdminClientErrors() {
   return api.delete<{ ok: boolean; deleted?: number; message?: string }>('/admin/client-errors');
 }
 
-export function listAdminFraudSignals(params: { scope: string; page: number; limit: number }) {
-  return api.get('/admin/fraud-signals', { params });
+import { adminFraudSignalsApi } from '../fraud-signals/adminFraudSignals.api';
+export { adminFraudSignalsApi };
+
+export function listAdminFraudSignals(params?: { scope?: import('../fraud-signals/adminFraudSignals.types').FraudScope; page?: number; limit?: number; q?: string }) {
+  return adminFraudSignalsApi.listSignals(params);
 }
 
 export function refreshAdminFraudIp(ip: string) {
-  return api.post('/admin/fraud-signals/refresh-ip', { ip, forceRefresh: true });
+  return adminFraudSignalsApi.refreshIp(ip);
+}
+
+export function resetAdminFraudCollection(confirm?: string) {
+  return adminFraudSignalsApi.resetCollection(confirm);
 }
 
 export function listAdminUsers(params: {
