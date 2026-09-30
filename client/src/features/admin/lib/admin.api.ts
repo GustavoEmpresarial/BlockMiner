@@ -199,13 +199,16 @@ export const adminInternalOfferwallApi = {
     api.get('/admin/internal-offerwall/attempts', { params }),
 };
 
+export { adminSidebarNavApi } from '../sidebar-nav/adminSidebarNav.api';
+
 export function getAdminSidebarNav() {
-  return api.get('/admin/sidebar-nav');
+  return api.get<import('../sidebar-nav/adminSidebarNav.types').AdminSidebarNavResponse>('/admin/sidebar-nav');
 }
 
-export function putAdminSidebarNav(entries: unknown) {
-  return api.put('/admin/sidebar-nav', { entries });
+export function putAdminSidebarNav(entries: import('../sidebar-nav/adminSidebarNav.types').SidebarPersistedEntry[]) {
+  return api.put<import('../sidebar-nav/adminSidebarNav.types').AdminSidebarNavUpdateResponse>('/admin/sidebar-nav', { entries });
 }
+
 
 export function getAdminFaucetConfig() {
   return api.get<import('../faucet/adminFaucet.types').AdminFaucetConfigResponse>('/admin/faucet/config');
