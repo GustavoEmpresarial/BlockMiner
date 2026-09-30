@@ -258,6 +258,15 @@ export async function adminSetTrusted(req: Request, res: Response): Promise<void
     }
     const { id: userId } = paramParsed.data;
 
+    const userExists = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
+    if (!userExists) {
+      res.status(404).json({ ok: false, code: "not_found", message: "User not found" });
+      return;
+    }
+
     const bodyParsed = adminSetTrustedSchema.safeParse(req.body);
     if (!bodyParsed.success) {
       res.status(400).json({ ok: false, code: "validation_error", errors: bodyParsed.error.issues });
@@ -295,6 +304,15 @@ export async function adminRecompute(req: Request, res: Response): Promise<void>
       return;
     }
     const { id: userId } = paramParsed.data;
+
+    const userExists = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
+    if (!userExists) {
+      res.status(404).json({ ok: false, code: "not_found", message: "User not found" });
+      return;
+    }
 
     const result = await recomputeAntibotUserScore(prisma, userId);
 
