@@ -16,6 +16,12 @@ fi
 
 echo "[+] Using Kali Linux container: $IMAGE_NAME"
 
+echo "[*] Cleaning test rate limit state..."
+npx tsx -e '
+  import prisma from "./server/core/database/prisma.ts";
+  prisma.callbackQueue.deleteMany({ where: { callbackType: "SEC_SW_RL" } }).then(() => process.exit(0));
+'
+
 # Start local finance test server on port 5118
 echo "[*] Starting local finance test server on port ${PORT}..."
 PORT=${PORT} npx tsx tests/security/local-finance-test-server.mjs &
@@ -40,12 +46,19 @@ done
 ADMIN_TOKEN=$(node --env-file=.env -e '
   const jwt = require("jsonwebtoken");
   const secret = process.env.JWT_SECRET || "default_test_secret_for_local_ci";
-  const token = jwt.sign({ role: "admin", type: "admin_session" }, secret, { issuer: "blockminer-admin", algorithm: "HS256" });
+  const token = jwt.sign({ role: "admin", type: "admin_session", permissions: ["*"] }, secret, { issuer: "blockminer-admin", algorithm: "HS256" });
+  process.stdout.write(token);
+')
+
+FINANCE_ONLY_TOKEN=$(node --env-file=.env -e '
+  const jwt = require("jsonwebtoken");
+  const secret = process.env.JWT_SECRET || "default_test_secret_for_local_ci";
+  const token = jwt.sign({ role: "admin", type: "admin_session", permissions: ["finance"] }, secret, { issuer: "blockminer-admin", algorithm: "HS256" });
   process.stdout.write(token);
 ')
 
 echo "[*] Running Kali Linux Penetration Test container..."
-docker run --rm --network host -i "$IMAGE_NAME" python3 - "${TARGET}" "${ADMIN_TOKEN}" < tests/security/kali_finance_pentest.py
+docker run --rm --network host -i "$IMAGE_NAME" python3 - "${TARGET}" "${ADMIN_TOKEN}" "${FINANCE_ONLY_TOKEN}" < tests/security/kali_finance_pentest.py
 
 echo ""
 echo "[*] Running Dependency Security Audit (npm audit)..."
