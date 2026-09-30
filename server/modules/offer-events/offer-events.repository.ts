@@ -85,3 +85,21 @@ export async function incrementSoldCountOptimistic(
   }
   throw Object.assign(new Error("STOCK_BUSY"), { code: "CONFLICT" });
 }
+
+export async function listPendingDeliveryAts(userId: number, eventMinerIds: number[]) {
+  if (eventMinerIds.length === 0) return [];
+  return prisma.eventMinerDelivery.groupBy({
+    by: ["eventMinerId"],
+    where: { userId, eventMinerId: { in: eventMinerIds }, deliveredAt: null },
+    _min: { deliverAt: true },
+  });
+}
+
+export async function listDueEventMinerDeliveryIds(now: Date, take: number) {
+  return prisma.eventMinerDelivery.findMany({
+    where: { deliveredAt: null, deliverAt: { lte: now } },
+    select: { id: true },
+    orderBy: { deliverAt: "asc" },
+    take,
+  });
+}

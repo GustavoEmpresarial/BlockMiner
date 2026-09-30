@@ -17,4 +17,5 @@ export {
   normalizeOfferCurrency,
   toDecimalPrice,
 } from "./offer-events.helpers.js";
-export { deactivateExpiredOfferEvents } from "./offer-events.service.js";
+export { deactivateExpiredOfferEvents, deliverDueEventMiners } from "./offer-events.service.js";
+export { ensureMinercoreMcx9Offer } from "./offer-events.minercore-seed.js";

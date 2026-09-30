@@ -3149,7 +3149,9 @@
     "room_unlock_ok": "Sala desbloqueada com sucesso!",
     "confirm_title": "Confirmar compra",
     "purchase_ok": "Compra realizada!",
-    "ended": "Encerrado"
+    "ended": "Encerrado",
+    "arrives_in_days": "Chega em {{days}} dias",
+    "pending_arrival": "A caminho · {{date}}"
   },
   "calculator": {
     "title": "Calculadora de Ganhos",

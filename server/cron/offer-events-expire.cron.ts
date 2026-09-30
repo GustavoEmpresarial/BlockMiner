@@ -5,7 +5,7 @@
  * per cron doctrine — this file only schedules it.
  */
 import { logger } from "../core/logger/index.js";
-import { deactivateExpiredOfferEvents } from "../modules/offer-events/index.js";
+import { deactivateExpiredOfferEvents, deliverDueEventMiners } from "../modules/offer-events/index.js";
 
 const log = logger.child("OfferEventsExpireCron");
 
@@ -16,6 +16,9 @@ export function startOfferEventsExpireCron(): { stop: () => void } {
   const run = () => {
     deactivateExpiredOfferEvents().catch((err: unknown) => {
       log.warn("Expire sweep failed", { error: err instanceof Error ? err.message : String(err) });
+    });
+    deliverDueEventMiners().catch((err: unknown) => {
+      log.warn("Delayed miner delivery failed", { error: err instanceof Error ? err.message : String(err) });
     });
   };
   run();

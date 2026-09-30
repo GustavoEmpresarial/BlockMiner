@@ -5,6 +5,7 @@ import { useAuthStore } from '../../shared/auth/auth.store';
 import { Loader2, Zap, TrendingUp, CheckCircle2, AlertTriangle, X, Sparkles, Calendar, Clock, Minus, Plus, Package, DoorOpen, Wind, Boxes } from 'lucide-react';
 import { getActiveOfferEvents, postOfferEventPurchase, postOfferFanPurchase, postOfferRackPurchase, readActiveOffersCache, writeActiveOffersCache, clearActiveOffersCache, hasLiveRoomOffers, hasLiveGearOffers, OFFER_PURCHASE_MAX_QUANTITY, readGearMaxBulkQuantity, readOfferPurchaseError } from './lib/offers.api';
 import type { OfferEventDTO, OfferEventMinerDTO, RoomOffersDTO, FanOffersDTO, FanOfferItemDTO, RackOffersDTO } from './lib/offers.api';
+import { OfferMinerModel } from './components/OfferMinerModel';
 import { CoolingFanUnit } from '../inventory2/components/CoolingFanUnit';
 import { MiningRackShelf } from '../inventory2/components/MiningRackShelf';
 import { postBuyRoom } from '../machines/lib/machines.api';
@@ -551,12 +552,22 @@ export default function OffersPage() {
                                             </div>
                                         )}
 
-                                        <div className="aspect-square bg-gray-900/50 rounded-3xl p-2 border border-gray-800 group-hover:scale-105 transition-transform duration-500 flex items-center justify-center">
-                                            {m.imageUrl
+                                        <div className="aspect-square bg-gray-900/50 rounded-3xl p-2 border border-gray-800 group-hover:scale-105 transition-transform duration-500 flex items-center justify-center overflow-hidden">
+                                            {m.modelUrl
+                                                ? <OfferMinerModel src={m.modelUrl} alt={m.name || 'MinerCore'} />
+                                                : m.imageUrl
                                                 ? <img src={m.imageUrl} alt={m.name} className="w-full h-full object-contain scale-110" />
                                                 : <Zap className="w-20 h-20 text-amber-500/30" />
                                             }
                                         </div>
+                                        {(m.deliveryDelayDays ?? 0) > 0 && (
+                                            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold w-fit bg-amber-500/10 text-amber-300 border border-amber-500/20">
+                                                <Clock className="w-3 h-3" />
+                                                {m.pendingDeliveryAt
+                                                    ? t('offers.pending_arrival', { date: fmtDate(m.pendingDeliveryAt, offerDateLocale) })
+                                                    : t('offers.arrives_in_days', { days: m.deliveryDelayDays })}
+                                            </div>
+                                        )}
 
                                         <div className="space-y-1">
                                             <h3 className="text-xl font-black text-white truncate">{m.name}</h3>
@@ -660,7 +671,9 @@ export default function OffersPage() {
                             <div className="bg-gray-900/50 border border-gray-800 rounded-3xl p-6 space-y-4">
                                 <div className="flex items-center gap-4 text-left">
                                     <div className="w-24 h-24 bg-gray-800 rounded-2xl p-1.5 border border-gray-700 flex items-center justify-center">
-                                        {modal.miner.imageUrl
+                                        {modal.miner.modelUrl
+                                            ? <OfferMinerModel src={modal.miner.modelUrl} alt={modal.miner.name || 'MinerCore'} />
+                                            : modal.miner.imageUrl
                                             ? <img src={modal.miner.imageUrl} className="w-full h-full object-contain" alt="" />
                                             : <Zap className="w-8 h-8 text-amber-500/40" />
                                         }

@@ -8,6 +8,7 @@ const {
   normalizeOfferCurrency,
   userBalanceFieldForCurrency,
   getUserBalanceNumber,
+  offerEventDeliveryAt,
   toDecimalPrice,
 } = await import("../../server/modules/offer-events/offer-events.helpers.ts");
 
@@ -117,4 +118,12 @@ test("toDecimalPrice: converte números e strings para string numérica e lança
   assert.equal(toDecimalPrice(0), "0");
   assert.throws(() => toDecimalPrice("invalid"), /invalid price/);
   assert.throws(() => toDecimalPrice(-5), /invalid price/);
+});
+
+test("offerEventDeliveryAt: imagem chega na hora; atraso conta dias UTC inteiros", () => {
+  const purchasedAt = new Date("2026-09-30T18:00:00.000Z");
+  assert.equal(offerEventDeliveryAt(purchasedAt, 0), null);
+  assert.equal(offerEventDeliveryAt(purchasedAt, -3), null);
+  const dayFive = offerEventDeliveryAt(purchasedAt, 5);
+  assert.equal(dayFive?.toISOString(), "2026-10-05T18:00:00.000Z");
 });

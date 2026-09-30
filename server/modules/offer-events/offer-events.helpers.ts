@@ -1,5 +1,5 @@
 /** Pure helpers ported from legacy/server/services/offerEventHelpers.ts */
-import { DEFAULT_OFFER_CURRENCY } from "./offer-events.config.js";
+import { DEFAULT_OFFER_CURRENCY, OFFER_EVENT_MS_PER_DAY } from "./offer-events.config.js";
 
 const CURRENCY_TO_USER_FIELD: Record<string, string> = {
   POL: "polBalance",
@@ -77,6 +77,16 @@ export function toDecimalPrice(v: unknown): string {
   const n = typeof v === "number" ? v : Number(v);
   if (!Number.isFinite(n) || n < 0) throw new Error("invalid price");
   return String(n);
+}
+
+/**
+ * When the purchased miner should land in inventory.
+ * `0` means grant in the same purchase — image miners stay on that path.
+ */
+export function offerEventDeliveryAt(purchasedAt: Date, deliveryDelayDays: number): Date | null {
+  const days = Math.floor(Number(deliveryDelayDays) || 0);
+  if (days <= 0) return null;
+  return new Date(purchasedAt.getTime() + days * OFFER_EVENT_MS_PER_DAY);
 }
 
 export function mapBalances(user: Record<string, unknown> | null | undefined): Record<string, number> {

@@ -4,6 +4,7 @@ import {
   ADMIN_OFFER_EVENT_PURCHASES_PAGE_SIZE_MIN,
   ADMIN_OFFER_EVENTS_LIST_PAGE_SIZE_MAX,
   ADMIN_OFFER_EVENTS_LIST_PAGE_SIZE_MIN,
+  MAX_OFFER_DELIVERY_DELAY_DAYS,
   OFFER_EVENT_PURCHASE_MAX_QUANTITY,
 } from "./offer-events.config.js";
 
@@ -47,6 +48,8 @@ export const minerCreateSchema = z
     name: z.string().trim().min(1).max(200),
     description: z.string().trim().max(20000).optional().default(""),
     imageUrl: z.string().trim().max(2000).optional().nullable(),
+    modelUrl: z.string().trim().max(2000).optional().nullable(),
+    deliveryDelayDays: z.number().int().min(0).max(MAX_OFFER_DELIVERY_DELAY_DAYS).optional(),
     price: z.union([z.number().min(0), z.string().regex(/^\d+(\.\d+)?$/)]),
     hashRate: z.number().positive(),
     currency: offerCurrencyEnumSchema.optional(),
@@ -67,6 +70,8 @@ export const minerUpdateSchema = z
     name: z.string().trim().min(1).max(200).optional(),
     description: z.string().trim().max(20000).optional(),
     imageUrl: z.string().trim().max(2000).optional().nullable(),
+    modelUrl: z.string().trim().max(2000).optional().nullable(),
+    deliveryDelayDays: z.number().int().min(0).max(MAX_OFFER_DELIVERY_DELAY_DAYS).optional(),
     price: z.union([z.number().min(0), z.string().regex(/^\d+(\.\d+)?$/)]).optional(),
     hashRate: z.number().positive().optional(),
     currency: offerCurrencyEnumSchema.optional(),

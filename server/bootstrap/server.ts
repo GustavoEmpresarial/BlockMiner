@@ -59,7 +59,7 @@ import { notificationsRouter, broadcastRouter, broadcastAdminRouter, rewardInbox
 import { chatRouter } from "../modules/chat/index.js";
 import { tournamentsRouter, tournamentsAdminRouter, rankingRouter, startTournamentsCron, } from "../modules/tournaments/index.js";
 import { burnEventsRouter, burnEventsAdminRouter } from "../modules/burn-events/index.js";
-import { offerEventsRouter, offerEventsAdminRouter } from "../modules/offer-events/index.js";
+import { offerEventsRouter, offerEventsAdminRouter, ensureMinercoreMcx9Offer } from "../modules/offer-events/index.js";
 import { miniPassRouter, miniPassAdminRouter } from "../modules/mini-pass/index.js";
 import { bannersRouter, bannersAdminRouter } from "../modules/banners/index.js";
 import { publicStatsRouter } from "../modules/public-stats/index.js";
@@ -290,6 +290,7 @@ async function main() {
     // Copy versioned storage/media-seed → storage/uploads/media when files are missing.
     // Must run before the HTTP server accepts traffic so /media/* does not 404 on first paint.
     seedBundledMedia();
+    await ensureMinercoreMcx9Offer().catch((err) => log.error("MinerCore MCX9 offer seed failed", { error: String(err) }));
     await bootstrapAdminUsers().catch((err) => log.error("Admin bootstrap failed", { error: String(err) }));
     await bootstrapEngine().catch((err) => log.error("Mining engine bootstrap failed", { error: String(err) }));
     await applyInternalOfferwallStandardBlkReward().catch((err) => log.warn("Internal offerwall BLK reward sync failed", { error: String(err) }));

@@ -23,13 +23,14 @@ import {
   isOfferEventLiveAt,
   mapBalances,
   normalizeOfferCurrency,
+  offerEventDeliveryAt,
   userBalanceFieldForCurrency,
 } from "./offer-events.helpers.js";
 import { buildActiveRoomOffersPayload } from "../rooms/rooms.offers.js";
 import { buildActiveFanOffersPayload } from "../fans/index.js";
 import { buildActiveRackOffersPayload } from "../racks/index.js";
 import { countUnlockedRoomsForUser } from "../rooms/rooms.service.js";
-import { OFFER_EVENT_PURCHASE_MAX_QUANTITY } from "./offer-events.config.js";
+import { OFFER_EVENT_DELIVERY_BATCH, OFFER_EVENT_PURCHASE_MAX_QUANTITY } from "./offer-events.config.js";
 import * as repo from "./offer-events.repository.js";
 
 const log = logger.child("offer-events.service");
@@ -49,6 +50,8 @@ type EventMinerPublic = {
   name: string;
   description: string | null;
   imageUrl: string | null;
+  modelUrl?: string | null;
+  deliveryDelayDays?: number;
   price: unknown;
   hashRate: number;
   currency: string;
@@ -73,7 +76,11 @@ type OfferEventPublic = {
   miners?: EventMinerPublic[];
 };
 
-export function serializeMinerPublic(m: EventMinerPublic, claimMap: Record<number, number> = {}) {
+export function serializeMinerPublic(
+  m: EventMinerPublic,
+  claimMap: Record<number, number> = {},
+  pendingDeliveryAt: Record<number, string> = {},
+) {
   const remaining =
     m.stockUnlimited || m.stockCount == null
       ? null
@@ -83,6 +90,9 @@ export function serializeMinerPublic(m: EventMinerPublic, claimMap: Record<numbe
     name: m.name,
     description: m.description,
     imageUrl: m.imageUrl,
+    modelUrl: m.modelUrl ?? null,
+    deliveryDelayDays: m.deliveryDelayDays ?? 0,
+    pendingDeliveryAt: pendingDeliveryAt[m.id] ?? null,
     price: Number(m.price),
     hashRate: m.hashRate,
     currency: m.currency,
@@ -99,6 +109,7 @@ export function serializeEventPublic(
   e: OfferEventPublic,
   now: Date,
   claimMap: Record<number, number> = {},
+  pendingDeliveryAt: Record<number, string> = {},
 ) {
   return {
     id: e.id,
@@ -108,9 +119,69 @@ export function serializeEventPublic(
     startsAt: e.startsAt,
     endsAt: e.endsAt,
     isActive: e.isActive,
-    miners: (e.miners ?? []).map((m) => serializeMinerPublic(m, claimMap)),
+    miners: (e.miners ?? []).map((m) => serializeMinerPublic(m, claimMap, pendingDeliveryAt)),
     isLive: isOfferEventActiveForPublic(now, e),
   };
+}
+
+type PurchaseWriter = {
+  eventPurchase: {
+    create: (args: {
+      data: {
+        userId: number;
+        eventId: number;
+        eventMinerId: number;
+        pricePaid: number | string | { toString(): string };
+        currency: string;
+      };
+    }) => Promise<{ id: number }>;
+  };
+  eventMinerDelivery: {
+    create: (args: {
+      data: {
+        userId: number;
+        eventId: number;
+        eventMinerId: number;
+        eventPurchaseId: number;
+        deliverAt: Date;
+      };
+    }) => Promise<unknown>;
+  };
+};
+
+async function recordEventPurchases(
+  tx: PurchaseWriter,
+  input: {
+    userId: number;
+    eventId: number;
+    eventMinerId: number;
+    qty: number;
+    pricePaid: number | string | { toString(): string };
+    currency: string;
+    deliverAt: Date | null;
+  },
+) {
+  for (let i = 0; i < input.qty; i += 1) {
+    const purchase = await tx.eventPurchase.create({
+      data: {
+        userId: input.userId,
+        eventId: input.eventId,
+        eventMinerId: input.eventMinerId,
+        pricePaid: input.pricePaid,
+        currency: input.currency,
+      },
+    });
+    if (!input.deliverAt) continue;
+    await tx.eventMinerDelivery.create({
+      data: {
+        userId: input.userId,
+        eventId: input.eventId,
+        eventMinerId: input.eventMinerId,
+        eventPurchaseId: purchase.id,
+        deliverAt: input.deliverAt,
+      },
+    });
+  }
 }
 
 export async function listActiveOfferEventsForUser(userId?: number) {
@@ -122,18 +193,25 @@ export async function listActiveOfferEventsForUser(userId?: number) {
   });
 
   let claimMap: Record<number, number> = {};
+  let pendingDeliveryAt: Record<number, string> = {};
   let unlockedRoomCount: number | undefined;
   if (userId) {
     const allMinerIds = events.flatMap((e) => e.miners.map((m) => m.id));
     if (allMinerIds.length > 0) {
       const claimCounts = await repo.groupEventPurchaseClaimCounts(userId, allMinerIds);
       claimMap = Object.fromEntries(claimCounts.map((row) => [row.eventMinerId, row._count.id]));
+      const pending = await repo.listPendingDeliveryAts(userId, allMinerIds);
+      pendingDeliveryAt = Object.fromEntries(
+        pending
+          .filter((row) => row._min.deliverAt)
+          .map((row) => [row.eventMinerId, row._min.deliverAt!.toISOString()]),
+      );
     }
     unlockedRoomCount = await countUnlockedRoomsForUser(userId);
   }
 
   return {
-    events: events.map((e) => serializeEventPublic(e, now, claimMap)),
+    events: events.map((e) => serializeEventPublic(e, now, claimMap, pendingDeliveryAt)),
     roomOffers: buildActiveRoomOffersPayload(now, { unlockedRoomCount }),
     fanOffers: buildActiveFanOffersPayload(now),
     rackOffers: buildActiveRackOffersPayload(now),
@@ -191,6 +269,7 @@ export async function purchaseEventMinerForUser(
       const currency = normalizeOfferCurrency(em.currency);
       const slotSize =
         Number.isInteger(em.slotSize) && em.slotSize >= 1 && em.slotSize <= 2 ? em.slotSize : 1;
+      const deliverAt = offerEventDeliveryAt(now, em.deliveryDelayDays);
       let totalPrice = 0;
 
       if (em.isFree) {
@@ -205,14 +284,14 @@ export async function purchaseEventMinerForUser(
 
         await repo.incrementSoldCountOptimistic(tx, em.id, qty);
 
-        await tx.eventPurchase.createMany({
-          data: Array.from({ length: qty }, () => ({
-            userId,
-            eventId: em.eventId,
-            eventMinerId: em.id,
-            pricePaid: 0,
-            currency,
-          })),
+        await recordEventPurchases(tx as unknown as PurchaseWriter, {
+          userId,
+          eventId: em.eventId,
+          eventMinerId: em.id,
+          qty,
+          pricePaid: 0,
+          currency,
+          deliverAt,
         });
       } else {
         const price = Number(em.price);
@@ -239,33 +318,35 @@ export async function purchaseEventMinerForUser(
           data: { [balanceField]: { decrement: totalPrice } },
         });
 
-        await tx.eventPurchase.createMany({
-          data: Array.from({ length: qty }, () => ({
-            userId,
-            eventId: em.eventId,
-            eventMinerId: em.id,
-            pricePaid: em.price,
-            currency,
-          })),
+        await recordEventPurchases(tx as unknown as PurchaseWriter, {
+          userId,
+          eventId: em.eventId,
+          eventMinerId: em.id,
+          qty,
+          pricePaid: em.price,
+          currency,
+          deliverAt,
         });
       }
 
-      await grantPurchasedInventoryItems(
-        tx,
-        userId,
-        {
-          minerId: null,
-          eventMinerId: em.id,
-          minerName: `[Event] ${em.name}`,
-          level: 1,
-          hashRate: em.hashRate,
-          slotSize,
-          imageUrl: normalizePersistableMinerImageUrl(em.imageUrl),
-          acquisitionSource: "offer_event",
-        },
-        qty,
-        now,
-      );
+      if (!deliverAt) {
+        await grantPurchasedInventoryItems(
+          tx,
+          userId,
+          {
+            minerId: null,
+            eventMinerId: em.id,
+            minerName: `[Event] ${em.name}`,
+            level: 1,
+            hashRate: em.hashRate,
+            slotSize,
+            imageUrl: normalizePersistableMinerImageUrl(em.imageUrl),
+            acquisitionSource: "offer_event",
+          },
+          qty,
+          now,
+        );
+      }
 
       const updatedUser = await tx.user.findUnique({ where: { id: userId } });
       return {
@@ -274,26 +355,34 @@ export async function purchaseEventMinerForUser(
         currency,
         isFree: em.isFree,
         totalPrice,
+        deliverAt,
+        deliveryDelayDays: em.deliveryDelayDays ?? 0,
         updatedUser,
       };
     });
 
-    const { minerName, eventTitle, isFree, updatedUser } = result;
+    const { minerName, eventTitle, isFree, deliverAt, deliveryDelayDays, updatedUser } = result;
 
     // applyUserBalanceDelta skipped — DB balance is source of truth (no miningRuntime).
+
+    const arrivalNote = deliverAt
+      ? `A maquina chega no inventario em ${deliveryDelayDays} dias.`
+      : `${qty > 1 ? "Os equipamentos estao" : "O equipamento esta"} no inventario!`;
 
     await createNotification({
       userId,
       title: isFree ? "Maquina gratis coletada!" : "Oferta especial",
       message: isFree
-        ? `Voce coletou ${qty}x ${minerName} gratuitamente! ${qty > 1 ? "Os equipamentos estao" : "O equipamento esta"} no inventario!`
-        : `Voce comprou ${qty}x ${minerName} no evento "${eventTitle}". ${qty > 1 ? "Os equipamentos estao" : "O equipamento esta"} no inventario!`,
+        ? `Voce coletou ${qty}x ${minerName} gratuitamente! ${arrivalNote}`
+        : `Voce comprou ${qty}x ${minerName} no evento "${eventTitle}". ${arrivalNote}`,
       type: "success",
     });
 
     return {
       ok: true,
-      message: `${qty}x ${minerName} adicionado(s) ao inventario.`,
+      message: deliverAt
+        ? `${qty}x ${minerName} reservada. Chega no inventario em ${deliveryDelayDays} dias.`
+        : `${qty}x ${minerName} adicionado(s) ao inventario.`,
       balances: mapBalances(updatedUser as unknown as Record<string, unknown>),
     };
   } catch (e: unknown) {
@@ -328,5 +417,65 @@ export async function purchaseEventMinerForUser(
     }
     log.error("purchaseEventMinerForUser", { error: String(e) });
     return { ok: false, status: 500, code: "error", message: "Purchase failed." };
+  }
+}
+
+/** Grants miners whose delivery day has arrived. Image miners never enter this queue. */
+export async function deliverDueEventMiners(now: Date = new Date()): Promise<number> {
+  const due = await repo.listDueEventMinerDeliveryIds(now, OFFER_EVENT_DELIVERY_BATCH);
+  let delivered = 0;
+  for (const row of due) {
+    const granted = await grantDueDelivery(row.id, now);
+    if (granted) delivered += 1;
+  }
+  if (delivered > 0) log.info(`Delivered ${delivered} delayed offer miner(s).`);
+  return delivered;
+}
+
+async function grantDueDelivery(deliveryId: number, now: Date): Promise<boolean> {
+  try {
+    const granted = await prisma.$transaction(async (tx) => {
+      const claimed = await tx.eventMinerDelivery.updateMany({
+        where: { id: deliveryId, deliveredAt: null, deliverAt: { lte: now } },
+        data: { deliveredAt: now },
+      });
+      if (claimed.count !== 1) return null;
+      const row = await tx.eventMinerDelivery.findUnique({
+        where: { id: deliveryId },
+        include: { eventMiner: true },
+      });
+      if (!row?.eventMiner) return null;
+      const em = row.eventMiner;
+      const slotSize =
+        Number.isInteger(em.slotSize) && em.slotSize >= 1 && em.slotSize <= 2 ? em.slotSize : 1;
+      await grantPurchasedInventoryItems(
+        tx,
+        row.userId,
+        {
+          minerId: null,
+          eventMinerId: em.id,
+          minerName: `[Event] ${em.name}`,
+          level: 1,
+          hashRate: em.hashRate,
+          slotSize,
+          imageUrl: normalizePersistableMinerImageUrl(em.imageUrl),
+          acquisitionSource: "offer_event",
+        },
+        1,
+        now,
+      );
+      return { userId: row.userId, minerName: em.name };
+    });
+    if (!granted) return false;
+    await createNotification({
+      userId: granted.userId,
+      title: "Maquina entregue",
+      message: `${granted.minerName} chegou e esta no inventario.`,
+      type: "success",
+    });
+    return true;
+  } catch (err: unknown) {
+    log.error("grantDueDelivery", { deliveryId, error: err instanceof Error ? err.message : String(err) });
+    return false;
   }
 }

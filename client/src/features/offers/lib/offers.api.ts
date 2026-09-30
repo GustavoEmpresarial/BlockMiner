@@ -14,6 +14,9 @@ export interface OfferEventMinerDTO {
   name?: string;
   description?: string | null;
   imageUrl?: string | null;
+  modelUrl?: string | null;
+  deliveryDelayDays?: number;
+  pendingDeliveryAt?: string | null;
   price?: number | string;
   hashRate?: number | string;
   currency?: string;

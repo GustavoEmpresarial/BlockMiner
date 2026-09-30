@@ -3143,7 +3143,9 @@
     "room_unlock_ok": "Room unlocked successfully!",
     "confirm_title": "Confirm purchase",
     "purchase_ok": "Purchase successful!",
-    "ended": "Ended"
+    "ended": "Ended",
+    "arrives_in_days": "Arrives in {{days}} days",
+    "pending_arrival": "On the way · {{date}}"
   },
   "calculator": {
     "title": "Earnings Calculator",
