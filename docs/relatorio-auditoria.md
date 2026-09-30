@@ -209,6 +209,10 @@ Executado através de `tests/security/run-kali-faucet-audit.sh` utilizando o con
 | **SEC-11** | **Ausência de Auditoria em Mutações Financeiras:** Ações de `approve`, `reject` e `complete` não registravam nenhum evento em `admin_audit_logs`. | **ALTA** | CWE-778 / OWASP A9 | `server/modules/wallet/withdrawal/withdrawal.controller.ts:126-234` | ✅ **Corrigido** |
 | **SEC-12** | **Crash 500 por Integer Overflow em ID de Rota:** Fuzzing com números gigantescos no `:withdrawalId` gerava `PrismaClientValidationError` e HTTP 500. | **MÉDIA** | CWE-190 / OWASP A3 | `server/modules/wallet/withdrawal/withdrawal.controller.ts` | ✅ **Corrigido** |
 | **PERF-01** | **Sobrecarga de RPC Polygon em Consultas Administrativas:** `getHotWalletPaymentStatus` realizava requisições HTTPS síncronas de rede para cada requisição HTTP, elevando latência para ~936ms p95. | **MÉDIA** | Performance / Resiliência | `server/modules/wallet/withdrawal/withdrawal.auto-send.ts:536` | ✅ **Corrigido (Cache TTL 5s)** |
+| **SEC-39** | **Ausência de Rate Limiting Distribuído no Admin:** Roteador administrativo `walletAdminRouter` exposto sem teto de requisições por minuto no cluster. | **ALTA** | CWE-770 / OWASP A4 | `server/modules/wallet/wallet.admin.routes.ts:9` | ✅ **Corrigido (120/300 req/min)** |
+| **SEC-40** | **Mass Assignment & Validação Manual em Conclusão de Saques:** `adminCompleteWithdrawal` realizava verificação manual em vez de Zod `.strict()`, permitindo injeção de parâmetros adicionais no payload. | **MÉDIA** | CWE-915 / OWASP A4 | `server/modules/wallet/withdrawal/withdrawal.controller.ts:237` | ✅ **Corrigido (completeWithdrawalSchema.strict())** |
+| **DEAD-01** | **Código Morto com `window.confirm`:** Componente órfão `AdminFinanceBlkTab.tsx` não importado em nenhuma tela continha `window.confirm` nativo e chamadas não tipadas. | **BAIXA** | Qualidade de Código | `client/src/features/admin/finance/components/AdminFinanceBlkTab.tsx` | ✅ **Removido** |
+| **TYPE-09** | **Falta de API Service Centralizado & Tipos Órfãos:** `AdminFinancePage` consumia métodos dispersos; `adminFinance.types.ts` possuía interfaces obsoletas. | **BAIXA** | Arquitetura Frontend | `client/src/features/admin/finance/adminFinance.api.ts` | ✅ **Corrigido (adminFinanceApi)** |
 | **UX-03** | **Invisibilidade da Hot Wallet no Painel Admin:** Nenhuma informação sobre saldo on-chain, reserva mínima ou status do auto-send era exibida na interface `/admin/finance`. | **MÉDIA** | Usabilidade / Operações | `client/src/features/admin/finance/AdminFinancePage.tsx` | ✅ **Corrigido (HotWalletStatusPanel)** |
 | **SEC-13** | **Segredo Residual Descontinuado no Ambiente:** Chave mnemônica `WITHDRAWAL_MNEMONIC` legada e não utilizada presente no `.env`. | **BAIXA** | CWE-200 | `.env:107` | ✅ **Corrigido** |
 
@@ -254,13 +258,13 @@ Executado através de `tests/performance/run-finance-k6.mjs` sob 15 VUs simultâ
 
 | Métrica | Meta Estabelecida | Resultado Obtido | Status |
 | :--- | :---: | :---: | :---: |
-| **Taxa de Erro 5xx** | `0.00%` | **0.00%** (0 de 2.436 requests) | ✅ Aprovado |
-| **Checks Totais** | `100.00%` | **100.00%** (2.436 de 2.436) | ✅ Aprovado |
-| **Latência Hot Wallet GET p50** | $< 100\text{ ms}$ | **6.25 ms** | ✅ Excelente |
-| **Latência Hot Wallet GET p95** | $< 300\text{ ms}$ | **22.14 ms** | ✅ Excelente |
-| **Latência Fila Pendente GET p50** | $< 150\text{ ms}$ | **6.46 ms** | ✅ Excelente |
-| **Latência Fila Pendente GET p95** | $< 400\text{ ms}$ | **18.24 ms** | ✅ Excelente |
-| **Throughput Médio** | $> 100\text{ req/s}$ | **214.23 req/s** | ✅ Aprovado |
+| **Taxa de Erro 5xx** | `0.00%` | **0.00%** (0 de 2.302 requests) | ✅ Aprovado |
+| **Checks Totais** | `100.00%` | **100.00%** (2.302 de 2.302) | ✅ Aprovado |
+| **Latência Hot Wallet GET p50** | $< 100\text{ ms}$ | **4.70 ms** | ✅ Excelente |
+| **Latência Hot Wallet GET p95** | $< 300\text{ ms}$ | **15.54 ms** | ✅ Excelente |
+| **Latência Fila Pendente GET p50** | $< 150\text{ ms}$ | **3.71 ms** | ✅ Excelente |
+| **Latência Fila Pendente GET p95** | $< 400\text{ ms}$ | **13.01 ms** | ✅ Excelente |
+| **Throughput Médio** | $> 100\text{ req/s}$ | **209.14 req/s** | ✅ Aprovado |
 
 ---
 
@@ -270,13 +274,15 @@ Executado através de `tests/security/run-kali-finance-audit.sh` utilizando o co
 
 | Categoria do Teste | Casos Executados | Resultado |
 | :--- | :---: | :---: |
-| **Autenticação & RBAC Bypass** | 5 rotas administrativas | **100% Bloqueados** (HTTP 401 Unauthorized estrito) |
+| **Autenticação & RBAC Bypass** | 6 rotas administrativas | **100% Bloqueados** (HTTP 401 Unauthorized estrito) |
 | **Tokens Adulterados / Assinatura Inválida** | 3 vetores (alg:none, invalid jwt, SQLi probe) | **100% Rejeitados** (HTTP 401) |
+| **BFLA (Broken Function Level Authorization)** | Operador apenas com `finance` tentando mutações | **100% Bloqueado** (HTTP 403 Forbidden - `FORBIDDEN_PERMISSION`) |
 | **Parameter Fuzzing & SQLi em `:withdrawalId`** | 4 vetores (SQLi Union, negativo, string, overflow $> 2^{31}-1$) | **100% Neutralizados** (HTTP 400 Bad Request, zero crash 500) |
 | **Injeção de txHash Inválido / Malicioso** | 4 vetores (sem 0x, curto, XSS `<script>`, não-hex) | **100% Bloqueados** (HTTP 400 Bad Request) |
-| **Prevenção de Information Disclosure** | Injeção de payloads malformados | **Zero vazamentos** de stack traces ou Prisma |
+| **Bloqueio de Mass Assignment (`complete`)** | Injeção de propriedades não autorizadas | **100% Bloqueado** (HTTP 400 via `completeWithdrawalSchema.strict()`) |
+| **Prevenção de Information Disclosure** | Injeção de payloads malformados em probes | **Zero vazamentos** de stack traces ou Prisma |
 
-**Total de Verificações de Segurança**: 18 executadas, 18 aprovadas, 0 falhas.
+**Total de Verificações de Segurança**: 25 executadas, 25 aprovadas, 0 falhas.
 
 ---
 
