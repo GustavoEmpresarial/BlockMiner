@@ -115,7 +115,7 @@ TARGET_DEFAULTS = {
         "app_root": "/root/blockminer-current",
         "compose_file": "docker-compose.yml",
         "container_app": "blockminer-current-app",
-        "health_port": 3000,
+        "health_port": 5102,
     },
     "staging": {
         "app_root": "/root/blockminer-staging",
