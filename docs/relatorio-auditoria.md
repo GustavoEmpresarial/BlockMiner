@@ -1469,6 +1469,83 @@ Executado através de `tests/security/run-kali-support-audit.sh` utilizando o co
 
 **Total de Verificações de Segurança**: 22 executadas, 22 aprovadas, 0 falhas.
 
+---
+
+# PARTE XVI: MÓDULO ANTIBOT (`/admin/antibot`)
+
+## 1. Resumo Executivo dos Achados — AntiBot
+
+| ID | Descrição do Achado | Severidade | CWE / OWASP | Arquivo e Linha Original | Status da Correção |
+| :---: | :--- | :---: | :---: | :--- | :---: |
+| **SEC-51** | **BFLA Crítico nas Rotas do AntiBot:** Roteador administrativo (`/api/admin/antibot/*`) continha apenas `requireAdminAuth`, sem nenhuma verificação de permissões RBAC (`requireAdminPermission`). Qualquer operador autenticado (inclusive `readonly`, `support` ou `finance`) podia atualizar alertas, adicionar usuários na whitelist de confiança e até disparar `POST /reset` para apagar todo o banco de detecções. | **CRÍTICA** | CWE-285 / OWASP A1 | `server/modules/antibot/antibot.routes.ts:29-40` | ✅ **Corrigido** |
+| **SEC-52** | **Ausência de Permissões RBAC no Sistema Central:** As permissões `antibot` e `antibot.view` não existiam em `server/modules/admin/admin.permissions.ts`, impossibilitando controle granular por papel. | **ALTA** | CWE-284 / OWASP A1 | `server/modules/admin/admin.permissions.ts` | ✅ **Corrigido** |
+| **SEC-53** | **Falha de Auditoria com Identidade Nula (`adminId: null`):** Operações `ANTIBOT_TRUST_USER` e `ANTIBOT_CLEAR_ALL` tentavam extrair `req.user.id` em vez de `req.admin.adminId`, gravando `adminId: null` em `admin_audit_logs`. `adminUpdateAlert` e `adminRecompute` não possuíam auditoria. | **ALTA** | CWE-778 / OWASP A9 | `server/modules/antibot/antibot.controller.ts:228, 279` | ✅ **Corrigido** |
+| **SEC-54** | **Ausência de Rate Limiting Distribuído:** Rotas de auditoria do AntiBot utilizavam rate limiter local em memória, suscetíveis a DoS sob balanceamento de carga com múltiplos containers. | **ALTA** | CWE-770 / OWASP A4 | `server/modules/antibot/antibot.routes.ts:28` | ✅ **Corrigido** |
+| **SEC-55** | **Falta de Validação Estrita Zod (.strict()) e Clamping 32-bit:** Endpoints administrativos não validavam entradas com Zod, permitindo mass assignment e falhas `P2003` (500) em IDs inexistentes. | **ALTA** | CWE-915 / CWE-20 | `server/modules/antibot/antibot.controller.ts` | ✅ **Corrigido** |
+| **TEC-04** | **Rota de Transição Legada `/overview-legacy`:** Rota duplicada e não utilizada consumindo manutenção e superfície de ataque. | **BAIXA** | Código Morto | `server/modules/antibot/antibot.routes.ts:31` | ✅ **Removido** |
+| **UX-02** | **Dump de JSON Bruto em Perfil de Usuário e `window.confirm`:** `AdminAntibotUserProfilePage.tsx` renderizava apenas uma tag `<pre>` com `JSON.stringify`. `AdminAntibotPage.tsx` usava `window.confirm` bloqueante. | **MÉDIA** | Usabilidade / UI | `client/src/features/admin/antibot/` | ✅ **Corrigido** |
+
+---
+
+## 2. Detalhamento dos Achados e Mitigações Aplicadas — AntiBot
+
+### SEC-51 & SEC-52: Controle de Acesso Quebrado (BFLA) e Permissões Ausentes — CRÍTICA
+- **Descrição**: O roteador `/api/admin/antibot` montava todas as rotas com apenas `requireAdminAuth`. Qualquer credencial administrativa, mesmo de papéis meramente consultivos ou de suporte/financeiro, permitia alterar status de alertas, zerar o score de jogadores via whitelist (`/trust`) e acionar a rota destrutiva `POST /reset`. Adicionalmente, as permissões `antibot` e `antibot.view` não estavam cadastradas na matriz de RBAC.
+- **Correção Aplicada**: Cadastradas as permissões `antibot` e `antibot.view` em `server/modules/admin/admin.permissions.ts`, atribuídas ao papel `admin` e concedido `antibot.view` para `moderator`. Adicionados guards `requireAdminPermission("antibot.view", "antibot")` para rotas de leitura e `requireAdminPermission("antibot")` para todas as mutações e o reset.
+- **Teste de Verificação**: `tests/antibot/admin-antibot.rbac.test.mjs` (12 testes) e testes Kali `BFLA-001..005` e `RBAC-001..004` (100% aprovados).
+
+---
+
+### SEC-53: Correção da Trilha de Auditoria e Identidade Administrativa — ALTA
+- **Descrição**: A função auxiliar `sessionUserId(req)` buscava `req.user?.id`. Em rotas administrativas protegidas por `requireAdminAuth`, o contexto autenticado é alocado em `req.admin.adminId`. Como consequência, o banco registrava o autor da mutação como `null`.
+- **Correção Aplicada**: Criada função `adminActorId(req)` que extrai corretamente `req.admin?.adminId`. Adicionadas chamadas `logAdminAction` para `ANTIBOT_UPDATE_ALERT`, `ANTIBOT_RECOMPUTE_SCORE`, `ANTIBOT_TRUST_USER` e `ANTIBOT_CLEAR_ALL`.
+
+---
+
+### SEC-54 & SEC-55: Blindagem Zod `.strict()`, Rate Limiting Distribuído e Resiliência a IDs Inexistentes — ALTA
+- **Descrição**: Requisições para `/users/:id/trust` com IDs inexistentes causavam violação de chave estrangeira no Prisma (`P2003`) com HTTP 500. Schemas não rejeitavam propriedades adicionais.
+- **Correção Aplicada**: Criado arquivo `server/modules/antibot/antibot.schemas.ts` com validação estrita `.strict()` em todos os parâmetros, queries e payloads. Verificação prévia da existência do usuário no banco respondendo HTTP 404 limpo. Substituição por limitadores distribuídos `antibot_admin_read` (120 req/min), `antibot_admin_write` (120 req/min) e `antibot_admin_reset` (10 req/min).
+
+---
+
+### UX-02: Redesign Moderno do Perfil Antibot e Eliminação de `window.confirm` — MÉDIA
+- **Descrição**: A página `/admin/antibot/users/:id` exibia um dump cru em JSON. A limpeza da base usava o diálogo nativo e bloqueante `window.confirm`.
+- **Correção Aplicada**: Criação de modal de confirmação estilizado em Tailwind para limpeza de dados. Redesign completo de `AdminAntibotUserProfilePage.tsx` com cards de KPI, pontuação de risco com escala colorida (0-100), botão de recálculo dinâmico, modal de motivo de confiança e tabelas organizadas de evidências, sessões e dispositivos.
+
+---
+
+## 3. Resultados dos Testes de Carga (k6) — AntiBot
+
+Executado através de `tests/performance/run-antibot-k6.mjs` sob 15 VUs:
+
+| Métrica | Meta Estabelecida | Resultado Obtido | Status |
+| :--- | :---: | :---: | :---: |
+| **Taxa de Erro 5xx** | `0.00%` | **0.00%** (0 de 9.048 requests) | ✅ Aprovado |
+| **Latência Admin Overview (`/api/admin/antibot/overview`)** | p95 < 300 ms | **46.14 ms** (p50: 14.59 ms) | ✅ Excelente |
+| **Latência Telemetria Pública (`/api/antibot/telemetry`)** | p95 < 300 ms | **2.66 ms** (p50: 1.30 ms) | ✅ Excelente |
+| **Throughput Médio** | > 100 req/s | **822.2 req/s** | ✅ Aprovado |
+| **Duração Total** | 11 s | **11 s** (15 VUs) | ✅ Conforme |
+
+---
+
+## 4. Resultados da Auditoria de Segurança (Container Kali Linux) — AntiBot
+
+Executado através de `tests/security/run-kali-antibot-audit.sh` utilizando o container `kali-pentest:latest`:
+
+| Categoria do Teste | Casos Executados | Resultado |
+| :--- | :---: | :---: |
+| **Autenticação (GET/PATCH/POST Admin sem token / Forged)** | 6 vetores em rotas admin | **100% Bloqueados** (HTTP 401 Unauthorized) |
+| **BFLA (Broken Function Level Authorization)** | Operador restrito tentando GET, update, trust, recompute e reset | **100% Bloqueado** (HTTP 403 Forbidden) |
+| **RBAC Granular (Moderador com antibot.view)** | Leitura permitida (200), mutações bloqueadas (403) | **100% Conforme** |
+| **Mass Assignment Protection** | Chaves rogue em PATCH alert, POST trust e GET overview | **100% Bloqueado** (HTTP 400 Bad Request via `.strict()`) |
+| **Validação de ID (Negativo e Overflow 32-bit)** | 2 vetores de ID malformado | **100% Bloqueado** (HTTP 400 invalid_id) |
+| **Validação de Enum (Status de Alerta Inválido)** | 1 vetor com status inválido | **100% Bloqueado** (HTTP 400 validation_error) |
+| **Neutralização de Injeção SQL e XSS** | Vetor SQLi em ID e payload XSS em motivo de confiança | **100% Neutralizados** (HTTP 400 / 404 sem execução) |
+| **Prevenção de Information Disclosure** | Varredura de stack traces e strings internas do ORM | **Zero vazamentos** detectados |
+| **Telemetria Pública** | `POST /api/antibot/telemetry` | **100% Funcional** (HTTP 200 OK) |
+
+**Total de Verificações de Segurança**: 25 executadas, 25 aprovadas, 0 falhas.
+
 
 
 
