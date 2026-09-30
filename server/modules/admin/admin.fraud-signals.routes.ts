@@ -16,6 +16,7 @@ import {
   adminFraudRefreshIpSchema,
   adminFraudResetCollectionSchema,
 } from "./admin.fraud-signals.schemas.js";
+import { requireAdminAuth } from "./admin.auth.middleware.js";
 import {
   listAdminFraudSignals,
   resetAdminFraudCollectionData,
@@ -24,6 +25,7 @@ import {
 } from "./admin.fraud-signals.service.js";
 
 export const fraudSignalsAdminRouter: Router = express.Router();
+fraudSignalsAdminRouter.use(requireAdminAuth);
 const log = logger.child("AdminFraudSignals");
 
 const readLimiter = createDistributedRateLimiter({
@@ -40,7 +42,7 @@ const writeLimiter = createDistributedRateLimiter({
 
 const resetLimiter = createDistributedRateLimiter({
   windowMs: 60 * 60 * 1000,
-  max: 5,
+  max: 10,
   name: "fraud_signals_admin_reset",
 });
 
@@ -117,8 +119,8 @@ fraudSignalsAdminRouter.post(
 
 fraudSignalsAdminRouter.post(
   "/reset-collection",
-  resetLimiter,
   requireAdminPermission("fraud_signals"),
+  resetLimiter,
   async (req: Request, res: Response) => {
     try {
       const parsed = adminFraudResetCollectionSchema.safeParse(req.body);

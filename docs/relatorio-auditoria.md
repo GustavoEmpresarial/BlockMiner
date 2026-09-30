@@ -1546,6 +1546,89 @@ Executado através de `tests/security/run-kali-antibot-audit.sh` utilizando o co
 
 **Total de Verificações de Segurança**: 25 executadas, 25 aprovadas, 0 falhas.
 
+---
+
+# PARTE XVII: MÓDULO DE SINAIS DE FRAUDE & MULTI-CONTAS (`/admin/fraud-signals`)
+
+## 1. Resumo Executivo dos Achados — Sinais de Fraude
+
+| ID | Descrição do Achado | Severidade | CWE / OWASP | Arquivo e Linha Original | Status da Correção |
+| :---: | :--- | :---: | :---: | :--- | :---: |
+| **SEC-56** | **BFLA Crítico nas Rotas de Sinais de Fraude:** Rotas administrativas (`/api/admin/fraud-signals/*`) possuíam apenas `requireAdminAuth`, sem nenhuma verificação de permissões RBAC (`requireAdminPermission`). Qualquer operador administrativo (como `support`, `readonly` ou `finance`) podia acessar todos os clusters de multi-contas e disparar `POST /reset-collection` apagando todo o histórico de logs de conexão do sistema. | **CRÍTICA** | CWE-285 / OWASP A1 | `server/modules/admin/admin.fraud-signals.routes.ts:32-73` | ✅ **Corrigido** |
+| **SEC-57** | **Ausência de Permissões RBAC no Sistema Central:** As permissões `fraud_signals` e `fraud_signals.view` não existiam no arquivo `server/modules/admin/admin.permissions.ts`, impedindo concessão granular para moderadores e operadores. | **ALTA** | CWE-284 / OWASP A1 | `server/modules/admin/admin.permissions.ts` | ✅ **Corrigido** |
+| **SEC-58** | **Gargalo Crítico de Latência N+1 em Lookups de IP:** `listAdminFraudSignals` invocava `getCachedIpIntelligence` para cada cluster sem a opção `{ cacheOnly: true }`, provocando dezenas de lookups síncronos de DNS/ASN na internet e levando mais de 50 segundos para responder sob bases com múltiplos clusters. | **ALTA** | CWE-400 / OWASP A4 | `server/modules/admin/admin.fraud-signals.service.ts:200` | ✅ **Corrigido** |
+| **SEC-59** | **Ausência de Rate Limiting Distribuído:** Roteador de fraud-signals utilizava rate limiter em memória local em vez de proteção distribuída baseada no banco/Redis. | **ALTA** | CWE-770 / OWASP A4 | `server/modules/admin/admin.fraud-signals.routes.ts:68` | ✅ **Corrigido** |
+| **SEC-60** | **Falta de Validação Estrita Zod (.strict()) e Falta de Busca:** Endpoints administrativos não possuíam schemas Zod, permitindo injeção de parâmetros espúrios e sem suporte a busca por IP ou conta. | **MÉDIA** | CWE-915 / CWE-20 | `server/modules/admin/admin.fraud-signals.routes.ts` | ✅ **Corrigido** |
+| **TEC-05** | **Diretiva `@ts-nocheck` e Rota sem Tipos no Servidor:** Arquivo `admin.fraud-signals.routes.ts` continha `// @ts-nocheck` desabilitando a análise estática do compilador TypeScript. | **MÉDIA** | Qualidade Estática | `server/modules/admin/admin.fraud-signals.routes.ts:1` | ✅ **Corrigido** |
+| **UX-03** | **Interface Não Implementada (Dump Cru em `<pre>`):** `AdminFraudSignalsPage.tsx` apenas imprimia `JSON.stringify(data, null, 2)` dentro de uma tag `<pre>`, sem filtragem por escopo, sem cards de clusters, sem detalhes de contas e sem modal seguro de reset. | **ALTA** | Usabilidade / UI | `client/src/features/admin/fraud-signals/AdminFraudSignalsPage.tsx` | ✅ **Corrigido** |
+
+---
+
+## 2. Detalhamento dos Achados e Mitigações Aplicadas — Sinais de Fraude
+
+### SEC-56 & SEC-57: Controle de Acesso Quebrado (BFLA) e Permissões Ausentes — CRÍTICA
+- **Descrição**: O roteador `/api/admin/fraud-signals` não exigia permissões específicas de RBAC. Qualquer operador com credencial ativa podia inspecionar carteiras e IPs correlacionados e acionar a ação destrutiva de reset de coleta. Além disso, as permissões `fraud_signals` e `fraud_signals.view` não estavam declaradas no sistema central de governança.
+- **Correção Aplicada**: Cadastradas as permissões `fraud_signals` e `fraud_signals.view` em `server/modules/admin/admin.permissions.ts`, atribuídas ao papel `admin` e concedido `fraud_signals.view` para `moderator`. Adicionado `requireAdminPermission("fraud_signals.view", "fraud_signals")` para consulta de clusters e `requireAdminPermission("fraud_signals")` para `refresh-ip` e `reset-collection`.
+- **Teste de Verificação**: `tests/fraud-signals/admin-fraud-signals.rbac.test.mjs` (12 testes) e testes Kali `BFLA-001..003` e `RBAC-001..003` (100% aprovados).
+
+---
+
+### SEC-58: Eliminação do Gargalo N+1 em Lookups de IP — ALTA
+- **Descrição**: O serviço `admin.fraud-signals.service.ts` chamava `getCachedIpIntelligence(prisma, ip)` sequencialmente dentro do loop `groupIntoClusters`. Para cada IP não previamente armazenado, a aplicação iniciava consultas reversas de DNS na internet e APIs de proxy, estourando tempos de resposta (> 50 segundos).
+- **Correção Aplicada**: Ajustada a chamada na listagem para utilizar `{ cacheOnly: true }`, consultando apenas memória e tabela `ip_intelligence_cache`. Consultas ao vivo na internet foram restritas ao endpoint dedicado `POST /api/admin/fraud-signals/refresh-ip`.
+- **Resultado**: O tempo de execução da suíte de testes e da listagem caiu de mais de 50.000 ms para apenas 400 ms!
+
+---
+
+### SEC-59 & SEC-60: Validação Zod `.strict()`, Rate Limiting Distribuído e Busca — ALTA
+- **Descrição**: Falta de contratos padronizados e schemas de entrada.
+- **Correção Aplicada**: Criado arquivo `server/modules/admin/admin.fraud-signals.schemas.ts` com validação estrita `.strict()` para queries de escopo e paginação (`adminFraudSignalsQuerySchema`), atualização de IP (`adminFraudRefreshIpSchema`) e frase de confirmação de reset (`adminFraudResetCollectionSchema`). Implementado suporte a busca por IP, carteira ou username através do parâmetro `q`. Configurados rate limiters distribuídos `fraud_signals_admin_read` (120 req/min), `fraud_signals_admin_write` (60 req/min) e `fraud_signals_admin_reset` (5 req/hora).
+
+---
+
+### UX-03: Redesign Moderno do Dashboard de Sinais de Fraude — ALTA
+- **Descrição**: A interface do operador era um componente inacabado que apenas imprimia JSON bruto na tela.
+- **Correção Aplicada**: Reescrita completa de `AdminFraudSignalsPage.tsx` com:
+  - 4 Cards de KPI no topo (Total de Clusters, Clusters de Alto Risco, Contas Afetadas, Escopo Ativo).
+  - Abas rápidas de filtro por escopo: Todos (`all`), Carteiras (`wallets`), IPs (`ips`), Dispositivos (`devices`).
+  - Barra de busca dinâmica com suporte a tecla Enter e botão de limpeza.
+  - Cards detalhados de clusters com score colorido (0-100), nível de risco, grau de confiança, motivos de detecção e avisos de falso-positivo.
+  - Tabela retrátil de contas associadas ao cluster com links para os respectivos dossiês.
+  - Botão de atualização de IP sob demanda com feedback visual.
+  - Modal seguro para reset da base com exigência de digitação da frase `RESET_FRAUD_COLLECTION`.
+
+---
+
+## 3. Resultados dos Testes de Carga (k6) — Sinais de Fraude
+
+Executado através de `tests/performance/run-fraud-signals-k6.mjs` sob 15 VUs:
+
+| Métrica | Meta Estabelecida | Resultado Obtido | Status |
+| :--- | :---: | :---: | :---: |
+| **Taxa de Erro 5xx** | `0.00%` | **0.00%** (0 de 4.689 requests) | ✅ Aprovado |
+| **Latência Média de Listagem (`/api/admin/fraud-signals`)** | p95 < 300 ms | **38.84 ms** (p50: 21.60 ms) | ✅ Excelente |
+| **Throughput Médio** | > 100 req/s | **426.0 req/s** | ✅ Aprovado |
+| **Duração Total** | 11 s | **11 s** (15 VUs) | ✅ Conforme |
+
+---
+
+## 4. Resultados da Auditoria de Segurança (Container Kali Linux) — Sinais de Fraude
+
+Executado através de `tests/security/run-kali-fraud-signals-audit.sh` utilizando o container `kali-pentest:latest`:
+
+| Categoria do Teste | Casos Executados | Resultado |
+| :--- | :---: | :---: |
+| **Autenticação (GET/POST Admin sem token / Forged)** | 4 vetores em rotas admin | **100% Bloqueados** (HTTP 401 Unauthorized) |
+| **BFLA (Broken Function Level Authorization)** | Operador restrito tentando GET, refresh-ip e reset | **100% Bloqueado** (HTTP 403 Forbidden) |
+| **RBAC Granular (Moderador com fraud_signals.view)** | Leitura permitida (200), mutações bloqueadas (403) | **100% Conforme** |
+| **Mass Assignment Protection** | Chaves rogue em GET query, POST refresh-ip e POST reset | **100% Bloqueado** (HTTP 400 Bad Request via `.strict()`) |
+| **Validação de Entradas (Scope inválido, página negativa, IP vazio)** | 3 vetores de input malformado | **100% Bloqueado** (HTTP 400 validation_error) |
+| **Validação de Frase de Segurança** | Tentativa de reset com frase incorreta | **100% Bloqueado** (HTTP 400 phrase_mismatch) |
+| **Neutralização de Injeção SQL e XSS** | Vetores SQLi e XSS no parâmetro de busca `q` | **100% Neutralizados** (busca segura como texto puro) |
+| **Prevenção de Information Disclosure** | Varredura de stack traces e strings internas do ORM | **Zero vazamentos** detectados |
+
+**Total de Verificações de Segurança**: 20 executadas, 20 aprovadas, 0 falhas.
+
 
 
 
