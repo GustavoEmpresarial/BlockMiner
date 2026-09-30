@@ -114,6 +114,9 @@ export function uploadAdminSupportImage(file: File) {
 import { adminPublicSupportApi } from '../support/adminPublicSupport.api';
 export { adminPublicSupportApi };
 
+import { adminAntibotApi } from '../antibot/adminAntibot.api';
+export { adminAntibotApi };
+
 export function listAdminPublicSupportTickets(params: { status: AdminPublicSupportStatusFilter; page: number }) {
   return adminPublicSupportApi.listTickets(params);
 }
