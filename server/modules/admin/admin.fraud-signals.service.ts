@@ -197,7 +197,7 @@ async function groupIntoClusters(
     if (IP_KEYED_SIGNAL_TYPES.has(signalType)) {
       const ip = normalizeIp(key);
       if (ip) {
-        ipIntelligence = await getCachedIpIntelligence(prisma, ip).catch(() => null);
+        ipIntelligence = await getCachedIpIntelligence(prisma, ip, { cacheOnly: true }).catch(() => null);
       }
     }
 
@@ -276,12 +276,14 @@ export type ListAdminFraudSignalsOpts = {
   scope?: unknown;
   page?: unknown;
   limit?: unknown;
+  q?: unknown;
 };
 
 export async function listAdminFraudSignals(prisma: AppPrisma, opts: ListAdminFraudSignalsOpts = {}) {
   const scope = parseScope(opts.scope);
   const page = parsePage(opts.page);
   const limit = parseLimit(opts.limit);
+  const search = typeof opts.q === "string" ? opts.q.trim().toLowerCase() : "";
 
   const clusters: FraudCluster[] = [];
 
@@ -304,11 +306,27 @@ export async function listAdminFraudSignals(prisma: AppPrisma, opts: ListAdminFr
     clusters.push(...(await groupIntoClusters(prisma, rows, "device_duplicate", "device_fingerprint")));
   }
 
-  clusters.sort((a, b) => b.riskScore - a.riskScore || b.userCount - a.userCount || a.key.localeCompare(b.key));
+  let filtered = clusters;
+  if (search) {
+    filtered = clusters.filter(
+      (c) =>
+        c.key.toLowerCase().includes(search) ||
+        c.kind.toLowerCase().includes(search) ||
+        c.signalType.toLowerCase().includes(search) ||
+        c.users.some(
+          (u) =>
+            (u.username && u.username.toLowerCase().includes(search)) ||
+            (u.email && u.email.toLowerCase().includes(search)) ||
+            (u.walletAddress && u.walletAddress.toLowerCase().includes(search))
+        )
+    );
+  }
 
-  const total = clusters.length;
+  filtered.sort((a, b) => b.riskScore - a.riskScore || b.userCount - a.userCount || a.key.localeCompare(b.key));
+
+  const total = filtered.length;
   const start = (page - 1) * limit;
-  const signals = clusters.slice(start, start + limit);
+  const signals = filtered.slice(start, start + limit);
 
   return {
     scope,
