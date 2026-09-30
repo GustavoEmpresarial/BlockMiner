@@ -1395,6 +1395,80 @@ Executado através de `tests/security/run-kali-public-support-audit.sh` utilizan
 
 **Total de Verificações de Segurança**: 14 executadas, 14 aprovadas, 0 falhas.
 
+---
+
+# PARTE XV: MÓDULO DE SUPORTE ADMINISTRATIVO (`/admin/support`)
+
+## 1. Resumo Executivo dos Achados — Suporte Administrativo
+
+| ID | Descrição do Achado | Severidade | CWE / OWASP | Arquivo e Linha Original | Status da Correção |
+| :---: | :--- | :---: | :---: | :--- | :---: |
+| **SEC-47** | **BFLA e Injeção Financeira sem RBAC em `/credit-pol`:** Rota administrativa que credita POL real (`POST /api/admin/support/:id/credit-pol`) e rotas de resposta/arquivamento não possuíam verificação de permissão `requireAdminPermission`. Qualquer operador logado com qualquer privilégio podia creditar fundos reais no saldo de jogadores. | **CRÍTICA** | CWE-285 / OWASP A1 | `server/modules/support/support.admin.routes.ts:28` | ✅ **Corrigido** |
+| **SEC-48** | **Ausência de Trilha de Auditoria em Ações Críticas de Suporte:** Operações de compensação de POL (`creditPol`), envio de resposta (`replyToMessage`) e arquivamento (`setArchived`) não registravam chamadas em `admin_audit_logs`. | **ALTA** | CWE-778 / OWASP A9 | `server/modules/support/support.admin.controller.ts:40, 97, 137` | ✅ **Corrigido** |
+| **SEC-49** | **Ausência de Rate Limiting Distribuído:** Rotas de suporte administrativo não possuíam rate limiting distribuído, sujeitando o backend a flooding e DoS em endpoints pesados como `player-dossier`. | **ALTA** | CWE-770 / OWASP A4 | `server/modules/support/support.admin.routes.ts:26-31` | ✅ **Corrigido** |
+| **SEC-50** | **Mass Assignment e Falta de Clamping 32-bit:** Schemas de suporte não utilizavam `.strict()`, permitindo injeção de campos desconhecidos. `setArchived` não usava Zod. IDs de tickets não passavam por validação de limite de 32 bits (`2_147_483_647`). | **ALTA** | CWE-915 / OWASP A3 | `server/modules/support/support.schemas.ts` | ✅ **Corrigido** |
+| **TEC-03** | **Diretivas `@ts-nocheck` em Rotas e Realtime:** Arquivos `support.routes.ts` e `support.realtime.ts` continham `// @ts-nocheck` desativando a checagem de tipos estáticos do TypeScript. | **MÉDIA** | Qualidade Estática | `server/modules/support/support.routes.ts:1`, `support.realtime.ts:1` | ✅ **Corrigido** |
+| **BUG-03** | **6 Erros de Tipagem no Client (`AdminSupportPage.tsx`):** Descompasso de nomes de tipos (`PlayerDossierBundle` vs `AdminSupportPlayerDossierBundle`) e parâmetros com tipo implícito `any` que impediam a compilação do front-end. | **MÉDIA** | Tipagem Estática | `client/src/features/admin/support/AdminSupportPage.tsx:92-95` | ✅ **Corrigido** |
+
+---
+
+## 2. Detalhamento dos Achados e Mitigações Aplicadas — Suporte Administrativo
+
+### SEC-47: BFLA e Injeção Financeira sem RBAC em `/credit-pol` — CRÍTICA
+- **Descrição**: O endpoint `POST /api/admin/support/:id/credit-pol` recebia um identificador de chamado, valor em POL e motivo, e executava um incremento direto de saldo na tabela de usuários via transação atômica do Prisma. Entretanto, a rota possuía apenas `requireAdminAuth`, permitindo que operadores com papéis secundários (ex.: `finance`, `moderator`, `readonly`) injetassem saldo real sem possuir a permissão `support`.
+- **Correção Aplicada**: Adicionado o guard `requireAdminPermission("support")` em `credit-pol`, `reply` e `archive`, e `requireAdminPermission("support.view", "support")` para leitura de tickets e dossiês.
+- **Teste de Verificação**: `tests/support/admin-support.rbac.test.mjs` e teste Kali `BFLA-003` comprovam bloqueio com HTTP 403 Forbidden.
+
+---
+
+### SEC-48: Trilha de Auditoria Obrigatória — ALTA
+- **Descrição**: Operadores administrativos podiam creditar saldos, responder e arquivar tickets sem que o `admin_audit_logs` registrasse a identidade do operador, o IP, a sessão e o valor compensado.
+- **Correção Aplicada**: Integrada chamada assíncrona a `logAdminAction` nas três operações administrativas: `ADMIN_SUPPORT_CREDIT_POL` (com snapshot de valor, saldo resultante e transactionId), `ADMIN_REPLY_SUPPORT_TICKET` e `ADMIN_SET_SUPPORT_ARCHIVED`.
+
+---
+
+### SEC-49: Rate Limiting Distribuído no Painel Admin — ALTA
+- **Descrição**: Diferente do módulo público, as rotas administrativas de suporte não continham limitação de taxa distribuída, deixando o banco exposto a sobrecarga na agregação de tabelas do dossiê de jogador.
+- **Correção Aplicada**: Aplicados rate limiters distribuídos baseados em Redis/Prisma: `support_admin_read` (120 req/min), `support_admin_write` (300 req/min) e `support_admin_credit` (60 req/min).
+
+---
+
+### SEC-50: Blindagem Zod `.strict()` e Clamping 32-bit — ALTA
+- **Descrição**: Parâmetros de rota utilizavam `parseInt` vulnerável a overflows e strings malformadas, e schemas de body não bloqueavam campos espúrios.
+- **Correção Aplicada**: Criados schemas estritos `supportTicketIdParamSchema` (rejeitando IDs negativos, float, non-numeric e > 2.147.483.647), `adminSupportListQuerySchema`, `adminSupportArchiveSchema`, `adminSupportDossierQuerySchema` e blindagem `.strict()` em `creditPolSchema` e `adminReplySchema`.
+
+---
+
+## 3. Resultados dos Testes de Carga (k6) — Suporte Administrativo
+
+Executado através de `tests/performance/run-support-k6.mjs` sob 15 VUs:
+
+| Métrica | Meta Estabelecida | Resultado Obtido | Status |
+| :--- | :---: | :---: | :---: |
+| **Taxa de Erro 5xx** | `0.00%` | **0.00%** (0 de 10.074 requests) | ✅ Aprovado |
+| **Latência Admin Support (`/api/admin/support`)** | p95 < 300 ms | **27.92 ms** (p50: 19.35 ms) | ✅ Excelente |
+| **Latência Player Support (`/api/support`)** | p95 < 300 ms | **1.56 ms** (p50: 0.69 ms) | ✅ Excelente |
+| **Throughput Médio** | > 100 req/s | **915.5 req/s** | ✅ Aprovado |
+| **Duração Total** | 11 s | **11 s** (15 VUs) | ✅ Conforme |
+
+---
+
+## 4. Resultados da Auditoria de Segurança (Container Kali Linux) — Suporte Administrativo
+
+Executado através de `tests/security/run-kali-support-audit.sh` utilizando o container `kali-pentest:latest`:
+
+| Categoria do Teste | Casos Executados | Resultado |
+| :--- | :---: | :---: |
+| **Autenticação (GET/POST Admin sem token / Forged)** | 5 vetores em rotas admin | **100% Bloqueados** (HTTP 401 Unauthorized) |
+| **BFLA (Broken Function Level Authorization)** | Operador restrito tentando GET, reply, credit-pol e archive | **100% Bloqueado** (HTTP 403 Forbidden) |
+| **Mass Assignment Protection** | Chaves rogue em reply, credit-pol, archive e query params | **100% Bloqueado** (HTTP 400 Bad Request via `.strict()`) |
+| **Validação de ID (Negativo, Overflow 32-bit e Non-numeric)** | 3 vetores de ID malformado | **100% Bloqueado** (HTTP 400 invalid_id) |
+| **Validação Financeira (Amount negativo, cap > 1000 e short reason)** | 3 vetores de valores de POL inválidos | **100% Bloqueado** (HTTP 400 validation_error) |
+| **Neutralização de Injeção SQL e XSS** | Vetores SQLi em parâmetro de ID e XSS em corpo de resposta | **100% Neutralizados** (HTTP 400 / encoding seguro) |
+| **Prevenção de Information Disclosure** | Varredura de strings sensíveis de ORM, paths e stack traces | **Zero vazamentos** detectados |
+
+**Total de Verificações de Segurança**: 22 executadas, 22 aprovadas, 0 falhas.
+
 
 
 
