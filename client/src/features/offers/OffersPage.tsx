@@ -481,8 +481,12 @@ export default function OffersPage() {
                                 const canCollect = eventState === 'live' && m.inStock && !alreadyClaimed;
                                 return (
                                 <div key={m.id} className={`bg-surface border rounded-[2.5rem] p-8 shadow-xl transition-all duration-500 group relative overflow-hidden ${
+                                    m.modelUrl ? 'md:col-span-2' : ''
+                                } ${
                                     effectivelyFree
                                         ? 'border-green-500/20 hover:border-green-400/40'
+                                        : m.modelUrl
+                                        ? 'border-cyan-400/25 hover:border-cyan-300/50 shadow-cyan-500/10'
                                         : 'border-gray-800/50 hover:border-primary/30'
                                 }`}>
                                     <div className="relative z-10 space-y-6">
@@ -552,9 +556,15 @@ export default function OffersPage() {
                                             </div>
                                         )}
 
-                                        <div className="aspect-square bg-gray-900/50 rounded-3xl p-2 border border-gray-800 group-hover:scale-105 transition-transform duration-500 flex items-center justify-center overflow-hidden">
+                                        <div className={m.modelUrl
+                                            ? 'relative aspect-[4/3] min-h-[22rem] bg-[#070b12] rounded-3xl border border-cyan-400/20 shadow-[0_0_48px_rgba(34,211,238,0.16)] flex items-center justify-center overflow-hidden'
+                                            : 'aspect-square bg-gray-900/50 rounded-3xl p-2 border border-gray-800 group-hover:scale-105 transition-transform duration-500 flex items-center justify-center overflow-hidden'
+                                        }>
+                                            {m.modelUrl && (
+                                                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(34,211,238,0.28),rgba(245,158,11,0.08)_40%,transparent_68%)]" />
+                                            )}
                                             {m.modelUrl
-                                                ? <OfferMinerModel src={m.modelUrl} alt={m.name || 'MinerCore'} />
+                                                ? <div className="absolute inset-0 z-10"><OfferMinerModel featured src={m.modelUrl} alt={m.name || 'MinerCore'} /></div>
                                                 : m.imageUrl
                                                 ? <img src={m.imageUrl} alt={m.name} className="w-full h-full object-contain scale-110" />
                                                 : <Zap className="w-20 h-20 text-amber-500/30" />
@@ -670,7 +680,7 @@ export default function OffersPage() {
                             </div>
                             <div className="bg-gray-900/50 border border-gray-800 rounded-3xl p-6 space-y-4">
                                 <div className="flex items-center gap-4 text-left">
-                                    <div className="w-24 h-24 bg-gray-800 rounded-2xl p-1.5 border border-gray-700 flex items-center justify-center">
+                                    <div className="w-36 h-36 bg-gray-800 rounded-2xl p-1 border border-cyan-400/20 flex items-center justify-center overflow-hidden">
                                         {modal.miner.modelUrl
                                             ? <OfferMinerModel src={modal.miner.modelUrl} alt={modal.miner.name || 'MinerCore'} />
                                             : modal.miner.imageUrl

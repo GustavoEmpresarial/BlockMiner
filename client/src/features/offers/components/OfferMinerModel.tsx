@@ -3,6 +3,13 @@ import { useEffect, useRef, useState } from 'react';
 const OFFER_MODEL_VIEWER_SCRIPT =
   'https://cdn.jsdelivr.net/npm/@google/model-viewer@3.5.0/dist/model-viewer.min.js';
 
+/** Closer than the default frame so the GPU fills the offer stage. Radius is % of the model bounds. */
+const OFFER_MODEL_FEATURE_ORBIT = '16deg 72deg 68%';
+const OFFER_MODEL_FEATURE_FOV = '16deg';
+const OFFER_MODEL_FEATURE_SPIN = '8deg';
+const OFFER_MODEL_THUMB_ORBIT = '18deg 74deg 88%';
+const OFFER_MODEL_THUMB_FOV = '20deg';
+
 let modelViewerScriptPromise: Promise<void> | null = null;
 
 function loadModelViewer(): Promise<void> {
@@ -21,7 +28,15 @@ function loadModelViewer(): Promise<void> {
 }
 
 /** The MCX9 is the only offer miner with a .glb. Image miners keep using <img>. */
-export function OfferMinerModel({ src, alt }: { src: string; alt: string }) {
+export function OfferMinerModel({
+  src,
+  alt,
+  featured = false,
+}: {
+  src: string;
+  alt: string;
+  featured?: boolean;
+}) {
   const hostRef = useRef<HTMLDivElement>(null);
   const [failed, setFailed] = useState(false);
 
@@ -40,14 +55,18 @@ export function OfferMinerModel({ src, alt }: { src: string; alt: string }) {
           alt,
           'camera-controls': '',
           autoplay: '',
-          'shadow-intensity': '0.4',
-          exposure: '1.1',
+          'shadow-intensity': featured ? '0.85' : '0.4',
+          exposure: featured ? '1.35' : '1.15',
           'tone-mapping': 'aces',
           'environment-image': 'neutral',
           'interaction-prompt': 'auto',
-          'camera-orbit': '20deg 78deg 120%',
-          'field-of-view': '26deg',
+          'camera-orbit': featured ? OFFER_MODEL_FEATURE_ORBIT : OFFER_MODEL_THUMB_ORBIT,
+          'field-of-view': featured ? OFFER_MODEL_FEATURE_FOV : OFFER_MODEL_THUMB_FOV,
         };
+        if (featured) {
+          attrs['auto-rotate'] = '';
+          attrs['rotation-per-second'] = OFFER_MODEL_FEATURE_SPIN;
+        }
         for (const [key, value] of Object.entries(attrs)) {
           viewer.setAttribute(key, value);
         }
@@ -65,7 +84,7 @@ export function OfferMinerModel({ src, alt }: { src: string; alt: string }) {
       cancelled = true;
       viewer?.remove();
     };
-  }, [src, alt]);
+  }, [src, alt, featured]);
 
   if (failed) return null;
   return <div ref={hostRef} className="h-full w-full" />;
