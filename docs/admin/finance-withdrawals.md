@@ -81,15 +81,20 @@ model Transaction {
 
 ## 3. Matriz de Permissões RBAC & Segurança
 
-O roteador `/api/admin/wallet/*` é protegido com autenticação administrativa (`requireAdminAuth`) e permissões granulares (`requireAdminPermission`):
+O roteador `/api/admin/wallet/*` é protegido com autenticação administrativa (`requireAdminAuth`), permissões granulares (`requireAdminPermission`) e rate limiting distribuído (`createDistributedRateLimiter`):
 
-| Endpoint | Método | Permissão Exigida | Descrição |
-| :--- | :---: | :--- | :--- |
-| `/api/admin/wallet/hot-wallet` | `GET` | `withdrawals` ou `finance` | Consulta status da Hot Wallet, saldo POL on-chain e fila de saques. |
-| `/api/admin/wallet/withdrawals/pending` | `GET` | `withdrawals` ou `finance` | Lista fila de saques ativos (aprovados/processando) e histórico recente. |
-| `/api/admin/wallet/withdrawals/:id/approve` | `POST` | `withdrawals` | Aprova saque pendente (legado / fallback). |
-| `/api/admin/wallet/withdrawals/:id/reject` | `POST` | `withdrawals` | Rejeita saque e estorna valor + taxa para o saldo do jogador. |
-| `/api/admin/wallet/withdrawals/:id/complete` | `POST` | `withdrawals` | Marca saque como concluído manualmente com hash `0x...` fornecido. |
+| Endpoint | Método | Permissão Exigida | Rate Limit | Descrição |
+| :--- | :---: | :--- | :---: | :--- |
+| `/api/admin/wallet/hot-wallet` | `GET` | `withdrawals` ou `finance` | 120/min | Consulta status da Hot Wallet, saldo POL on-chain e fila de saques. |
+| `/api/admin/wallet/withdrawals/pending` | `GET` | `withdrawals` ou `finance` | 120/min | Lista fila de saques ativos (aprovados/processando) e histórico recente. |
+| `/api/admin/wallet/hot-wallet/clear-cooldown` | `POST` | `withdrawals` | 300/min | Remove flag de cooldown da Hot Wallet para retomar auto-send. |
+| `/api/admin/wallet/withdrawals/:id/approve` | `POST` | `withdrawals` | 300/min | Aprova saque pendente (legado / fallback). |
+| `/api/admin/wallet/withdrawals/:id/reject` | `POST` | `withdrawals` | 300/min | Rejeita saque e estorna valor + taxa para o saldo do jogador. |
+| `/api/admin/wallet/withdrawals/:id/complete` | `POST` | `withdrawals` | 300/min | Marca saque como concluído manualmente com hash `0x...` fornecido. |
+
+### Regras de Validação & Clamping 32-Bit
+- **Identificadores numéricos (`:withdrawalId`)**: Validados via `withdrawalAdminIdParamSchema` limitando a inteiros positivos com teto `2_147_483_647`.
+- **Conclusão manual (`completeWithdrawalSchema`)**: Requer `txHash` no formato `0x` + 64 hexadecimais, com `.strict()` para rejeitar mass assignment.
 
 ---
 
@@ -174,6 +179,21 @@ paths:
           description: Não autenticado
         '403':
           description: Permissão insuficiente (requer withdrawals ou finance)
+
+  /api/admin/wallet/hot-wallet/clear-cooldown:
+    post:
+      summary: Limpa cooldown de saldo insuficiente para retomar auto-send
+      tags:
+        - Admin Finance
+      security:
+        - AdminAuth: []
+      responses:
+        '200':
+          description: Cooldown removido com sucesso
+        '401':
+          description: Não autenticado
+        '403':
+          description: Permissão insuficiente (requer withdrawals)
 
   /api/admin/wallet/withdrawals/pending:
     get:
