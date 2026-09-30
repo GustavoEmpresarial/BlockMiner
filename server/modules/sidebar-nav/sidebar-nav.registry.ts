@@ -1,9 +1,11 @@
-// @ts-nocheck
-// RECOVERED: this source file was missing from git history (never committed) while
-// production kept running off a stale compiled dist/ via Docker build cache.
-// Reconstructed verbatim from the last known-good compiled output on 2026-09-11.
-// TODO: remove @ts-nocheck once someone re-adds proper types for this file.
-export const SIDEBAR_ITEM_REGISTRY = {
+import type {
+  SidebarAdminItemMeta,
+  SidebarPersistedEntry,
+  SidebarRegistryItemDef,
+  SidebarSection,
+} from "./sidebar-nav.types.js";
+
+export const SIDEBAR_ITEM_REGISTRY: Record<string, SidebarRegistryItemDef> = {
     dashboard: {
         path: "/dashboard",
         labelKey: "sidebar.dashboard",
@@ -240,256 +242,252 @@ export const SIDEBAR_ITEM_REGISTRY = {
         parentLocked: true,
     },
 };
-export const ALLOWED_ITEM_IDS = new Set(Object.keys(SIDEBAR_ITEM_REGISTRY));
-export const SIDEBAR_SECTIONS = ["main", "earn", "social"];
-export const CATEGORY_TITLE_KEYS = {
-    main: "sidebar.categories.main",
-    earn: "sidebar.categories.earn",
-    social: "sidebar.categories.social",
+export const ALLOWED_ITEM_IDS: ReadonlySet<string> = new Set(Object.keys(SIDEBAR_ITEM_REGISTRY));
+export const SIDEBAR_SECTIONS: readonly SidebarSection[] = ["main", "earn", "social"] as const;
+export const CATEGORY_TITLE_KEYS: Record<SidebarSection, string> = {
+  main: "sidebar.categories.main",
+  earn: "sidebar.categories.earn",
+  social: "sidebar.categories.social",
 };
+
 /** Metadata for admin editor (no paths — client resolves labels via i18n `labelKey`). */
-export function buildAdminItemMeta() {
-    return Object.fromEntries(Object.entries(SIDEBAR_ITEM_REGISTRY).map(([itemId, def]) => [
-        itemId,
-        {
-            labelKey: def.labelKey,
-            icon: def.icon,
-            section: def.section,
-            parentLocked: Boolean(def.parentLocked),
-            defaultParentItemId: def.defaultParentItemId,
-            isGroup: Boolean(def.isGroup),
-        },
-    ]));
+export function buildAdminItemMeta(): Record<string, SidebarAdminItemMeta> {
+  return Object.fromEntries(
+    Object.entries(SIDEBAR_ITEM_REGISTRY).map(([itemId, def]) => [
+      itemId,
+      {
+        labelKey: def.labelKey,
+        icon: def.icon,
+        section: def.section,
+        parentLocked: Boolean(def.parentLocked),
+        defaultParentItemId: def.defaultParentItemId,
+        isGroup: Boolean(def.isGroup),
+      },
+    ])
+  );
 }
-function asRows(entries) {
-    return Array.isArray(entries);
+
+function asRows(entries: unknown): entries is unknown[] {
+  return Array.isArray(entries);
 }
+
 /**
  * Aligns internal offerwall `parentItemId` with the registry default (under rewards_group; legacy rows may have null).
  */
-export function coerceInternalOfferwallEarnRoot(entries) {
-    if (!asRows(entries))
-        return { entries: entries, changed: false };
-    const want = SIDEBAR_ITEM_REGISTRY.internal_offerwall?.defaultParentItemId ?? null;
-    let changed = false;
-    const next = entries.map((e) => {
-        if (!e || typeof e !== "object")
-            return e;
-        const row = e;
-        if (row.itemId !== "internal_offerwall")
-            return e;
-        const cur = row.parentItemId ?? null;
-        if (cur !== want) {
-            changed = true;
-            return { ...row, parentItemId: want, section: "earn" };
-        }
-        return e;
-    });
-    return { entries: next, changed };
+export function coerceInternalOfferwallEarnRoot(entries: unknown): { entries: SidebarPersistedEntry[]; changed: boolean } {
+  if (!asRows(entries)) {
+    return { entries: entries as SidebarPersistedEntry[], changed: false };
+  }
+  const want = SIDEBAR_ITEM_REGISTRY.internal_offerwall?.defaultParentItemId ?? null;
+  let changed = false;
+  const next = entries.map((e) => {
+    if (!e || typeof e !== "object") return e as SidebarPersistedEntry;
+    const row = e as Partial<SidebarPersistedEntry>;
+    if (row.itemId !== "internal_offerwall") return e as SidebarPersistedEntry;
+    const cur = row.parentItemId ?? null;
+    if (cur !== want) {
+      changed = true;
+      return { ...row, parentItemId: want, section: "earn" as SidebarSection } as SidebarPersistedEntry;
+    }
+    return e as SidebarPersistedEntry;
+  });
+  return { entries: next, changed };
 }
+
 /**
  * Migrates `games` from the old `social` section to `earn`.
  */
-export function coerceGamesInEarnSection(entries) {
-    if (!asRows(entries))
-        return { entries: entries, changed: false };
-    let changed = false;
-    const next = entries.map((e) => {
-        if (!e || typeof e !== "object")
-            return e;
-        const row = e;
-        if (row.itemId !== "games")
-            return e;
-        if (row.section !== "earn" || (row.parentItemId ?? null) !== null) {
-            changed = true;
-            return { ...row, section: "earn", parentItemId: null };
-        }
-        return e;
-    });
-    return { entries: next, changed };
+export function coerceGamesInEarnSection(entries: unknown): { entries: SidebarPersistedEntry[]; changed: boolean } {
+  if (!asRows(entries)) {
+    return { entries: entries as SidebarPersistedEntry[], changed: false };
+  }
+  let changed = false;
+  const next = entries.map((e) => {
+    if (!e || typeof e !== "object") return e as SidebarPersistedEntry;
+    const row = e as Partial<SidebarPersistedEntry>;
+    if (row.itemId !== "games") return e as SidebarPersistedEntry;
+    if (row.section !== "earn" || (row.parentItemId ?? null) !== null) {
+      changed = true;
+      return { ...row, section: "earn" as SidebarSection, parentItemId: null } as SidebarPersistedEntry;
+    }
+    return e as SidebarPersistedEntry;
+  });
+  return { entries: next, changed };
 }
+
 /**
  * Migrates `youtube` back under Recompensas (earn) after mistaken Social & Fun placement.
  */
-export function coerceYoutubeInEarnRewardsGroup(entries) {
-    if (!asRows(entries))
-        return { entries: entries, changed: false };
-    let changed = false;
-    const next = entries.map((e) => {
-        if (!e || typeof e !== "object")
-            return e;
-        const row = e;
-        if (row.itemId !== "youtube")
-            return e;
-        if (row.section !== "earn" || (row.parentItemId ?? null) !== "rewards_group") {
-            changed = true;
-            return { ...row, section: "earn", parentItemId: "rewards_group" };
-        }
-        return e;
-    });
-    return { entries: next, changed };
+export function coerceYoutubeInEarnRewardsGroup(entries: unknown): { entries: SidebarPersistedEntry[]; changed: boolean } {
+  if (!asRows(entries)) {
+    return { entries: entries as SidebarPersistedEntry[], changed: false };
+  }
+  let changed = false;
+  const next = entries.map((e) => {
+    if (!e || typeof e !== "object") return e as SidebarPersistedEntry;
+    const row = e as Partial<SidebarPersistedEntry>;
+    if (row.itemId !== "youtube") return e as SidebarPersistedEntry;
+    if (row.section !== "earn" || (row.parentItemId ?? null) !== "rewards_group") {
+      changed = true;
+      return { ...row, section: "earn" as SidebarSection, parentItemId: "rewards_group" } as SidebarPersistedEntry;
+    }
+    return e as SidebarPersistedEntry;
+  });
+  return { entries: next, changed };
 }
+
 /**
  * Forces `zerads` to `visible: false` so it no longer appears in the sidebar
  * now that it is embedded inside the Offerwall page. INTENTIONAL hardcoded override
  * — do not "fix" this into a normal admin-editable item.
  */
-export function coerceZeradsHidden(entries) {
-    if (!asRows(entries))
-        return { entries: entries, changed: false };
-    let changed = false;
-    const next = entries.map((e) => {
-        if (!e || typeof e !== "object")
-            return e;
-        const row = e;
-        if (row.itemId === "zerads" && row.visible !== false) {
-            changed = true;
-            return { ...row, visible: false };
-        }
-        return e;
-    });
-    return { entries: next, changed };
+export function coerceZeradsHidden(entries: unknown): { entries: SidebarPersistedEntry[]; changed: boolean } {
+  if (!asRows(entries)) {
+    return { entries: entries as SidebarPersistedEntry[], changed: false };
+  }
+  let changed = false;
+  const next = entries.map((e) => {
+    if (!e || typeof e !== "object") return e as SidebarPersistedEntry;
+    const row = e as Partial<SidebarPersistedEntry>;
+    if (row.itemId === "zerads" && row.visible !== false) {
+      changed = true;
+      return { ...row, visible: false } as SidebarPersistedEntry;
+    }
+    return e as SidebarPersistedEntry;
+  });
+  return { entries: next, changed };
 }
-export function coerceParentLockedSidebarEntries(entries) {
-    if (!asRows(entries))
-        return { entries: entries, changed: false };
-    let changed = false;
-    const next = entries.map((e) => {
-        if (!e || typeof e !== "object")
-            return e;
-        const row = e;
-        const def = row.itemId ? SIDEBAR_ITEM_REGISTRY[row.itemId] : undefined;
-        if (!def?.parentLocked)
-            return e;
-        const want = def.defaultParentItemId ?? null;
-        const cur = row.parentItemId ?? null;
-        if (cur !== want) {
-            changed = true;
-            return { ...row, parentItemId: want };
-        }
-        return e;
-    });
-    return { entries: next, changed };
+
+export function coerceParentLockedSidebarEntries(entries: unknown): { entries: SidebarPersistedEntry[]; changed: boolean } {
+  if (!asRows(entries)) {
+    return { entries: entries as SidebarPersistedEntry[], changed: false };
+  }
+  let changed = false;
+  const next = entries.map((e) => {
+    if (!e || typeof e !== "object") return e as SidebarPersistedEntry;
+    const row = e as Partial<SidebarPersistedEntry>;
+    const def = row.itemId ? SIDEBAR_ITEM_REGISTRY[row.itemId] : undefined;
+    if (!def?.parentLocked) return e as SidebarPersistedEntry;
+    const want = def.defaultParentItemId ?? null;
+    const cur = row.parentItemId ?? null;
+    if (cur !== want) {
+      changed = true;
+      return { ...row, parentItemId: want } as SidebarPersistedEntry;
+    }
+    return e as SidebarPersistedEntry;
+  });
+  return { entries: next, changed };
 }
+
 /**
  * Appends rows for any new `SIDEBAR_ITEM_REGISTRY` ids missing from stored nav (survives DB
  * snapshots from older builds), and prunes any entries whose itemId was removed from the registry.
  */
-export function mergeMissingSidebarRegistryEntries(entries) {
-    if (!asRows(entries)) {
-        return { entries: buildDefaultSidebarEntries(), changed: true };
+export function mergeMissingSidebarRegistryEntries(entries: unknown): { entries: SidebarPersistedEntry[]; changed: boolean } {
+  if (!asRows(entries)) {
+    return { entries: buildDefaultSidebarEntries(), changed: true };
+  }
+  const pruned = entries.filter((e): e is Record<string, unknown> => e != null && typeof e === "object" && ALLOWED_ITEM_IDS.has(String((e as Record<string, unknown>).itemId || "")));
+  const prunedCount = entries.length - pruned.length;
+  let changed = prunedCount > 0;
+  const present = new Set(pruned.map((e) => String(e.itemId || "").trim()).filter(Boolean));
+  const defaults = buildDefaultSidebarEntries();
+  const next: SidebarPersistedEntry[] = (pruned as unknown) as SidebarPersistedEntry[];
+  for (const row of defaults) {
+    if (!present.has(row.itemId)) {
+      next.push({ ...row });
+      present.add(row.itemId);
+      changed = true;
     }
-    const pruned = entries.filter((e) => e && typeof e === "object" && ALLOWED_ITEM_IDS.has(String(e.itemId || "")));
-    const prunedCount = entries.length - pruned.length;
-    let changed = prunedCount > 0;
-    const present = new Set(pruned.map((e) => String(e.itemId || "").trim()).filter(Boolean));
-    const defaults = buildDefaultSidebarEntries();
-    const next = [...pruned];
-    for (const row of defaults) {
-        if (!present.has(row.itemId)) {
-            next.push({ ...row });
-            present.add(row.itemId);
-            changed = true;
-        }
-    }
-    return { entries: next, changed };
+  }
+  return { entries: next, changed };
 }
-export function buildDefaultSidebarEntries() {
-    return [
-        { itemId: "dashboard", visible: true, sortOrder: 10, section: "main", parentItemId: null },
-        { itemId: "power_stats", visible: true, sortOrder: 20, section: "main", parentItemId: null },
-        { itemId: "machines", visible: true, sortOrder: 30, section: "main", parentItemId: null },
-        { itemId: "inventario", visible: true, sortOrder: 35, section: "main", parentItemId: null },
-        { itemId: "shop", visible: true, sortOrder: 40, section: "main", parentItemId: null },
-        { itemId: "offers", visible: true, sortOrder: 50, section: "main", parentItemId: null },
-        { itemId: "wallet", visible: true, sortOrder: 60, section: "main", parentItemId: null },
-        { itemId: "taxes", visible: true, sortOrder: 65, section: "main", parentItemId: null },
-        { itemId: "support", visible: true, sortOrder: 70, section: "main", parentItemId: null },
-        { itemId: "tournaments", visible: true, sortOrder: 105, section: "earn", parentItemId: null },
-        { itemId: "checkin", visible: true, sortOrder: 110, section: "earn", parentItemId: null },
-        { itemId: "daily_tasks", visible: true, sortOrder: 115, section: "earn", parentItemId: null },
-        { itemId: "mini_pass", visible: true, sortOrder: 118, section: "earn", parentItemId: null },
-        { itemId: "burn", visible: true, sortOrder: 119, section: "earn", parentItemId: null },
-        { itemId: "games", visible: true, sortOrder: 121, section: "earn", parentItemId: null },
-        { itemId: "rewards_group", visible: true, sortOrder: 130, section: "earn", parentItemId: null },
-        { itemId: "faucet", visible: true, sortOrder: 135, section: "earn", parentItemId: "rewards_group" },
-        { itemId: "internal_offerwall", visible: true, sortOrder: 137, section: "earn", parentItemId: "rewards_group" },
-        { itemId: "offerwall", visible: true, sortOrder: 138, section: "earn", parentItemId: "rewards_group" },
-        { itemId: "zerads", visible: false, sortOrder: 139, section: "earn", parentItemId: "rewards_group" },
-        { itemId: "ptc_earn", visible: true, sortOrder: 140, section: "earn", parentItemId: "rewards_group" },
-        { itemId: "shortlinks", visible: true, sortOrder: 150, section: "earn", parentItemId: "rewards_group" },
-        { itemId: "read_earn", visible: true, sortOrder: 160, section: "earn", parentItemId: "rewards_group" },
-        { itemId: "youtube", visible: true, sortOrder: 170, section: "earn", parentItemId: "rewards_group" },
-        { itemId: "auto_mining", visible: true, sortOrder: 180, section: "earn", parentItemId: "rewards_group" },
-        { itemId: "social_feed", visible: true, sortOrder: 210, section: "social", parentItemId: null },
-        { itemId: "creator", visible: true, sortOrder: 215, section: "social", parentItemId: null },
-        { itemId: "referrals", visible: true, sortOrder: 218, section: "social", parentItemId: null },
-        { itemId: "manual", visible: true, sortOrder: 220, section: "social", parentItemId: null },
-        { itemId: "ranking", visible: true, sortOrder: 230, section: "social", parentItemId: null },
-        { itemId: "transparency", visible: true, sortOrder: 240, section: "social", parentItemId: null },
-        { itemId: "roadmap", visible: true, sortOrder: 250, section: "social", parentItemId: null },
-    ];
+
+export function buildDefaultSidebarEntries(): SidebarPersistedEntry[] {
+  return [
+    { itemId: "dashboard", visible: true, sortOrder: 10, section: "main", parentItemId: null },
+    { itemId: "power_stats", visible: true, sortOrder: 20, section: "main", parentItemId: null },
+    { itemId: "machines", visible: true, sortOrder: 30, section: "main", parentItemId: null },
+    { itemId: "inventario", visible: true, sortOrder: 35, section: "main", parentItemId: null },
+    { itemId: "shop", visible: true, sortOrder: 40, section: "main", parentItemId: null },
+    { itemId: "offers", visible: true, sortOrder: 50, section: "main", parentItemId: null },
+    { itemId: "wallet", visible: true, sortOrder: 60, section: "main", parentItemId: null },
+    { itemId: "taxes", visible: true, sortOrder: 65, section: "main", parentItemId: null },
+    { itemId: "support", visible: true, sortOrder: 70, section: "main", parentItemId: null },
+    { itemId: "tournaments", visible: true, sortOrder: 105, section: "earn", parentItemId: null },
+    { itemId: "checkin", visible: true, sortOrder: 110, section: "earn", parentItemId: null },
+    { itemId: "daily_tasks", visible: true, sortOrder: 115, section: "earn", parentItemId: null },
+    { itemId: "mini_pass", visible: true, sortOrder: 118, section: "earn", parentItemId: null },
+    { itemId: "burn", visible: true, sortOrder: 119, section: "earn", parentItemId: null },
+    { itemId: "games", visible: true, sortOrder: 121, section: "earn", parentItemId: null },
+    { itemId: "rewards_group", visible: true, sortOrder: 130, section: "earn", parentItemId: null },
+    { itemId: "faucet", visible: true, sortOrder: 135, section: "earn", parentItemId: "rewards_group" },
+    { itemId: "internal_offerwall", visible: true, sortOrder: 137, section: "earn", parentItemId: "rewards_group" },
+    { itemId: "offerwall", visible: true, sortOrder: 138, section: "earn", parentItemId: "rewards_group" },
+    { itemId: "zerads", visible: false, sortOrder: 139, section: "earn", parentItemId: "rewards_group" },
+    { itemId: "ptc_earn", visible: true, sortOrder: 140, section: "earn", parentItemId: "rewards_group" },
+    { itemId: "shortlinks", visible: true, sortOrder: 150, section: "earn", parentItemId: "rewards_group" },
+    { itemId: "read_earn", visible: true, sortOrder: 160, section: "earn", parentItemId: "rewards_group" },
+    { itemId: "youtube", visible: true, sortOrder: 170, section: "earn", parentItemId: "rewards_group" },
+    { itemId: "auto_mining", visible: true, sortOrder: 180, section: "earn", parentItemId: "rewards_group" },
+    { itemId: "social_feed", visible: true, sortOrder: 210, section: "social", parentItemId: null },
+    { itemId: "creator", visible: true, sortOrder: 215, section: "social", parentItemId: null },
+    { itemId: "referrals", visible: true, sortOrder: 218, section: "social", parentItemId: null },
+    { itemId: "manual", visible: true, sortOrder: 220, section: "social", parentItemId: null },
+    { itemId: "ranking", visible: true, sortOrder: 230, section: "social", parentItemId: null },
+    { itemId: "transparency", visible: true, sortOrder: 240, section: "social", parentItemId: null },
+    { itemId: "roadmap", visible: true, sortOrder: 250, section: "social", parentItemId: null },
+  ];
 }
-export function validationErrorForEntry(raw) {
-    if (!raw || typeof raw !== "object")
-        return "invalid_entry_shape";
-    const { itemId, visible, sortOrder, section, parentItemId } = raw;
-    if (typeof itemId !== "string" || !ALLOWED_ITEM_IDS.has(itemId))
-        return "unknown_item_id";
-    if (typeof visible !== "boolean")
-        return "invalid_visible";
-    if (typeof sortOrder !== "number" || !Number.isInteger(sortOrder))
-        return "invalid_sort_order";
-    if (section !== "main" && section !== "earn" && section !== "social")
-        return "invalid_section";
-    if (parentItemId !== null && parentItemId !== "rewards_group")
-        return "invalid_parent";
-    const def = SIDEBAR_ITEM_REGISTRY[itemId];
-    if (def.section !== section)
-        return "section_mismatch";
-    if (def.parentLocked && parentItemId !== def.defaultParentItemId)
-        return "parent_locked";
-    if (def.section === "main" || def.section === "social") {
-        if (parentItemId !== null)
-            return "main_social_parent_must_be_null";
+
+export function validationErrorForEntry(raw: unknown): string | null {
+  if (!raw || typeof raw !== "object") return "invalid_entry_shape";
+  const { itemId, visible, sortOrder, section, parentItemId } = raw as Partial<SidebarPersistedEntry>;
+  if (typeof itemId !== "string" || !ALLOWED_ITEM_IDS.has(itemId)) return "unknown_item_id";
+  if (typeof visible !== "boolean") return "invalid_visible";
+  if (typeof sortOrder !== "number" || !Number.isInteger(sortOrder)) return "invalid_sort_order";
+  if (section !== "main" && section !== "earn" && section !== "social") return "invalid_section";
+  if (parentItemId !== null && parentItemId !== "rewards_group") return "invalid_parent";
+  const def = SIDEBAR_ITEM_REGISTRY[itemId];
+  if (!def) return "unknown_item_id";
+  if (def.section !== section) return "section_mismatch";
+  if (def.parentLocked && parentItemId !== def.defaultParentItemId) return "parent_locked";
+  if (def.section === "main" || def.section === "social") {
+    if (parentItemId !== null) return "main_social_parent_must_be_null";
+  }
+  if (def.section === "earn" && itemId !== "rewards_group") {
+    if (parentItemId === "rewards_group" && def.defaultParentItemId !== "rewards_group") {
+      return "cannot_nest_item";
     }
-    if (def.section === "earn" && itemId !== "rewards_group") {
-        if (parentItemId === "rewards_group" && def.defaultParentItemId !== "rewards_group") {
-            return "cannot_nest_item";
-        }
-    }
-    if (itemId === "rewards_group" && parentItemId !== null)
-        return "group_must_be_root";
-    return null;
+  }
+  if (itemId === "rewards_group" && parentItemId !== null) return "group_must_be_root";
+  return null;
 }
-export function validateSidebarEntriesPayload(entries) {
-    if (!Array.isArray(entries))
-        return { ok: false, code: "entries_not_array" };
-    const seen = new Set();
-    for (const e of entries) {
-        const err = validationErrorForEntry(e);
-        if (err)
-            return { ok: false, code: err };
-        const id = e.itemId;
-        if (seen.has(id))
-            return { ok: false, code: "duplicate_item_id" };
-        seen.add(id);
-    }
-    if (seen.size !== ALLOWED_ITEM_IDS.size)
-        return { ok: false, code: "incomplete_item_set" };
-    const hasGroup = entries.some((x) => x.itemId === "rewards_group");
-    const childOfGroup = entries.filter((x) => x.parentItemId === "rewards_group");
-    if (childOfGroup.length > 0 && !hasGroup)
-        return { ok: false, code: "rewards_group_required" };
-    const typed = entries.map((e) => {
-        const r = e;
-        return {
-            itemId: String(r.itemId),
-            visible: Boolean(r.visible),
-            sortOrder: Number(r.sortOrder),
-            section: r.section,
-            parentItemId: r.parentItemId == null ? null : String(r.parentItemId),
-        };
-    });
-    return { ok: true, entries: typed };
+
+export function validateSidebarEntriesPayload(entries: unknown):
+  | { ok: true; entries: SidebarPersistedEntry[] }
+  | { ok: false; code: string } {
+  if (!Array.isArray(entries)) return { ok: false, code: "entries_not_array" };
+  const seen = new Set<string>();
+  for (const e of entries) {
+    const err = validationErrorForEntry(e);
+    if (err) return { ok: false, code: err };
+    const id = (e as SidebarPersistedEntry).itemId;
+    if (seen.has(id)) return { ok: false, code: "duplicate_item_id" };
+    seen.add(id);
+  }
+  if (seen.size !== ALLOWED_ITEM_IDS.size) return { ok: false, code: "incomplete_item_set" };
+  const typedEntries = entries as SidebarPersistedEntry[];
+  const hasGroup = typedEntries.some((x) => x.itemId === "rewards_group");
+  const childOfGroup = typedEntries.filter((x) => x.parentItemId === "rewards_group");
+  if (childOfGroup.length > 0 && !hasGroup) return { ok: false, code: "rewards_group_required" };
+  const typed: SidebarPersistedEntry[] = typedEntries.map((r) => ({
+    itemId: String(r.itemId),
+    visible: Boolean(r.visible),
+    sortOrder: Number(r.sortOrder),
+    section: r.section,
+    parentItemId: r.parentItemId == null ? null : String(r.parentItemId),
+  }));
+  return { ok: true, entries: typed };
 }
+

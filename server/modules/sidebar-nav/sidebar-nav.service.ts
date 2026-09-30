@@ -3,6 +3,7 @@
  * SidebarNavConfig holds the admin-editable entries; paths/labels always come from
  * sidebar-nav.registry.ts (no arbitrary URLs from clients).
  */
+import type { Prisma } from "@prisma/client";
 import prisma from "../../core/database/prisma.js";
 import {
   buildDefaultSidebarEntries,
@@ -101,14 +102,14 @@ export async function getSidebarNavForAdmin(): Promise<{
   if (lockedChanged || offerwallChanged || zeradsChanged || gamesChanged || youtubeChanged) {
     await prisma.sidebarNavConfig.update({
       where: { id: SINGLETON_ID },
-      data: { entries: coercedYoutube as never },
+      data: { entries: coercedYoutube as unknown as Prisma.InputJsonValue },
     });
   }
   const { entries: merged, changed: mergeChanged } = mergeMissingSidebarRegistryEntries(coercedYoutube);
   if (mergeChanged) {
     await prisma.sidebarNavConfig.update({
       where: { id: SINGLETON_ID },
-      data: { entries: merged as never },
+      data: { entries: merged as unknown as Prisma.InputJsonValue },
     });
   }
   const parsed = validateSidebarEntriesPayload(merged);
@@ -116,7 +117,7 @@ export async function getSidebarNavForAdmin(): Promise<{
     const defaults = buildDefaultSidebarEntries();
     await prisma.sidebarNavConfig.update({
       where: { id: SINGLETON_ID },
-      data: { entries: defaults as never },
+      data: { entries: defaults as unknown as Prisma.InputJsonValue },
     });
     return { entries: defaults, categories: buildResolvedCategories(defaults) };
   }
@@ -148,7 +149,7 @@ export async function saveSidebarNavEntries(
   await ensureRow();
   await prisma.sidebarNavConfig.update({
     where: { id: SINGLETON_ID },
-    data: { entries: v.entries as never },
+    data: { entries: v.entries as unknown as Prisma.InputJsonValue },
   });
   return { ok: true, entries: v.entries, categories: buildResolvedCategories(v.entries) };
 }
