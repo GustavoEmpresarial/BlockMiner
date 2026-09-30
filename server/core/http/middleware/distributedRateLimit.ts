@@ -111,7 +111,9 @@ export function createDistributedRateLimiter(opts: CreateDistributedRateLimiterO
     try {
       const primary = await slidingWindowAllow({ dedupeKey, windowMs, max, redisPrefix: `rl:${name}:p` });
       if (!primary.ok) {
-        res.setHeader("Retry-After", String(primary.retryAfterSec));
+        if (typeof res.setHeader === "function") {
+          res.setHeader("Retry-After", String(primary.retryAfterSec));
+        }
         res.status(statusCode).json({ ok: false, code: "RATE_LIMIT_EXCEEDED", message: message || "Too many requests. Please slow down and try again.", details: { retryAfterSec: primary.retryAfterSec } });
         return;
       }
@@ -120,14 +122,18 @@ export function createDistributedRateLimiter(opts: CreateDistributedRateLimiterO
         if (secKey) {
           const secondary = await slidingWindowAllow({ dedupeKey: secKey, windowMs, max, redisPrefix: `rl:${name}:s` });
           if (!secondary.ok) {
-            res.setHeader("Retry-After", String(secondary.retryAfterSec));
+            if (typeof res.setHeader === "function") {
+              res.setHeader("Retry-After", String(secondary.retryAfterSec));
+            }
             res.status(statusCode).json({ ok: false, code: "RATE_LIMIT_EXCEEDED", message: message || "Too many requests. Please slow down and try again.", details: { retryAfterSec: secondary.retryAfterSec } });
             return;
           }
         }
       }
-      res.setHeader("X-RateLimit-Limit", String(max));
-      res.setHeader("X-RateLimit-Remaining", String(primary.remaining));
+      if (typeof res.setHeader === "function") {
+        res.setHeader("X-RateLimit-Limit", String(max));
+        res.setHeader("X-RateLimit-Remaining", String(primary.remaining));
+      }
       next();
     } catch (err: unknown) {
       log.warn("Distributed rate limiter failed; using in-process fallback", {

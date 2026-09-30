@@ -81,11 +81,15 @@ export function createRateLimiter(options: CreateRateLimiterOptions = {}): Reque
     hits.set(key, entry);
     const remaining = Math.max(max - entry.count, 0);
     const retryAfterSeconds = Math.max(Math.ceil((entry.resetAt - now) / 1000), 1);
-    res.setHeader("X-RateLimit-Limit", String(max));
-    res.setHeader("X-RateLimit-Remaining", String(remaining));
-    res.setHeader("X-RateLimit-Reset", String(Math.ceil(entry.resetAt / 1000)));
+    if (typeof res.setHeader === "function") {
+      res.setHeader("X-RateLimit-Limit", String(max));
+      res.setHeader("X-RateLimit-Remaining", String(remaining));
+      res.setHeader("X-RateLimit-Reset", String(Math.ceil(entry.resetAt / 1000)));
+    }
     if (entry.count > max) {
-      res.setHeader("Retry-After", String(retryAfterSeconds));
+      if (typeof res.setHeader === "function") {
+        res.setHeader("Retry-After", String(retryAfterSeconds));
+      }
       res.status(statusCode).json({ ok: false, message });
       return;
     }

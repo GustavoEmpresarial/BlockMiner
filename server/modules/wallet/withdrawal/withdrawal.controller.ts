@@ -17,6 +17,12 @@ import * as withdrawalService from "./withdrawal.service.js";
 import { getHotWalletPaymentStatus, clearHotWalletCooldown } from "./withdrawal.auto-send.js";
 import { notifyWithdrawalCompleted } from "../../notifications/telegram.service.js";
 import { logAdminAction } from "../../admin/index.js";
+import {
+  withdrawRequestSchema,
+  shibWithdrawRequestSchema,
+  completeWithdrawalSchema,
+  withdrawalAdminIdParamSchema,
+} from "./withdrawal.schemas.js";
 import { logger } from "../../../core/logger/index.js";
 
 const log = logger.child("WithdrawalController");
@@ -125,9 +131,8 @@ export async function adminListPendingWithdrawals(_req: Request, res: Response):
 }
 
 function parsePositiveIntId(val: unknown): number | null {
-  const n = Number(val);
-  if (!Number.isInteger(n) || n <= 0 || n > 2_147_483_647) return null;
-  return n;
+  const parsed = withdrawalAdminIdParamSchema.safeParse({ withdrawalId: val });
+  return parsed.success ? parsed.data.withdrawalId : null;
 }
 
 export async function adminApproveWithdrawal(req: Request, res: Response): Promise<void> {
@@ -234,11 +239,12 @@ export async function adminCompleteWithdrawal(req: Request, res: Response): Prom
       res.status(400).json({ ok: false, message: "Invalid withdrawal id" });
       return;
     }
-    const rawHash = (req.body as { txHash?: unknown })?.txHash;
-    if (!withdrawalService.isValidPolygonTxHash(rawHash)) {
+    const parsedBody = completeWithdrawalSchema.safeParse(req.body);
+    if (!parsedBody.success) {
       res.status(400).json({ ok: false, message: "txHash required (0x + 64 hex characters)" });
       return;
     }
+    const txHash = parsedBody.data.txHash;
     const row = await withdrawalRepo.findWithdrawalById(id);
     if (!row || (row.type !== "withdrawal" && row.type !== "shib_withdrawal")) {
       res.status(404).json({ ok: false, message: "Withdrawal not found" });
@@ -252,7 +258,6 @@ export async function adminCompleteWithdrawal(req: Request, res: Response): Prom
       res.status(400).json({ ok: false, message: "Cannot complete this withdrawal" });
       return;
     }
-    const txHash = String(rawHash).trim();
     const completed = await withdrawalRepo.markWithdrawalCompleted(id, txHash);
     if (!completed) {
       res.status(409).json({ ok: false, message: "Withdrawal was already processed by another action" });

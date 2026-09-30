@@ -24,6 +24,17 @@ export const shibWithdrawRequestSchema = z.object({
     .refine((a) => EVM_ADDRESS_REGEX.test(a), { message: "Invalid wallet address format." }),
 });
 
-export const completeWithdrawalSchema = z.object({
-  txHash: z.string().regex(/^0x[a-fA-F0-9]{64}$/, "txHash required (0x + 64 hex characters)"),
-});
+export const completeWithdrawalSchema = z
+  .object({
+    txHash: z
+      .string()
+      .trim()
+      .regex(/^0x[a-fA-F0-9]{64}$/, "txHash required (0x + 64 hex characters)"),
+  })
+  .strict();
+
+export const withdrawalAdminIdParamSchema = z
+  .object({
+    withdrawalId: z.coerce.number().int().positive().max(2_147_483_647),
+  })
+  .strict();

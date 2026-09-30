@@ -43,6 +43,9 @@ function executeRoute(router, { method = "POST", url = "", body = {} } = {}) {
         statusCode = code;
         return this;
       },
+      setHeader(name, value) {
+        return this;
+      },
       json(data) {
         sentData = data;
         resolve({ statusCode, data: sentData });
