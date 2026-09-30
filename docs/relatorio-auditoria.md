@@ -1321,6 +1321,80 @@ Executado através de `tests/security/run-kali-sidebar-nav-audit.sh` utilizando 
 
 **Total de Verificações de Segurança**: 21 executadas, 21 aprovadas, 0 falhas.
 
+---
+
+# PARTE XVIII: MÓDULO DE SUPORTE PÚBLICO PRÉ-LOGIN (`/admin/public-support`)
+
+## 1. Resumo Executivo dos Achados — Suporte Público Pré-Login
+
+| ID | Descrição do Achado | Severidade | CWE / OWASP | Arquivo e Linha Original | Status da Correção |
+| :---: | :--- | :---: | :---: | :--- | :---: |
+| **SEC-43** | **BFLA (Broken Function Level Authorization):** Rotas de mutação admin (`POST /message`, `PATCH /status`) exigiam apenas `requireAdminAuth` sem verificação granular de permissão RBAC. Operadores com permissão `finance` podiam responder tickets e alterar status. | **CRÍTICA** | CWE-285 / OWASP A1 | `server/modules/support/support.admin.routes.ts:47-59` | ✅ **Corrigido** |
+| **SEC-44** | **Mass Assignment via Ausência de `.strict()`:** Os schemas `adminReplyPublicTicketSchema` e `adminSetPublicTicketStatusSchema` não impediam campos extras no body, permitindo injeção de propriedades arbitrárias. | **ALTA** | CWE-915 / OWASP A8 | `server/modules/support/public-support.schemas.ts` | ✅ **Corrigido** |
+| **SEC-45** | **Crash P2025 em Ticket Inexistente:** Tentativa de atualizar status de ticket não existente gerava exceção Prisma `P2025` sem tratamento, resultando em 500 com stack trace. | **ALTA** | CWE-209 / OWASP A7 | `server/modules/support/support.service.ts` | ✅ **Corrigido** |
+| **SEC-46** | **Falta de Rastro de Auditoria nas Mutações Admin:** Respostas de admin a tickets públicos e alterações de status não registravam histórico em `admin_audit_logs`. | **ALTA** | CWE-778 / OWASP A9 | `server/modules/support/support.admin.controller.ts:203-271` | ✅ **Corrigido** |
+
+---
+
+## 2. Detalhamento dos Achados e Mitigações Aplicadas
+
+### SEC-43: Controle de Acesso Quebrado (BFLA) — CRÍTICA
+- **Descrição**: Rotas de mutação em `/api/admin/public-support/ticket/:id/message` e `/api/admin/public-support/ticket/:id/status` aplicavam apenas `requireAdminAuth` sem checagem RBAC granular.
+- **Correção Aplicada**: Aplicado `requireAdminPermission("support.view", "support")` para leitura e `requireAdminPermission("support")` para mutações, além de rate limiting distribuído (`public_support_admin_read` 120/min, `public_support_admin_write` 300/min).
+- **Verificação**: Testes `AUTHZ-001` e `AUTHZ-002` no container Kali comprovaram bloqueio HTTP 403 Forbidden para tokens com permissão `finance` (sem `support`).
+
+---
+
+### SEC-44: Zod Schema Estrito e Prevenção de Mass Assignment — ALTA
+- **Descrição**: Os schemas Zod não utilizavam `.strict()`, permitindo que campos arbitrários fossem aceitos sem erro.
+- **Correção Aplicada**: Todos os schemas admin (`adminReplyPublicTicketSchema`, `adminSetPublicTicketStatusSchema`, `publicSupportIdParamSchema`, `adminPublicSupportQuerySchema`) agora utilizam `.strict()`, rejeitando qualquer propriedade não declarada com HTTP 400.
+- **Verificação**: Testes `VALID-001` e `VALID-002` no container Kali comprovaram rejeição de campos rogue (`isAdmin`, `role`, etc.) com 400.
+
+---
+
+### SEC-45: Tratamento de P2025 em Ticket Inexistente — ALTA
+- **Descrição**: Operações em tickets inexistentes geravam exceção Prisma `P2025` sem catch, resultando em 500 Internal Server Error com stack trace vazado.
+- **Correção Aplicada**: Todos os controllers admin verificam retorno `null` do serviço e respondem 404 com mensagem segura (`not_found`) antes de tentar operações de escrita.
+
+---
+
+### SEC-46: Auditoria Administrativa Obrigatória — ALTA
+- **Descrição**: Nenhuma mutação administrativa em tickets públicos deixava registro histórico em `admin_audit_logs`.
+- **Correção Aplicada**: Integrada chamada assíncrona a `logAdminAction` registrando `adminId`, `adminEmail`, `sessionId`, `action`, `module: "support"`, `resource: "PublicSupportTicket"` e `resourceId` para as ações `ADMIN_REPLY_PUBLIC_SUPPORT_TICKET` e `ADMIN_SET_PUBLIC_SUPPORT_STATUS`.
+
+---
+
+## 3. Resultados dos Testes de Carga (k6) — Public Support
+
+Executado através de `tests/performance/run-public-support-k6.mjs` sob 15 VUs:
+
+| Métrica | Meta Estabelecida | Resultado Obtido | Status |
+| :--- | :---: | :---: | :---: |
+| **Taxa de Erro 5xx** | `0.00%` | **0.00%** (0 de 12.194 requests) | ✅ Aprovado |
+| **Latência Pública (`/api/public-support/tickets`)** | p95 < 300 ms | **1.58 ms** (p50: 0.61 ms) | ✅ Excelente |
+| **Latência Admin (`/api/admin/public-support/tickets`)** | p95 < 300 ms | **31.40 ms** (p50: 20.14 ms) | ✅ Excelente |
+| **Throughput Médio** | > 100 req/s | **1.108 req/s** | ✅ Aprovado |
+| **Duração Total** | 11 s | **11 s** (15 VUs) | ✅ Conforme |
+
+---
+
+## 4. Resultados da Auditoria de Segurança (Container Kali Linux) — Public Support
+
+Executado através de `tests/security/run-kali-public-support-audit.sh` utilizando o container `kali-pentest:latest`:
+
+| Categoria do Teste | Casos Executados | Resultado |
+| :--- | :---: | :---: |
+| **Autenticação (GET/POST/PATCH Admin sem token)** | 3 vetores em rotas admin | **100% Bloqueados** (HTTP 401 Unauthorized) |
+| **Token Adulterado / Alg None** | 2 vetores de assinatura falsa / alg none | **100% Rejeitado** (HTTP 401 Unauthorized) |
+| **BFLA (Broken Function Level Authorization)** | Operador `finance` tentando POST message e PATCH status | **100% Bloqueado** (HTTP 403 Forbidden) |
+| **Mass Assignment Protection** | Chaves rogue em POST message e PATCH status | **100% Bloqueado** (HTTP 400 Bad Request via `.strict()`) |
+| **Validação de ID (Negativo e Overflow 32-bit)** | 2 vetores de ID malformado | **100% Bloqueado** (HTTP 400 Bad Request) |
+| **Validação de Enum (Status Inválido)** | 1 vetor com `status: "pending"` | **100% Bloqueado** (HTTP 400 Bad Request) |
+| **Prevenção de Information Disclosure** | Injeção SQL e traversal em path | **Zero vazamentos** de stack traces ou detalhes do ORM |
+| **Rota Pública de Tickets** | `GET /api/public-support/tickets?email=test@test.com` | **100% Funcional** (200 OK) |
+
+**Total de Verificações de Segurança**: 14 executadas, 14 aprovadas, 0 falhas.
+
 
 
 
