@@ -5,7 +5,6 @@ import {
   ShieldCheck, Terminal, UserRound, Wallet, X,
 } from 'lucide-react';
 import { formatHashrate } from '../../../../shared/utils/machine';
-import AntibotTab from '../AntibotTab';
 import type {
     LucideIc,
     IpIntel,

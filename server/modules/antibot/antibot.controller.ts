@@ -15,7 +15,6 @@ import { bandForScore } from "./antibot.riskEngine.js";
 import {
   collectTelemetry as collectTelemetryService,
   getAntibotAdminOverview,
-  getAntibotOverview,
   getAntibotUserProfile,
   listAntibotAlerts,
   listAntibotDevices,
@@ -124,18 +123,6 @@ export async function adminOverview(req: Request, res: Response): Promise<void> 
     });
   } catch (err) {
     log.error("overview_failed", { err: err instanceof Error ? err.message : String(err) });
-    res.status(500).json({ ok: false, message: "Unable to load antibot overview." });
-  }
-}
-
-export async function adminOverviewLegacy(req: Request, res: Response): Promise<void> {
-  try {
-    const limitRaw = Number(String(req.query.limit ?? "50").trim());
-    const limit = Number.isFinite(limitRaw) ? Math.max(1, Math.min(200, Math.round(limitRaw))) : 50;
-    const data = await getAntibotOverview(prisma, limit);
-    res.json({ ok: true, ...data });
-  } catch (err) {
-    log.error("overview_legacy_failed", { err: err instanceof Error ? err.message : String(err) });
     res.status(500).json({ ok: false, message: "Unable to load antibot overview." });
   }
 }

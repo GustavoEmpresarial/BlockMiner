@@ -7,7 +7,6 @@ import {
 } from 'lucide-react';
 import { api } from '../../../../shared/auth/auth.store';
 import { readAxiosResponseMessage } from '../../lib/admin.api';
-import AntibotTab from '../AntibotTab';
 import type {
     LucideIc,
     IpIntel,

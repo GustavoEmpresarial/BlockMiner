@@ -10,7 +10,6 @@ import {
   adminListEvidence,
   adminListSessions,
   adminOverview,
-  adminOverviewLegacy,
   adminRecompute,
   adminSetTrusted,
   adminUpdateAlert,
@@ -28,7 +27,6 @@ export const antibotAdminRouter = express.Router();
 const antibotAdminLimiter = createRateLimiter({ windowMs: 60_000, max: 300 });
 antibotAdminRouter.use(requireAdminAuth, antibotAdminLimiter);
 antibotAdminRouter.get("/overview", adminOverview);
-antibotAdminRouter.get("/overview-legacy", adminOverviewLegacy);
 antibotAdminRouter.get("/evidence", adminListEvidence);
 antibotAdminRouter.get("/sessions", adminListSessions);
 antibotAdminRouter.get("/devices", adminListDevices);

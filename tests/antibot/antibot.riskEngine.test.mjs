@@ -134,8 +134,8 @@ test("analyze: detector failures never throw or block the pipeline — the rest 
   assert.ok(result.evidence.some((e) => e.code === "navigator_webdriver"), "headless detector evidence must still be present");
 });
 
-test("analyze: impossible_speed behavior evidence triggers an impossible_behavior alert", async () => {
-  const { prisma, alertsCreated } = makeFakePrisma();
+test("analyze: impossible_speed behavior evidence triggers an impossible_behavior alert when corroborated", async () => {
+  const { prisma, alertsCreated } = makeFakePrisma({ evidenceCodes: ["navigator_webdriver"] });
   await analyze({
     prisma,
     userId: 3,

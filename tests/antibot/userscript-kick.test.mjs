@@ -34,9 +34,20 @@ test("hasBlockedUserscriptManager via filter length", () => {
   assert.equal(filterBlockedUserscriptManagers(["greasemonkey"]).length > 0, false);
 });
 
-test("userscriptManagerKickEnabled defaults on", () => {
+test("userscriptManagerKickEnabled defaults off", () => {
   const prev = process.env.USERSCRIPT_MANAGER_KICK_ENABLED;
   delete process.env.USERSCRIPT_MANAGER_KICK_ENABLED;
+  try {
+    assert.equal(userscriptManagerKickEnabled(), false);
+  } finally {
+    if (prev === undefined) delete process.env.USERSCRIPT_MANAGER_KICK_ENABLED;
+    else process.env.USERSCRIPT_MANAGER_KICK_ENABLED = prev;
+  }
+});
+
+test("userscriptManagerKickEnabled enables with env var set to 1", () => {
+  const prev = process.env.USERSCRIPT_MANAGER_KICK_ENABLED;
+  process.env.USERSCRIPT_MANAGER_KICK_ENABLED = "1";
   try {
     assert.equal(userscriptManagerKickEnabled(), true);
   } finally {
