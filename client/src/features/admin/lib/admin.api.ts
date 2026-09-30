@@ -77,40 +77,38 @@ export function readAxiosResponseCode(err: unknown): string | undefined {
 }
 
 
+import { adminSupportApi } from '../support/adminSupport.api';
+export { adminSupportApi };
+
 export function listAdminSupportMessages(params: { page?: number; limit?: number; userId?: number; archived?: boolean }) {
-  const query: Record<string, string | number> = {};
-  if (params.page != null) query.page = params.page;
-  if (params.limit != null) query.limit = params.limit;
-  if (params.userId != null) query.userId = params.userId;
-  if (params.archived) query.archived = '1';
-  return api.get<AdminSupportListApiResponse>('/admin/support', { params: query });
+  return adminSupportApi.listMessages(params);
 }
 
 export function getAdminSupportMessage(ticketId: number) {
-  return api.get<AdminSupportMessageApiResponse>(`/admin/support/${ticketId}`);
+  return adminSupportApi.getMessage(ticketId);
 }
 
 export function replyAdminSupportMessage(
   ticketId: number,
   body: { reply: string; attachments?: AdminSupportAttachment[] },
 ) {
-  return api.post<AdminSupportReplyPostResponse>(`/admin/support/${ticketId}/reply`, body);
+  return adminSupportApi.reply(ticketId, body);
+}
+
+export function setAdminSupportArchived(ticketId: number, archived: boolean) {
+  return adminSupportApi.setArchived(ticketId, archived);
 }
 
 export function fetchAdminSupportPlayerDossier(ticketId: number, params: AdminSupportPlayerDossierParams) {
-  return api.get<AdminSupportPlayerDossierBundle>(`/admin/support/${ticketId}/player-dossier`, { params });
+  return adminSupportApi.getDossier(ticketId, params);
 }
 
 export function creditAdminSupportPol(ticketId: number, body: { amount: number; reason: string }) {
-  return api.post<AdminSupportCreditPolResponse>(`/admin/support/${ticketId}/credit-pol`, body);
+  return adminSupportApi.creditPol(ticketId, body);
 }
 
 export function uploadAdminSupportImage(file: File) {
-  const fd = new FormData();
-  fd.append('image', file);
-  return api.post<AdminSupportUploadImageResponse>('/admin/upload-image', fd, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
+  return adminSupportApi.uploadImage(file);
 }
 
 import { adminPublicSupportApi } from '../support/adminPublicSupport.api';

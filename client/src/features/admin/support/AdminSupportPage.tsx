@@ -26,26 +26,22 @@ import {
   Wallet,
 } from "lucide-react";
 import { toast } from "sonner";
-import { api } from "../../../shared/auth/auth.store";
 import SupportAttachmentThumbnails from "../../../shared/components/SupportAttachmentThumbnails";
 import PlayerDossier from "./components/PlayerDossier";
 import CreditPolModal from "./components/CreditPolModal";
+import { adminSupportApi } from "./adminSupport.api";
 import {
   isAdminSupportPlayerDossierBundle,
   type AdminSupportAttachment,
   type AdminSupportInboxMessage,
-  type AdminSupportListApiResponse,
   type AdminSupportListFilter,
-  type AdminSupportMessageApiResponse,
   type AdminSupportMessageDetail,
   type AdminSupportPlayerDossierBundle,
   type AdminSupportPlayerDossierParams,
   type AdminSupportReplyEntry,
-  type AdminSupportReplyPostResponse,
   type AdminSupportSocketReplyPayload,
   type AdminSupportSubscribeAck,
-  type AdminSupportUploadImageResponse,
-} from '../lib/admin.types';
+} from './adminSupport.types';
 import { ADMIN_SUPPORT_REPLY_MAX_ATTACHMENTS } from "./support.constants";
 
 function defaultDossierParams(): AdminSupportPlayerDossierParams {
@@ -104,7 +100,7 @@ export default function AdminSupportPage() {
     async (p = 1, append = false) => {
       try {
         setLoading(true);
-        const res = await api.get<AdminSupportListApiResponse>("/admin/support", { params: { page: p, limit } });
+        const res = await adminSupportApi.listMessages({ page: p, limit });
         if (res.data.ok) {
           const rows = res.data.messages ?? [];
           setMessages((prev) => (append ? [...prev, ...rows] : rows));
@@ -138,7 +134,7 @@ export default function AdminSupportPage() {
       setDossierLoading(true);
       setDossierError(false);
       try {
-        const res = await api.get<unknown>(`/admin/support/${ticketId}/player-dossier`, { params: dossierParams });
+        const res = await adminSupportApi.getDossier(ticketId, dossierParams);
         if (cancelled) return;
         if (isAdminSupportPlayerDossierBundle(res.data)) {
           setDossierBundle(res.data);
@@ -166,7 +162,7 @@ export default function AdminSupportPage() {
     setDossierBundle(null);
     setReplyComposerOpen(true);
     try {
-      const res = await api.get<AdminSupportMessageApiResponse>(`/admin/support/${msg.id}`);
+      const res = await adminSupportApi.getMessage(msg.id);
       if (res.data.ok && res.data.message) {
         setSelectedMessage(res.data.message);
         setDossierParams(defaultDossierParams());
@@ -237,11 +233,7 @@ export default function AdminSupportPage() {
   const uploadAdminImages = async (files: File[]): Promise<AdminSupportAttachment[]> => {
     const urls: AdminSupportAttachment[] = [];
     for (const file of files) {
-      const fd = new FormData();
-      fd.append("image", file);
-      const res = await api.post<AdminSupportUploadImageResponse>("/admin/upload-image", fd, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const res = await adminSupportApi.uploadImage(file);
       if (res.data?.ok && res.data.url) {
         urls.push({ url: res.data.url, mimeType: res.data.mimeType || file.type });
       }
@@ -258,13 +250,13 @@ export default function AdminSupportPage() {
       if (replyFiles.length) {
         attachments = await uploadAdminImages(replyFiles);
       }
-      const res = await api.post<AdminSupportReplyPostResponse>(`/admin/support/${selectedMessage.id}/reply`, {
+      const res = await adminSupportApi.reply(selectedMessage.id, {
         reply: reply.trim() || t("admin_support.reply_image_only"),
         attachments,
       });
       if (res.data.ok) {
         toast.success(t("admin_support.reply_sent"));
-        const detailsRes = await api.get<AdminSupportMessageApiResponse>(`/admin/support/${selectedMessage.id}`);
+        const detailsRes = await adminSupportApi.getMessage(selectedMessage.id);
         if (detailsRes.data.ok && detailsRes.data.message) {
           const updatedFull = detailsRes.data.message;
           setSelectedMessage(updatedFull);
@@ -646,7 +638,7 @@ export default function AdminSupportPage() {
         onCredited={() => {
           if (selectedMessage?.id) {
             setDossierParams((p: AdminSupportPlayerDossierParams) => ({ ...p }));
-            void api.get<AdminSupportMessageApiResponse>(`/admin/support/${selectedMessage.id}`).then((detailsRes) => {
+            void adminSupportApi.getMessage(selectedMessage.id).then((detailsRes) => {
               if (detailsRes.data.ok) setSelectedMessage(detailsRes.data.message ?? null);
             }).catch(() => {});
           }

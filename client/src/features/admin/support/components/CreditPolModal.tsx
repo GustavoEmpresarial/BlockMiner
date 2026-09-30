@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Loader2, Wallet, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { resolveApiErrorMessage } from '../../../../shared/utils/apiErrorI18n';
-import { creditAdminSupportPol } from '../../lib/admin.api';
+import { adminSupportApi } from '../adminSupport.api';
 
 type Props = {
   open: boolean;
@@ -45,7 +45,7 @@ export default function CreditPolModal({ open, ticketId, playerLabel, onClose, o
     }
     setSubmitting(true);
     try {
-      const res = await creditAdminSupportPol(ticketId, { amount: parsed, reason: reason.trim() });
+      const res = await adminSupportApi.creditPol(ticketId, { amount: parsed, reason: reason.trim() });
       if (!res.data.ok) throw new Error(res.data.message);
       toast.success(t('adminSupport.creditPol.success', { amount: parsed.toFixed(6) }));
       onCredited?.({ amount: parsed, polBalance: res.data.polBalance ?? null });

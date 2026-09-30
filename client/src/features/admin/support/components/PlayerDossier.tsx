@@ -2,7 +2,7 @@ import { useCallback, useMemo, type ReactNode, type SyntheticEvent } from 'react
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { AlertTriangle, ChevronLeft, ChevronRight, Cpu, Fingerprint, Loader2, Mail, Plus, RefreshCw, User, Wallet } from 'lucide-react';
-import type { AdminSupportDossierPaged, AdminSupportPlayerDossierBundle, AdminSupportPlayerDossierParams } from '../../lib/admin.api';
+import type { AdminSupportDossierPaged, AdminSupportPlayerDossierBundle, AdminSupportPlayerDossierParams } from '../adminSupport.types';
 
 type NumericPageKey = 'depositsPage' | 'ccpaymentPage' | 'withdrawalsPage' | 'payoutsPage' | 'minersPage';
 
