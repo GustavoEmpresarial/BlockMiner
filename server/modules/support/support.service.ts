@@ -331,6 +331,6 @@ export async function adminReplyPublicTicket(id: number, content: string, imageU
   return msg;
 }
 
-export async function adminSetPublicTicketStatus(id: number, status: string) {
-  await supportRepo.setTicketStatus(id, status);
+export async function adminSetPublicTicketStatus(id: number, status: string): Promise<boolean> {
+  return supportRepo.setTicketStatus(id, status);
 }
