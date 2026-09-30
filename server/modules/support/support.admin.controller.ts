@@ -7,12 +7,18 @@ import {
   adminReplySchema,
   creditPolSchema,
   parseSupportPagination,
-  PS_MAX_MSG_LEN,
   sanitizeImageUrl,
   sanitizeStr,
 } from "./support.schemas.js";
+import {
+  publicSupportIdParamSchema,
+  adminPublicSupportQuerySchema,
+  adminReplyPublicTicketSchema,
+  adminSetPublicTicketStatusSchema,
+} from "./public-support.schemas.js";
 import * as supportService from "./support.service.js";
 import { getSupportTicketPlayerDossier } from "./support.dossier.service.js";
+import { logAdminAction } from "../admin/index.js";
 
 const log = logger.child("support.admin.controller");
 
@@ -168,18 +174,24 @@ export async function replyToMessage(req: Request, res: Response): Promise<void>
 // ─── Public support admin ─────────────────────────────────────────────────────
 
 export async function adminListPublicTickets(req: Request, res: Response): Promise<void> {
-  const status = typeof req.query?.status === "string" ? req.query.status : undefined;
-  const page = Math.max(1, parseInt(String(req.query?.page ?? "1"), 10) || 1);
-  const result = await supportService.adminListPublicTickets(status, page, 30);
+  const parsed = adminPublicSupportQuerySchema.safeParse(req.query);
+  if (!parsed.success) {
+    res.status(400).json({ ok: false, code: "validation_error", errors: parsed.error.issues });
+    return;
+  }
+  const { status, page, limit } = parsed.data;
+  const statusFilter = status === "all" ? undefined : status;
+  const result = await supportService.adminListPublicTickets(statusFilter, page, limit);
   res.json({ ok: true, ...result });
 }
 
 export async function adminGetPublicTicket(req: Request, res: Response): Promise<void> {
-  const id = parseInt(String(req.params.id), 10);
-  if (!Number.isFinite(id)) {
-    res.status(400).json({ ok: false, message: "invalid_id", code: "invalid_id" });
+  const paramParsed = publicSupportIdParamSchema.safeParse(req.params);
+  if (!paramParsed.success) {
+    res.status(400).json({ ok: false, code: "invalid_id", errors: paramParsed.error.issues });
     return;
   }
+  const { id } = paramParsed.data;
   const ticket = await supportService.adminGetPublicTicket(id);
   if (!ticket) {
     res.status(404).json({ ok: false, message: "not_found", code: "not_found" });
@@ -189,39 +201,72 @@ export async function adminGetPublicTicket(req: Request, res: Response): Promise
 }
 
 export async function adminReplyPublicTicket(req: Request, res: Response): Promise<void> {
-  const id = parseInt(String(req.params.id), 10);
-  const content = sanitizeStr(req.body?.message, PS_MAX_MSG_LEN);
-  const imageUrl = sanitizeImageUrl(req.body?.imageUrl);
-
-  if (!Number.isFinite(id)) {
-    res.status(400).json({ ok: false, message: "invalid_id", code: "invalid_id" });
+  const paramParsed = publicSupportIdParamSchema.safeParse(req.params);
+  if (!paramParsed.success) {
+    res.status(400).json({ ok: false, code: "invalid_id", errors: paramParsed.error.issues });
     return;
   }
-  if (!content && !imageUrl) {
-    res.status(400).json({ ok: false, message: "empty_message", code: "empty_message" });
+  const { id } = paramParsed.data;
+
+  const bodyParsed = adminReplyPublicTicketSchema.safeParse(req.body);
+  if (!bodyParsed.success) {
+    res.status(400).json({ ok: false, code: "validation_error", errors: bodyParsed.error.issues });
     return;
   }
 
-  const msg = await supportService.adminReplyPublicTicket(id, content || "", imageUrl);
+  const content = bodyParsed.data.message ?? "";
+  const imageUrl = sanitizeImageUrl(bodyParsed.data.imageUrl);
+
+  const msg = await supportService.adminReplyPublicTicket(id, content, imageUrl);
   if (!msg) {
     res.status(404).json({ ok: false, message: "not_found", code: "not_found" });
     return;
   }
+
+  void logAdminAction({
+    adminId: req.admin?.adminId ?? null,
+    adminEmail: req.admin?.email ?? null,
+    sessionId: req.admin?.sessionId ?? null,
+    action: "ADMIN_REPLY_PUBLIC_SUPPORT_TICKET",
+    module: "support",
+    resource: "PublicSupportTicket",
+    resourceId: String(id),
+  });
+
   res.status(201).json({ ok: true, message: msg });
 }
 
 export async function adminSetPublicTicketStatus(req: Request, res: Response): Promise<void> {
-  const id = parseInt(String(req.params.id), 10);
-  const status = sanitizeStr(req.body?.status, 20);
+  const paramParsed = publicSupportIdParamSchema.safeParse(req.params);
+  if (!paramParsed.success) {
+    res.status(400).json({ ok: false, code: "invalid_id", errors: paramParsed.error.issues });
+    return;
+  }
+  const { id } = paramParsed.data;
 
-  if (!Number.isFinite(id)) {
-    res.status(400).json({ ok: false, message: "invalid_id", code: "invalid_id" });
+  const bodyParsed = adminSetPublicTicketStatusSchema.safeParse(req.body);
+  if (!bodyParsed.success) {
+    res.status(400).json({ ok: false, code: "validation_error", errors: bodyParsed.error.issues });
     return;
   }
-  if (status !== "open" && status !== "closed") {
-    res.status(400).json({ ok: false, message: "invalid_status", code: "invalid_status" });
+  const { status } = bodyParsed.data;
+
+  const updated = await supportService.adminSetPublicTicketStatus(id, status);
+  if (!updated) {
+    res.status(404).json({ ok: false, message: "not_found", code: "not_found" });
     return;
   }
-  await supportService.adminSetPublicTicketStatus(id, status);
+
+  void logAdminAction({
+    adminId: req.admin?.adminId ?? null,
+    adminEmail: req.admin?.email ?? null,
+    sessionId: req.admin?.sessionId ?? null,
+    action: "ADMIN_SET_PUBLIC_SUPPORT_STATUS",
+    module: "support",
+    resource: "PublicSupportTicket",
+    resourceId: String(id),
+    newValue: { status },
+  });
+
   res.json({ ok: true });
 }

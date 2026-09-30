@@ -42,10 +42,10 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<AdminRole, string[]> = {
     "burn_events",
     "transparency",
   ],
-  moderator: ["dashboard", "users.view", "users.ban", "support", "logs.view", "creators.view", "banners.view", "tournaments.view", "faucet.view", "read_earn.view", "ptc.view", "tasks.view", "offerwall.view", "internal_offerwall.view", "events.view", "checkin.view", "mini_pass.view", "miners.view", "burn_events.view", "transparency.view", "config.view"],
+  moderator: ["dashboard", "users.view", "users.ban", "support", "support.view", "logs.view", "creators.view", "banners.view", "tournaments.view", "faucet.view", "read_earn.view", "ptc.view", "tasks.view", "offerwall.view", "internal_offerwall.view", "events.view", "checkin.view", "mini_pass.view", "miners.view", "burn_events.view", "transparency.view", "config.view"],
 
   finance: ["dashboard", "users.view", "payments", "withdrawals", "deposits"],
-  support: ["dashboard", "users.view", "support"],
+  support: ["dashboard", "users.view", "support", "support.view"],
   readonly: ["dashboard"],
 };
 
@@ -94,6 +94,7 @@ export const AVAILABLE_PERMISSIONS: PermissionDefinition[] = [
   { key: "read_earn", label: "Gestão de Campanhas Read & Earn", category: "Monetização" },
   { key: "read_earn.view", label: "Visualizar Read & Earn (Leitura)", category: "Monetização" },
   { key: "support", label: "Tickets & Suporte ao Usuário", category: "Suporte" },
+  { key: "support.view", label: "Visualizar Tickets de Suporte (Leitura)", category: "Suporte" },
   { key: "logs", label: "Logs de Sistema & Diagnóstico", category: "Sistema" },
   { key: "logs.view", label: "Visualizar Logs do Sistema", category: "Sistema" },
   { key: "monitoring", label: "Monitoramento & Métricas do Servidor", category: "Sistema" },
