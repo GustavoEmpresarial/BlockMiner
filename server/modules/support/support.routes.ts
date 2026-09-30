@@ -1,20 +1,14 @@
-// @ts-nocheck
-// RECOVERED: this source file was missing from git history (never committed) while
-// production kept running off a stale compiled dist/ via Docker build cache.
-// Reconstructed verbatim from the last known-good compiled output on 2026-09-11.
-// TODO: remove @ts-nocheck once someone re-adds proper types for this file.
 /**
- * Ported from legacy/server/modules/support/support.routes.ts, incl. the
- * `requireVisibleSidebarPath` operational kill switch (sidebar-nav Fase 8).
- * Note: legacy does NOT gate POST /upload-image — matches here (see legacy
- * server/modules/support/support.routes.ts).
+ * Routes for authenticated and guest support messages.
+ * Includes the `requireVisibleSidebarPath` operational kill switch (sidebar-nav Fase 8).
  */
-import express from "express";
+import express, { type Router } from "express";
 import { requireAuth, authenticateTokenOptional } from "../../core/http/middleware/auth.js";
 import { createRateLimiter } from "../../core/http/middleware/rateLimit.js";
 import { requireVisibleSidebarPath, sidebarRegistryPath, SIDEBAR_ITEM_REGISTRY } from "../sidebar-nav/index.js";
 import * as supportController from "./support.controller.js";
-export const supportRouter = express.Router();
+
+export const supportRouter: Router = express.Router();
 const supportLimiter = createRateLimiter({
     windowMs: 15 * 60 * 1000,
     max: 5,

@@ -89,10 +89,10 @@ export default function AdminSupportPage() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<AdminSupportListFilter>("all");
   const [loadingDetails, setLoadingDetails] = useState(false);
-  const [dossierBundle, setDossierBundle] = useState<PlayerDossierBundle | null>(null);
+  const [dossierBundle, setDossierBundle] = useState<AdminSupportPlayerDossierBundle | null>(null);
   const [dossierLoading, setDossierLoading] = useState(false);
   const [dossierError, setDossierError] = useState(false);
-  const [dossierParams, setDossierParams] = useState<PlayerDossierParams>(() => defaultDossierParams());
+  const [dossierParams, setDossierParams] = useState<AdminSupportPlayerDossierParams>(() => defaultDossierParams());
   const [replyComposerOpen, setReplyComposerOpen] = useState(true);
   const [dossierOpen, setDossierOpen] = useState(false);
   const [creditPolOpen, setCreditPolOpen] = useState(false);
@@ -181,8 +181,8 @@ export default function AdminSupportPage() {
     }
   };
 
-  const handleDossierParamsChange = useCallback((patch: Partial<PlayerDossierParams>) => {
-    setDossierParams((prev) => ({ ...prev, ...patch }));
+  const handleDossierParamsChange = useCallback((patch: Partial<AdminSupportPlayerDossierParams>) => {
+    setDossierParams((prev: AdminSupportPlayerDossierParams) => ({ ...prev, ...patch }));
   }, []);
 
   useEffect(() => {
@@ -481,7 +481,7 @@ export default function AdminSupportPage() {
                     params={dossierParams}
                     onParamsChange={handleDossierParamsChange}
                     onRetry={() => {
-                      if (selectedMessage?.id) setDossierParams((p) => ({ ...p }));
+                      if (selectedMessage?.id) setDossierParams((p: AdminSupportPlayerDossierParams) => ({ ...p }));
                     }}
                     onCreditPol={() => setCreditPolOpen(true)}
                   />
@@ -645,7 +645,7 @@ export default function AdminSupportPage() {
         onClose={() => setCreditPolOpen(false)}
         onCredited={() => {
           if (selectedMessage?.id) {
-            setDossierParams((p) => ({ ...p }));
+            setDossierParams((p: AdminSupportPlayerDossierParams) => ({ ...p }));
             void api.get<AdminSupportMessageApiResponse>(`/admin/support/${selectedMessage.id}`).then((detailsRes) => {
               if (detailsRes.data.ok) setSelectedMessage(detailsRes.data.message ?? null);
             }).catch(() => {});
