@@ -1239,6 +1239,89 @@ Executado através de `tests/security/run-kali-transparency-full-audit.sh` utili
 
 **Total de Verificações de Segurança**: 22 executadas, 22 aprovadas, 0 falhas.
 
+---
+
+# PARTE XI: MÓDULO DE GESTÃO DA SIDEBAR DO USUÁRIO & KILL SWITCH OPERACIONAL (`/admin/user-sidebar`)
+
+## 1. Resumo Executivo dos Achados — Sidebar Nav & Kill Switch
+
+| ID | Descrição do Achado | Severidade | CWE / OWASP | Arquivo e Linha Original | Status da Correção |
+| :---: | :--- | :---: | :---: | :--- | :---: |
+| **SEC-40** | **BFLA (Broken Function Level Authorization):** Rotas administrativas `/api/admin/sidebar-nav` acessíveis por qualquer administrador autenticado sem verificação de permissão RBAC. Operadores restritos (`support`, `readonly`) podiam desabilitar funcionalidades da plataforma. | **CRÍTICA** | CWE-285 / OWASP A1 | `server/modules/sidebar-nav/sidebar-nav.admin.routes.ts:14-17` | ✅ **Corrigido** |
+| **SEC-41** | **Falta de Rastro de Auditoria nas Alterações de Sidebar:** Mutações no JSON de rotas da aplicação não registravam histórico em `admin_audit_logs`. | **ALTA** | CWE-778 / OWASP A9 | `server/modules/sidebar-nav/sidebar-nav.controller.ts:32-49` | ✅ **Corrigido** |
+| **SEC-42** | **Mass Assignment e Ausência de Zod Schema:** O payload do `PUT` aceitava `entries: unknown` sem validação estrita `.strict()`, permitindo injeção de campos arbitrários. | **ALTA** | CWE-915 / OWASP A8 | `server/modules/sidebar-nav/sidebar-nav.controller.ts:33` | ✅ **Corrigido** |
+| **UX-06** | **Interface Administrativa Primitiva com Textarea:** A tela continha apenas uma caixa de texto crua para digitação manual de JSON, sem componentes visuais, sem ordenação visual e com alto risco de erro humano. | **MÉDIA** | Usabilidade & UX | `client/src/features/admin/sidebar-nav/AdminUserSidebarPage.tsx` | ✅ **Corrigido** |
+| **TEC-12** | **Diretivas `@ts-nocheck` e Incompatibilidade de Tipos:** Arquivos de recuperação com `@ts-nocheck` geravam erros de tipagem em cascata no `sidebar-nav.service.ts`. | **MÉDIA** | Tipagem Estática | `server/modules/sidebar-nav/*.ts` | ✅ **Corrigido** |
+
+---
+
+## 2. Detalhamento dos Achados e Mitigações Aplicadas
+
+### SEC-40: Controle de Acesso Quebrado (BFLA) — CRÍTICA
+- **Descrição**: O roteador `sidebarNavAdminRouter` aplicava apenas `requireAdminAuth` e um limitador em memória. Não existia checagem de permissões RBAC.
+- **Correção Aplicada**: Aplicado `requireAdminPermission("config.view", "config", "sidebar_nav.view", "sidebar_nav")` para leitura e `requireAdminPermission("config", "sidebar_nav")` para mutações, além de rate limiting distribuído (`sidebar_nav_admin_read` 120/min, `sidebar_nav_admin_write` 300/min).
+- **Verificação**: Teste `AUTHZ-001` no container Kali comprovou bloqueio HTTP 403 Forbidden para tokens restritos.
+
+---
+
+### SEC-41: Auditoria Administrativa Obrigatória — ALTA
+- **Descrição**: Nenhuma operação administrativa na sidebar deixava registro histórico.
+- **Correção Aplicada**: Integrada chamada assíncrona a `logAdminAction` registrando `adminId`, `ip`, `userAgent`, `action: "ADMIN_UPDATE_SIDEBAR_NAV"`, `resource: "SidebarNavConfig"` e o total de entradas atualizadas.
+
+---
+
+### SEC-42: Zod Schema Estrito e Prevenção de Mass Assignment — ALTA
+- **Descrição**: O endpoint recebia `req.body?.entries` solto e o gravava diretamente após checagens manuais parciais.
+- **Correção Aplicada**: Implementado `putSidebarNavSchema` com validação estrita `.strict()`, rejeitando quaisquer propriedades espúrias no corpo ou dentro dos itens (`itemId`, `visible`, `sortOrder`, `section`, `parentItemId`).
+
+---
+
+### UX-06: Redesign Completo da Interface do Usuário — MÉDIA
+- **Descrição**: O administrador operava um `<textarea>` cego com JSON stringificado.
+- **Correção Aplicada**: Criada interface moderna e modular com:
+  1. `SidebarNavStats`: KPIs de módulos totais, ativos, desativados e raiz.
+  2. `SidebarSectionCard`: Cards agrupados por seção (`main`, `earn`, `social`) com controles de setas (Mover para cima/baixo) e toggle visual de visibilidade.
+  3. Suporte a árvore hierárquica com itens aninhados em `rewards_group`.
+  4. Indicadores de regras de negócio (`parentLocked`, `zerads` embutido).
+  5. Alternância fluida entre "Modo Visual" e "Editor JSON Avançado".
+
+---
+
+## 3. Resultados dos Testes de Carga (k6) — Sidebar Nav
+
+Executado através de `tests/performance/run-sidebar-nav-k6.mjs` sob 15 VUs:
+
+| Métrica | Meta Estabelecida | Resultado Obtido | Status |
+| :--- | :---: | :---: | :---: |
+| **Taxa de Erro 5xx** | `0.00%` | **0.00%** (0 de 11.564 requests) | ✅ Aprovado |
+| **Checks de Sucesso Admin & Public** | `100.00%` | **100.00%** (11.564 de 11.564) | ✅ Aprovado |
+| **Latência Média Global** | $< 100\text{ ms}$ | **11.03 ms** | ✅ Excelente |
+| **Latência Pública (`/api/sidebar/nav`)** | p95 $< 200\text{ ms}$ | **3.47 ms** (p50: 1.64 ms) | ✅ Excelente |
+| **Latência Admin (`/api/admin/sidebar-nav`)** | p95 $< 300\text{ ms}$ | **30.06 ms** (p50: 20.70 ms) | ✅ Excelente |
+| **Throughput Médio** | $> 100\text{ req/s}$ | **1.051.13 req/s** | ✅ Aprovado |
+
+---
+
+## 4. Resultados da Auditoria de Segurança (Container Kali Linux) — Sidebar Nav
+
+Executado através de `tests/security/run-kali-sidebar-nav-audit.sh` utilizando o container `kali-pentest:latest`:
+
+| Categoria do Teste | Casos Executados | Resultado |
+| :--- | :---: | :---: |
+| **Autenticação & RBAC Bypass** | 4 vetores em rotas de leitura/escrita | **100% Bloqueados** (HTTP 401 Unauthorized) |
+| **Tokens Adulterados / Alg None** | 2 vetores de assinatura falsa / alg none | **100% Rejeitado** (HTTP 401 Unauthorized) |
+| **BFLA (Broken Function Level Authorization)** | Operador restrito tentando mutações | **100% Bloqueado** (HTTP 403 Forbidden) |
+| **Mass Assignment Protection** | Chaves rogue no root e dentro do item | **100% Bloqueado** (HTTP 400 Bad Request via `.strict()`) |
+| **Validação de Payload (Enums, Floats, Negativos)** | 4 vetores de entrada malformada | **100% Bloqueado** (HTTP 400 Bad Request) |
+| **Integridade de Negócio (Incomplete, Duplicates, Unknown)** | 3 vetores de quebra de catálogo | **100% Bloqueado** (HTTP 400 Bad Request) |
+| **Invariantes e Auto-Healing (ZerAds & ParentLocked)** | 2 verificações de coerção | **100% Preservados** (Regras respeitadas no banco) |
+| **Kill Switch Operacional End-to-End** | Desativação e reativação de `/faucet` | **100% Validado** (403 feature_disabled / 200 OK) |
+| **Rota Pública de Navegação** | `GET /api/sidebar/nav` | **100% Funcional** (200 OK com 3 categorias) |
+| **Prevenção de Information Disclosure** | Injeção de aspas e traversal em query | **Zero vazamentos** de stack traces ou detalhes do ORM |
+
+**Total de Verificações de Segurança**: 21 executadas, 21 aprovadas, 0 falhas.
+
+
 
 
 
