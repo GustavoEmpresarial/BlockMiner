@@ -5,8 +5,11 @@ import { logger } from "../../core/logger/index.js";
 import { SUPPORT_ERROR } from "./support.errors.js";
 import {
   adminReplySchema,
+  adminSupportArchiveSchema,
+  adminSupportDossierQuerySchema,
+  adminSupportListQuerySchema,
   creditPolSchema,
-  parseSupportPagination,
+  supportTicketIdParamSchema,
   sanitizeImageUrl,
   sanitizeStr,
 } from "./support.schemas.js";
@@ -24,10 +27,13 @@ const log = logger.child("support.admin.controller");
 
 export async function listMessages(req: Request, res: Response): Promise<void> {
   try {
-    const { limit, page, skip } = parseSupportPagination(req, { defaultLimit: 50, maxLimit: 100 });
-    const userIdFilter = req.query.userId ? parseInt(String(req.query.userId), 10) : null;
-    const validUserIdFilter = userIdFilter != null && !Number.isNaN(userIdFilter) ? userIdFilter : null;
-    const archivedFilter = String(req.query.archived ?? "").trim() === "1";
+    const parsedQuery = adminSupportListQuerySchema.safeParse(req.query);
+    if (!parsedQuery.success) {
+      res.status(400).json({ ok: false, code: "validation_error", message: "Invalid query parameters", errors: parsedQuery.error.issues });
+      return;
+    }
+    const { page, limit, userId: validUserIdFilter, archived: archivedFilter } = parsedQuery.data;
+    const skip = (page - 1) * limit;
     const { messages, total } = await supportService.listMessagesForAdmin(validUserIdFilter, skip, limit, archivedFilter);
     res.json({ ok: true, messages, page, limit, total });
   } catch (e: unknown) {
@@ -38,17 +44,37 @@ export async function listMessages(req: Request, res: Response): Promise<void> {
 
 export async function setArchived(req: Request, res: Response): Promise<void> {
   try {
-    const id = parseInt(String(req.params.id), 10);
-    if (!id || Number.isNaN(id)) {
-      res.status(400).json({ ok: false, message: "Invalid id" });
+    const paramParsed = supportTicketIdParamSchema.safeParse(req.params);
+    if (!paramParsed.success) {
+      res.status(400).json({ ok: false, code: "invalid_id", message: "Invalid id", errors: paramParsed.error.issues });
       return;
     }
-    const archived = Boolean((req.body as { archived?: unknown } | undefined)?.archived);
+    const { id } = paramParsed.data;
+
+    const bodyParsed = adminSupportArchiveSchema.safeParse(req.body);
+    if (!bodyParsed.success) {
+      res.status(400).json({ ok: false, code: "validation_error", message: "Invalid request body", errors: bodyParsed.error.issues });
+      return;
+    }
+    const { archived } = bodyParsed.data;
+
     const ok = await supportService.setTicketArchivedForAdmin(id, archived);
     if (!ok) {
       res.status(404).json({ ok: false, message: "Message not found" });
       return;
     }
+
+    void logAdminAction({
+      adminId: req.admin?.adminId ?? null,
+      adminEmail: req.admin?.email ?? null,
+      sessionId: req.admin?.sessionId ?? null,
+      action: "ADMIN_SET_SUPPORT_ARCHIVED",
+      module: "support",
+      resource: "SupportMessage",
+      resourceId: String(id),
+      newValue: { archived },
+    });
+
     res.json({ ok: true, archived });
   } catch (e: unknown) {
     log.error("Error archiving message", { error: String(e instanceof Error ? e.message : e) });
@@ -58,11 +84,13 @@ export async function setArchived(req: Request, res: Response): Promise<void> {
 
 export async function getMessage(req: Request, res: Response): Promise<void> {
   try {
-    const id = parseInt(String(req.params.id), 10);
-    if (!id || Number.isNaN(id)) {
-      res.status(400).json({ ok: false, message: "Invalid id" });
+    const paramParsed = supportTicketIdParamSchema.safeParse(req.params);
+    if (!paramParsed.success) {
+      res.status(400).json({ ok: false, code: "invalid_id", message: "Invalid id", errors: paramParsed.error.issues });
       return;
     }
+    const { id } = paramParsed.data;
+
     const message = await supportService.getMessageForAdmin(id);
     if (!message) {
       res.status(404).json({ ok: false, message: "Message not found" });
@@ -76,13 +104,21 @@ export async function getMessage(req: Request, res: Response): Promise<void> {
 }
 
 export async function getPlayerDossier(req: Request, res: Response): Promise<void> {
-  const id = parseInt(String(req.params.id), 10);
-  if (!id || Number.isNaN(id)) {
-    res.status(400).json({ ok: false, message: "Invalid id" });
+  const paramParsed = supportTicketIdParamSchema.safeParse(req.params);
+  if (!paramParsed.success) {
+    res.status(400).json({ ok: false, code: "invalid_id", message: "Invalid id", errors: paramParsed.error.issues });
     return;
   }
+  const { id } = paramParsed.data;
+
+  const queryParsed = adminSupportDossierQuerySchema.safeParse(req.query);
+  if (!queryParsed.success) {
+    res.status(400).json({ ok: false, code: "validation_error", message: "Invalid query parameters", errors: queryParsed.error.issues });
+    return;
+  }
+
   try {
-    const result = await getSupportTicketPlayerDossier(id, req.query as Record<string, string | undefined>);
+    const result = await getSupportTicketPlayerDossier(id, queryParsed.data as Record<string, unknown>);
     if (!result.ok) {
       res.status(404).json({ ok: false, message: "Ticket not found" });
       return;
@@ -96,14 +132,16 @@ export async function getPlayerDossier(req: Request, res: Response): Promise<voi
 
 export async function creditPol(req: Request, res: Response): Promise<void> {
   try {
-    const id = parseInt(String(req.params.id), 10);
-    if (!id || Number.isNaN(id)) {
-      res.status(400).json({ ok: false, message: "Invalid id" });
+    const paramParsed = supportTicketIdParamSchema.safeParse(req.params);
+    if (!paramParsed.success) {
+      res.status(400).json({ ok: false, code: "invalid_id", message: "Invalid id", errors: paramParsed.error.issues });
       return;
     }
+    const { id } = paramParsed.data;
+
     const parsed = creditPolSchema.safeParse(req.body);
     if (!parsed.success) {
-      res.status(400).json({ ok: false, message: "Invalid request body", issues: parsed.error.flatten() });
+      res.status(400).json({ ok: false, code: "validation_error", message: "Invalid request body", issues: parsed.error.flatten(), errors: parsed.error.issues });
       return;
     }
     const amount = parsed.data.amount;
@@ -119,6 +157,22 @@ export async function creditPol(req: Request, res: Response): Promise<void> {
       res.status(400).json({ ok: false, message: "Ticket is not linked to a player account" });
       return;
     }
+
+    void logAdminAction({
+      adminId: req.admin?.adminId ?? null,
+      adminEmail: req.admin?.email ?? null,
+      sessionId: req.admin?.sessionId ?? null,
+      action: "ADMIN_SUPPORT_CREDIT_POL",
+      module: "support",
+      resource: "SupportMessage",
+      resourceId: String(id),
+      newValue: {
+        amount,
+        reason,
+        transactionId: outcome.transactionId,
+        polBalance: outcome.polBalance,
+      },
+    });
 
     res.json({
       ok: true,
@@ -136,14 +190,16 @@ export async function creditPol(req: Request, res: Response): Promise<void> {
 
 export async function replyToMessage(req: Request, res: Response): Promise<void> {
   try {
-    const id = parseInt(String(req.params.id), 10);
-    if (!id || Number.isNaN(id)) {
-      res.status(400).json({ ok: false, message: "Invalid id" });
+    const paramParsed = supportTicketIdParamSchema.safeParse(req.params);
+    if (!paramParsed.success) {
+      res.status(400).json({ ok: false, code: "invalid_id", message: "Invalid id", errors: paramParsed.error.issues });
       return;
     }
+    const { id } = paramParsed.data;
+
     const parsed = adminReplySchema.safeParse(req.body);
     if (!parsed.success) {
-      res.status(400).json({ ok: false, message: "Invalid request body", issues: parsed.error.flatten() });
+      res.status(400).json({ ok: false, code: "validation_error", message: "Invalid request body", issues: parsed.error.flatten(), errors: parsed.error.issues });
       return;
     }
     const text = parsed.data.reply ?? parsed.data.message;
@@ -157,6 +213,21 @@ export async function replyToMessage(req: Request, res: Response): Promise<void>
         body: text,
         attachments: parsed.data.attachments,
       });
+
+      void logAdminAction({
+        adminId: req.admin?.adminId ?? null,
+        adminEmail: req.admin?.email ?? null,
+        sessionId: req.admin?.sessionId ?? null,
+        action: "ADMIN_REPLY_SUPPORT_TICKET",
+        module: "support",
+        resource: "SupportMessage",
+        resourceId: String(id),
+        newValue: {
+          hasAttachments: (parsed.data.attachments?.length ?? 0) > 0,
+          replyLength: text.length,
+        },
+      });
+
       res.json({ ok: true, message: "Reply saved successfully", reply });
     } catch (inner: unknown) {
       if (readErrorCode(inner) === SUPPORT_ERROR.NOT_FOUND || (inner instanceof Error && inner.message === "NOT_FOUND")) {

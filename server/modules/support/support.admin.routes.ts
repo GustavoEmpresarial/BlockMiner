@@ -14,21 +14,57 @@ supportAdminRouter.use(requireAdminAuth);
 const readLimiter = createDistributedRateLimiter({
   windowMs: 60_000,
   max: 120,
-  name: "public_support_admin_read",
+  name: "support_admin_read",
 });
 
 const writeLimiter = createDistributedRateLimiter({
   windowMs: 60_000,
   max: 300,
-  name: "public_support_admin_write",
+  name: "support_admin_write",
 });
 
-supportAdminRouter.get("/support", adminSupportController.listMessages);
-supportAdminRouter.get("/support/:id/player-dossier", adminSupportController.getPlayerDossier);
-supportAdminRouter.post("/support/:id/credit-pol", adminSupportController.creditPol);
-supportAdminRouter.get("/support/:id", adminSupportController.getMessage);
-supportAdminRouter.post("/support/:id/reply", adminSupportController.replyToMessage);
-supportAdminRouter.post("/support/:id/archive", adminSupportController.setArchived);
+const creditLimiter = createDistributedRateLimiter({
+  windowMs: 60_000,
+  max: 60,
+  name: "support_admin_credit",
+});
+
+supportAdminRouter.get(
+  "/support",
+  readLimiter,
+  requireAdminPermission("support.view", "support"),
+  adminSupportController.listMessages
+);
+supportAdminRouter.get(
+  "/support/:id/player-dossier",
+  readLimiter,
+  requireAdminPermission("support.view", "support"),
+  adminSupportController.getPlayerDossier
+);
+supportAdminRouter.get(
+  "/support/:id",
+  readLimiter,
+  requireAdminPermission("support.view", "support"),
+  adminSupportController.getMessage
+);
+supportAdminRouter.post(
+  "/support/:id/reply",
+  writeLimiter,
+  requireAdminPermission("support"),
+  adminSupportController.replyToMessage
+);
+supportAdminRouter.post(
+  "/support/:id/archive",
+  writeLimiter,
+  requireAdminPermission("support"),
+  adminSupportController.setArchived
+);
+supportAdminRouter.post(
+  "/support/:id/credit-pol",
+  creditLimiter,
+  requireAdminPermission("support"),
+  adminSupportController.creditPol
+);
 
 supportAdminRouter.get(
   "/public-support/tickets",
