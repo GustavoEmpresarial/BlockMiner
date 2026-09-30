@@ -42,7 +42,7 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<AdminRole, string[]> = {
     "burn_events",
     "transparency",
   ],
-  moderator: ["dashboard", "users.view", "users.ban", "support", "logs.view", "creators.view", "banners.view", "tournaments.view", "faucet.view", "read_earn.view", "ptc.view", "tasks.view", "offerwall.view", "internal_offerwall.view", "events.view", "checkin.view", "mini_pass.view", "miners.view", "burn_events.view", "transparency.view"],
+  moderator: ["dashboard", "users.view", "users.ban", "support", "logs.view", "creators.view", "banners.view", "tournaments.view", "faucet.view", "read_earn.view", "ptc.view", "tasks.view", "offerwall.view", "internal_offerwall.view", "events.view", "checkin.view", "mini_pass.view", "miners.view", "burn_events.view", "transparency.view", "config.view"],
 
   finance: ["dashboard", "users.view", "payments", "withdrawals", "deposits"],
   support: ["dashboard", "users.view", "support"],
@@ -98,6 +98,9 @@ export const AVAILABLE_PERMISSIONS: PermissionDefinition[] = [
   { key: "logs.view", label: "Visualizar Logs do Sistema", category: "Sistema" },
   { key: "monitoring", label: "Monitoramento & Métricas do Servidor", category: "Sistema" },
   { key: "config", label: "Configurações Gerais & Backups", category: "Sistema" },
+  { key: "config.view", label: "Visualizar Configurações & Sidebar (Leitura)", category: "Sistema" },
+  { key: "sidebar_nav", label: "Gestão da Sidebar do App (Kill Switch)", category: "Sistema" },
+  { key: "sidebar_nav.view", label: "Visualizar Sidebar do App (Leitura)", category: "Sistema" },
   { key: "audit", label: "Logs de Auditoria Administrativa", category: "Administração" },
   { key: "admins", label: "Gerenciamento de Administradores", category: "Administração" },
   { key: "broadcast", label: "Notificações & Anúncios Broadcast", category: "Engajamento" },

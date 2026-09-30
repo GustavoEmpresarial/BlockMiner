@@ -9,5 +9,12 @@ export { sidebarNavAdminRouter } from "./sidebar-nav.admin.routes.js";
 export { requireVisibleSidebarPath, sidebarRegistryPath } from "./sidebar-nav.gate.js";
 export { isSidebarPathVisible } from "./sidebar-nav.service.js";
 export { SIDEBAR_ITEM_REGISTRY } from "./sidebar-nav.registry.js";
+export {
+  sidebarSectionSchema,
+  sidebarPersistedEntrySchema,
+  putSidebarNavSchema,
+  type PutSidebarNavInput,
+} from "./sidebar-nav.schemas.js";
 export { SIDEBAR_NAV_ERROR, type SidebarNavErrorCode } from "./sidebar-nav.errors.js";
 export type { SidebarPersistedEntry, SidebarSection, SidebarCategory } from "./sidebar-nav.types.js";
+
