@@ -113,7 +113,8 @@ export function uploadAdminSupportImage(file: File) {
   });
 }
 
-export { adminPublicSupportApi } from '../support/adminPublicSupport.api';
+import { adminPublicSupportApi } from '../support/adminPublicSupport.api';
+export { adminPublicSupportApi };
 
 export function listAdminPublicSupportTickets(params: { status: AdminPublicSupportStatusFilter; page: number }) {
   return adminPublicSupportApi.listTickets(params);
