@@ -46,7 +46,7 @@ export const MINERCORE_MCX9_HASH_RATE_ENV_KEY = "MINERCORE_MCX9_HASH_RATE";
 export const DEFAULT_MINERCORE_MCX9_HASH_RATE = 3000;
 
 export const MINERCORE_MCX9_OFFER_DESCRIPTION =
-  "Placa 3D da MinerCore. A compra é confirmada na hora, mas a máquina só entra no inventário 5 dias depois. As outras ofertas em imagem chegam hoje e continuam minerando.";
+  "Placa 3D da MinerCore. A venda abre 5 dias após o início do evento; depois disso a máquina entra no inventário na hora. As outras ofertas em imagem já estão à venda e chegam hoje.";
 
 /**
  * The three image miners beside the MCX9.
@@ -60,21 +60,21 @@ export const MINERCORE_IMAGE_OFFER_MINERS = [
   {
     name: "Gildcore",
     description: "Placa dourada da MinerCore. A compra entra no inventário na hora e a máquina continua minerando.",
-    imageUrl: "/media/offers/gildcore-hero.png",
+    imageUrl: "/media/offers/gildcore-cut.png",
     priceBlk: "0.5",
     hashRate: 750,
   },
   {
     name: "Amberforge",
     description: "Placa âmbar da MinerCore. A compra entra no inventário na hora e a máquina continua minerando.",
-    imageUrl: "/media/offers/amberforge-hero.png",
+    imageUrl: "/media/offers/amberforge-cut.png",
     priceBlk: "1",
     hashRate: 2000,
   },
   {
     name: "Hexcore",
     description: "Placa ciano da MinerCore, com a marca M. A compra entra no inventário na hora e a máquina continua minerando.",
-    imageUrl: "/media/offers/hexcore-hero.png",
+    imageUrl: "/media/offers/hexcore-cut.png",
     priceBlk: "1.5",
     hashRate: 3750,
   },

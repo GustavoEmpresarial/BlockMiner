@@ -1,5 +1,5 @@
 import { Suspense, useEffect } from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../shared/auth/auth.store';
 import { useGameStore } from './lib/game.store';
 import Sidebar from './components/Sidebar';
@@ -16,6 +16,8 @@ export default function ProtectedLayout() {
   const authHydrated = useAuthStore((s) => s.authHydrated);
   const checkSession = useAuthStore((s) => s.checkSession);
   const initSocket = useGameStore((s) => s.initSocket);
+  const location = useLocation();
+  const fullWidth = location.pathname === '/inventory';
 
   useEffect(() => {
     void checkSession({ silent: true });
@@ -43,7 +45,7 @@ export default function ProtectedLayout() {
       <div className="flex min-w-0 flex-1 flex-col pt-14 md:pt-0 pb-16 md:pb-0">
         <Header />
         <main className="flex-1 overflow-x-hidden px-4 py-6 sm:px-6 lg:px-8 supports-[padding:max(0px)]:pb-[max(1rem,env(safe-area-inset-bottom))]">
-          <div className="mx-auto w-full max-w-7xl">
+          <div className={fullWidth ? 'mx-auto w-full max-w-none' : 'mx-auto w-full max-w-7xl'}>
             <div className="sticky top-14 z-20 md:top-20">
               <EmailVerifyBanner />
             </div>

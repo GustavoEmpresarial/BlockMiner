@@ -64,19 +64,37 @@ function imageMinerCreate(miner: (typeof MINERCORE_IMAGE_OFFER_MINERS)[number]) 
 
 /**
  * Adds the three PNG miners, or renames the previous ticker names in place.
- * Does not move the offer window and does not rewrite a row that already has the new name.
+ * If the new name already exists, the leftover ticker row is deleted.
+ * Does not move the offer window and does not rewrite price or hashrate.
+ * A row that already has the new name only refreshes its image when the cutout path changed.
  */
 async function ensureMinercoreImageMiners(eventId: number): Promise<number> {
   const existing = await prisma.eventMiner.findMany({
     where: { eventId },
-    select: { id: true, name: true },
+    select: { id: true, name: true, imageUrl: true },
   });
-  const byName = new Map(existing.map((miner) => [miner.name, miner.id]));
+  const byName = new Map(existing.map((miner) => [miner.name, miner]));
   let changed = 0;
   for (const miner of MINERCORE_IMAGE_OFFER_MINERS) {
-    if (byName.has(miner.name)) continue;
+    const current = byName.get(miner.name);
+    if (current) {
+      if (current.imageUrl !== miner.imageUrl) {
+        await prisma.eventMiner.update({
+          where: { id: current.id },
+          data: { imageUrl: miner.imageUrl },
+        });
+        changed += 1;
+      }
+      const legacy = byName.get(MINERCORE_IMAGE_OFFER_LEGACY_NAMES[miner.name]);
+      if (legacy) {
+        await prisma.eventMiner.delete({ where: { id: legacy.id } });
+        changed += 1;
+      }
+      continue;
+    }
     const legacyName = MINERCORE_IMAGE_OFFER_LEGACY_NAMES[miner.name];
-    const legacyId = byName.get(legacyName);
+    const legacy = byName.get(legacyName);
+    const legacyId = legacy?.id;
     if (legacyId != null) {
       await prisma.eventMiner.update({
         where: { id: legacyId },

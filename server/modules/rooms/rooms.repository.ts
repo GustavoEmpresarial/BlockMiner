@@ -8,6 +8,7 @@ import { resolveGrantEventMinerId } from "../machines/eventMinerDisplayName.js";
 const roomListSelect = {
     id: true,
     roomNumber: true,
+    kind: true,
     pricePaid: true,
     unlockedAt: true,
     racks: {
@@ -26,7 +27,13 @@ const roomListSelect = {
                     level: true,
                     slotSize: true,
                     ownedMachineId: true,
-                    ownedMachine: { select: { imageUrl: true, minerName: true } },
+                    ownedMachine: {
+                        select: {
+                            imageUrl: true,
+                            minerName: true,
+                            eventMiner: { select: { name: true, imageUrl: true, modelUrl: true } },
+                        },
+                    },
                     miner: { select: { name: true, imageUrl: true } },
                 },
             },
@@ -73,7 +80,7 @@ export async function findInventoryItemForUser(inventoryId, userId) {
                 select: {
                     minerName: true,
                     imageUrl: true,
-                    eventMiner: { select: { name: true, imageUrl: true } },
+                    eventMiner: { select: { name: true, imageUrl: true, modelUrl: true } },
                 },
             },
         },

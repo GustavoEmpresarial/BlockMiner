@@ -4,6 +4,7 @@
 import { resolveOwnedMachineImageUrl } from "../inventory/index.js";
 import { resolveOwnedMachineDisplay } from "../machines/ownedMachineDisplay.js";
 import { getRoomPriceQuote, readRoomListPrices } from "./rooms.config.js";
+import { isShowcaseRoom, isShowcaseRoomEnabled, readShowcaseRackPrice, SHOWCASE_3D_ROOM_KIND } from "./rooms.showcase.js";
 import { ROOM_MAX, type ListedRoomPayload, type RoomListQueryRow } from "./rooms.types.js";
 
 export function getRoomPrices(): number[] {
@@ -38,6 +39,7 @@ function mapRackMiner(um: RackMinerRow) {
     ownedMachineId: um.ownedMachineId,
     level: um.level,
     slotSize: um.slotSize,
+    modelUrl: um.ownedMachine?.eventMiner?.modelUrl ?? null,
   };
 }
 
@@ -53,6 +55,7 @@ export function buildListedRoomsPayload(
       result.push({
         id: found.id,
         roomNumber: found.roomNumber,
+        kind: "standard",
         unlocked: true,
         pricePaid: Number(found.pricePaid),
         unlockedAt: found.unlockedAt,
@@ -79,6 +82,26 @@ export function buildListedRoomsPayload(
       }
       result.push(locked);
     }
+  }
+
+  const showcase = isShowcaseRoomEnabled() ? rooms.find((room) => isShowcaseRoom(room)) : undefined;
+  if (showcase) {
+    result.push({
+      id: showcase.id,
+      roomNumber: showcase.roomNumber,
+      kind: SHOWCASE_3D_ROOM_KIND,
+      unlocked: true,
+      pricePaid: Number(showcase.pricePaid),
+      unlockedAt: showcase.unlockedAt,
+      showcaseRackPrice: readShowcaseRackPrice(),
+      racks: showcase.racks.map((rack) => ({
+        id: rack.id,
+        position: rack.position,
+        installedAt: rack.installedAt || null,
+        blockedByMinerId: rack.blockedByMinerId || null,
+        miner: rack.userMiner ? mapRackMiner(rack.userMiner) : null,
+      })),
+    });
   }
   return result;
 }

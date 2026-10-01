@@ -1,12 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import {
+  computeShowcaseSlotOverlayStyle,
   computeSlotOverlayStyle,
   parseVisualFanDrag,
   parseVisualFanFromDrag,
   RACK_SLOT_COLUMNS,
   RACK_SLOT_RECTS,
   RACK_SLOT_ROWS,
+  SHOWCASE_RACK_BAYS,
+  SHOWCASE_RACK_SLOT_RECTS,
+  SHOWCASE_RACKS_PER_ROOM,
 } from './inventory2.rackLayout';
+import { groupIntoRacks } from '../../machines/lib/machines.shared';
+import type { UserRackSlot } from '../../machines/lib/machines.types';
 
 function dataTransferWith(entries: Record<string, string>): DataTransfer {
   return {
@@ -27,6 +33,37 @@ describe('RACK_SLOT_RECTS', () => {
       expect(rect.yPct).toBeGreaterThanOrEqual(0);
       expect(rect.xPct + rect.wPct).toBeLessThanOrEqual(100.01);
     }
+  });
+});
+
+describe('showcase 2-bay overlay', () => {
+  it('has one rect per bay and they do not overlap', () => {
+    expect(SHOWCASE_RACK_SLOT_RECTS).toHaveLength(SHOWCASE_RACK_BAYS);
+    const [top, bottom] = SHOWCASE_RACK_SLOT_RECTS;
+    expect(top!.yPct + top!.hPct).toBeLessThanOrEqual(bottom!.yPct);
+    expect(computeShowcaseSlotOverlayStyle(0)?.height).toBe('38%');
+    expect(computeShowcaseSlotOverlayStyle(1)?.top).toBe('56%');
+    expect(computeShowcaseSlotOverlayStyle(2)).toBeNull();
+  });
+
+  it('groups two showcase slots into a single rack', () => {
+    const slots = [0, 1].map((position) => ({ id: position + 1, position, miner: null })) as UserRackSlot[];
+    const groups = groupIntoRacks(slots, SHOWCASE_RACK_BAYS);
+    expect(groups).toHaveLength(1);
+    expect(groups[0]?.slots).toHaveLength(2);
+  });
+
+  it('groups a full 3D room into 24 racks of 2 bays', () => {
+    expect(SHOWCASE_RACKS_PER_ROOM).toBe(24);
+    const slots = Array.from({ length: SHOWCASE_RACKS_PER_ROOM * SHOWCASE_RACK_BAYS }, (_, position) => ({
+      id: position + 1,
+      position,
+      miner: null,
+    })) as UserRackSlot[];
+    const groups = groupIntoRacks(slots, SHOWCASE_RACK_BAYS);
+    expect(groups).toHaveLength(SHOWCASE_RACKS_PER_ROOM);
+    expect(groups[0]?.slots.map((slot) => slot.position)).toEqual([0, 1]);
+    expect(groups[23]?.slots.map((slot) => slot.position)).toEqual([46, 47]);
   });
 });
 

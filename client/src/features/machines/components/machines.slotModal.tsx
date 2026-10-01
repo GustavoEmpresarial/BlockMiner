@@ -12,7 +12,9 @@ import {
   MODAL_GROUP_PAGE_SIZE,
 } from '../lib/machines.shared';
 import { getMachineDisplayImageUrl } from '../lib/machineDisplayImage';
+import { rackMinerModelUrl } from '../lib/rackMinerModel';
 import { MachineImage } from './MachineImage';
+import { OfferMinerModel } from '../../offers/components/OfferMinerModel';
 import type { InventoryStackGroup, SelectedSlotPayload } from '../lib/machines.types';
 
 export type SlotModalProps = {
@@ -23,10 +25,12 @@ export type SlotModalProps = {
   onMoveToVault: (userMinerId: number) => Promise<void>;
   onClose: () => void;
   actionBusy: boolean;
+  /** Sala 3D: the picker only lists machines that have a GLB. */
+  showcaseOnly?: boolean;
 };
 
 /** Ported from legacy/client/src/pages/machines/machines.slotModal.tsx */
-export const SlotModal = memo(function SlotModal({ slot, groupedInventory, onInstall, onRemove, onMoveToVault, onClose, actionBusy }: SlotModalProps) {
+export const SlotModal = memo(function SlotModal({ slot, groupedInventory, onInstall, onRemove, onMoveToVault, onClose, actionBusy, showcaseOnly = false }: SlotModalProps) {
   const { t } = useTranslation();
   const [confirmingAction, setConfirmingAction] = useState<'inventory' | 'vault' | null>(null);
   const [busy, setBusy] = useState(false);
@@ -39,10 +43,15 @@ export const SlotModal = memo(function SlotModal({ slot, groupedInventory, onIns
     setVisibleCount(MODAL_GROUP_PAGE_SIZE);
   }, [slot, groupedInventory]);
 
-  const visibleInventoryGroups = useMemo(() => groupedInventory.slice(0, visibleCount), [groupedInventory, visibleCount]);
-  const hasMoreInventoryGroups = visibleCount < groupedInventory.length;
+  const installGroups = useMemo(
+    () => (showcaseOnly ? groupedInventory.filter((group) => rackMinerModelUrl(group)) : groupedInventory),
+    [groupedInventory, showcaseOnly],
+  );
+  const visibleInventoryGroups = useMemo(() => installGroups.slice(0, visibleCount), [installGroups, visibleCount]);
+  const hasMoreInventoryGroups = visibleCount < installGroups.length;
   const descriptor = machine ? getMachineDescriptor(machine) : null;
   const modalImageUrl = machine ? getMachineDisplayImageUrl({ imageUrl: machine.imageUrl, imageSource: machine.imageSource }) : null;
+  const modalModelUrl = rackMinerModelUrl(machine);
   const displayNameSafe = machine ? safeDisplayLabel(machine.minerName || descriptor?.name || '') : '';
 
   return createPortal(
@@ -71,8 +80,12 @@ export const SlotModal = memo(function SlotModal({ slot, groupedInventory, onIns
           {machine ? (
             <div className="space-y-6">
               <div className="flex flex-col gap-4 rounded-2xl border border-gray-800/50 bg-gray-800/20 p-4 sm:flex-row sm:items-center sm:gap-6">
-                <div className="mx-auto flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl border border-gray-800/50 bg-gray-900/50 p-3 sm:mx-0">
-                  <MachineImage imageUrl={modalImageUrl} name={safeDisplayLabel(descriptor?.name || machine?.minerName || '')} className="max-h-full max-w-full object-contain" />
+                <div className={`mx-auto flex shrink-0 items-center justify-center rounded-2xl border border-gray-800/50 bg-gray-900/50 p-3 sm:mx-0 ${modalModelUrl ? 'h-40 w-full sm:h-36 sm:w-36' : 'h-20 w-20'}`}>
+                  {modalModelUrl ? (
+                    <OfferMinerModel src={modalModelUrl} alt={displayNameSafe} variant="rack" fallback={<MachineImage imageUrl={modalImageUrl} name={displayNameSafe} className="max-h-full max-w-full object-contain" />} />
+                  ) : (
+                    <MachineImage imageUrl={modalImageUrl} name={safeDisplayLabel(descriptor?.name || machine?.minerName || '')} className="max-h-full max-w-full object-contain" />
+                  )}
                 </div>
                 <div className="min-w-0 flex-1 text-center sm:text-left">
                   <h4 className="text-lg font-bold leading-snug text-white break-words">{displayNameSafe || safeDisplayLabel(descriptor?.name || '')}</h4>
@@ -178,9 +191,13 @@ export const SlotModal = memo(function SlotModal({ slot, groupedInventory, onIns
             </div>
           ) : (
             <div className="space-y-4">
-              {groupedInventory.length === 0 ? (
+              {installGroups.length === 0 ? (
                 <div className="p-8 text-center bg-gray-800/20 rounded-2xl border border-dashed border-gray-800">
-                  <p className="text-gray-500 text-sm">{t('inventory.modal.no_machines_avail')}</p>
+                  <p className="text-gray-500 text-sm">
+                    {showcaseOnly && groupedInventory.length > 0
+                      ? t('inventory.showcase_3d_only')
+                      : t('inventory.modal.no_machines_avail')}
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
@@ -194,6 +211,10 @@ export const SlotModal = memo(function SlotModal({ slot, groupedInventory, onIns
                         disabled={busy || actionBusy}
                         onClick={async () => {
                           if (busy || actionBusy) return;
+                          if (showcaseOnly && !rackMinerModelUrl(group)) {
+                            toast.error(t('inventory.showcase_3d_only'));
+                            return;
+                          }
                           if (!canMachineFitVisualSlot(slot.rack, group)) {
                             toast.error(t('inventory.double_slot_row_edge'));
                             return;

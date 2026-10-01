@@ -1,6 +1,10 @@
 /** Default furniture art + 8 bay rects (percent of the rack image). Tune when swapping art. */
 
 export const DEFAULT_RACK_IMAGE_URL = '/media/racks/default-shelf.svg';
+/** Two large bays. Rects match the openings in showcase-3d-rack.svg (viewBox 800×500). */
+export const SHOWCASE_RACK_IMAGE_URL = '/media/racks/showcase-3d-rack-fit.svg';
+export const SHOWCASE_RACK_BAYS = 2;
+export const SHOWCASE_RACKS_PER_ROOM = 24;
 export const ENERGY_GENERATOR_IMAGE_URL = '/media/racks/energy-generator.webp';
 
 export const VISUAL_FAN_DRAG = 'visualFan';
@@ -34,6 +38,9 @@ const GAP_Y_PCT = 2.5;
 const SLOT_W_PCT = 21.75;
 const SLOT_H_PCT = 36;
 
+/** A few pixels larger than the art’s natural fit inside the shelf bay. */
+export const RACK_MACHINE_VISUAL_SCALE = 1.04;
+
 function buildSlotRects(): RackSlotRect[] {
   const rects: RackSlotRect[] = [];
   for (let i = 0; i < RACK_SLOT_COLUMNS * RACK_SLOT_ROWS; i++) {
@@ -50,6 +57,12 @@ function buildSlotRects(): RackSlotRect[] {
 }
 
 export const RACK_SLOT_RECTS: RackSlotRect[] = buildSlotRects();
+
+/** Top then bottom bay. Matches showcase-3d-rack-fit.svg (viewBox 1500×1080). */
+export const SHOWCASE_RACK_SLOT_RECTS: RackSlotRect[] = [
+  { xPct: 5, yPct: 12, wPct: 90, hPct: 38 },
+  { xPct: 5, yPct: 56, wPct: 90, hPct: 38 },
+];
 
 export type SlotOverlayStyle = {
   left: string;
@@ -86,4 +99,11 @@ export function computeSlotOverlayStyle(slotIndex: number, slotSize: number): Sl
     wPct: next.xPct + next.wPct - primary.xPct,
     hPct: Math.max(primary.hPct, next.hPct),
   });
+}
+
+/** One machine per bay. slotSize does not merge the two openings. */
+export function computeShowcaseSlotOverlayStyle(slotIndex: number): SlotOverlayStyle | null {
+  const rect = SHOWCASE_RACK_SLOT_RECTS[slotIndex];
+  if (!rect) return null;
+  return rectToStyle(rect);
 }

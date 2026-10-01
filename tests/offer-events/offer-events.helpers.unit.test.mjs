@@ -9,6 +9,8 @@ const {
   userBalanceFieldForCurrency,
   getUserBalanceNumber,
   offerEventDeliveryAt,
+  offerMinerReleaseAt,
+  isOfferMinerReleased,
   toDecimalPrice,
 } = await import("../../server/modules/offer-events/offer-events.helpers.ts");
 
@@ -126,4 +128,13 @@ test("offerEventDeliveryAt: imagem chega na hora; atraso conta dias UTC inteiros
   assert.equal(offerEventDeliveryAt(purchasedAt, -3), null);
   const dayFive = offerEventDeliveryAt(purchasedAt, 5);
   assert.equal(dayFive?.toISOString(), "2026-10-05T18:00:00.000Z");
+});
+
+test("offerMinerReleaseAt: delay days after event start gate the sale", () => {
+  const startsAt = new Date("2026-09-30T23:07:54.000Z");
+  assert.equal(offerMinerReleaseAt(startsAt, 0), null);
+  assert.equal(offerMinerReleaseAt(startsAt, 5)?.toISOString(), "2026-10-05T23:07:54.000Z");
+  assert.equal(isOfferMinerReleased(new Date("2026-10-01T12:00:00.000Z"), startsAt, 5), false);
+  assert.equal(isOfferMinerReleased(new Date("2026-10-05T23:07:54.000Z"), startsAt, 5), true);
+  assert.equal(isOfferMinerReleased(new Date("2026-10-01T12:00:00.000Z"), startsAt, 0), true);
 });

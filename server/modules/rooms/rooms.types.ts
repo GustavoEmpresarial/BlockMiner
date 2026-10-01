@@ -39,7 +39,7 @@ export type MinerWithMinerRel = {
   ownedMachine: {
     minerName: string;
     imageUrl: string | null;
-    eventMiner?: { name: string; imageUrl: string | null } | null;
+    eventMiner?: { name: string; imageUrl: string | null; modelUrl?: string | null } | null;
   } | null;
 };
 
@@ -50,6 +50,8 @@ export type ListedRoomPayload =
       unlocked: true;
       pricePaid: number;
       unlockedAt: Date;
+      kind?: "standard" | "showcase_3d";
+      showcaseRackPrice?: number;
       racks: Array<{
         id: number;
         position: number;
@@ -65,6 +67,7 @@ export type ListedRoomPayload =
           ownedMachineId: number | null;
           level: number;
           slotSize: number;
+          modelUrl: string | null;
         } | null;
       }>;
     }
@@ -83,6 +86,7 @@ export type RoomListQueryRow = {
   roomNumber: number;
   pricePaid: unknown;
   unlockedAt: Date;
+  kind?: string | null;
   racks: Array<{
     id: number;
     position: number;
@@ -100,7 +104,7 @@ export type RoomListQueryRow = {
       ownedMachine: {
         imageUrl: string | null;
         minerName: string;
-        eventMiner?: { name: string; imageUrl: string | null } | null;
+        eventMiner?: { name: string; imageUrl: string | null; modelUrl?: string | null } | null;
       } | null;
       miner: { name: string; imageUrl: string | null } | null;
     } | null;

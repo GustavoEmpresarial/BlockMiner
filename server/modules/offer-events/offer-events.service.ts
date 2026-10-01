@@ -21,9 +21,10 @@ import {
   hasEventMinerStock,
   isOfferEventActiveForPublic,
   isOfferEventLiveAt,
+  isOfferMinerReleased,
   mapBalances,
   normalizeOfferCurrency,
-  offerEventDeliveryAt,
+  offerMinerReleaseAt,
   userBalanceFieldForCurrency,
 } from "./offer-events.helpers.js";
 import { buildActiveRoomOffersPayload } from "../rooms/rooms.offers.js";
@@ -80,18 +81,29 @@ export function serializeMinerPublic(
   m: EventMinerPublic,
   claimMap: Record<number, number> = {},
   pendingDeliveryAt: Record<number, string> = {},
+  opts: { eventStartsAt?: Date | string; now?: Date } = {},
 ) {
   const remaining =
     m.stockUnlimited || m.stockCount == null
       ? null
       : Math.max(0, (m.stockCount ?? 0) - (m.soldCount ?? 0));
+  const delayDays = m.deliveryDelayDays ?? 0;
+  const releaseAt =
+    opts.eventStartsAt != null ? offerMinerReleaseAt(opts.eventStartsAt, delayDays) : null;
+  const now = opts.now ?? new Date();
+  const onSale =
+    opts.eventStartsAt != null
+      ? isOfferMinerReleased(now, opts.eventStartsAt, delayDays)
+      : delayDays <= 0;
   return {
     id: m.id,
     name: m.name,
     description: m.description,
     imageUrl: m.imageUrl,
     modelUrl: m.modelUrl ?? null,
-    deliveryDelayDays: m.deliveryDelayDays ?? 0,
+    deliveryDelayDays: delayDays,
+    releaseAt: releaseAt && delayDays > 0 ? releaseAt.toISOString() : null,
+    onSale,
     pendingDeliveryAt: pendingDeliveryAt[m.id] ?? null,
     price: Number(m.price),
     hashRate: m.hashRate,
@@ -119,7 +131,9 @@ export function serializeEventPublic(
     startsAt: e.startsAt,
     endsAt: e.endsAt,
     isActive: e.isActive,
-    miners: (e.miners ?? []).map((m) => serializeMinerPublic(m, claimMap, pendingDeliveryAt)),
+    miners: (e.miners ?? []).map((m) =>
+      serializeMinerPublic(m, claimMap, pendingDeliveryAt, { eventStartsAt: e.startsAt, now }),
+    ),
     isLive: isOfferEventActiveForPublic(now, e),
   };
 }
@@ -266,10 +280,15 @@ export async function purchaseEventMinerForUser(
         throw Object.assign(new Error("MINER_UNAVAILABLE"), { code: "UNAVAILABLE" });
       }
 
+      if (!isOfferMinerReleased(now, em.event.startsAt, em.deliveryDelayDays ?? 0)) {
+        throw Object.assign(new Error("MINER_NOT_RELEASED"), { code: "NOT_RELEASED" });
+      }
+
       const currency = normalizeOfferCurrency(em.currency);
       const slotSize =
         Number.isInteger(em.slotSize) && em.slotSize >= 1 && em.slotSize <= 2 ? em.slotSize : 1;
-      const deliverAt = offerEventDeliveryAt(now, em.deliveryDelayDays);
+      // Delay days gate the sale window (startsAt + N). Once on sale, grant immediately.
+      const deliverAt = null as Date | null;
       let totalPrice = 0;
 
       if (em.isFree) {
@@ -411,6 +430,14 @@ export async function purchaseEventMinerForUser(
     }
     if (msg === "EVENT_NOT_ACTIVE") {
       return { ok: false, status: 400, code: "event_expired", message: "This event is not active." };
+    }
+    if (msg === "MINER_NOT_RELEASED") {
+      return {
+        ok: false,
+        status: 400,
+        code: "not_released",
+        message: "Esta máquina ainda não liberou. A venda abre no dia marcado.",
+      };
     }
     if (msg === "STOCK_BUSY") {
       return { ok: false, status: 409, code: "retry", message: "Please try again." };

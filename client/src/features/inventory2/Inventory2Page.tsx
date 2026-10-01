@@ -8,6 +8,7 @@ import {
   getRooms,
   getInventory,
   postBuyRoom,
+  postBuyShowcaseRack,
   postRackInstall,
   postRackUninstall,
   postRackUninstallBatch,
@@ -39,7 +40,8 @@ import {
 } from '../machines/lib/machines.optimistic';
 import { Inventory2RoomContent, type PendingPlacement } from './components/Inventory2RoomContent';
 import { Inventory2Distributor } from './components/Inventory2Distributor';
-import { DEFAULT_RACK_IMAGE_URL } from './lib/inventory2.rackLayout';
+import { DEFAULT_RACK_IMAGE_URL, SHOWCASE_RACK_BAYS } from './lib/inventory2.rackLayout';
+import { rackMinerModelUrl } from '../machines/lib/rackMinerModel';
 import { logInventory2Error } from './lib/inventory2.errors';
 
 const INVENTORY_REFRESH_DEBOUNCE_MS = 160;
@@ -58,6 +60,7 @@ export default function Inventory2Page() {
   const [summary, setSummary] = useState<RoomsSummaryState>({ totalRacks: 0, occupiedRacks: 0, freeRacks: 0 });
   const [loading, setLoading] = useState(true);
   const [buyingRoom, setBuyingRoom] = useState(false);
+  const [buyingShowcaseRack, setBuyingShowcaseRack] = useState(false);
   const [rackDismantleLoading, setRackDismantleLoading] = useState(false);
   const [rackActionBusy, setRackActionBusy] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<SelectedSlotPayload | null>(null);
@@ -77,6 +80,7 @@ export default function Inventory2Page() {
   const refreshTimerRef = useRef<number | null>(null);
   const rackMutationLock = useRef(false);
   const buyRoomLock = useRef(false);
+  const buyShowcaseLock = useRef(false);
   const backpackVaultLock = useRef(false);
   const dismantleLock = useRef(false);
   const farmRef = useRef({ rooms, inventory, summary });
@@ -178,6 +182,13 @@ export default function Inventory2Page() {
   }, [t]);
 
   useEffect(() => {
+    if (rooms.length === 0) return;
+    if (rooms.some((room) => room.roomNumber === activeRoom && room.kind !== 'showcase_3d')) return;
+    const fallback = rooms.find((room) => room.kind !== 'showcase_3d' && room.unlocked)?.roomNumber ?? 1;
+    setActiveRoom(fallback);
+  }, [rooms, activeRoom]);
+
+  useEffect(() => {
     initSocket();
     void fetchData();
     return () => {
@@ -249,6 +260,27 @@ export default function Inventory2Page() {
     [fetchData, t],
   );
 
+  const handleBuyShowcaseRack = useCallback(async (floorSlot?: number) => {
+    if (buyShowcaseLock.current) return;
+    buyShowcaseLock.current = true;
+    setBuyingShowcaseRack(true);
+    try {
+      const res = await postBuyShowcaseRack(floorSlot);
+      if (res.data?.ok) {
+        toast.success(t('inventory.showcase_rack_bought'));
+        await fetchData();
+      } else {
+        toast.error(resolveApiPayloadMessage(res.data, t('common.error')));
+      }
+    } catch (err) {
+      logInventory2Error('INVENTORY_BUY_SHOWCASE_RACK_FAILED', err);
+      toast.error(apiErrorMessage(err, t('common.error')));
+    } finally {
+      buyShowcaseLock.current = false;
+      setBuyingShowcaseRack(false);
+    }
+  }, [fetchData, t]);
+
   const handleInstall = useCallback(
     async (rackId: number, inventoryId: number) => {
       if (!Number.isInteger(rackId) || rackId <= 0 || !Number.isInteger(inventoryId) || inventoryId <= 0) {
@@ -256,9 +288,15 @@ export default function Inventory2Page() {
         return;
       }
       if (rackMutationLock.current) return;
-      const targetRack = rooms.flatMap((room) => ('racks' in room ? room.racks || [] : [])).find((rack) => rack.id === rackId);
+      const hostRoom = rooms.find((room) => room.unlocked && room.racks?.some((rack) => rack.id === rackId));
+      const targetRack = hostRoom?.racks?.find((rack) => rack.id === rackId);
       const inventoryItem = inventory.find((item) => item.id === inventoryId);
-      if (inventoryItem && !canMachineFitVisualSlot(targetRack, inventoryItem)) {
+      if (hostRoom?.kind === 'showcase_3d') {
+        if (!inventoryItem || !rackMinerModelUrl(inventoryItem)) {
+          toast.error(t('inventory.showcase_3d_only'));
+          return;
+        }
+      } else if (inventoryItem && !canMachineFitVisualSlot(targetRack, inventoryItem)) {
         toast.error(t('inventory.double_slot_row_edge'));
         return;
       }
@@ -445,9 +483,10 @@ export default function Inventory2Page() {
   const currentRoom = useMemo(() => rooms.find((room) => room.roomNumber === activeRoom) ?? null, [rooms, activeRoom]);
   const visualRacksOfCurrent = useMemo(() => {
     if (!currentRoom?.unlocked) return [];
-    return groupIntoRacks(currentRoom.racks ?? []);
+    const perRack = currentRoom.kind === 'showcase_3d' ? SHOWCASE_RACK_BAYS : undefined;
+    return groupIntoRacks(currentRoom.racks ?? [], perRack);
   }, [currentRoom]);
-  const rackOffset = currentRoom ? (currentRoom.roomNumber - 1) * 24 : 0;
+  const rackOffset = currentRoom && currentRoom.kind !== 'showcase_3d' ? (currentRoom.roomNumber - 1) * 24 : 0;
 
   const handleSelectSlot = useCallback((slot: SelectedSlotPayload) => {
     setBackpackWarehouseModal(null);
@@ -624,7 +663,7 @@ export default function Inventory2Page() {
         }}
       />
 
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:gap-8">
+      <div className="flex flex-col gap-6">
         <div className="min-w-0 lg:flex-1">
           {showDistributor ? (
             <Inventory2Distributor farmHashRate={activeMachinesHashRate} />
@@ -640,6 +679,8 @@ export default function Inventory2Page() {
             rackActionBusy={rackActionBusy}
             buyingRoom={buyingRoom}
             onBuyRoom={handleBuyRoom}
+            buyingShowcaseRack={buyingShowcaseRack}
+            onBuyShowcaseRack={(floorSlot) => void handleBuyShowcaseRack(floorSlot)}
             placements={currentPlacements}
             onPlaceRack={handlePlaceRack}
             mountedFans={currentMountedFans}
@@ -676,6 +717,9 @@ export default function Inventory2Page() {
           onRemove={handleRemove}
           onMoveToVault={handleMoveRackToVault}
           actionBusy={rackActionBusy}
+          showcaseOnly={rooms.some(
+            (room) => room.kind === 'showcase_3d' && room.racks?.some((rack) => rack.id === selectedSlot.rack?.id),
+          )}
           onClose={() => {
             setSelectedSlot(null);
             setBackpackWarehouseModal(null);

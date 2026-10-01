@@ -250,6 +250,21 @@ describe('SlotModal — empty slot (install view)', () => {
     expect(screen.getByText('Basic Miner').closest('button')).toBeDisabled();
   });
 
+  it('hides PNG miners in a 3D room and does not install them', () => {
+    const onInstall = vi.fn();
+    const png = group({ id: 5, minerName: 'Gildcore', imageUrl: '/media/offers/gildcore-cut.png' });
+    const mcx9 = group({
+      id: 9,
+      minerName: 'MinerCore MCX9',
+      imageUrl: '/media/offers/minercore-mcx9.webp',
+      modelUrl: '/media/models/minercore-mcx9.glb',
+    });
+    render(withProviders(<SlotModal {...baseProps({ slot: emptySlot(), groupedInventory: [png, mcx9], onInstall, showcaseOnly: true })} />));
+    expect(screen.queryByText('Gildcore')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText('MinerCore MCX9'));
+    expect(onInstall).toHaveBeenCalledWith(10, 9);
+  });
+
   it('resets confirmation/busy/pagination state when the slot changes', () => {
     const groups = Array.from({ length: 25 }, (_, i) => group({ id: i + 1, minerName: `Miner ${i + 1}` }));
     const { rerender } = render(withProviders(<SlotModal {...baseProps({ slot: emptySlot(), groupedInventory: groups })} />));

@@ -1,6 +1,7 @@
 import type { TFunction } from "i18next";
 import { AlertCircle, Box, Calculator, ChevronDown, Lock, Warehouse, Zap } from "lucide-react";
 import { getMachineDisplayImageUrl } from '../lib/machineDisplayImage';
+import { markShowcase3dDrag } from '../lib/rackMinerModel';
 import { MachineImage } from './MachineImage';
 import { inventoryStackKey } from '../../../shared/utils/inventoryStackKey';
 import type {
@@ -87,14 +88,14 @@ export type MachinesRoomTabsProps = {
 export function MachinesRoomTabs({ t, rooms, activeRoom, onSelectRoom, extraTab }: MachinesRoomTabsProps) {
   return (
     <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1" role="tablist">
-      {rooms.map((room) => {
+      {rooms.filter((room) => room.kind !== "showcase_3d").map((room) => {
         const isActive = !extraTab?.active && room.roomNumber === activeRoom;
         const isUnlocked = room.unlocked;
         return (
           <button key={room.roomNumber} role="tab" aria-selected={isActive} onClick={() => onSelectRoom(room.roomNumber)}
             className={`flex min-h-11 shrink-0 items-center gap-2 rounded-2xl px-5 py-2.5 text-xs font-black uppercase tracking-wider transition-all ${isActive ? "bg-primary text-black shadow-glow" : isUnlocked ? "bg-gray-800/50 text-gray-300 hover:bg-gray-700/50" : "bg-gray-900/30 text-gray-500 hover:text-gray-400"}`}>
             {!isUnlocked && <Lock className="w-3 h-3" />}
-            {t("inventory.room_label")} {room.roomNumber}
+            {room.kind === "showcase_3d" ? t("inventory.showcase_room_label") : `${t("inventory.room_label")} ${room.roomNumber}`}
             {isUnlocked && !isActive && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
           </button>
         );
@@ -175,6 +176,7 @@ export function InventorySidebar({
                 title={`${miniName} x${group.quantity}`}
                 onDragStart={(e) => {
                   e.dataTransfer.setData("inventoryId", String(firstId));
+                  markShowcase3dDrag(e.dataTransfer, group);
                   e.dataTransfer.effectAllowed = "move";
                 }}
                 className="relative h-20 w-20 shrink-0 cursor-grab select-none rounded-xl border border-gray-800/50 bg-gray-900/50 p-2.5 transition-colors hover:border-gray-700 active:cursor-grabbing"
@@ -193,7 +195,7 @@ export function InventorySidebar({
     );
   }
   return (
-    <div className="w-full shrink-0 space-y-4 transition-[width] duration-300 ease-in-out lg:w-80">
+    <div className="w-full shrink-0 space-y-4">
       <div className="bg-surface border border-gray-800/50 rounded-3xl p-4 sm:p-6 shadow-xl lg:sticky top-28">
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <button
@@ -238,6 +240,7 @@ export function InventorySidebar({
                   title={t("inventory.modal.choose_machine")}
                   onDragStart={(e) => {
                     e.dataTransfer.setData("inventoryId", String(firstId));
+                    markShowcase3dDrag(e.dataTransfer, group);
                     e.dataTransfer.effectAllowed = "move";
                   }}
                   className="grid cursor-grab select-none grid-cols-1 grid-rows-[auto_auto] gap-3 rounded-2xl border border-gray-800/50 bg-gray-800/30 p-4 transition-all hover:border-gray-700 active:cursor-grabbing"

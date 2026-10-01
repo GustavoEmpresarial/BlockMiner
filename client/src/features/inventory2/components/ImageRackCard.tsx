@@ -10,12 +10,17 @@ import {
   parsePositiveIntFromDrag,
 } from '../../machines/lib/machines.shared';
 import { getMachineDisplayImageUrl } from '../../machines/lib/machineDisplayImage';
+import { dragCarriesShowcase3d, rackMinerModelUrl } from '../../machines/lib/rackMinerModel';
 import { MachineImage } from '../../machines/components/MachineImage';
+import { OfferMinerModel } from '../../offers/components/OfferMinerModel';
 import { RackMachineTooltipPortal } from '../../machines/components/machines.tooltip';
 import { RackDismantleModal } from '../../machines/components/machines.dismantleModal';
 import type { MachineTipState, SelectedSlotPayload, UserRackSlot } from '../../machines/lib/machines.types';
 import {
   DEFAULT_RACK_IMAGE_URL,
+  RACK_MACHINE_VISUAL_SCALE,
+  SHOWCASE_RACK_IMAGE_URL,
+  computeShowcaseSlotOverlayStyle,
   VISUAL_FAN_DRAG,
   VISUAL_FAN_FROM_DRAG,
   computeSlotOverlayStyle,
@@ -33,6 +38,8 @@ export type ImageRackCardProps = {
   rackDismantleLoading: boolean;
   rackActionBusy: boolean;
   visualIndex?: number;
+  /** shelf = 8 small bays. showcase = the two large 3D bays. */
+  rackVariant?: 'shelf' | 'showcase';
   onUnplaceRack?: (visualIndex: number, opts?: { silent?: boolean }) => void | Promise<void>;
   fanMounted?: boolean;
   onMountFan?: (fromVisualIndex?: number | null) => void | Promise<void>;
@@ -50,6 +57,7 @@ export const ImageRackCard = memo(function ImageRackCard({
   rackDismantleLoading,
   rackActionBusy,
   visualIndex,
+  rackVariant = 'shelf',
   onUnplaceRack,
   fanMounted = false,
   onMountFan,
@@ -165,7 +173,7 @@ export const ImageRackCard = memo(function ImageRackCard({
       <div className="flex items-center justify-between gap-2 border-b border-gray-800/50 bg-gray-800/20 px-3 py-2.5 sm:px-6 sm:py-4">
         <div className="flex min-w-0 items-center gap-3">
           <div className={`h-2 w-2 shrink-0 rounded-full ${hasMachines ? 'animate-pulse bg-emerald-500 shadow-glow' : 'bg-gray-600'}`} />
-          {visualIndex != null && (
+          {rackVariant !== 'showcase' && visualIndex != null && (
             <button
               type="button"
               draggable={!rackActionBusy && !rackDismantleLoading}
@@ -226,7 +234,12 @@ export const ImageRackCard = memo(function ImageRackCard({
         </div>
       </div>
       <div className="relative w-full">
-        <img src={DEFAULT_RACK_IMAGE_URL} alt="" className="block h-auto w-full select-none" draggable={false} />
+        <img
+          src={rackVariant === 'showcase' ? SHOWCASE_RACK_IMAGE_URL : DEFAULT_RACK_IMAGE_URL}
+          alt=""
+          className="block h-auto w-full select-none"
+          draggable={false}
+        />
         {hasMachines && <div className="rack-scan" aria-hidden />}
         <div className="absolute inset-0">
           {(() => {
@@ -239,7 +252,8 @@ export const ImageRackCard = memo(function ImageRackCard({
               const descriptor = machine ? getMachineDescriptor(machine) : null;
               const isOccupied = !!machine;
               const isBlocked = !machine && !!rack?.blockedByMinerId;
-              const isDoubleSlot = isOccupied && machine != null && Number(machine.slotSize) >= 2;
+              const isShowcase = rackVariant === 'showcase';
+              const isDoubleSlot = !isShowcase && isOccupied && machine != null && Number(machine.slotSize) >= 2;
               const slotKey = rack?.id ?? slotIndex;
               const isDragTarget = dragOverId === slotKey;
 
@@ -248,13 +262,16 @@ export const ImageRackCard = memo(function ImageRackCard({
                 continue;
               }
 
-              const overlay = computeSlotOverlayStyle(slotIndex, isDoubleSlot ? 2 : 1);
+              const overlay = isShowcase
+                ? computeShowcaseSlotOverlayStyle(slotIndex)
+                : computeSlotOverlayStyle(slotIndex, isDoubleSlot ? 2 : 1);
               if (!overlay) {
                 i++;
                 continue;
               }
 
               const displayName = machine ? safeDisplayLabel(machine.minerName || descriptor?.name || '') : '';
+              const modelUrl = rackMinerModelUrl(machine);
               const hashrateStr = machine ? formatHashrate(machine.hashRate) : '';
               const slotSizeNum = machine ? Math.max(1, Number(machine.slotSize) || 1) : 1;
               const stableSlotKey = rack?.id ?? slotIndex;
@@ -280,6 +297,7 @@ export const ImageRackCard = memo(function ImageRackCard({
                   onDragOver={
                     !isOccupied && !rackActionBusy
                       ? (e) => {
+                          if (rackVariant === 'showcase' && !dragCarriesShowcase3d(e.dataTransfer)) return;
                           e.preventDefault();
                           setDragOverId(slotKey);
                         }
@@ -291,6 +309,7 @@ export const ImageRackCard = memo(function ImageRackCard({
                       ? (e) => {
                           e.preventDefault();
                           setDragOverId(null);
+                          if (rackVariant === 'showcase' && !dragCarriesShowcase3d(e.dataTransfer)) return;
                           const invId = parsePositiveIntFromDrag(e.dataTransfer.getData('inventoryId'));
                           const rid = rack?.id;
                           if (invId != null && Number.isInteger(rid) && rid! > 0) onSlotDrop(rid!, invId);
@@ -350,12 +369,35 @@ export const ImageRackCard = memo(function ImageRackCard({
                       className="rack-machine-idle pointer-events-none flex h-full w-full items-end justify-center pb-1"
                       style={{ animationDelay: `${(slotIndex % 8) * 0.18}s` }}
                     >
-                      <MachineImage
-                        key={`${machine.id}-${machine.imageUrl ?? ''}`}
-                        imageUrl={getMachineDisplayImageUrl({ imageUrl: machine.imageUrl, imageSource: machine.imageSource })}
-                        name={displayName}
-                        className="max-h-[92%] max-w-full object-contain object-bottom transition-transform group-hover:scale-105"
-                      />
+                      <div
+                        className="flex h-full w-full origin-bottom items-end justify-center"
+                        style={{ transform: `scale(${RACK_MACHINE_VISUAL_SCALE})` }}
+                      >
+                        {modelUrl ? (
+                          <div className="h-full w-full">
+                            <OfferMinerModel
+                              key={`${machine.id}-model`}
+                              src={modelUrl}
+                              alt={displayName}
+                              variant="rack"
+                              fallback={
+                                <MachineImage
+                                  imageUrl={getMachineDisplayImageUrl({ imageUrl: machine.imageUrl, imageSource: machine.imageSource })}
+                                  name={displayName}
+                                  className="max-h-[92%] max-w-full object-contain object-bottom"
+                                />
+                              }
+                            />
+                          </div>
+                        ) : (
+                          <MachineImage
+                            key={`${machine.id}-${machine.imageUrl ?? ''}`}
+                            imageUrl={getMachineDisplayImageUrl({ imageUrl: machine.imageUrl, imageSource: machine.imageSource })}
+                            name={displayName}
+                            className="max-h-[92%] max-w-full object-contain object-bottom"
+                          />
+                        )}
+                      </div>
                     </div>
                   ) : isDragTarget ? (
                     <Plus className="mb-6 h-6 w-6 shrink-0 animate-pulse text-primary" aria-hidden />
@@ -370,7 +412,7 @@ export const ImageRackCard = memo(function ImageRackCard({
           })()}
         </div>
       </div>
-      {visualIndex != null && onMountFan ? (
+      {rackVariant !== 'showcase' && visualIndex != null && onMountFan ? (
         <div
           className={`border-t px-3 py-3 sm:px-5 sm:py-4 ${
             dragOverId === 'fan-bay'
@@ -484,7 +526,7 @@ export const ImageRackCard = memo(function ImageRackCard({
         onConfirm={async () => {
           try {
             await onDismantleRack(slots);
-            if (visualIndex != null && onUnplaceRack) {
+            if (rackVariant !== 'showcase' && visualIndex != null && onUnplaceRack) {
               await onUnplaceRack(visualIndex, { silent: true });
             }
             setConfirmingDismantle(false);

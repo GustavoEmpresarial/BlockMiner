@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500" role="img" aria-label="2-bay 3D mining rack">
+  <defs>
+    <linearGradient id="chassis" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2a241c"/>
+      <stop offset="1" stop-color="#0c0e12"/>
+    </linearGradient>
+    <linearGradient id="rail" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5c4a2a"/>
+      <stop offset="1" stop-color="#1a160f"/>
+    </linearGradient>
+    <linearGradient id="bay" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#070b12"/>
+      <stop offset="1" stop-color="#101820"/>
+    </linearGradient>
+    <linearGradient id="lip" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f5c16c"/>
+      <stop offset="1" stop-color="#8a5a18"/>
+    </linearGradient>
+    <linearGradient id="pillar" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#3a3428"/>
+      <stop offset="0.5" stop-color="#1c1914"/>
+      <stop offset="1" stop-color="#3a3428"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="500" rx="18" fill="#090b10"/>
+  <rect x="16" y="16" width="768" height="468" rx="14" fill="url(#chassis)" stroke="#c9a15b" stroke-width="3"/>
+  <rect x="28" y="28" width="744" height="58" rx="8" fill="url(#rail)"/>
+  <g fill="#8ec8ff">
+    <rect x="48" y="46" width="28" height="8" rx="2"/>
+    <rect x="84" y="46" width="28" height="8" rx="2"/>
+    <rect x="120" y="46" width="28" height="8" rx="2"/>
+  </g>
+  <text x="400" y="66" text-anchor="middle" fill="#f5c16c" font-family="ui-sans-serif, system-ui, sans-serif" font-size="22" font-weight="700" letter-spacing="6">3D</text>
+  <circle cx="740" cy="57" r="7" fill="#22d3ee"/>
+  <circle cx="712" cy="57" r="5" fill="#f5c16c"/>
+  <rect x="28" y="96" width="16" height="372" rx="4" fill="#241e16"/>
+  <rect x="756" y="96" width="16" height="372" rx="4" fill="#241e16"/>
+  <rect x="388" y="96" width="24" height="372" rx="4" fill="url(#pillar)"/>
+  <rect x="40" y="100" width="340" height="340" rx="12" fill="url(#bay)" stroke="#1e3a4a" stroke-width="2"/>
+  <rect x="420" y="100" width="340" height="340" rx="12" fill="url(#bay)" stroke="#1e3a4a" stroke-width="2"/>
+  <rect x="40" y="428" width="340" height="14" rx="3" fill="url(#lip)"/>
+  <rect x="420" y="428" width="340" height="14" rx="3" fill="url(#lip)"/>
+</svg>

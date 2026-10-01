@@ -80,8 +80,34 @@ export function toDecimalPrice(v: unknown): string {
 }
 
 /**
+ * When a delayed miner opens for sale: event start + whole UTC days.
+ * `0` means no extra gate — buy as soon as the event is live.
+ */
+export function offerMinerReleaseAt(
+  eventStartsAt: Date | string,
+  deliveryDelayDays: number,
+): Date | null {
+  const days = Math.floor(Number(deliveryDelayDays) || 0);
+  if (days <= 0) return null;
+  const start = eventStartsAt instanceof Date ? eventStartsAt : new Date(eventStartsAt);
+  if (Number.isNaN(start.getTime())) return null;
+  return new Date(start.getTime() + days * OFFER_EVENT_MS_PER_DAY);
+}
+
+export function isOfferMinerReleased(
+  now: Date,
+  eventStartsAt: Date | string,
+  deliveryDelayDays: number,
+): boolean {
+  const releaseAt = offerMinerReleaseAt(eventStartsAt, deliveryDelayDays);
+  if (!releaseAt) return true;
+  return now.getTime() >= releaseAt.getTime();
+}
+
+/**
  * When the purchased miner should land in inventory.
  * `0` means grant in the same purchase — image miners stay on that path.
+ * Delayed MCX9 sales use {@link offerMinerReleaseAt} as a buy gate; once on sale the grant is immediate.
  */
 export function offerEventDeliveryAt(purchasedAt: Date, deliveryDelayDays: number): Date | null {
   const days = Math.floor(Number(deliveryDelayDays) || 0);

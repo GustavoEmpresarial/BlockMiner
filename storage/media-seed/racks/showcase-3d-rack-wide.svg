@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" width="1600" height="1000" role="img" aria-label="Wide 2-bay 3D mining rack">
+  <defs>
+    <linearGradient id="chassis" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2a241c"/>
+      <stop offset="1" stop-color="#0c0e12"/>
+    </linearGradient>
+    <linearGradient id="rail" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5c4a2a"/>
+      <stop offset="1" stop-color="#1a160f"/>
+    </linearGradient>
+    <linearGradient id="bay" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#070b12"/>
+      <stop offset="1" stop-color="#101820"/>
+    </linearGradient>
+    <linearGradient id="lip" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f5c16c"/>
+      <stop offset="1" stop-color="#8a5a18"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="1000" rx="28" fill="#090b10"/>
+  <rect x="18" y="18" width="1564" height="964" rx="20" fill="url(#chassis)" stroke="#c9a15b" stroke-width="4"/>
+  <rect x="36" y="36" width="1528" height="88" rx="12" fill="url(#rail)"/>
+  <g fill="#8ec8ff">
+    <rect x="64" y="68" width="42" height="14" rx="2"/>
+    <rect x="118" y="68" width="42" height="14" rx="2"/>
+    <rect x="172" y="68" width="42" height="14" rx="2"/>
+  </g>
+  <text x="800" y="96" text-anchor="middle" fill="#f5c16c" font-family="ui-sans-serif, system-ui, sans-serif" font-size="36" font-weight="700" letter-spacing="8">3D</text>
+  <circle cx="1504" cy="80" r="10" fill="#22d3ee"/>
+  <circle cx="1460" cy="80" r="7" fill="#f5c16c"/>
+  <rect x="36" y="140" width="22" height="820" rx="4" fill="#241e16"/>
+  <rect x="1542" y="140" width="22" height="820" rx="4" fill="#241e16"/>
+  <rect x="56" y="150" width="1488" height="360" rx="16" fill="url(#bay)" stroke="#1e3a4a" stroke-width="3"/>
+  <rect x="56" y="520" width="1488" height="18" rx="4" fill="url(#lip)"/>
+  <rect x="56" y="560" width="1488" height="360" rx="16" fill="url(#bay)" stroke="#1e3a4a" stroke-width="3"/>
+  <rect x="56" y="930" width="1488" height="18" rx="4" fill="url(#lip)"/>
+</svg>

@@ -274,22 +274,57 @@ fi
 
 
 def _build_client_on_vm() -> str:
-    """Rebuild SPA from source when Node is available; otherwise keep preserved dist."""
+    """Rebuild SPA into a fresh directory and swap it in only after success.
+
+    Found 2026-10-01: client/dist on the VM held two generations at once
+    (154 chunks from an older vite build plus a later copied bundle). The
+    previous step restored that tree and a failed/skipped rebuild left it in
+    place, so some tabs kept serving the older generation. Build into
+    client/dist.next and replace client/dist only when index.html exists.
+    A failed build leaves the previous dist untouched.
+    """
     return r'''
+install_fresh_client_dist() {
+  if [[ ! -f "$APP_ROOT/client/dist.next/index.html" ]]; then
+    echo "[vm] ERROR: client build did not write index.html — keeping previous client/dist"
+    rm -rf "$APP_ROOT/client/dist.next"
+    return 1
+  fi
+  rm -rf "$APP_ROOT/client/dist"
+  mv "$APP_ROOT/client/dist.next" "$APP_ROOT/client/dist"
+  if [[ -f "$APP_ROOT/storage/scripts/purge-spa-orphans.py" ]]; then
+    python3 "$APP_ROOT/storage/scripts/purge-spa-orphans.py" --apply \
+      || echo "[vm] WARN: SPA orphan purge failed"
+  fi
+  echo "[vm] client build OK (client/dist replaced; previous chunks dropped)"
+}
 if [[ -f "$APP_ROOT/client/package.json" ]]; then
+  rm -rf "$APP_ROOT/client/dist.next"
   if command -v npm >/dev/null 2>&1; then
     echo "[vm] building client SPA with host npm"
-    ( cd "$APP_ROOT/client" && npm ci --no-audit --no-fund && npm run build ) || echo "[vm] WARN: client build failed — keeping previous client/dist"
+    if ( cd "$APP_ROOT/client" && npm ci --no-audit --no-fund && npm run build -- --outDir dist.next ); then
+      install_fresh_client_dist
+    else
+      echo "[vm] ERROR: client build failed — keeping previous client/dist"
+      rm -rf "$APP_ROOT/client/dist.next"
+      exit 1
+    fi
   elif command -v docker >/dev/null 2>&1; then
     echo "[vm] building client SPA via node container"
-    docker run --rm \
+    if docker run --rm \
       -v "$APP_ROOT/client:/app" \
       -w /app \
       node:22-bookworm-slim \
-      bash -lc 'npm ci --no-audit --no-fund && npm run build' \
-      || echo "[vm] WARN: client container build failed — keeping previous client/dist"
+      bash -lc 'npm ci --no-audit --no-fund && npm run build -- --outDir dist.next'; then
+      install_fresh_client_dist
+    else
+      echo "[vm] ERROR: client container build failed — keeping previous client/dist"
+      rm -rf "$APP_ROOT/client/dist.next"
+      exit 1
+    fi
   else
-    echo "[vm] WARN: no npm/docker to rebuild client — keeping previous client/dist"
+    echo "[vm] ERROR: no npm/docker to rebuild client — keeping previous client/dist (this deploy did not refresh the SPA)"
+    exit 1
   fi
 fi
 '''

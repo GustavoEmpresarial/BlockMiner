@@ -1,9 +1,11 @@
 import prisma from "../../core/database/prisma.js";
 import { HttpStatusError } from "../../shared/errors/httpStatusError.js";
 import { getRackCreditsForUser } from "../racks/racks.service.js";
+import { isShowcaseRoom, showcaseVisualCount } from "./rooms.showcase.js";
 import { SLOTS_PER_VISUAL_RACK } from "./rooms.types.js";
 
-function visualCountFromSlots(slotCount: number): number {
+function visualCountFromSlots(slotCount: number, roomNumber?: number | null): number {
+  if (isShowcaseRoom({ roomNumber })) return showcaseVisualCount(slotCount);
   return Math.max(0, Math.ceil(slotCount / SLOTS_PER_VISUAL_RACK));
 }
 
@@ -33,7 +35,7 @@ export async function listVisualPlacementsForUser(userId: number) {
     ok: true,
     rackCredits,
     rooms: rooms.map((room) => {
-      const visualCount = visualCountFromSlots(room._count.racks);
+      const visualCount = visualCountFromSlots(room._count.racks, room.roomNumber);
       const placements =
         room.visualPlacements.length === 0
           ? defaultPlacements(visualCount)
@@ -83,12 +85,18 @@ export async function setVisualPlacementForUser(
     where: { userId, roomNumber },
     select: {
       id: true,
+      roomNumber: true,
+      kind: true,
       _count: { select: { racks: true } },
     },
   });
   if (!room) throw new HttpStatusError(404, "Sala não encontrada.");
 
-  let visualCount = visualCountFromSlots(room._count.racks);
+  if (isShowcaseRoom(room) && (fromCredit || floorSlot == null)) {
+    throw new HttpStatusError(400, "O rack desta sala fica fixo no chão.", { code: "SHOWCASE_RACK_FIXED" });
+  }
+
+  let visualCount = visualCountFromSlots(room._count.racks, room.roomNumber);
   await seedDefaultsIfEmpty(userId, room.id, visualCount);
 
   if (fromCredit) {

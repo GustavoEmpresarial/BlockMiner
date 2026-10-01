@@ -41,7 +41,9 @@ export function applyOptimisticInstall(state: FarmSnapshot, rackId: number, item
   const rooms = mapUnlockedRacks(state.rooms, (racks) => {
     const target = racks.find((slot) => slot.id === rackId);
     if (!target) return racks;
+    const hostRoom = state.rooms.find((room) => room.racks?.some((slot) => slot.id === rackId));
     const slotSize = Math.max(1, Number(item.slotSize) || 1);
+    const spillSize = hostRoom?.kind === 'showcase_3d' ? 1 : slotSize;
     const miner: NonNullable<UserRackSlot['miner']> = {
       id: -item.id,
       minerId: item.minerId,
@@ -58,7 +60,7 @@ export function applyOptimisticInstall(state: FarmSnapshot, rackId: number, item
         if (!slotOccupied(slot)) occupiedDelta += 1;
         return { ...slot, miner, installedAt: new Date().toISOString(), blockedByMinerId: null };
       }
-      if (slotSize >= 2 && slot.position === target.position + (slotSize - 1)) {
+      if (spillSize >= 2 && slot.position === target.position + (spillSize - 1)) {
         if (!slotOccupied(slot)) occupiedDelta += 1;
         return { ...slot, blockedByMinerId: miner.id };
       }

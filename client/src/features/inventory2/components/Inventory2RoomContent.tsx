@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Lock, PackageMinus, Plus, Zap, X } from 'lucide-react';
 import { ImageRackCard } from './ImageRackCard';
-import { DEFAULT_RACK_IMAGE_URL, parseVisualFanDrag } from '../lib/inventory2.rackLayout';
+import { DEFAULT_RACK_IMAGE_URL, SHOWCASE_RACKS_PER_ROOM, parseVisualFanDrag } from '../lib/inventory2.rackLayout';
 import type { RoomPayload, SelectedSlotPayload, UserRackSlot } from '../../machines/lib/machines.types';
 
 export type PendingPlacement =
@@ -36,6 +36,8 @@ export type Inventory2RoomContentProps = {
   rackActionBusy: boolean;
   buyingRoom: boolean;
   onBuyRoom: (roomNumber: number) => void;
+  buyingShowcaseRack?: boolean;
+  onBuyShowcaseRack?: (floorSlot: number) => void;
   placements: VisualRackPlacement[];
   onPlaceRack: (
     visualIndex: number,
@@ -178,6 +180,8 @@ export function Inventory2RoomContent({
   rackActionBusy,
   buyingRoom,
   onBuyRoom,
+  buyingShowcaseRack = false,
+  onBuyShowcaseRack,
   placements,
   onPlaceRack,
   mountedFans,
@@ -199,7 +203,8 @@ export function Inventory2RoomContent({
     [currentRoom],
   );
 
-  const padCount = visualRacksOfCurrent.length;
+  const isShowcaseRoom = currentRoom?.kind === 'showcase_3d';
+  const padCount = isShowcaseRoom ? SHOWCASE_RACKS_PER_ROOM : visualRacksOfCurrent.length;
   const placementByFloor = useMemo(() => {
     const map = new Map<number, VisualRackPlacement>();
     for (const p of placements) {
@@ -240,6 +245,8 @@ export function Inventory2RoomContent({
     );
   }
 
+  const isShowcase = currentRoom.kind === 'showcase_3d';
+
   if (!currentRoom.unlocked) {
     return (
       <div role="tabpanel" className="flex min-h-64 flex-col items-center justify-center gap-6 rounded-3xl border border-gray-800/30 bg-surface p-6 text-center sm:p-10">
@@ -278,26 +285,7 @@ export function Inventory2RoomContent({
     );
   }
 
-  return (
-    <div role="tabpanel" className="space-y-4">
-      {occupiedSlots.length > 0 && (
-        <div className="flex justify-end">
-          <button
-            type="button"
-            onClick={() => setDismantleOpen(true)}
-            disabled={rackDismantleLoading || rackActionBusy}
-            title={t('inventory.dismantle_room_tooltip')}
-            aria-label={t('inventory.dismantle_room_aria')}
-            className="inline-flex min-h-11 items-center gap-2 rounded-2xl border border-red-500/25 bg-red-500/10 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-red-400 transition-colors hover:bg-red-500/20 disabled:pointer-events-none disabled:opacity-40"
-          >
-            <PackageMinus className="h-4 w-4 shrink-0" strokeWidth={2.5} aria-hidden />
-            {t('inventory.dismantle_room')}
-          </button>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-        {Array.from({ length: padCount }, (_, floorSlot) => {
+  const renderShowcaseFloor = (floorSlot: number) => {
           const placement = placementByFloor.get(floorSlot);
           const rack = placement ? visualRacksOfCurrent[placement.visualIndex] : undefined;
 
@@ -305,6 +293,7 @@ export function Inventory2RoomContent({
             return (
               <div
                 key={`pad-${floorSlot}`}
+                className={isShowcase ? 'w-full max-w-[46rem]' : undefined}
                 onDragOver={(e) => {
                   e.preventDefault();
                   setDragOverPad(floorSlot);
@@ -321,18 +310,23 @@ export function Inventory2RoomContent({
                   rackNumber={rackOffset + rack.rackNumber}
                   slots={rack.slots}
                   visualIndex={placement.visualIndex}
+                  rackVariant={isShowcase ? 'showcase' : 'shelf'}
                   onSlotClick={onSelectSlot}
                   onSlotDrop={onInstall}
                   onDismantleRack={onDismantleRack}
-                  onUnplaceRack={(visualIndex, opts) => void onPlaceRack(visualIndex, null, opts)}
-                  fanMounted={mountedFans.includes(placement.visualIndex)}
-                  onMountFan={(from) => void onMountFan(placement.visualIndex, from)}
-                  onUnmountFan={() => void onUnmountFan(placement.visualIndex)}
-                  fanBaySelectable={pendingPlacement?.type === 'fan'}
-                  onSelectFanBay={() => {
-                    void onMountFan(placement.visualIndex, null);
-                    onConsumePendingPlacement?.();
-                  }}
+                  onUnplaceRack={isShowcase ? undefined : (visualIndex, opts) => void onPlaceRack(visualIndex, null, opts)}
+                  fanMounted={isShowcase ? false : mountedFans.includes(placement.visualIndex)}
+                  onMountFan={isShowcase ? undefined : (from) => void onMountFan(placement.visualIndex, from)}
+                  onUnmountFan={isShowcase ? undefined : () => void onUnmountFan(placement.visualIndex)}
+                  fanBaySelectable={!isShowcase && pendingPlacement?.type === 'fan'}
+                  onSelectFanBay={
+                    isShowcase
+                      ? undefined
+                      : () => {
+                          void onMountFan(placement.visualIndex, null);
+                          onConsumePendingPlacement?.();
+                        }
+                  }
                   rackDismantleLoading={rackDismantleLoading}
                   rackActionBusy={rackActionBusy}
                 />
@@ -356,6 +350,7 @@ export function Inventory2RoomContent({
               onDrop={(e) => {
                 e.preventDefault();
                 setDragOverPad(null);
+                if (isShowcase) return;
                 const idx = parseVisualRackIndex(e.dataTransfer);
                 if (idx != null) {
                   void onPlaceRack(idx, floorSlot);
@@ -363,17 +358,33 @@ export function Inventory2RoomContent({
                 }
                 if (parseVisualFanDrag(e.dataTransfer)) onFanNeedsRack();
               }}
-              onClick={() => handleEmptyPadClick(floorSlot)}
+              onClick={() => {
+                if (isShowcase) {
+                  if (!buyingShowcaseRack) onBuyShowcaseRack?.(floorSlot);
+                  return;
+                }
+                handleEmptyPadClick(floorSlot);
+              }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
+                  if (isShowcase) {
+                    if (!buyingShowcaseRack) onBuyShowcaseRack?.(floorSlot);
+                    return;
+                  }
                   handleEmptyPadClick(floorSlot);
                 }
               }}
               aria-label={
-                rackPending ? t('inventory2.rack_pad_empty_selected') : t('inventory2.rack_pad_empty')
+                isShowcase && typeof currentRoom.showcaseRackPrice === 'number'
+                  ? t('inventory.showcase_buy_rack', { price: currentRoom.showcaseRackPrice })
+                  : rackPending
+                    ? t('inventory2.rack_pad_empty_selected')
+                    : t('inventory2.rack_pad_empty')
               }
-              className={`flex min-h-28 cursor-pointer items-center justify-center rounded-3xl border-2 border-dashed px-4 py-8 transition-colors ${
+              className={`flex cursor-pointer items-center justify-center self-start rounded-3xl border-2 border-dashed px-4 transition-colors ${
+                isShowcase ? 'min-h-24 py-4' : 'min-h-28 py-8'
+              } ${
                 highlighted
                   ? 'border-primary bg-primary/10 text-primary'
                   : 'border-slate-800 bg-slate-950/40 text-slate-500 hover:border-slate-600 hover:text-slate-300'
@@ -390,8 +401,79 @@ export function Inventory2RoomContent({
               </span>
             </div>
           );
-        })}
-      </div>
+  };
+
+  const showcaseFloorSlots = isShowcase ? Array.from({ length: padCount }, (_, floorSlot) => floorSlot) : [];
+  const showcaseOccupied = showcaseFloorSlots.filter((floorSlot) => {
+    const placement = placementByFloor.get(floorSlot);
+    return Boolean(placement && visualRacksOfCurrent[placement.visualIndex]);
+  });
+  const showcaseEmpty = showcaseFloorSlots.filter((floorSlot) => !showcaseOccupied.includes(floorSlot));
+
+  return (
+    <div role="tabpanel" className="space-y-4">
+      {(occupiedSlots.length > 0 || isShowcase) && (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          {isShowcase ? (
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+              {t('inventory.showcase_rack_count', {
+                count: visualRacksOfCurrent.length,
+                max: SHOWCASE_RACKS_PER_ROOM,
+              })}
+            </p>
+          ) : (
+            <span />
+          )}
+          <div className="flex flex-wrap justify-end gap-2">
+          {occupiedSlots.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setDismantleOpen(true)}
+            disabled={rackDismantleLoading || rackActionBusy}
+            title={t('inventory.dismantle_room_tooltip')}
+            aria-label={t('inventory.dismantle_room_aria')}
+            className="inline-flex min-h-11 items-center gap-2 rounded-2xl border border-red-500/25 bg-red-500/10 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-red-400 transition-colors hover:bg-red-500/20 disabled:pointer-events-none disabled:opacity-40"
+          >
+            <PackageMinus className="h-4 w-4 shrink-0" strokeWidth={2.5} aria-hidden />
+            {t('inventory.dismantle_room')}
+          </button>
+          )}
+          </div>
+        </div>
+      )}
+
+      {isShowcase ? (
+        <div
+          className={
+            showcaseOccupied.length > 0 && showcaseEmpty.length > 0
+              ? 'grid items-start gap-4 lg:grid-cols-[minmax(22rem,46rem)_minmax(0,1fr)]'
+              : showcaseOccupied.length > 0
+                ? 'flex flex-wrap items-start gap-4'
+                : 'grid grid-cols-2 items-start gap-3 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6'
+          }
+        >
+          {showcaseOccupied.length > 0 && (
+            <div className={showcaseEmpty.length > 0 ? 'flex min-w-0 flex-col gap-4' : 'contents'}>
+              {showcaseOccupied.map((floorSlot) => renderShowcaseFloor(floorSlot))}
+            </div>
+          )}
+          {showcaseEmpty.length > 0 && (
+            <div
+              className={
+                showcaseOccupied.length > 0
+                  ? 'grid grid-cols-2 items-start gap-3 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5'
+                  : 'contents'
+              }
+            >
+              {showcaseEmpty.map((floorSlot) => renderShowcaseFloor(floorSlot))}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+          {Array.from({ length: padCount }, (_, floorSlot) => renderShowcaseFloor(floorSlot))}
+        </div>
+      )}
 
       <RoomDismantleModal
         open={dismantleOpen}

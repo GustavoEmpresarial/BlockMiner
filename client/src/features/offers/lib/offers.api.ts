@@ -16,6 +16,10 @@ export interface OfferEventMinerDTO {
   imageUrl?: string | null;
   modelUrl?: string | null;
   deliveryDelayDays?: number;
+  /** ISO time when a delayed miner opens for sale (event start + delay). */
+  releaseAt?: string | null;
+  /** False until releaseAt — buy is blocked. */
+  onSale?: boolean;
   pendingDeliveryAt?: string | null;
   price?: number | string;
   hashRate?: number | string;

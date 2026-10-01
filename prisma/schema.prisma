@@ -2038,6 +2038,8 @@ model UserRoom {
   roomNumber Int      @map("room_number")
   pricePaid  Decimal  @default(0) @map("price_paid") @db.Decimal(20, 8)
   unlockedAt DateTime @default(now()) @map("unlocked_at")
+  /** standard | showcase_3d. Showcase is the free 3D room, not a paid room 1–4. */
+  kind       String   @default("standard")
 
   user                User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
   racks               UserRack[]

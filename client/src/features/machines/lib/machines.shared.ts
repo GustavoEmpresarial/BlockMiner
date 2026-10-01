@@ -26,12 +26,13 @@ export function sumRackHashRate(slots: UserRackSlot[]): number {
   return total;
 }
 
-export function groupIntoRacks(racks: UserRackSlot[]): VisualRackGroup[] {
+export function groupIntoRacks(racks: UserRackSlot[], slotsPerRack = SLOTS_PER_VISUAL_RACK): VisualRackGroup[] {
+  const size = Math.max(1, Math.floor(slotsPerRack));
   const groups: VisualRackGroup[] = [];
-  for (let r = 0; r < Math.ceil(racks.length / SLOTS_PER_VISUAL_RACK); r++) {
+  for (let r = 0; r < Math.ceil(racks.length / size); r++) {
     groups.push({
       rackNumber: r + 1,
-      slots: racks.slice(r * SLOTS_PER_VISUAL_RACK, (r + 1) * SLOTS_PER_VISUAL_RACK),
+      slots: racks.slice(r * size, (r + 1) * size),
     });
   }
   return groups;

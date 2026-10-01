@@ -8,6 +8,7 @@ export const MACHINES_API = {
   rooms: '/rooms',
   inventory: '/inventory',
   roomsBuy: '/rooms/buy',
+  showcaseRackBuy: '/rooms/showcase-rack/buy',
   rackInstall: '/rooms/rack/install',
   rackUninstall: '/rooms/rack/uninstall',
   rackUninstallBatch: '/rooms/rack/uninstall-batch',
@@ -30,6 +31,13 @@ export function getVault(signal?: AbortSignal) {
 
 export function postBuyRoom() {
   return api.post(MACHINES_API.roomsBuy);
+}
+
+export function postBuyShowcaseRack(floorSlot?: number) {
+  return api.post<{ ok: boolean; price?: number; message?: string; code?: string }>(
+    MACHINES_API.showcaseRackBuy,
+    floorSlot == null ? {} : { floorSlot },
+  );
 }
 
 export function postRackInstall(rackId: number, inventoryId: number) {

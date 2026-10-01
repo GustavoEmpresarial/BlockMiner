@@ -31,6 +31,7 @@ export type UserRackSlot = {
     hashRate?: number | string | null;
     imageUrl?: string | null;
     imageSource?: MachineImageSource | null;
+    modelUrl?: string | null;
     ownedMachineId?: number | null;
     level?: number | null;
     slotSize?: number | null;
@@ -52,6 +53,9 @@ export type RoomPayload = {
   visualCount?: number;
   /** BLK unlock price + optional promo fields — only meaningful while `unlocked` is false. */
   price?: number;
+  kind?: 'standard' | 'showcase_3d';
+  /** BLK price of the single showcase rack. Present on the free 3D room. */
+  showcaseRackPrice?: number;
   listPrice?: number;
   onOffer?: boolean;
 };

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 const OFFER_MODEL_VIEWER_SCRIPT =
   'https://cdn.jsdelivr.net/npm/@google/model-viewer@3.5.0/dist/model-viewer.min.js';
@@ -9,6 +9,9 @@ const OFFER_MODEL_FEATURE_FOV = '16deg';
 const OFFER_MODEL_FEATURE_SPIN = '8deg';
 const OFFER_MODEL_THUMB_ORBIT = '18deg 74deg 88%';
 const OFFER_MODEL_THUMB_FOV = '20deg';
+/** Close enough that the GPU fills the wide bay instead of floating in the middle. */
+const RACK_MODEL_ORBIT = '12deg 75deg 38%';
+const RACK_MODEL_FOV = '16deg';
 
 let modelViewerScriptPromise: Promise<void> | null = null;
 
@@ -32,13 +35,19 @@ export function OfferMinerModel({
   src,
   alt,
   featured = false,
+  variant,
+  fallback = null,
 }: {
   src: string;
   alt: string;
   featured?: boolean;
+  /** Rack slot: spinning model, no camera drag, so the slot click still works. */
+  variant?: 'featured' | 'thumb' | 'rack';
+  fallback?: ReactNode;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const [failed, setFailed] = useState(false);
+  const mode = variant ?? (featured ? 'featured' : 'thumb');
 
   useEffect(() => {
     const host = hostRef.current;
@@ -53,19 +62,19 @@ export function OfferMinerModel({
         const attrs: Record<string, string> = {
           src,
           alt,
-          'camera-controls': '',
           autoplay: '',
-          'shadow-intensity': featured ? '0.85' : '0.4',
-          exposure: featured ? '1.35' : '1.15',
+          'shadow-intensity': mode === 'thumb' ? '0.4' : '0.85',
+          exposure: mode === 'thumb' ? '1.15' : '1.4',
           'tone-mapping': 'aces',
           'environment-image': 'neutral',
-          'interaction-prompt': 'auto',
-          'camera-orbit': featured ? OFFER_MODEL_FEATURE_ORBIT : OFFER_MODEL_THUMB_ORBIT,
-          'field-of-view': featured ? OFFER_MODEL_FEATURE_FOV : OFFER_MODEL_THUMB_FOV,
+          'interaction-prompt': mode === 'rack' ? 'none' : 'auto',
+          'camera-orbit': mode === 'featured' ? OFFER_MODEL_FEATURE_ORBIT : mode === 'rack' ? RACK_MODEL_ORBIT : OFFER_MODEL_THUMB_ORBIT,
+          'field-of-view': mode === 'featured' ? OFFER_MODEL_FEATURE_FOV : mode === 'rack' ? RACK_MODEL_FOV : OFFER_MODEL_THUMB_FOV,
         };
-        if (featured) {
+        if (mode !== 'rack') attrs['camera-controls'] = '';
+        if (mode === 'featured' || mode === 'rack') {
           attrs['auto-rotate'] = '';
-          attrs['rotation-per-second'] = OFFER_MODEL_FEATURE_SPIN;
+          attrs['rotation-per-second'] = mode === 'rack' ? '20deg' : OFFER_MODEL_FEATURE_SPIN;
         }
         for (const [key, value] of Object.entries(attrs)) {
           viewer.setAttribute(key, value);
@@ -84,8 +93,8 @@ export function OfferMinerModel({
       cancelled = true;
       viewer?.remove();
     };
-  }, [src, alt, featured]);
+  }, [src, alt, mode]);
 
-  if (failed) return null;
+  if (failed) return <>{fallback}</>;
   return <div ref={hostRef} className="h-full w-full" />;
 }
