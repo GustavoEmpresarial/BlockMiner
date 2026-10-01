@@ -479,9 +479,10 @@ export default function OffersPage() {
                                 const alreadyClaimed = effectivelyFree && claimLimit > 0 && (m.userClaimCount || 0) >= claimLimit;
                                 const eventState = getEventState(now, ev);
                                 const canCollect = eventState === 'live' && m.inStock && !alreadyClaimed;
+                                const plate = !m.modelUrl && /^(Gildcore|Amberforge|Hexcore)$/.test(m.name || '');
                                 return (
                                 <div key={m.id} className={`bg-surface border rounded-[2.5rem] p-8 shadow-xl transition-all duration-500 group relative overflow-hidden ${
-                                    m.modelUrl ? 'md:col-span-2' : ''
+                                    m.modelUrl || plate ? 'md:col-span-2' : ''
                                 } ${
                                     effectivelyFree
                                         ? 'border-green-500/20 hover:border-green-400/40'
@@ -558,6 +559,8 @@ export default function OffersPage() {
 
                                         <div className={m.modelUrl
                                             ? 'relative aspect-[4/3] min-h-[22rem] bg-[#070b12] rounded-3xl border border-cyan-400/20 shadow-[0_0_48px_rgba(34,211,238,0.16)] flex items-center justify-center overflow-hidden'
+                                            : plate
+                                            ? 'relative aspect-[16/9] min-h-[18rem] bg-[#070b12] rounded-3xl border border-amber-400/25 shadow-[0_0_36px_rgba(245,158,11,0.12)] flex items-center justify-center overflow-hidden'
                                             : 'aspect-square bg-gray-900/50 rounded-3xl p-2 border border-gray-800 group-hover:scale-105 transition-transform duration-500 flex items-center justify-center overflow-hidden'
                                         }>
                                             {m.modelUrl && (
@@ -566,7 +569,7 @@ export default function OffersPage() {
                                             {m.modelUrl
                                                 ? <div className="absolute inset-0 z-10"><OfferMinerModel featured src={m.modelUrl} alt={m.name || 'MinerCore'} /></div>
                                                 : m.imageUrl
-                                                ? <img src={m.imageUrl} alt={m.name} className="w-full h-full object-contain scale-110" />
+                                                ? <img src={m.imageUrl} alt={m.name} className={plate ? 'absolute inset-0 h-full w-full object-cover' : 'w-full h-full object-contain scale-110'} />
                                                 : <Zap className="w-20 h-20 text-amber-500/30" />
                                             }
                                         </div>
