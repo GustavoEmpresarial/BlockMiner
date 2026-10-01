@@ -71,7 +71,7 @@ export default function AdminOverviewPage() {
       setLoading(true);
       const [s, u, w, e] = await Promise.all([
         api.get<{ ok?: boolean; stats?: DashboardStats }>('/admin/stats'),
-        api.get<{ ok?: boolean; users?: RecentUser[] }>('/admin/users?limit=10'),
+        api.get<{ ok?: boolean; users?: RecentUser[] }>('/admin/users?pageSize=10'),
         listPendingWithdrawals(),
         api.get<{ ok?: boolean; executive?: ExecutiveSummary }>('/admin/analytics/executive?period=week'),
       ]);

@@ -13,13 +13,24 @@ export const adminUserIdParamSchema = z
 export const adminUsersListQuerySchema = z
   .object({
     page: z.coerce.number().int().positive().default(1),
-    pageSize: z.coerce.number().int().min(1).max(100).default(25),
+    pageSize: z.coerce.number().int().min(1).max(100).optional(),
+    limit: z.coerce.number().int().min(1).max(100).optional(),
     query: z.string().trim().max(120).optional(),
+    q: z.string().trim().max(120).optional(),
+    search: z.string().trim().max(120).optional(),
     status: z.enum(["all", "active", "banned"]).optional().default("all"),
     fromDate: z.string().trim().datetime({ offset: true }).or(z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/)).optional(),
     toDate: z.string().trim().datetime({ offset: true }).or(z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/)).optional(),
   })
-  .strict();
+  .strict()
+  .transform((data) => ({
+    page: data.page,
+    pageSize: data.pageSize ?? data.limit ?? 25,
+    query: data.query ?? data.q ?? data.search,
+    status: data.status,
+    fromDate: data.fromDate,
+    toDate: data.toDate,
+  }));
 
 export const adminBanUserSchema = z
   .object({

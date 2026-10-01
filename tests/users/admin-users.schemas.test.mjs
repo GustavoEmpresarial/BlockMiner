@@ -75,6 +75,13 @@ test("adminUsersListQuerySchema: rejects pageSize out of bounds (> 100)", () => 
   assert.equal(result.success, false);
 });
 
+test("adminUsersListQuerySchema: accepts limit alias for pageSize and q alias for query", () => {
+  const result = schemas.adminUsersListQuerySchema.safeParse({ limit: "10", q: "alice" });
+  assert.equal(result.success, true);
+  assert.equal(result.data.pageSize, 10);
+  assert.equal(result.data.query, "alice");
+});
+
 test("adminUsersListQuerySchema: rejects unknown properties (.strict)", () => {
   const result = schemas.adminUsersListQuerySchema.safeParse({ page: 1, hack: true });
   assert.equal(result.success, false);
