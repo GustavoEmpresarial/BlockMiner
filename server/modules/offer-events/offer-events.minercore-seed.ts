@@ -1,6 +1,6 @@
 /**
- * Opens the MinerCore MCX9 offer once. Image miners are untouched.
- * A row that already exists is left alone so a restart does not slide the 60-day window.
+ * Opens the MinerCore MCX9 offer once and attaches the three PNG miners if they are missing.
+ * An existing event is not rewritten, so a restart does not slide the 60-day window.
  */
 import prisma from "../../core/database/prisma.js";
 import { logger } from "../../core/logger/index.js";
@@ -13,6 +13,8 @@ import {
   MINERCORE_MCX9_HASH_RATE_ENV_KEY,
   MINERCORE_MCX9_IMAGE_URL,
   MINERCORE_MCX9_MODEL_URL,
+  MINERCORE_IMAGE_OFFER_DESCRIPTION,
+  MINERCORE_IMAGE_OFFER_MINERS,
   MINERCORE_MCX9_OFFER_DESCRIPTION,
   MINERCORE_MCX9_OFFER_DURATION_DAYS,
   MINERCORE_MCX9_OFFER_TITLE,
@@ -41,12 +43,51 @@ function readHashRate(): number {
   return n;
 }
 
+function imageMinerCreate(miner: (typeof MINERCORE_IMAGE_OFFER_MINERS)[number]) {
+  return {
+    name: miner.name,
+    description: MINERCORE_IMAGE_OFFER_DESCRIPTION,
+    imageUrl: miner.imageUrl,
+    modelUrl: null,
+    deliveryDelayDays: 0,
+    price: miner.priceBlk,
+    hashRate: miner.hashRate,
+    currency: DEFAULT_OFFER_CURRENCY,
+    stockUnlimited: true,
+    stockCount: null,
+    slotSize: 1,
+    isActive: true,
+    isFree: false,
+    claimLimitPerUser: 1,
+  };
+}
+
+/** Adds any of the three PNG miners that are not already on the offer. Does not move the window. */
+async function ensureMinercoreImageMiners(eventId: number): Promise<number> {
+  const names = MINERCORE_IMAGE_OFFER_MINERS.map((miner) => miner.name);
+  const existing = await prisma.eventMiner.findMany({
+    where: { eventId, name: { in: [...names] } },
+    select: { name: true },
+  });
+  const have = new Set(existing.map((miner) => miner.name));
+  const missing = MINERCORE_IMAGE_OFFER_MINERS.filter((miner) => !have.has(miner.name));
+  if (missing.length === 0) return 0;
+  await prisma.eventMiner.createMany({
+    data: missing.map((miner) => ({ eventId, ...imageMinerCreate(miner) })),
+  });
+  return missing.length;
+}
+
 export async function ensureMinercoreMcx9Offer(now: Date = new Date()): Promise<void> {
   const existing = await prisma.offerEvent.findFirst({
     where: { title: MINERCORE_MCX9_OFFER_TITLE, deletedAt: null },
     select: { id: true },
   });
-  if (existing) return;
+  if (existing) {
+    const added = await ensureMinercoreImageMiners(existing.id);
+    if (added > 0) log.info("MinerCore image miners added", { eventId: existing.id, added });
+    return;
+  }
 
   const endsAt = new Date(now.getTime() + MINERCORE_MCX9_OFFER_DURATION_DAYS * OFFER_EVENT_MS_PER_DAY);
   await prisma.offerEvent.create({
@@ -58,27 +99,31 @@ export async function ensureMinercoreMcx9Offer(now: Date = new Date()): Promise<
       endsAt,
       isActive: true,
       miners: {
-        create: {
-          name: MINERCORE_MCX9_OFFER_TITLE,
-          description: MINERCORE_MCX9_OFFER_DESCRIPTION,
-          imageUrl: MINERCORE_MCX9_IMAGE_URL,
-          modelUrl: MINERCORE_MCX9_MODEL_URL,
-          deliveryDelayDays: MINERCORE_MCX9_DELIVERY_DELAY_DAYS,
-          price: readPriceBlk(),
-          hashRate: readHashRate(),
-          currency: DEFAULT_OFFER_CURRENCY,
-          stockUnlimited: true,
-          stockCount: null,
-          slotSize: 1,
-          isActive: true,
-          isFree: false,
-          claimLimitPerUser: 1,
-        },
+        create: [
+          {
+            name: MINERCORE_MCX9_OFFER_TITLE,
+            description: MINERCORE_MCX9_OFFER_DESCRIPTION,
+            imageUrl: MINERCORE_MCX9_IMAGE_URL,
+            modelUrl: MINERCORE_MCX9_MODEL_URL,
+            deliveryDelayDays: MINERCORE_MCX9_DELIVERY_DELAY_DAYS,
+            price: readPriceBlk(),
+            hashRate: readHashRate(),
+            currency: DEFAULT_OFFER_CURRENCY,
+            stockUnlimited: true,
+            stockCount: null,
+            slotSize: 1,
+            isActive: true,
+            isFree: false,
+            claimLimitPerUser: 1,
+          },
+          ...MINERCORE_IMAGE_OFFER_MINERS.map((miner) => imageMinerCreate(miner)),
+        ],
       },
     },
   });
   log.info("MinerCore MCX9 offer opened", {
     endsAt: endsAt.toISOString(),
     deliveryDelayDays: MINERCORE_MCX9_DELIVERY_DELAY_DAYS,
+    imageMiners: MINERCORE_IMAGE_OFFER_MINERS.length,
   });
 }

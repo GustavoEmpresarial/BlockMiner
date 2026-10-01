@@ -47,3 +47,33 @@ export const DEFAULT_MINERCORE_MCX9_HASH_RATE = 3000;
 
 export const MINERCORE_MCX9_OFFER_DESCRIPTION =
   "Placa 3D da MinerCore. A compra é confirmada na hora, mas a máquina só entra no inventário 5 dias depois. As outras ofertas em imagem chegam hoje e continuam minerando.";
+
+/**
+ * The three image miners that sit next to the MCX9 on the same offer.
+ * They have no .glb and deliveryDelayDays 0, so the grant is immediate.
+ * Price and hashrate are the live Mining Revolution cards, cheapest to richest:
+ * Block Overdrive, BlockEclipse, BlockNova.
+ */
+export const MINERCORE_IMAGE_OFFER_DESCRIPTION =
+  "Placa em imagem. A compra entra no inventário na hora e a máquina continua minerando.";
+
+export const MINERCORE_IMAGE_OFFER_MINERS = [
+  {
+    name: "MinerCore DOGE",
+    imageUrl: "/media/offers/minercore-doge.png",
+    priceBlk: "0.5",
+    hashRate: 750,
+  },
+  {
+    name: "MinerCore BTC",
+    imageUrl: "/media/offers/minercore-btc.png",
+    priceBlk: "1",
+    hashRate: 2000,
+  },
+  {
+    name: "MinerCore MCORE",
+    imageUrl: "/media/offers/minercore-mcore.png",
+    priceBlk: "1.5",
+    hashRate: 3750,
+  },
+] as const;
