@@ -48,6 +48,10 @@ export type AdminDossierUser = {
   name?: string | null;
   email?: string | null;
   isBanned?: boolean;
+  banReason?: string | null;
+  bannedAt?: string | Date | null;
+  bannedUntil?: string | Date | null;
+  bannedByAdminId?: number | null;
   polBalance?: number | string | null;
   blkBalance?: number | string | null;
   blkLocked?: number | string | null;
@@ -66,6 +70,63 @@ export type AdminDossierUser = {
   createdAt?: string | Date | null;
   refCode?: string | null;
   lastIpIntelligence?: IpIntel | null;
+  _count?: {
+    miners?: number;
+    inventory?: number;
+    ownedMachines?: number;
+    referrals?: number;
+    auditLogs?: number;
+  };
+  miners?: Array<{
+    id: number;
+    minerId?: number | null;
+    slotIndex: number;
+    level: number;
+    hashRate: number;
+    slotSize: number;
+    imageUrl?: string | null;
+    isActive?: boolean;
+    purchasedAt?: string | Date | null;
+    ownedMachineId?: number | null;
+    miner?: { name?: string | null; slug?: string | null } | null;
+  }>;
+  inventory?: Array<{
+    id: number;
+    minerId?: number | null;
+    minerName?: string | null;
+    level: number;
+    hashRate: number;
+    slotSize: number;
+    imageUrl?: string | null;
+    acquiredAt?: string | Date | null;
+    expiresAt?: string | Date | null;
+    ownedMachineId?: number | null;
+    miner?: { slug?: string | null } | null;
+  }>;
+  ownedMachines?: Array<{
+    id: number;
+    location: string;
+    minerId?: number | null;
+    minerName?: string | null;
+    snapshotSlug?: string | null;
+    level: number;
+    hashRate: number;
+    slotSize: number;
+    imageUrl?: string | null;
+    acquisitionSource?: string | null;
+    createdAt?: string | Date | null;
+  }>;
+  auditLogs?: Array<{
+    id: number;
+    action: string;
+    label?: string | null;
+    description?: string | null;
+    source?: string | null;
+    severity?: string | null;
+    ip?: string | null;
+    createdAt: string | Date;
+    detailsJson?: string | null;
+  }>;
 };
 
 export type AdminDossierMetrics = {
@@ -78,6 +139,7 @@ export type AdminDossierMetrics = {
   totalWithdrawn?: number | string | null;
   totalTransactions?: number | null;
   totalLogs?: number | null;
+  totalTickets?: number | null;
   riskSummary?: string | null;
 };
 

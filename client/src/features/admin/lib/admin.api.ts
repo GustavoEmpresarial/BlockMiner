@@ -171,7 +171,7 @@ export const banUser = adminUsersApi.banUser;
 export const unbanUser = adminUsersApi.unbanUser;
 export const adjustAdminUserBalance = adminUsersApi.adjustBalance;
 export const unlockAdminUser = adminUsersApi.unlockUser;
-export const resetAdminUserPassword = adminUsersApi.resetPassword;
+export const resetUserPassword = adminUsersApi.resetPassword;
 export const sendAdminUserMiner = adminUsersApi.sendMiner;
 
 export * from '../users/adminUsers.types';

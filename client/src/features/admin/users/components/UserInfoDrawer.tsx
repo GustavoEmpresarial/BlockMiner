@@ -10,7 +10,7 @@ import {
   banUser,
   unbanUser,
   fetchAdminUserDetail,
-  resetAdminUserPassword,
+  resetUserPassword,
   unlockAdminUser,
   type AdminBalanceCurrency,
   type AdminUserDetail,
@@ -100,7 +100,7 @@ export default function UserInfoDrawer({ userId, onClose }: { userId: number | n
     if (!user) return;
     const password = prompt(t('adminUsers.detail_password_prompt'));
     if (!password) return;
-    void perform(() => resetAdminUserPassword(user.id, password));
+    void perform(() => resetUserPassword(user.id, { newPassword: password.trim() }));
   };
 
   if (!userId) return null;
