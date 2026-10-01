@@ -15,7 +15,7 @@ test("MinerCore image miners are three named PNG cards and not the 3D model", ()
     Hexcore: "MinerCore MCORE",
   });
   for (const miner of MINERCORE_IMAGE_OFFER_MINERS) {
-    assert.match(miner.imageUrl, /^\/media\/offers\/[a-z]+-front\.png$/);
+    assert.match(miner.imageUrl, /^\/media\/offers\/[a-z]+-logo\.png$/);
     assert.equal(miner.imageUrl.includes("glb"), false);
     assert.ok(miner.description.length > 0);
     assert.ok(Number(miner.priceBlk) > 0);
