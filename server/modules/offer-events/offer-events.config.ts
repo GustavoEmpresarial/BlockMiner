@@ -49,31 +49,43 @@ export const MINERCORE_MCX9_OFFER_DESCRIPTION =
   "Placa 3D da MinerCore. A compra é confirmada na hora, mas a máquina só entra no inventário 5 dias depois. As outras ofertas em imagem chegam hoje e continuam minerando.";
 
 /**
- * The three image miners that sit next to the MCX9 on the same offer.
- * They have no .glb and deliveryDelayDays 0, so the grant is immediate.
- * Price and hashrate are the live Mining Revolution cards, cheapest to richest:
+ * The three image miners beside the MCX9.
+ * No .glb, deliveryDelayDays 0, so the grant is immediate.
+ * Colors follow the MinerCore dashboard palette: gold, amber, cyan.
+ * Price and hashrate stay on the Mining Revolution ladder:
  * Block Overdrive, BlockEclipse, BlockNova.
+ * Previous names were MinerCore DOGE, MinerCore BTC and MinerCore MCORE.
  */
-export const MINERCORE_IMAGE_OFFER_DESCRIPTION =
-  "Placa em imagem. A compra entra no inventário na hora e a máquina continua minerando.";
-
 export const MINERCORE_IMAGE_OFFER_MINERS = [
   {
-    name: "MinerCore DOGE",
-    imageUrl: "/media/offers/minercore-doge-front.png",
+    name: "Gildcore",
+    description: "Placa dourada da MinerCore. A compra entra no inventário na hora e a máquina continua minerando.",
+    imageUrl: "/media/offers/gildcore-front.png",
     priceBlk: "0.5",
     hashRate: 750,
   },
   {
-    name: "MinerCore BTC",
-    imageUrl: "/media/offers/minercore-btc-front.png",
+    name: "Amberforge",
+    description: "Placa âmbar da MinerCore. A compra entra no inventário na hora e a máquina continua minerando.",
+    imageUrl: "/media/offers/amberforge-front.png",
     priceBlk: "1",
     hashRate: 2000,
   },
   {
-    name: "MinerCore MCORE",
-    imageUrl: "/media/offers/minercore-mcore-front.png",
+    name: "Hexcore",
+    description: "Placa ciano da MinerCore, com a marca M. A compra entra no inventário na hora e a máquina continua minerando.",
+    imageUrl: "/media/offers/hexcore-front.png",
     priceBlk: "1.5",
     hashRate: 3750,
   },
 ] as const;
+
+/** Names already stored on the live offer, before the MinerCore rename. */
+export const MINERCORE_IMAGE_OFFER_LEGACY_NAMES: Record<
+  (typeof MINERCORE_IMAGE_OFFER_MINERS)[number]["name"],
+  string
+> = {
+  Gildcore: "MinerCore DOGE",
+  Amberforge: "MinerCore BTC",
+  Hexcore: "MinerCore MCORE",
+};

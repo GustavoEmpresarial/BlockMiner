@@ -1,17 +1,23 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-const { MINERCORE_IMAGE_OFFER_MINERS } = await import(
+const { MINERCORE_IMAGE_OFFER_LEGACY_NAMES, MINERCORE_IMAGE_OFFER_MINERS } = await import(
   "../../server/modules/offer-events/offer-events.config.ts"
 );
 
-test("MinerCore image miners are three immediate PNG cards and not the 3D model", () => {
+test("MinerCore image miners are three named PNG cards and not the 3D model", () => {
   assert.equal(MINERCORE_IMAGE_OFFER_MINERS.length, 3);
   const names = MINERCORE_IMAGE_OFFER_MINERS.map((miner) => miner.name);
-  assert.deepEqual(names, ["MinerCore DOGE", "MinerCore BTC", "MinerCore MCORE"]);
+  assert.deepEqual(names, ["Gildcore", "Amberforge", "Hexcore"]);
+  assert.deepEqual(MINERCORE_IMAGE_OFFER_LEGACY_NAMES, {
+    Gildcore: "MinerCore DOGE",
+    Amberforge: "MinerCore BTC",
+    Hexcore: "MinerCore MCORE",
+  });
   for (const miner of MINERCORE_IMAGE_OFFER_MINERS) {
-    assert.match(miner.imageUrl, /^\/media\/offers\/minercore-.+\.png$/);
-    assert.equal("modelUrl" in miner, false);
+    assert.match(miner.imageUrl, /^\/media\/offers\/[a-z]+-front\.png$/);
+    assert.equal(miner.imageUrl.includes("glb"), false);
+    assert.ok(miner.description.length > 0);
     assert.ok(Number(miner.priceBlk) > 0);
     assert.ok(miner.hashRate > 0);
   }

@@ -13,7 +13,7 @@ import {
   MINERCORE_MCX9_HASH_RATE_ENV_KEY,
   MINERCORE_MCX9_IMAGE_URL,
   MINERCORE_MCX9_MODEL_URL,
-  MINERCORE_IMAGE_OFFER_DESCRIPTION,
+  MINERCORE_IMAGE_OFFER_LEGACY_NAMES,
   MINERCORE_IMAGE_OFFER_MINERS,
   MINERCORE_MCX9_OFFER_DESCRIPTION,
   MINERCORE_MCX9_OFFER_DURATION_DAYS,
@@ -46,7 +46,7 @@ function readHashRate(): number {
 function imageMinerCreate(miner: (typeof MINERCORE_IMAGE_OFFER_MINERS)[number]) {
   return {
     name: miner.name,
-    description: MINERCORE_IMAGE_OFFER_DESCRIPTION,
+    description: miner.description,
     imageUrl: miner.imageUrl,
     modelUrl: null,
     deliveryDelayDays: 0,
@@ -62,20 +62,41 @@ function imageMinerCreate(miner: (typeof MINERCORE_IMAGE_OFFER_MINERS)[number]) 
   };
 }
 
-/** Adds any of the three PNG miners that are not already on the offer. Does not move the window. */
+/**
+ * Adds the three PNG miners, or renames the previous ticker names in place.
+ * Does not move the offer window and does not rewrite a row that already has the new name.
+ */
 async function ensureMinercoreImageMiners(eventId: number): Promise<number> {
-  const names = MINERCORE_IMAGE_OFFER_MINERS.map((miner) => miner.name);
   const existing = await prisma.eventMiner.findMany({
-    where: { eventId, name: { in: [...names] } },
-    select: { name: true },
+    where: { eventId },
+    select: { id: true, name: true },
   });
-  const have = new Set(existing.map((miner) => miner.name));
-  const missing = MINERCORE_IMAGE_OFFER_MINERS.filter((miner) => !have.has(miner.name));
-  if (missing.length === 0) return 0;
-  await prisma.eventMiner.createMany({
-    data: missing.map((miner) => ({ eventId, ...imageMinerCreate(miner) })),
-  });
-  return missing.length;
+  const byName = new Map(existing.map((miner) => [miner.name, miner.id]));
+  let changed = 0;
+  for (const miner of MINERCORE_IMAGE_OFFER_MINERS) {
+    if (byName.has(miner.name)) continue;
+    const legacyName = MINERCORE_IMAGE_OFFER_LEGACY_NAMES[miner.name];
+    const legacyId = byName.get(legacyName);
+    if (legacyId != null) {
+      await prisma.eventMiner.update({
+        where: { id: legacyId },
+        data: {
+          name: miner.name,
+          description: miner.description,
+          imageUrl: miner.imageUrl,
+          modelUrl: null,
+          deliveryDelayDays: 0,
+        },
+      });
+      changed += 1;
+      continue;
+    }
+    await prisma.eventMiner.create({
+      data: { eventId, ...imageMinerCreate(miner) },
+    });
+    changed += 1;
+  }
+  return changed;
 }
 
 export async function ensureMinercoreMcx9Offer(now: Date = new Date()): Promise<void> {
