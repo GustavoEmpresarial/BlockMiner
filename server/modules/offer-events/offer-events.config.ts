@@ -60,19 +60,19 @@ export const MINERCORE_IMAGE_OFFER_DESCRIPTION =
 export const MINERCORE_IMAGE_OFFER_MINERS = [
   {
     name: "MinerCore DOGE",
-    imageUrl: "/media/offers/minercore-doge.png",
+    imageUrl: "/media/offers/minercore-doge-front.png",
     priceBlk: "0.5",
     hashRate: 750,
   },
   {
     name: "MinerCore BTC",
-    imageUrl: "/media/offers/minercore-btc.png",
+    imageUrl: "/media/offers/minercore-btc-front.png",
     priceBlk: "1",
     hashRate: 2000,
   },
   {
     name: "MinerCore MCORE",
-    imageUrl: "/media/offers/minercore-mcore.png",
+    imageUrl: "/media/offers/minercore-mcore-front.png",
     priceBlk: "1.5",
     hashRate: 3750,
   },
