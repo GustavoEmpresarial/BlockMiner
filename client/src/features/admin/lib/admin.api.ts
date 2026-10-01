@@ -161,26 +161,22 @@ export function resetAdminFraudCollection(confirm?: string) {
   return adminFraudSignalsApi.resetCollection(confirm);
 }
 
-export function listAdminUsers(params: {
-  page?: number;
-  pageSize?: number;
-  query?: string;
-  fromDate?: string;
-  toDate?: string;
-}) {
-  const q: Record<string, string | number> = { pageSize: params.pageSize ?? 25 };
-  if (params.page != null) q.page = params.page;
-  if (params.query?.trim()) q.query = params.query.trim();
-  if (params.fromDate) q.fromDate = params.fromDate;
-  if (params.toDate) q.toDate = params.toDate;
-  return api.get('/admin/users', { params: q });
-}
+import { adminUsersApi } from '../users/adminUsers.api';
+export { adminUsersApi };
+
+export const listAdminUsers = adminUsersApi.listUsers;
+export const getAdminUser = adminUsersApi.getUserDetail;
+export const fetchAdminUserDetail = adminUsersApi.getUserDetail;
+export const banUser = adminUsersApi.banUser;
+export const unbanUser = adminUsersApi.unbanUser;
+export const adjustAdminUserBalance = adminUsersApi.adjustBalance;
+export const unlockAdminUser = adminUsersApi.unlockUser;
+export const resetAdminUserPassword = adminUsersApi.resetPassword;
+export const sendAdminUserMiner = adminUsersApi.sendMiner;
+
+export * from '../users/adminUsers.types';
 
 import { adminFinanceApi } from '../finance/adminFinance.api';
-
-export function getAdminUser(id: number | string) {
-  return api.get(`/admin/users/${id}`);
-}
 
 /** Delegate to adminFinanceApi */
 export const listPendingWithdrawals = adminFinanceApi.listWithdrawals;

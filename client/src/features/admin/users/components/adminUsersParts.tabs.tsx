@@ -40,11 +40,6 @@ import {
   SORTS,
   TxHashLink,
 } from './adminUsersParts.controls';
-import {
-  AdjustBalanceModal,
-  BALANCE_FIELDS,
-  ProfileTab,
-} from './adminUsersParts.balance';
 
 export function TabToolbar({
   state,

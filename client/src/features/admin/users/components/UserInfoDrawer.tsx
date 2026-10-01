@@ -8,6 +8,7 @@ import { UserProfileGrid } from './userDetail.shared';
 import {
   adjustAdminUserBalance,
   banUser,
+  unbanUser,
   fetchAdminUserDetail,
   resetAdminUserPassword,
   unlockAdminUser,
@@ -134,7 +135,9 @@ export default function UserInfoDrawer({ userId, onClose }: { userId: number | n
         {user ? (
           <div className="flex flex-wrap items-center gap-2 border-t border-slate-800 bg-slate-900/60 px-6 py-4 backdrop-blur">
             <DrawerAction icon={user.isBanned ? <ShieldOff className="h-4 w-4" /> : <Ban className="h-4 w-4" />} disabled={busy} onClick={() => {
-              if (confirm(user.isBanned ? t('adminUsers.confirm_unban', { id: user.id }) : t('adminUsers.confirm_ban', { id: user.id }))) void perform(() => banUser(user.id, user.isBanned));
+              if (confirm(user.isBanned ? t('adminUsers.confirm_unban', { id: user.id }) : t('adminUsers.confirm_ban', { id: user.id }))) {
+                void perform(() => (user.isBanned ? unbanUser(user.id) : banUser(user.id, { reason: 'Admin panel action' })));
+              }
             }}>
               {user.isBanned ? t('adminUsers.action_unban') : t('adminUsers.action_ban')}
             </DrawerAction>

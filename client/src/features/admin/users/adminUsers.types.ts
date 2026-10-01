@@ -85,6 +85,7 @@ export type AdminUserDetailsPayload = {
   ok: boolean;
   user: AdminDossierUser;
   metrics: AdminDossierMetrics;
+  message?: string;
 };
 
 export type UsersListApiResponse = { ok: boolean; users?: AdminUsersListRow[]; total?: number | string };
@@ -169,3 +170,99 @@ export type AdminUsersTabSlice = {
 };
 
 export type TabStateMap = Partial<Record<string, AdminUsersTabSlice>>;
+
+export type AdminBalanceCurrency =
+  | 'pol'
+  | 'blk'
+  | 'blkLocked'
+  | 'shib'
+  | 'btc'
+  | 'eth'
+  | 'usdt'
+  | 'usdc'
+  | 'zer';
+
+export type AdminUserDetail = AdminDossierUser;
+export type AdminUserMetrics = AdminDossierMetrics;
+
+export type AdminAdjustBalanceInput = {
+  currency: AdminBalanceCurrency;
+  mode: 'set' | 'add';
+  amount: number;
+  reason?: string;
+};
+
+export type AdminBanUserInput = {
+  reason?: string;
+  days?: number;
+};
+
+export type AdminResetPasswordInput = {
+  newPassword?: string;
+};
+
+export type AdminSendMinerInput = {
+  minerId: number;
+  quantity?: number;
+};
+
+export type AdminUsersStats = {
+  total: number;
+  active: number;
+  banned: number;
+};
+
+export type AdminUsersListApiResponse = {
+  ok: boolean;
+  users?: AdminUsersListRow[];
+  total?: number;
+  page?: number;
+  pageSize?: number;
+  stats?: AdminUsersStats;
+};
+
+export type AdminUserTicketsResponse = {
+  ok: boolean;
+  userId: number;
+  tickets: Array<{
+    id: number;
+    subject: string;
+    isRead: boolean;
+    isReplied: boolean;
+    repliedAt: string | null;
+    createdAt: string;
+    _count?: { replies: number };
+  }>;
+};
+
+export type AdminUserRelatedResponse = {
+  ok: boolean;
+  userId: number;
+  related: Array<{
+    id: number;
+    username: string | null;
+    name: string | null;
+    email: string;
+    isBanned: boolean;
+    createdAt: string;
+    reasons: string[];
+  }>;
+};
+
+export type AdminUserWalletLedgerResponse = {
+  ok: boolean;
+  userId: number;
+  balances: Record<string, number | null>;
+  walletAddress: string | null;
+};
+
+export type AdminUserActivitySummaryResponse = {
+  ok: boolean;
+  userId: number;
+  session: {
+    ytSecondsBalance: number;
+    autoMiningSecondsBalance: number;
+    lastHeartbeatAt: string | null;
+  };
+};
+
