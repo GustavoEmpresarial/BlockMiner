@@ -110,30 +110,34 @@ export async function getTrafficByUtm(days = 30): Promise<TrafficByUtmRow[]> {
 }
 
 export async function getTrafficDaily(days = 30): Promise<TrafficDailyRow[]> {
-  const rows = (await prisma.$queryRawUnsafe(
-    `SELECT
+  const safeDays = Math.min(Math.max(Math.floor(days) || 30, 1), 365);
+  const since = new Date(Date.now() - safeDays * 86_400_000);
+
+  const rows = await prisma.$queryRaw<Array<{ date: string; hits: string; registrations: string }>>`
+    SELECT
        TO_CHAR(d.day::date, 'YYYY-MM-DD') AS date,
        COALESCE(h.hits, 0)::text           AS hits,
        COALESCE(r.regs, 0)::text           AS registrations
      FROM generate_series(
-       (NOW() - INTERVAL '${days} days')::date,
+       ${since}::date,
        NOW()::date,
        '1 day'::interval
      ) AS d(day)
      LEFT JOIN (
        SELECT DATE_TRUNC('day', created_at) AS day, COUNT(*) AS hits
        FROM page_views
-       WHERE created_at >= NOW() - INTERVAL '${days} days'
+       WHERE created_at >= ${since}
        GROUP BY 1
      ) h ON h.day = d.day::date
      LEFT JOIN (
        SELECT DATE_TRUNC('day', created_at) AS day, COUNT(*) AS regs
        FROM users
-       WHERE created_at >= NOW() - INTERVAL '${days} days'
+       WHERE created_at >= ${since}
        GROUP BY 1
      ) r ON r.day = d.day::date
-     ORDER BY d.day`,
-  )) as Array<{ date: string; hits: string; registrations: string }>;
+     ORDER BY d.day;
+  `;
+
   return rows.map((r) => ({
     date: r.date,
     hits: Number(r.hits),
