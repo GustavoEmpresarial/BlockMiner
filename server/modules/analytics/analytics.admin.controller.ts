@@ -124,11 +124,11 @@ export async function getExecutive(
     const now = new Date();
     const { since } = buildBuckets(period, now);
     const payload = await getOrCompute(`analytics:executive:${period}`, async () => {
-      const periodDistributed = await prisma.blockMinerReward.aggregate({
-        _sum: { rewardAmount: true },
+      const periodDistributed = await prisma.blockDistribution.aggregate({
+        _sum: { reward: true },
         where: { createdAt: { gte: since } },
       });
-      return computeExecutiveSummary(since, Number(periodDistributed._sum.rewardAmount || 0));
+      return computeExecutiveSummary(since, Number(periodDistributed._sum.reward || 0));
     });
     res.json({ ok: true, executive: payload });
   } catch (error) {
@@ -171,10 +171,14 @@ async function computeAllTimeRewardTotals(
 ): Promise<AllTimeRewardTotals> {
   const [totalDistributed, totalWithdrawals, topEarners] = await Promise.all([
     userIdNum !== undefined
-      ? prisma.blockMinerReward.aggregate({
-          _sum: { rewardAmount: true },
-          where: userFilter,
-        })
+      ? prisma.user
+          .findUnique({
+            where: { id: userIdNum },
+            select: { lifetimeMinedPol: true },
+          })
+          .then((u) => ({
+            _sum: { rewardAmount: Number(u?.lifetimeMinedPol || 0) },
+          }))
       : prisma.blockDistribution.aggregate({ _sum: { reward: true } }),
     prisma.transaction.aggregate({
       _sum: { amount: true },
@@ -182,20 +186,17 @@ async function computeAllTimeRewardTotals(
     }),
     userIdNum !== undefined
       ? Promise.resolve(null)
-      : prisma
-          .$queryRaw<Array<{ userId: number; total: number | null }>>(
-            Prisma.sql`
-              SELECT user_id AS "userId", SUM(reward_amount)::float8 AS total
-              FROM block_miner_rewards
-              GROUP BY user_id
-              ORDER BY 2 DESC
-              LIMIT 10
-            `
-          )
+      : prisma.user
+          .findMany({
+            where: { isBanned: false, lifetimeMinedPol: { gt: 0 } },
+            orderBy: { lifetimeMinedPol: 'desc' },
+            take: 10,
+            select: { id: true, lifetimeMinedPol: true },
+          })
           .then((rows) =>
             rows.map((r) => ({
-              userId: r.userId,
-              _sum: { rewardAmount: Number(r.total || 0) },
+              userId: r.id,
+              _sum: { rewardAmount: Number(r.lifetimeMinedPol || 0) },
             }))
           ),
   ]);
@@ -346,19 +347,36 @@ async function computeAnalytics(
       () => computeAllTimeRewardTotals(userIdNum, userFilter),
       ALLTIME_TTL_MS
     ),
-    prisma.blockMinerReward.aggregate({
-      _sum: { rewardAmount: true },
-      where: { ...userFilter, createdAt: { gte: since } },
-    }),
-    prisma.$queryRaw<Array<{ bucket: Date | string; total: number | null }>>(
-      Prisma.sql`
-        SELECT date_trunc(${unit}, created_at) AS bucket,
-               COALESCE(SUM(reward_amount), 0)::float8 AS total
-        FROM block_miner_rewards
-        WHERE created_at >= ${since} ${userClause}
-        GROUP BY 1
-      `
-    ),
+    userIdNum !== undefined
+      ? prisma.blockMinerReward.aggregate({
+          _sum: { rewardAmount: true },
+          where: { ...userFilter, createdAt: { gte: since } },
+        })
+      : prisma.blockDistribution
+          .aggregate({
+            _sum: { reward: true },
+            where: { createdAt: { gte: since } },
+          })
+          .then((res) => ({ _sum: { rewardAmount: res._sum.reward } })),
+    userIdNum !== undefined
+      ? prisma.$queryRaw<Array<{ bucket: Date | string; total: number | null }>>(
+          Prisma.sql`
+            SELECT date_trunc(${unit}, created_at) AS bucket,
+                   COALESCE(SUM(reward_amount), 0)::float8 AS total
+            FROM block_miner_rewards
+            WHERE created_at >= ${since} AND user_id = ${userIdNum}
+            GROUP BY 1
+          `
+        )
+      : prisma.$queryRaw<Array<{ bucket: Date | string; total: number | null }>>(
+          Prisma.sql`
+            SELECT date_trunc(${unit}, created_at) AS bucket,
+                   COALESCE(SUM(reward), 0)::float8 AS total
+            FROM block_distributions
+            WHERE created_at >= ${since}
+            GROUP BY 1
+          `
+        ),
     prisma.transaction.aggregate({
       _sum: { amount: true },
       where: {
@@ -374,8 +392,8 @@ async function computeAnalytics(
           .$queryRaw<Array<{ cnt: number }>>(
             Prisma.sql`
               SELECT COUNT(DISTINCT user_id)::int AS cnt
-              FROM block_miner_rewards
-              WHERE created_at >= ${since}
+              FROM user_miners
+              WHERE is_active = true AND hash_rate > 0
             `
           )
           .then((r) => r[0]?.cnt ?? 0),
@@ -522,8 +540,8 @@ async function computeInflation(period: PeriodKey): Promise<InflationResponse> {
     await Promise.all([
       prisma.$queryRaw<Array<{ bucket: Date | string; total: number | null }>>(
         Prisma.sql`
-          SELECT date_trunc(${bucketUnit}, created_at) AS bucket, COALESCE(SUM(reward_amount), 0)::float8 AS total
-          FROM block_miner_rewards WHERE created_at >= ${since} GROUP BY 1
+          SELECT date_trunc(${bucketUnit}, created_at) AS bucket, COALESCE(SUM(reward), 0)::float8 AS total
+          FROM block_distributions WHERE created_at >= ${since} GROUP BY 1
         `
       ),
       prisma.$queryRaw<Array<{ bucket: Date | string; total: number | null }>>(
