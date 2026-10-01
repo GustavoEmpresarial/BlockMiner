@@ -35,6 +35,8 @@ import type {
   AdminSystemLogItem,
   AdminSystemLogsResponse,
   AdminSystemLogsQueryParams,
+  AdminOpsSnapshotResponse,
+  AdminServerMetricsResponse,
 } from './admin.types';
 
 
@@ -191,11 +193,11 @@ export function fetchAdminDashboardStats() {
 }
 
 export function fetchAdminOpsSnapshot() {
-  return api.get('/admin/ops/snapshot');
+  return api.get<AdminOpsSnapshotResponse>('/admin/ops/snapshot');
 }
 
 export function fetchAdminServerMetrics() {
-  return api.get('/admin/ops/server-metrics');
+  return api.get<AdminServerMetricsResponse>('/admin/ops/server-metrics');
 }
 
 export const adminInternalOfferwallApi = {

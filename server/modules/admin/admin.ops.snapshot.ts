@@ -5,82 +5,23 @@ import { monitorEventLoopDelay } from "node:perf_hooks";
 import prisma from "../../core/database/prisma.js";
 import { logger } from "../../core/logger/index.js";
 import { miningEngine } from "../mining/index.js";
+import type {
+  AdminOpsSnapshot,
+  AdminOpsEconomyRow,
+  EventLoopLagSnapshot,
+  HealthCheckDetail,
+  RuntimeRegistrySnapshot,
+} from "./admin.metrics.types.js";
 
 const log = logger.child("AdminOpsSnapshot");
+
 const HEALTH_CHECK_TIMEOUT_MS = 2000;
 const EVENT_LOOP_SAMPLE_MS = 200;
-
-export interface EventLoopLagSnapshot {
-  maxMs: number;
-  meanMs: number;
-  p99Ms: number;
-  sampleWindowMs: number;
-}
-
-export interface HealthCheckResult {
-  ok: boolean;
-  latencyMs: number;
-  message?: string;
-  details?: Record<string, unknown>;
-}
-
-export interface HealthChecksSnapshot {
-  postgres: HealthCheckResult;
-  redis: HealthCheckResult;
-  bullmq: HealthCheckResult;
-  websocket: HealthCheckResult;
-  mining: HealthCheckResult;
-}
-
-export interface RuntimeRegistrySnapshot {
-  nodeVersion: string;
-  platform: string;
-  pid: number;
-  uptimeSeconds: number;
-  memoryRssBytes: number;
-  memoryHeapUsedBytes: number;
-}
-
-export interface EconomySnapshot {
-  blockNumber: number;
-  activeMiners: number;
-  rewardsSettled24h: number;
-}
-
-export interface SocketMetricsSnapshot {
-  available: boolean;
-  reason: string;
-  connectionsActive: number | null;
-  connectsTotal: number | null;
-  disconnectsTotal: number | null;
-}
-
-export interface MetricsRegistrySnapshot {
-  available: boolean;
-  reason: string;
-  counters: unknown[];
-  gauges: unknown[];
-}
-
-export interface AlertRegistrySnapshot {
-  available: boolean;
-  reason: string;
-  alerts: Array<{ id: string; severity: string; message: string; module: string; since: string }>;
-}
-
-export interface OpsSnapshot {
-  timestamp: string;
-  readiness: {
-    ok: boolean;
-    checks: HealthChecksSnapshot;
-  };
-  eventLoopLag: EventLoopLagSnapshot;
-  runtime: RuntimeRegistrySnapshot;
-  economy: EconomySnapshot;
-  socket: SocketMetricsSnapshot;
-  metrics: MetricsRegistrySnapshot;
-  alerts: AlertRegistrySnapshot;
-}
+const MS_PER_SECOND = 1000;
+const SECONDS_PER_MINUTE = 60;
+const HOURS_PER_DAY = 24;
+const NS_PER_MS = 1e6;
+const DAY_IN_MS = HOURS_PER_DAY * SECONDS_PER_MINUTE * SECONDS_PER_MINUTE * MS_PER_SECOND;
 
 async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   let timer: NodeJS.Timeout | undefined;
@@ -103,15 +44,15 @@ async function sampleEventLoopLag(): Promise<EventLoopLagSnapshot> {
   await new Promise((resolve) => setTimeout(resolve, EVENT_LOOP_SAMPLE_MS));
   h.disable();
   return {
-    maxMs: Number.isFinite(h.max) ? h.max / 1e6 : 0,
-    meanMs: Number.isFinite(h.mean) ? h.mean / 1e6 : 0,
-    p99Ms: Number.isFinite(h.percentile(99)) ? h.percentile(99) / 1e6 : 0,
+    maxMs: Number.isFinite(h.max) ? h.max / NS_PER_MS : 0,
+    meanMs: Number.isFinite(h.mean) ? h.mean / NS_PER_MS : 0,
+    p99Ms: Number.isFinite(h.percentile(99)) ? h.percentile(99) / NS_PER_MS : 0,
     sampleWindowMs: EVENT_LOOP_SAMPLE_MS,
   };
 }
 
 /** Real check: SELECT 1 against the live Prisma connection. */
-async function checkPostgres(): Promise<HealthCheckResult> {
+async function checkPostgres(): Promise<HealthCheckDetail> {
   const start = Date.now();
   try {
     await withTimeout(prisma.$queryRaw`SELECT 1`, HEALTH_CHECK_TIMEOUT_MS);
@@ -126,11 +67,11 @@ async function checkPostgres(): Promise<HealthCheckResult> {
 }
 
 /** Placeholder for unmounted infrastructure. */
-function notApplicable(reason: string): HealthCheckResult {
+function notApplicable(reason: string): HealthCheckDetail {
   return { ok: true, latencyMs: 0, message: `not_applicable: ${reason}` };
 }
 
-async function buildHealthChecks(): Promise<HealthChecksSnapshot> {
+async function buildHealthChecks(): Promise<Record<string, HealthCheckDetail>> {
   const postgres = await checkPostgres();
   return {
     postgres,
@@ -160,55 +101,34 @@ function buildRuntimeRegistry(): RuntimeRegistrySnapshot {
   };
 }
 
-async function buildEconomySnapshot(): Promise<EconomySnapshot> {
-  const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+async function buildEconomyRows(): Promise<AdminOpsEconomyRow[]> {
+  const dayAgo = new Date(Date.now() - DAY_IN_MS);
   let rewardsSettled24h = 0;
   try {
     rewardsSettled24h = await prisma.blockMinerReward.count({ where: { createdAt: { gte: dayAgo } } });
   } catch (e: unknown) {
     log.warn("economy snapshot: reward count failed", { error: e instanceof Error ? e.message : String(e) });
   }
-  return {
-    blockNumber: miningEngine?.blockNumber ?? 0,
-    activeMiners: miningEngine?.miners?.size ?? 0,
-    rewardsSettled24h,
-  };
+  const activeMiners = miningEngine?.miners?.size ?? 0;
+  const blockNumber = miningEngine?.blockNumber ?? 0;
+
+  return [
+    { module: "mining", action: "rewards_settled_24h", total: rewardsSettled24h },
+    { module: "mining", action: "active_miners", total: activeMiners },
+    { module: "mining", action: "current_block", total: blockNumber },
+  ];
 }
 
-function buildSocketMetricsStub(): SocketMetricsSnapshot {
-  return {
-    available: false,
-    reason: "Socket.IO (core/socket/) is not ported to current/ yet",
-    connectionsActive: null,
-    connectsTotal: null,
-    disconnectsTotal: null,
-  };
-}
-
-function buildMetricsRegistrySnapshot(): MetricsRegistrySnapshot {
-  return {
-    available: false,
-    reason: "In-process metricsRegistry not ported to current/ yet",
-    counters: [],
-    gauges: [],
-  };
-}
-
-function buildAlertRegistrySnapshot(): AlertRegistrySnapshot {
-  return {
-    available: false,
-    reason: "In-process alertRegistry not ported to current/ yet",
-    alerts: [],
-  };
-}
-
-export async function buildOpsSnapshot(): Promise<OpsSnapshot> {
+export async function buildOpsSnapshot(): Promise<AdminOpsSnapshot> {
   const [eventLoopLag, checks, economy] = await Promise.all([
     sampleEventLoopLag(),
     buildHealthChecks(),
-    buildEconomySnapshot(),
+    buildEconomyRows(),
   ]);
-  const requiredOk = checks.postgres.ok && checks.mining.ok;
+  const postgresOk = checks["postgres"]?.ok ?? false;
+  const miningOk = checks["mining"]?.ok ?? false;
+  const requiredOk = postgresOk && miningOk;
+
   return {
     timestamp: new Date().toISOString(),
     readiness: {
@@ -217,9 +137,31 @@ export async function buildOpsSnapshot(): Promise<OpsSnapshot> {
     },
     eventLoopLag,
     runtime: buildRuntimeRegistry(),
+    http: {
+      requestsTotal: 0,
+      errors4xxTotal: 0,
+      errors5xxTotal: 0,
+      requestsPerMinuteEstimate: 0,
+    },
+    socket: {
+      connectionsActive: 0,
+      connectsTotal: 0,
+      disconnectsTotal: 0,
+    },
+    mining: {
+      blockNumber: miningEngine?.blockNumber ?? 0,
+      activeMiners: miningEngine?.miners?.size ?? 0,
+      engineRunning: Boolean(miningEngine),
+    },
+    queues: {
+      bullmqWaiting: 0,
+      bullmqActive: 0,
+      bullmqFailed: 0,
+    },
+    redis: {
+      connected: 0,
+    },
     economy,
-    socket: buildSocketMetricsStub(),
-    metrics: buildMetricsRegistrySnapshot(),
-    alerts: buildAlertRegistrySnapshot(),
+    alerts: [],
   };
 }

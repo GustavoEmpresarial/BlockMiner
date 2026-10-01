@@ -1,8 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { Server, Activity, MemoryStick, HardDrive, Cpu, RefreshCw, AlertCircle, Radio, Database, Layers } from 'lucide-react';
-import { api } from '../../../shared/auth/auth.store';
-import type { AdminOpsSnapshot, AdminOpsSnapshotResponse, AdminServerMetricsResponse, AdminServerMetricsSnapshot } from '../lib/admin.types';
+import { fetchAdminOpsSnapshot, fetchAdminServerMetrics } from '../lib/admin.api';
+import { formatBytes, formatUptime } from '../lib/admin.format';
+import type { AdminOpsSnapshot, AdminServerMetricsSnapshot } from '../lib/admin.types';
+
+const METRICS_POLL_INTERVAL_MS = 15000;
+const PERCENT_100 = 100;
+const PERCENT_0 = 0;
+const MAX_ECONOMY_ROWS = 20;
 
 export default function AdminMetrics() {
     const [metrics, setMetrics] = useState<AdminServerMetricsSnapshot | null>(null);
@@ -13,8 +19,8 @@ export default function AdminMetrics() {
         try {
             setIsLoading(true);
             const [metricsRes, opsRes] = await Promise.all([
-                api.get<AdminServerMetricsResponse>('/admin/server-metrics'),
-                api.get<AdminOpsSnapshotResponse>('/admin/ops/snapshot'),
+                fetchAdminServerMetrics(),
+                fetchAdminOpsSnapshot(),
             ]);
             if (metricsRes.data.ok) {
                 setMetrics(metricsRes.data.metrics);
@@ -31,7 +37,7 @@ export default function AdminMetrics() {
 
     useEffect(() => {
         fetchMetrics();
-        const interval = setInterval(fetchMetrics, 15000);
+        const interval = setInterval(fetchMetrics, METRICS_POLL_INTERVAL_MS);
         return () => clearInterval(interval);
     }, [fetchMetrics]);
 
@@ -52,27 +58,9 @@ export default function AdminMetrics() {
         );
     }
 
-    const formatBytes = (bytes: unknown): string => {
-        if (bytes == null || !Number.isFinite(Number(bytes))) return '—';
-        const n = Number(bytes);
-        if (n < 0) return '—';
-        if (n === 0) return '0 B';
-        const k = 1000;
-        const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-        const i = Math.floor(Math.log(n) / Math.log(k));
-        return parseFloat((n / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-    };
-
     const diskOk = !metrics.diskUnavailable && Number(metrics.diskTotalBytes) > 0;
     const diskPct =
         diskOk && Number.isFinite(Number(metrics.diskUsagePercent)) ? Number(metrics.diskUsagePercent) : null;
-
-    const formatUptime = (seconds: number): string => {
-        const d = Math.floor(seconds / (3600 * 24));
-        const h = Math.floor((seconds % (3600 * 24)) / 3600);
-        const m = Math.floor((seconds % 3600) / 60);
-        return `${d}d ${h}h ${m}m`;
-    };
 
     return (
         <div className="space-y-8 animate-in fade-in duration-700">
@@ -175,7 +163,7 @@ export default function AdminMetrics() {
                         <div className="w-full h-1.5 bg-slate-800 rounded-full mt-3 overflow-hidden">
                             <div
                                 className="h-full bg-amber-500 transition-all duration-1000"
-                                style={{ width: `${diskPct != null ? Math.min(100, Math.max(0, diskPct)) : 0}%` }}
+                                style={{ width: `${diskPct != null ? Math.min(PERCENT_100, Math.max(PERCENT_0, diskPct)) : 0}%` }}
                             />
                         </div>
                         {metrics.diskUnavailable ? (
@@ -234,7 +222,7 @@ export default function AdminMetrics() {
                                 <p className="text-xs text-slate-500">Sem eventos instrumentados ainda nesta sessão.</p>
                             ) : (
                                 <ul className="space-y-1 text-xs font-mono max-h-48 overflow-auto">
-                                    {ops.economy.slice(0, 20).map((row) => (
+                                    {ops.economy.slice(0, MAX_ECONOMY_ROWS).map((row) => (
                                         <li key={`${row.module}-${row.action}`} className="flex justify-between text-slate-400">
                                             <span>{row.module}/{row.action}</span>
                                             <span className="text-slate-200">{row.total}</span>

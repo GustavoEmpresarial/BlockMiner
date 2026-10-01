@@ -305,29 +305,91 @@ export type AdminOfferEventMinerFormState = {
 };
 
 /** GET `/admin/server-metrics` — `metrics` payload (see `adminController.getServerMetrics`). */
+export interface EventLoopLagSnapshot {
+  maxMs: number;
+  meanMs: number;
+  p99Ms: number;
+  sampleWindowMs: number;
+}
+
+export interface HealthCheckDetail {
+  ok: boolean;
+  latencyMs: number;
+  message?: string;
+  details?: Record<string, unknown>;
+}
+
+export interface AdminOpsHttpStats {
+  requestsTotal: number;
+  errors4xxTotal: number;
+  errors5xxTotal: number;
+  requestsPerMinuteEstimate: number;
+}
+
+export interface AdminOpsMiningStats {
+  blockNumber: number;
+  activeMiners: number;
+  engineRunning: boolean;
+}
+
+export interface AdminOpsQueueStats {
+  bullmqWaiting: number;
+  bullmqActive: number;
+  bullmqFailed: number;
+}
+
+export interface AdminOpsRedisStats {
+  connected: number;
+}
+
+export interface AdminOpsEconomyRow {
+  module: string;
+  action: string;
+  total: number;
+}
+
+export interface AdminOpsAlert {
+  id: string;
+  severity: string;
+  message: string;
+  module: string;
+  since: string;
+}
+
+export interface RuntimeRegistrySnapshot {
+  nodeVersion: string;
+  platform: string;
+  pid: number;
+  uptimeSeconds: number;
+  memoryRssBytes: number;
+  memoryHeapUsedBytes: number;
+}
+
+/** Real GET `/admin/ops/snapshot` payload. */
 export type AdminOpsSnapshot = {
   timestamp: string;
-  readiness: { ok: boolean; checks: Record<string, { ok: boolean; latencyMs: number; message?: string }> };
-  alerts: Array<{ id: string; severity: string; message: string; module: string; since: string }>;
+  readiness: {
+    ok: boolean;
+    checks: Record<string, HealthCheckDetail>;
+  };
+  eventLoopLag: EventLoopLagSnapshot;
+  runtime: RuntimeRegistrySnapshot;
+  http: AdminOpsHttpStats;
   socket: {
-    engineClients: number;
     connectionsActive: number;
     connectsTotal: number;
     disconnectsTotal: number;
   };
-  mining: { blockNumber: number; activeMiners: number; engineRunning: boolean };
-  queues: { bullmqWaiting: number; bullmqActive: number; bullmqFailed: number };
-  redis: { connected: number };
-  http: { requestsTotal: number; errors4xxTotal: number; errors5xxTotal: number; requestsPerMinuteEstimate: number };
-  database: { prismaQueriesTotal: number; prismaSlowQueriesTotal: number };
-  cron: { schedulerStartedAt: string | null };
-  economy: Array<{ module: string; action: string; total: number }>;
-  process: { uptimeSeconds: number; pid: number; memoryRssBytes: number; memoryHeapUsedBytes: number };
+  mining: AdminOpsMiningStats;
+  queues: AdminOpsQueueStats;
+  redis: AdminOpsRedisStats;
+  economy: AdminOpsEconomyRow[];
+  alerts: AdminOpsAlert[];
 };
 
 export type AdminOpsSnapshotResponse =
   | { ok: true; snapshot: AdminOpsSnapshot }
-  | { ok: false; message?: string };
+  | { ok: false; message?: string; code?: string };
 
 export type AdminServerMetricsSnapshot = {
   cpuUsagePercent: number;
