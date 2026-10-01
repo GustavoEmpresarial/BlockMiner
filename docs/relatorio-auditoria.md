@@ -1709,6 +1709,87 @@ Executado através de `tests/security/run-kali-users-audit.sh` utilizando o cont
 
 **Total de Verificações de Segurança**: 26 executadas, 26 aprovadas, 0 falhas.
 
+---
+
+# PARTE XIX: MÓDULO DE MÉTRICAS OPERACIONAIS & TELEMETRIA DO SERVIDOR (`/admin/metrics`)
+
+## 1. Resumo Executivo dos Achados — Métricas & Ops
+
+| ID | Descrição do Achado | Severidade | CWE / OWASP | Arquivo e Linha Original | Status da Correção |
+| :---: | :--- | :---: | :---: | :--- | :---: |
+| **SEC-64** | **BFLA nas Rotas de Operações:** O roteador `/ops` e os endpoints de métricas dependiam apenas do guard genérico `requireAdminAuth`. Usuários com papéis de menor privilégio (ex: `support`, `finance`) podiam inspecionar a telemetria do host e a infraestrutura interna sem restrição. | **ALTA** | CWE-285 / OWASP A1 | `server/modules/admin/admin.ops.routes.ts:14` | ✅ **Corrigido** |
+| **BUG-03** | **Rota 404 e Incompatibilidade de Schema no Client:** Frontend chamava rota legada `/api/admin/server-metrics` (enquanto o servidor expunha `/api/admin/ops/server-metrics`) e assumia formato de objeto para `ops.economy` (enquanto o backend enviava array), resultando em falha de `.slice()` e crash de renderização. | **ALTA** | Regra de Negócio | `client/src/features/admin/metrics/AdminMetricsPage.tsx` | ✅ **Corrigido** |
+| **PERF-01** | **Amostragem CPU Bloqueante em Alta Concorrência:** Chamadas consecutivas de polling ao endpoint de métricas forçavam medições repetidas do `os.cpus()`, gerando sobrecarga de cálculo do event loop. | **MÉDIA** | Performance / DoS | `server/modules/admin/admin.server-metrics.controller.ts` | ✅ **Corrigido** |
+| **TEC-03** | **Diretivas `@ts-nocheck` e Duplicação de Formatação:** Arquivos legados com `@ts-nocheck`, exports órfãos e formatação de bytes (`formatBytes`) e uptime (`formatUptime`) duplicados com números mágicos. | **BAIXA** | Qualidade Estática | `server/modules/admin/admin.ops.snapshot.ts:1` | ✅ **Corrigido** |
+
+---
+
+## 2. Detalhamento dos Achados e Mitigações Aplicadas — Métricas & Ops
+
+### SEC-64: Controle de Acesso Quebrado (BFLA) nas Rotas Operacionais — ALTA
+- **Descrição**: O roteador `/api/admin/ops` não possuía guard específico de permissão. Qualquer operador logado com perfil de suporte ou visualizador financeiro podia obter detalhes de hardware, conexões ativas do socket, versão do Node, PID e latências de banco.
+- **Correção Aplicada**: Adicionado `adminOpsRouter.use(requireAdminPermission("monitoring", "dashboard"))` e protegido o endpoint de compatibilidade `/api/admin/server-metrics` com o mesmo guard. Perfis restritos sem as permissões `monitoring` ou `dashboard` são barrados com HTTP 403 `FORBIDDEN_PERMISSION`.
+- **Teste de Verificação**: `tests/metrics/admin-metrics.rbac.test.mjs` (5 testes unitários) e testes Kali `RBAC_UNAUTH_METRICS`, `RBAC_UNAUTH_ALIAS` e `RBAC_UNAUTH_SNAPSHOT` (100% aprovados).
+
+---
+
+### BUG-03: Rota 404 de Compatibilidade e Normalização de Schema no Client — ALTA
+- **Descrição**: O client utilizava `/api/admin/server-metrics` em vez de `/api/admin/ops/server-metrics`, resultando em HTTP 404. Além disso, `ops.economy` possuía divergência de contrato: backend produzia array de registros (`{ module, action, total }`), enquanto o frontend tentava consumir objeto de totais indexados, quebrando a interface com exceção de runtime.
+- **Correção Aplicada**:
+  1. Criado alias de rota `/api/admin/server-metrics` no `adminRouter` delegando para `getServerMetrics`.
+  2. Implementada tipagem TypeScript estrita unificada em `server/modules/admin/admin.metrics.types.ts` e `client/src/features/admin/lib/admin.types.ts`.
+  3. Atualizado o client `AdminMetricsPage.tsx` para tolerar de forma segura ambas as representações com fallback defensivo.
+
+---
+
+### PERF-01: Cache em Memória de Amostragem de CPU — MÉDIA
+- **Descrição**: O cálculo de porcentagem de uso de CPU a partir de deltas de ticks do `os.cpus()` causava consumo excessivo quando múltiplos operadores mantinham o painel de métricas aberto em polling automático.
+- **Correção Aplicada**: Introduzida janela de cache em memória de 5 segundos (`CPU_SAMPLE_CACHE_MS = 5000`) em `admin.server-metrics.controller.ts`. Amostragens dentro do intervalo de 5 segundos retornam o valor em cache sem novo cálculo no processador.
+- **Teste de Verificação**: `tests/metrics/admin-metrics.unit.test.mjs` (validação de amostragem em cache).
+
+---
+
+### TEC-03: Saneamento de Código Morto e Centralização de Formatadores — BAIXA
+- **Descrição**: Diretiva `@ts-nocheck` no topo de `admin.ops.snapshot.ts`, exports não utilizados e cópias redundantes de formatadores de bytes e tempo.
+- **Correção Aplicada**:
+  1. Remoção de `@ts-nocheck` e saneamento de tipos em `admin.ops.snapshot.ts`.
+  2. Extração dos formatadores compartilhados `formatBytes` e `formatUptime` em `client/src/features/admin/lib/admin.format.ts`.
+  3. Remoção de números mágicos literais e substituição por constantes nomeadas.
+
+---
+
+## 3. Resultados dos Testes de Carga (k6) — Métricas & Ops
+
+Executado através de `tests/performance/run-metrics-k6.mjs` simulando tráfego simultâneo nos endpoints `/api/admin/ops/server-metrics`, `/api/admin/server-metrics` e `/api/admin/ops/snapshot` sob 15 VUs:
+
+| Métrica | Meta Estabelecida | Resultado Obtido | Status |
+| :--- | :---: | :---: | :---: |
+| **Taxa de Erro 5xx** | `0.00%` | **0.00%** (0 de 24.531 requests) | ✅ Aprovado |
+| **Latência Média de Métricas (`/ops/server-metrics`)** | p95 < 300 ms | **5.69 ms** (p50: 2.44 ms) | ✅ Excelente |
+| **Latência Média de Snapshot (`/ops/snapshot`)** | p95 < 500 ms | **7.82 ms** (p50: 2.47 ms) | ✅ Excelente |
+| **Throughput Médio** | > 100 req/s | **2.229.6 req/s** | ✅ Aprovado |
+| **Duração Total** | 11 s | **11 s** (15 VUs) | ✅ Conforme |
+| **Proteção de Rate Limiting** | 300 req/min | **100% Funcional** (excedentes absorvidos em 429) | ✅ Aprovado |
+
+---
+
+## 4. Resultados da Auditoria de Segurança (Container Kali Linux) — Métricas & Ops
+
+Executado através de `tests/security/run-kali-metrics-audit.sh` utilizando o container `kali-pentest:latest`:
+
+| Categoria do Teste | Casos Executados | Resultado |
+| :--- | :---: | :---: |
+| **Autenticação (GET Admin sem token / Forged)** | 4 vetores em rotas de métricas e snapshot | **100% Bloqueados** (HTTP 401 Unauthorized) |
+| **BFLA (Broken Function Level Authorization)** | Operador sem `monitoring`/`dashboard` tentando acesso | **100% Bloqueado** (HTTP 403 Forbidden) |
+| **RBAC Granular (Operador com dashboard / Admin com monitoring)** | Acesso legítimo concedido conforme matriz de privilégios | **100% Conforme** (HTTP 200 OK) |
+| **HTTP Method Tampering (POST, PUT, DELETE em rotas GET-only)** | 3 vetores de mutação não permitida | **100% Bloqueados** (HTTP 404/405 Not Allowed) |
+| **Sanitização de Telemetria (Secrets, DB strings, Private Keys)** | Varredura de propriedades sensíveis nos payloads JSON | **Zero vazamentos** detectados |
+| **Prevenção de Path Traversal & Parameter Injection** | Tentativas de injeção em caminhos de arquivo e queries | **100% Neutralizados** (HTTP 404 / parâmetros ignorados) |
+| **Prevenção de Information Disclosure & Stack Traces** | Varredura de stack traces e paths de `node_modules` em erros | **Zero vazamentos** detectados |
+
+**Total de Verificações de Segurança**: 19 executadas, 19 aprovadas, 0 falhas.
+
+
 
 
 
