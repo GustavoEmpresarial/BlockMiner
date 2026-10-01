@@ -1,30 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Users, Pickaxe, Wallet, ArrowDownLeft, TrendingUp, Activity, AlertCircle, CheckCircle2 } from 'lucide-react';
-
-export type ExecutiveSummary = {
-  siteAgeDays: number;
-  usersTotal: number;
-  newUsersInPeriod: number;
-  newUsers24h: number;
-  activeMiners: number;
-  totalBlocks: number;
-  depositsTotal: number;
-  periodDeposits: number;
-  withdrawnTotal: number;
-  withdrawalCount: number;
-  balancesPol: number;
-  pendingPol: number;
-  pendingCount: number;
-  retentionPercent: number;
-  withdrawalDepositRatioPercent: number;
-  internalSpendPol: number;
-  avgWithdrawal: number;
-  miningEfficiencyPercent: number;
-  theoreticalDailyEmission: number;
-  empiricalDailyEmission: number;
-  deposits24h: number;
-  withdrawals24h: number;
-};
+import type { ExecutiveSummary } from './adminAnalytics.types';
+export type { ExecutiveSummary };
 
 function fmt(val: number, maxFrac = 2): string {
   return val.toLocaleString('pt-BR', { maximumFractionDigits: maxFrac });

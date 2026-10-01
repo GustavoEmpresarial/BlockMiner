@@ -1,166 +1,13 @@
 import type { LucideIcon } from 'lucide-react';
-
-export type PeriodKey = 'week' | 'month' | 'year';
-
-export type AnalyticsUserRef = {
-  id: number;
-  username?: string | null;
-  email?: string | null;
-};
-
-export type AnalyticsSummary = {
-  totalDistributed?: number;
-  periodDistributed?: number;
-  totalWithdrawals?: number;
-  periodWithdrawals?: number;
-  activeUsers?: number;
-  blockCount?: number;
-  totalBlocksEver?: number;
-  networkHashRate?: number;
-};
-
-export type AnalyticsForecast = {
-  userHashRate?: number;
-  sharePercent?: number;
-  day?: { pol?: number };
-  week?: { pol?: number };
-  month?: { pol?: number };
-  year?: { pol?: number };
-};
-
-export type ChartPoint = { label: string; value: number };
-export type DualChartPoint = { label: string; up: number; down: number };
-
-export type TopEarnerRow = {
-  userId: number;
-  username?: string | null;
-  total: number;
-};
-
-export type UserRecentBlockRow = {
-  id: number | string;
-  blockId?: number | null;
-  block?: {
-    blockNumber?: number | string | null;
-    reward?: number | null;
-  } | null;
-  rewardAmount: number;
-  percentage?: number | null;
-  createdAt: string | Date;
-};
-
-export type InflationResponse = {
-  ok?: boolean;
-  period?: PeriodKey;
-  polPrice?: number;
-  series: Array<{ label: string; distributed: number; withdrawn: number; net: number; cumulative: number }>;
-  totals: {
-    allTimeDistributed: number;
-    allTimeWithdrawn: number;
-    periodDistributed: number;
-    periodWithdrawn: number;
-    circulatingNet: number;
-    netInflationRatePercent: number;
-    avgDailyDistributed: number;
-    avgDailyWithdrawn: number;
-  };
-};
-
-export type ProjectionsResponse = {
-  ok?: boolean;
-  period?: PeriodKey;
-  polPrice?: number;
-  networkHashRate?: number;
-  userHashRate?: number | null;
-  sharePercent?: number | null;
-  theoretical: {
-    day1: number;
-    day7: number;
-    day30: number;
-    day90: number;
-    day365: number;
-  };
-  empirical: {
-    windowDays: number;
-    avgDaily: number;
-    avgDailyLast30?: number;
-    day7: number;
-    day30: number;
-    day90: number;
-  };
-  assumptions: {
-    blockRewardPol: number;
-    blocksPerDay: number;
-  };
-};
-
-export type WithdrawalsResponse = {
-  ok?: boolean;
-  period?: PeriodKey;
-  polPrice?: number;
-  stats: {
-    completedCount: number;
-    totalAmount: number;
-    avg: number;
-    median: number;
-    p90: number;
-    p99: number;
-    avgTimeToCompleteMs: number;
-    medianTimeToCompleteMs: number;
-  };
-  statusBreakdownPeriod: {
-    completed: number;
-    pending: number;
-    failed: number;
-    other: number;
-  };
-  series: Array<{ label: string; count: number; amount: number }>;
-};
-
-export type DistributionSourceItem = {
-  key: string;
-  label: string;
-  pol: number;
-  count: number;
-  sharePercent: number;
-};
-
-export type DistributionResponse = {
-  ok?: boolean;
-  period?: PeriodKey;
-  polPrice?: number;
-  sources: DistributionSourceItem[];
-  totalInflowFromSources: number;
-  depositsInflow: { key: string; label: string; pol: number; count: number };
-  outflows: Array<{ key: string; label: string; pol: number; count: number }>;
-  miningExpected?: {
-    siteAgeDays: number;
-    launchDate: string;
-    rewardBase: number;
-    blockDurationMinutes: number;
-    blocksPerDay: number;
-    efficiencyPercent: number;
-    expectedPol: number;
-    expectedBlocks: number;
-    actualPol: number;
-    actualBlocks: number;
-    missingPol: number;
-    missingBlocks: number;
-  };
-};
-
-export type WalletActivityPayload = {
-  wallets?: Array<{
-    label?: string | null;
-    address?: string;
-    summary?: { totalInPol?: number; totalInUsd?: number | null };
-  }>;
-};
+export type * from './adminAnalytics.types';
+import type { ChartPoint, DualChartPoint, PeriodKey } from './adminAnalytics.types';
 
 export const PERIOD_LABELS: Record<PeriodKey, string> = {
+  day: '24 horas',
   week: '7 dias',
   month: '30 dias',
   year: '12 meses',
+  all: 'Desde o início',
 };
 
 const COLOR_TEXT: Record<string, string> = {
@@ -287,13 +134,13 @@ export function MiniBarChart({
     );
   }
   const max = Math.max(...data.map((d) => d.value), 1e-6);
-  const bar = `bg-${color}-500/70 hover:bg-${color}-400`;
+  const colorClass = color === 'violet' ? 'bg-violet-500/70 hover:bg-violet-400' : 'bg-amber-500/70 hover:bg-amber-400';
   return (
     <div className="flex h-44 w-full items-end gap-0.5">
       {data.map((point, i) => (
         <div key={`${point.label}-${i}`} className="group relative flex flex-1 flex-col items-center gap-0">
           <div
-            className={`w-full cursor-default rounded-t transition-all ${bar}`}
+            className={`w-full cursor-default rounded-t transition-all ${colorClass}`}
             style={{ height: `${Math.max(3, (point.value / max) * 160)}px` }}
           />
           <div className="pointer-events-none absolute bottom-full z-20 mb-1 hidden flex-col items-center group-hover:flex">
