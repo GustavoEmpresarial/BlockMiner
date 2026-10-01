@@ -11,6 +11,8 @@ export type TrafficSummary = {
   periodRegs: number;
   conversionRate: number | null;
   days: number;
+  avgDailyHits?: number;
+  avgDailyRegs?: number;
 };
 
 export type TrafficByDomainRow = {
