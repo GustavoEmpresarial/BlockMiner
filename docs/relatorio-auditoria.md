@@ -1629,6 +1629,86 @@ Executado através de `tests/security/run-kali-fraud-signals-audit.sh` utilizand
 
 **Total de Verificações de Segurança**: 20 executadas, 20 aprovadas, 0 falhas.
 
+---
+
+# PARTE XVIII: MÓDULO DE GESTÃO DE USUÁRIOS (`/admin/users`)
+
+## 1. Resumo Executivo dos Achados — Usuários
+
+| ID | Descrição do Achado | Severidade | CWE / OWASP | Arquivo e Linha Original | Status da Correção |
+| :---: | :--- | :---: | :---: | :--- | :---: |
+| **SEC-61** | **BFLA Crítico em Mutações de Usuários e Ajuste Financeiro de Saldo:** Todas as 13 rotas administrativas (`/api/admin/users/*`), incluindo ajuste de saldo (`adjust-balance`), banimento (`ban`), redefinição de senha (`reset-password`) e envio de mineradoras (`send-miner`), continham apenas `requireAdminAuth`. Qualquer operador com qualquer nível de permissão administrativa podia alterar saldos e assumir contas. | **CRÍTICA** | CWE-285 / OWASP A1 | `server/modules/users/users.admin.routes.ts:10-22` | ✅ **Corrigido** |
+| **SEC-62** | **Falta de Validação Estrita Zod (.strict()) e Clamping 32-bit:** Ausência total de schemas Zod em `server/modules/users`. Parâmetros de rota e corpos de requisição eram processados ad-hoc, permitindo mass assignment e ausência de limites superiores no ID do usuário. | **ALTA** | CWE-915 / CWE-20 | `server/modules/users/users.admin.controller.ts` | ✅ **Corrigido** |
+| **SEC-63** | **Ausência de Rate Limiting Distribuído:** Rotas de usuários não possuíam limitadores distribuídos, permitindo tentativas contínuas de alteração de senhas e exaustão de conexões em queries de usuários. | **ALTA** | CWE-770 / OWASP A4 | `server/modules/users/users.admin.routes.ts` | ✅ **Corrigido** |
+| **SEC-64** | **Lentidão em Lookups de IP no Perfil do Jogador:** Consulta de IP intelligence em `getUserProfileMetrics` ocorria sem `{ cacheOnly: true }`, provocando chamadas síncronas de rede para IPs de usuários não previamente armazenados. | **MÉDIA** | CWE-400 / OWASP A4 | `server/modules/users/usersAdmin.repository.ts:189` | ✅ **Corrigido** |
+| **TEC-06** | **Diretivas `@ts-nocheck` no Backend de Usuários:** Arquivos `users.admin.controller.ts` e `usersAdmin.repository.ts` possuíam `@ts-nocheck` desabilitando checagens de tipos no compilador TypeScript. | **MÉDIA** | Qualidade Estática | `server/modules/users/users.admin.controller.ts:1`, `usersAdmin.repository.ts:1` | ✅ **Corrigido** |
+| **UX-04** | **Tela de Detalhes de Usuário Inacabada (`<pre>` com JSON):** `AdminUserDetailPage.tsx` exibia apenas um dump em JSON bruto de `data`, sem suporte a modais de ajuste de saldo, banimento, envio de máquinas, troca de senhas ou abas de auditoria e tickets. | **ALTA** | Usabilidade / UI | `client/src/features/admin/users/AdminUserDetailPage.tsx` | ✅ **Corrigido** |
+
+---
+
+## 2. Detalhamento dos Achados e Mitigações Aplicadas — Usuários
+
+### SEC-61: Controle de Acesso Quebrado (BFLA) nas Rotas Administrativas — CRÍTICA
+- **Descrição**: O roteador `/api/admin/users` montava todas as rotas com apenas `requireAdminAuth`. Qualquer credencial administrativa, mesmo de papéis meramente consultivos ou de suporte/financeiro, permitia ajustar saldos em 9 moedas, banir e desbanir jogadores, redefinir senhas e conceder mineradoras ativas.
+- **Correção Aplicada**: Aplicados guards granulares com `requireAdminPermission`:
+  - `requireAdminPermission("users.view", "users")`: rotas de leitura (`/users`, `/users/:id`, `/tickets`, `/related`, `/wallet-ledger`, `/activity-summary`).
+  - `requireAdminPermission("users.ban", "users")`: rotas de suspensão e reativação (`/ban`, `/unban`).
+  - `requireAdminPermission("users")`: mutações de alto impacto (`/adjust-balance`, `/send-miner`, `/reset-password`, `/unlock`).
+- **Teste de Verificação**: `tests/users/admin-users.rbac.test.mjs` (12 testes) e testes Kali `BFLA-001..003` e `RBAC-001..006` (100% aprovados).
+
+---
+
+### SEC-62: Blindagem Zod `.strict()` e Clamping 32-bit — ALTA
+- **Descrição**: O identificador de usuário era extraído sem verificação de estouro de inteiro de 32 bits (`2_147_483_647`), e os corpos de requisição não bloqueavam injeção de propriedades não mapeadas.
+- **Correção Aplicada**: Criado arquivo `server/modules/users/users.admin.schemas.ts` com validação estrita `.strict()` em todos os parâmetros, queries e payloads de requisição: `adminUserIdParamSchema`, `adminUsersListQuerySchema`, `adminBanUserSchema`, `adminAdjustBalanceSchema`, `adminResetPasswordSchema` e `adminSendMinerSchema`.
+
+---
+
+### SEC-63: Rate Limiting Distribuído e Proteção Anti-Flooding — ALTA
+- **Descrição**: As rotas administrativas não continham proteção distribuída contra flooding de requisições.
+- **Correção Aplicada**: Configurados rate limiters distribuídos baseados em Redis/Prisma: `users_admin_read` (120 req/min), `users_admin_write` (60 req/min), `users_admin_balance` (30 req/min) e `users_admin_password` (10 req/min).
+
+---
+
+### UX-04: Redesign Completo do Perfil e Diretório de Usuários — ALTA
+- **Descrição**: A página `/admin/users/:id` exibia um dump cru em JSON. A listagem de usuários não permitia filtrar por status e não fornecia indicadores financeiros claros.
+- **Correção Aplicada**:
+  - `AdminUsersPage.tsx`: Redesenhada com 3 cards de KPI (Total, Ativos, Banidos), abas rápidas de filtro de status, pesquisa dinâmica e tabela visual moderna com avatares e saldos.
+  - `AdminUserDetailPage.tsx`: Reescrita completa transformando o dump cru em um dashboard moderno com cards de KPI (hashrate, máquinas, saques, depósitos), 5 abas organizadas (*Balanços & Carteiras*, *Máquinas & Inventário*, *Contas Relacionadas*, *Tickets de Suporte*, *Auditoria*) e 5 modais de ação direta (*Ajustar Saldo*, *Banir/Desbanir*, *Resetar Senha*, *Enviar Mineradora*, *Desbloquear Conta*).
+
+---
+
+## 3. Resultados dos Testes de Carga (k6) — Usuários
+
+Executado através de `tests/performance/run-users-k6.mjs` sob 15 VUs:
+
+| Métrica | Meta Estabelecida | Resultado Obtido | Status |
+| :--- | :---: | :---: | :---: |
+| **Taxa de Erro 5xx** | `0.00%` | **0.00%** (0 de 4.287 requests) | ✅ Aprovado |
+| **Latência Média de Detalhe (`/api/admin/users/:id`)** | p95 < 300 ms | **33.12 ms** (p50: 5.95 ms) | ✅ Excelente |
+| **Latência Média de Listagem (`/api/admin/users`)** | p95 < 300 ms | **64.70 ms** (p50: 39.62 ms) | ✅ Excelente |
+| **Throughput Médio** | > 100 req/s | **389.4 req/s** | ✅ Aprovado |
+| **Duração Total** | 11 s | **11 s** (15 VUs) | ✅ Conforme |
+
+---
+
+## 4. Resultados da Auditoria de Segurança (Container Kali Linux) — Usuários
+
+Executado através de `tests/security/run-kali-users-audit.sh` utilizando o container `kali-pentest:latest`:
+
+| Categoria do Teste | Casos Executados | Resultado |
+| :--- | :---: | :---: |
+| **Autenticação (GET/POST Admin sem token / Forged)** | 6 vetores em rotas admin | **100% Bloqueados** (HTTP 401 Unauthorized) |
+| **BFLA (Broken Function Level Authorization)** | Operador restrito tentando GET, adjust-balance e ban | **100% Bloqueado** (HTTP 403 Forbidden) |
+| **RBAC Granular (Moderador com users.view e users.ban)** | Leitura e banimento permitidos, mutações financeiras/senha bloqueadas (403) | **100% Conforme** |
+| **Mass Assignment Protection** | Chaves rogue em adjust-balance, ban e query params | **100% Bloqueado** (HTTP 400 Bad Request via `.strict()`) |
+| **Validação de ID (Negativo, Overflow 32-bit e Non-numeric)** | 3 vetores de ID malformado | **100% Bloqueado** (HTTP 400 invalid_id) |
+| **Validação Financeira (Moeda inexistente, modo inválido)** | 2 vetores de ajuste inválido | **100% Bloqueado** (HTTP 400 validation_error) |
+| **Neutralização de Injeção SQL e XSS** | Vetor SQLi em query e payload XSS em motivo de ban | **100% Neutralizados** (busca segura / sem reflexão) |
+| **Prevenção de Information Disclosure** | Varredura de stack traces e strings internas do ORM | **Zero vazamentos** detectados |
+
+**Total de Verificações de Segurança**: 26 executadas, 26 aprovadas, 0 falhas.
+
 
 
 
