@@ -12,7 +12,7 @@ const log = logger.child("AdminOpsRoutes");
 export const adminOpsRouter = express.Router();
 
 // Live CPU/RAM/disk from the Node process host — real numbers via os module.
-adminOpsRouter.get("/server-metrics", (req: Request, res: Response) => getServerMetrics(req, res));
+adminOpsRouter.get("/server-metrics", getServerMetrics);
 adminOpsRouter.get("/snapshot", async (_req: Request, res: Response) => {
     try {
         const snapshot = await buildOpsSnapshot();
