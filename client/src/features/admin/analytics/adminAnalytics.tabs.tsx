@@ -133,9 +133,9 @@ export function OverviewTab(props: {
                     <td className="py-2 px-2 font-mono text-slate-400">#{r.block?.blockNumber ?? r.blockId}</td>
                     <td className="py-2 px-2 font-black text-amber-400">{Number(r.rewardAmount).toFixed(8)}</td>
                     <td className="py-2 px-2 text-slate-400">{polPrice > 0 ? `$${(Number(r.rewardAmount) * polPrice).toFixed(6)}` : "--"}</td>
-                    <td className="py-2 px-2 text-slate-400">{Number(r.percentage).toFixed(2)}%</td>
+                    <td className="py-2 px-2 text-slate-400">{Number(r.percentage ?? 0).toFixed(2)}%</td>
                     <td className="py-2 px-2 text-right text-slate-600">
-                      {new Date(r.createdAt).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                      {r.createdAt ? new Date(r.createdAt).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "--"}
                     </td>
                   </tr>
                 ))}
@@ -238,7 +238,7 @@ export function RewardSourcesTab(props: { data: DistributionResponse | null; pol
 }
 
 // ---------- Inflation Tab ----------
-export function InflationTab({ data, polPrice, isLoading }: { data: InflationResponse | null; polPrice: number; isLoading: boolean }) {
+function InflationTab({ data, polPrice, isLoading }: { data: InflationResponse | null; polPrice: number; isLoading: boolean }) {
   if (isLoading || !data) return <div className="h-64 bg-slate-900 border border-slate-800 rounded-2xl animate-pulse" />;
   const dual = data.series.map(s => ({ label: s.label, up: s.distributed, down: s.withdrawn }));
   const cumulative = data.series.map(s => ({ label: s.label, value: s.cumulative }));
@@ -297,7 +297,7 @@ export function ProjectionsTab({ data, polPrice, isLoading, selectedUser }: { da
         </div>
         <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Empírica (média real últimos 30 dias)</p>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <ForecastCard label="Média diária" pol={fmtPol(data.empirical.avgDailyLast30, 4)} usdVal={fmtUsdLong(data.empirical.avgDailyLast30, polPrice)} />
+          <ForecastCard label="Média diária" pol={fmtPol(data.empirical.avgDailyLast30 ?? data.empirical.avgDaily, 4)} usdVal={fmtUsdLong(data.empirical.avgDailyLast30 ?? data.empirical.avgDaily, polPrice)} />
           <ForecastCard label="7 dias" pol={fmtPol(data.empirical.day7, 4)} usdVal={fmtUsd(data.empirical.day7, polPrice)} />
           <ForecastCard label="30 dias" pol={fmtPol(data.empirical.day30, 2)} usdVal={fmtUsd(data.empirical.day30, polPrice)} highlight />
           <ForecastCard label="90 dias" pol={fmtPol(data.empirical.day90, 2)} usdVal={fmtUsd(data.empirical.day90, polPrice)} />
@@ -308,7 +308,7 @@ export function ProjectionsTab({ data, polPrice, isLoading, selectedUser }: { da
 }
 
 // ---------- Withdrawals Tab ----------
-export function WithdrawalsTab({ data, polPrice, isLoading, periodLabel }: { data: WithdrawalsResponse | null; polPrice: number; isLoading: boolean; periodLabel: string }) {
+function WithdrawalsTab({ data, polPrice, isLoading, periodLabel }: { data: WithdrawalsResponse | null; polPrice: number; isLoading: boolean; periodLabel: string }) {
   if (isLoading || !data) return <div className="h-64 bg-slate-900 border border-slate-800 rounded-2xl animate-pulse" />;
   const chartAmount: ChartPoint[] = data.series.map(s => ({ label: s.label, value: s.amount }));
   return (
@@ -350,7 +350,7 @@ export function WithdrawalsTab({ data, polPrice, isLoading, periodLabel }: { dat
 }
 
 // ---------- Distribution Tab ----------
-export function DistributionTab({ data, polPrice, isLoading, periodLabel }: { data: DistributionResponse | null; polPrice: number; isLoading: boolean; periodLabel: string }) {
+function DistributionTab({ data, polPrice, isLoading, periodLabel }: { data: DistributionResponse | null; polPrice: number; isLoading: boolean; periodLabel: string }) {
   if (isLoading || !data) return <div className="h-64 bg-slate-900 border border-slate-800 rounded-2xl animate-pulse" />;
   const me = data.miningExpected;
   return (
@@ -442,7 +442,7 @@ export function DistributionTab({ data, polPrice, isLoading, periodLabel }: { da
 
 
 
-export function DepositsTab({
+function DepositsTab({
   data, loading, onRefresh, polPrice = 0,
 }: {
   data: WalletActivityPayload | null;

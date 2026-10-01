@@ -38,44 +38,101 @@ export type TopEarnerRow = {
 };
 
 export type UserRecentBlockRow = {
-  blockNumber?: number | string;
-  rewardAmount?: number;
-  createdAt?: string;
+  id: number | string;
+  blockId?: number | null;
+  block?: {
+    blockNumber?: number | string | null;
+    reward?: number | null;
+  } | null;
+  rewardAmount: number;
+  percentage?: number | null;
+  createdAt: string | Date;
 };
 
 export type InflationResponse = {
+  ok?: boolean;
+  period?: PeriodKey;
   polPrice?: number;
-  series: Array<{ label: string; distributed: number; withdrawn: number; cumulative: number }>;
+  series: Array<{ label: string; distributed: number; withdrawn: number; net: number; cumulative: number }>;
   totals: {
+    allTimeDistributed: number;
+    allTimeWithdrawn: number;
+    periodDistributed: number;
+    periodWithdrawn: number;
     circulatingNet: number;
-    totalDistributed: number;
-    totalWithdrawn: number;
+    netInflationRatePercent: number;
     avgDailyDistributed: number;
+    avgDailyWithdrawn: number;
   };
 };
 
 export type ProjectionsResponse = {
+  ok?: boolean;
+  period?: PeriodKey;
   polPrice?: number;
   networkHashRate?: number;
-  userHashRate?: number;
-  sharePercent?: number;
-  day?: { pol?: number };
-  week?: { pol?: number };
-  month?: { pol?: number };
-  year?: { pol?: number };
+  userHashRate?: number | null;
+  sharePercent?: number | null;
+  theoretical: {
+    day1: number;
+    day7: number;
+    day30: number;
+    day90: number;
+    day365: number;
+  };
+  empirical: {
+    windowDays: number;
+    avgDaily: number;
+    avgDailyLast30?: number;
+    day7: number;
+    day30: number;
+    day90: number;
+  };
+  assumptions: {
+    blockRewardPol: number;
+    blocksPerDay: number;
+  };
 };
 
 export type WithdrawalsResponse = {
+  ok?: boolean;
+  period?: PeriodKey;
   polPrice?: number;
+  stats: {
+    completedCount: number;
+    totalAmount: number;
+    avg: number;
+    median: number;
+    p90: number;
+    p99: number;
+    avgTimeToCompleteMs: number;
+    medianTimeToCompleteMs: number;
+  };
+  statusBreakdownPeriod: {
+    completed: number;
+    pending: number;
+    failed: number;
+    other: number;
+  };
   series: Array<{ label: string; count: number; amount: number }>;
-  totals?: { count?: number; amount?: number };
+};
+
+export type DistributionSourceItem = {
+  key: string;
+  label: string;
+  pol: number;
+  count: number;
+  sharePercent: number;
 };
 
 export type DistributionResponse = {
+  ok?: boolean;
+  period?: PeriodKey;
   polPrice?: number;
-  series: Array<{ label: string; value: number; valueUsd?: number }>;
-  totals?: { amount?: number };
-  bySource?: Array<{ source: string; amount: number }>;
+  sources: DistributionSourceItem[];
+  totalInflowFromSources: number;
+  depositsInflow: { key: string; label: string; pol: number; count: number };
+  outflows: Array<{ key: string; label: string; pol: number; count: number }>;
   miningExpected?: {
     siteAgeDays: number;
     launchDate: string;
