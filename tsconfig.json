@@ -18,6 +18,7 @@
     "allowJs": false,
     "types": ["node", "express"],
     "noEmit": false,
+    "noEmitOnError": false,
     "sourceMap": true
   },
   "include": ["server/**/*.ts"],
