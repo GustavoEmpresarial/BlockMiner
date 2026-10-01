@@ -24,6 +24,8 @@ import { backupsAdminRouter } from "./admin.backups.routes.js";
 import { fraudSignalsAdminRouter } from "./admin.fraud-signals.routes.js";
 import { adminOpsRouter } from "./admin.ops.routes.js";
 import { adminLogsRouter } from "./admin.logs.routes.js";
+import { getServerMetrics } from "./admin.server-metrics.controller.js";
+import { requireAdminPermission } from "./admin.permissions.js";
 
 export const adminRouter = express.Router();
 
@@ -59,6 +61,9 @@ adminRouter.post("/change-password", changeOwnPasswordHandler);
 
 // Overview
 adminRouter.get("/admin-overview", adminOverviewHandler);
+
+// Metrics aliases for direct compatibility
+adminRouter.get("/server-metrics", requireAdminPermission("monitoring", "dashboard"), getServerMetrics);
 
 // Sub-routers (bootstrap-adjacent, ops)
 adminRouter.use("/backups", backupsAdminRouter);

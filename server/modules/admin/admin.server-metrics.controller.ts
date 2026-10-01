@@ -128,6 +128,6 @@ export async function getServerMetrics(_req: Request, res: Response): Promise<vo
     });
   } catch (error: unknown) {
     log.error("getServerMetrics failed", { error: errMsg(error) });
-    res.status(500).json({ ok: false, message: "Unable to load server metrics." });
+    res.status(500).json({ ok: false, code: "SERVER_METRICS_ERROR", message: "Unable to load server metrics." });
   }
 }
