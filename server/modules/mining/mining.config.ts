@@ -79,11 +79,15 @@ export function nextAlignedBoundary(now, intervalMs) {
 /** P2002 on the unique `block_number` — the block is already committed, not a real failure. */
 export function isDuplicateBlockError(error) {
     const code = error?.code;
-    if (code !== "P2002")
+    const message = String(error?.message ?? error ?? "");
+    if (code !== "P2002" && !message.includes("Unique constraint failed"))
         return false;
     const target = error?.meta?.target;
     const fields = Array.isArray(target) ? target.join(",") : String(target ?? "");
-    return fields.includes("block_number") || fields.includes("blockNumber");
+    if (fields.includes("block_number") || fields.includes("blockNumber"))
+        return true;
+    // Prisma 7 often omits meta.target and only names the column in the message.
+    return message.includes("block_number") || message.includes("blockNumber");
 }
 export function readBoundedIntegerEnv(name, fallback, minimum, maximum) {
     const value = Number(process.env[name] ?? fallback);

@@ -15,6 +15,7 @@ const logger = rootLogger.child("MiningService");
 /** Process-wide engine singleton. One MiningEngine per Node process, same as legacy. */
 export const engine = new MiningEngine();
 let bootstrapped = false;
+let bootstrapInFlight = null;
 engine.setProfileLoader(async (userId) => {
     try {
         return await miningRepo.getOrCreateMinerProfile(userId);
@@ -83,22 +84,36 @@ async function syncEngineMiners() {
         logger.error("Failed to sync engine miners", { error: error instanceof Error ? error.message : String(error) });
     }
 }
-/** Boots block-number continuity from the DB. Call once at process startup (bootstrap/server.ts wires this). */
-export async function bootstrapEngine() {
+/**
+ * Boots block-number continuity from the DB. Call once at process startup (bootstrap/server.ts wires this).
+ *
+ * The max block number is committed BEFORE the heavy history read. On 2026-10-02 a failed
+ * history load aborted this function first, left `blockNumber` at the constructor default (1),
+ * and every later settlement collided with ancient `block_distributions.block_number` rows.
+ * Those writes rolled back, so the dashboard showed DB and a personal reward of 0.
+ * `bootstrapped` stays false until the max read succeeds, so the mining tick can retry.
+ */
+export function bootstrapEngine() {
     if (bootstrapped)
-        return;
-    bootstrapped = true;
-    try {
-        const blocks = await miningRepo.loadRecentBlocks(12);
-        engine.blockHistory = blocks;
+        return Promise.resolve();
+    if (bootstrapInFlight)
+        return bootstrapInFlight;
+    bootstrapInFlight = (async () => {
         const currentMax = await miningRepo.loadMaxBlockNumber();
         engine.blockNumber = currentMax + 1;
+        bootstrapped = true;
         logger.info("Engine bootstrap complete", { currentMax, nextBlock: engine.blockNumber });
+        try {
+            engine.blockHistory = await miningRepo.loadRecentBlocks(12);
+        }
+        catch (error) {
+            logger.error("Failed to load recent block history", { error: error instanceof Error ? error.message : String(error) });
+        }
         await syncEngineMiners();
-    }
-    catch (error) {
-        logger.error("Failed to bootstrap mining engine", { error: error instanceof Error ? error.message : String(error) });
-    }
+    })().finally(() => {
+        bootstrapInFlight = null;
+    });
+    return bootstrapInFlight;
 }
 /** Gets (or lazily creates) the in-memory miner for a user, loading its DB profile first. */
 export async function getOrCreateEngineMinerForUser(userId) {
@@ -237,5 +252,16 @@ export async function adminRunBlockCycle() {
 }
 /** Called by cron (mining.cron.ts, wired in a later integration pass) once per tick interval. */
 export async function runEngineTick() {
+    if (!bootstrapped) {
+        try {
+            await bootstrapEngine();
+        }
+        catch (error) {
+            logger.error("Failed to bootstrap mining engine", { error: error instanceof Error ? error.message : String(error) });
+            return;
+        }
+    }
+    if (!bootstrapped)
+        return;
     await engine.tickAsync();
 }
