@@ -125,7 +125,7 @@ existentes continuam disparando; agora eles são precedidos por um log estrutura
 ### 3.4c Modal de Taxa de Energia Pendente (`DashboardEnergyTaxModal`)
 
 O componente `DashboardEnergyTaxModal.tsx` exibe um aviso modal quando o usuário logado possui dias em aberto de taxa de energia nesta semana (`unpaidDays > 0` e `active === true`):
-- **Montagem via Portal**: Renderizado via `createPortal(..., document.body)` com `z-[100]`. Isso elimina o aprisionamento no containing block de `DashboardPage` (que possui animações CSS), garantindo que o backdrop escureça e desfoque a viewport inteira (incluindo o header desktop `z-30` e a topbar mobile `z-40`), sem deixar faixas nítidas no topo.
+- **Montagem via Portal**: Renderizado via `createPortal(..., document.body)` com `ENERGY_TAX_MODAL_Z_INDEX = 'z-[9999]'`. Isso elimina o aprisionamento no containing block de `DashboardPage` (que possui animações CSS), garantindo que o backdrop escureça e desfoque a viewport inteira (incluindo o header desktop `z-30` e a topbar mobile `z-40`), sem deixar faixas nítidas no topo.
 - **Ciclo de Vida e Scroll Lock**: Ao abrir, trava a rolagem do `document.body` (`overflow: hidden`) preservando a largura do viewport sem causar layout shift; restaura o scroll original ao fechar ou desmontar.
 - **Acessibilidade (a11y)**: Configurado com `role="dialog"`, `aria-modal="true"`, `aria-labelledby` para o título e `aria-describedby` para o subtítulo descritivo. Suporta fechamento pela tecla `Escape` e botão de fechar acessível (`aria-label`).
 - **Regras de Negócio e Cotas**:

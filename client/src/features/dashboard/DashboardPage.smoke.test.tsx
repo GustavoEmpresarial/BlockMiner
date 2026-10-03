@@ -485,7 +485,7 @@ describe('DashboardPage — balance currency switch', () => {
     // O modal deve estar montado em document.body via portal
     const dialog = await screen.findByRole('dialog');
     expect(document.body).toContainElement(dialog);
-    expect(dialog).toHaveClass('fixed', 'inset-0', 'z-[100]');
+    expect(dialog).toHaveClass('fixed', 'inset-0', 'z-[9999]');
 
     // O título e o botão de pagar aparecem no DOM
     expect(screen.getByText('Taxa de Energia pendente')).toBeInTheDocument();

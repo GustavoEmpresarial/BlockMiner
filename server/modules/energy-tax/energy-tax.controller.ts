@@ -19,6 +19,17 @@ const log = logger.child("energy-tax.controller");
 const SUMMARY_TTL_MS = 45_000;
 const summaryCache = new Map<number, { at: number; data: Awaited<ReturnType<typeof energyTaxService.computeWeekSummary>> }>();
 
+let computeWeekSummaryFn = energyTaxService.computeWeekSummary;
+let payDailyTaxFn = energyTaxService.payDailyTax;
+
+export const _summaryCacheForTests = summaryCache;
+export function _setComputeWeekSummaryForTests(fn?: typeof energyTaxService.computeWeekSummary): void {
+  computeWeekSummaryFn = fn || energyTaxService.computeWeekSummary;
+}
+export function _setPayDailyTaxForTests(fn?: typeof energyTaxService.payDailyTax): void {
+  payDailyTaxFn = fn || energyTaxService.payDailyTax;
+}
+
 function invalidateSummary(userId: number): void {
   summaryCache.delete(userId);
 }
@@ -33,7 +44,7 @@ export async function getSummary(req: Request, res: Response): Promise<void> {
       res.json({ ok: true, ...cached.data });
       return;
     }
-    const summary = await energyTaxService.computeWeekSummary(user.id);
+    const summary = await computeWeekSummaryFn(user.id);
     summaryCache.set(user.id, { at: now, data: summary });
     if (summaryCache.size > 5000) {
       for (const [k, v] of Array.from(summaryCache.entries())) {
@@ -52,7 +63,7 @@ export async function postPayDaily(req: Request, res: Response): Promise<void> {
   if (!user) return;
   try {
     const currency = parseTaxPayCurrency(req.body?.currency);
-    const charge = await energyTaxService.payDailyTax(user.id, currency);
+    const charge = await payDailyTaxFn(user.id, currency);
     invalidateSummary(user.id);
     res.json({ ok: true, charge, currency });
   } catch (err) {

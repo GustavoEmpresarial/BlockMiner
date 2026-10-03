@@ -15,6 +15,20 @@ import {
   type TaxPayCurrency,
 } from '../../taxes/lib/taxPayCurrency';
 
+/**
+ * Canonical Z-Index for Dashboard Energy Tax Modal.
+ * Positioned at 9,999 in the project's layered stacking scale:
+ *  - 0..40: Shell (Header sticky z-30, Mobile Topbar/Nav fixed z-40)
+ *  - 100..200: Standard in-page feature modals (BannersCarousel, machines.slotModal) and dropdowns
+ *  - 9,999: System blocking modals (DashboardEnergyTaxModal, RootErrorBoundary)
+ *  - 10,000..10,050: Tooltips & floating selectors (machines.tooltip, SwapPanel)
+ *  - 99,999: Global Broadcast announcements (BroadcastPopup, AdminBroadcastPage)
+ *  - 2,147,483,000: BmCaptchaModal (anti-bot security challenge)
+ * Mounted via createPortal into document.body to escape the containing block
+ * created by DashboardPage's CSS animations (animate-in fade-in).
+ */
+export const ENERGY_TAX_MODAL_Z_INDEX = 'z-[9999]';
+
 type EnergySummary = {
   active: boolean;
   unpaidDays: number;
@@ -173,7 +187,7 @@ export default function DashboardEnergyTaxModal() {
       aria-modal="true"
       aria-labelledby="energy-tax-modal-title"
       aria-describedby="energy-tax-modal-description"
-      className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto overscroll-contain animate-in fade-in duration-200"
+      className={`fixed inset-0 ${ENERGY_TAX_MODAL_Z_INDEX} flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto overscroll-contain animate-in fade-in duration-200`}
       onClick={() => setOpen(false)}
       data-testid="energy-tax-modal-backdrop"
     >
@@ -237,7 +251,7 @@ export default function DashboardEnergyTaxModal() {
             </div>
             <div className="text-left sm:text-right shrink-0">
               <span className="font-mono font-extrabold text-amber-400 text-base sm:text-lg tracking-tight block drop-shadow-[0_0_6px_rgba(251,191,36,0.3)]">
-                {summary ? formatTaxPayAmount(quote?.amount ?? summary.todayDailyCharge, payCurrency) : '…'}
+                {formatTaxPayAmount(quote?.amount ?? summary?.todayDailyCharge ?? 0, payCurrency)}
               </span>
             </div>
           </div>
@@ -253,17 +267,15 @@ export default function DashboardEnergyTaxModal() {
               </p>
             </div>
             <span className="font-mono font-semibold text-slate-400 text-xs sm:text-sm shrink-0 sm:text-right">
-              {summary ? formatPol6(summary.fullRateTax) : '…'}
+              {formatPol6(summary?.fullRateTax ?? 0)}
             </span>
           </div>
 
           {/* 7-Day Rewards Stat */}
-          {summary ? (
-            <div className="rounded-xl border border-slate-800/80 bg-slate-950/40 px-3 py-2 flex items-center justify-between text-xs text-slate-400">
-              <span>{t('dashboard.energy_mined_7d')}</span>
-              <span className="font-mono font-medium text-slate-300">{formatPol6(summary.totalRewards7d)}</span>
-            </div>
-          ) : null}
+          <div className="rounded-xl border border-slate-800/80 bg-slate-950/40 px-3 py-2 flex items-center justify-between text-xs text-slate-400">
+            <span>{t('dashboard.energy_mined_7d')}</span>
+            <span className="font-mono font-medium text-slate-300">{formatPol6(summary?.totalRewards7d ?? 0)}</span>
+          </div>
         </div>
 
         {/* Currency Picker */}
@@ -303,7 +315,7 @@ export default function DashboardEnergyTaxModal() {
               {paying ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
               {payLabel}
             </button>
-          ) : summary && !summary.todayExempt && quote && !quote.affordable ? (
+          ) : quote && !quote.affordable ? (
             <div className="text-center rounded-xl border border-red-500/30 bg-red-950/30 py-2.5 px-3">
               <p className="text-xs font-semibold text-red-300">
                 {t('taxes.pay_insufficient', { currency: payCurrency })}

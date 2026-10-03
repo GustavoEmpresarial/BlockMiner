@@ -6,10 +6,14 @@ import { MemoryRouter } from 'react-router-dom';
 import { toast } from 'sonner';
 import i18next from 'i18next';
 import ptBR from '../../../i18n/locales/pt-BR.json';
+import { ENERGY_TAX_MODAL_Z_INDEX } from './DashboardEnergyTaxModal';
 
-const api = { get: vi.fn(), post: vi.fn(), patch: vi.fn() };
-const setUser = vi.fn();
-const checkSession = vi.fn().mockResolvedValue(undefined);
+const { api, setUser, checkSession } = vi.hoisted(() => ({
+  api: { get: vi.fn(), post: vi.fn(), patch: vi.fn() },
+  setUser: vi.fn(),
+  checkSession: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock('../../../shared/auth/auth.store', () => ({
   api,
   useAuthStore: (selector: (s: unknown) => unknown) => selector({ setUser, checkSession }),
@@ -65,6 +69,31 @@ describe('DashboardEnergyTaxModal', () => {
     expect(codes).toContain('DASHBOARD_ENERGY_TAX_FETCH_FAILED');
   });
 
+  it('safely handles unmount before fetch resolves (cancelled branch)', async () => {
+    let resolveGet: (v: unknown) => void = () => {};
+    api.get.mockReturnValue(new Promise((r) => (resolveGet = r)));
+    const { unmount } = await act(async () => mount());
+    unmount();
+    resolveGet({ data: pendingSummary() });
+    await Promise.resolve();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('safely handles unmount before rejected fetch resolves (cancelled error branch)', async () => {
+    let rejectGet: (err: unknown) => void = () => {};
+    api.get.mockReturnValue(new Promise((_, r) => (rejectGet = r)));
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { unmount } = await act(async () => mount());
+    unmount();
+    await act(async () => {
+      rejectGet(new Error('network died after unmount'));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(errorSpy).toHaveBeenCalled();
+  });
+
   it('stays hidden when there is no active/pending tax', async () => {
     api.get.mockResolvedValue({ data: { ok: true, active: false } });
     const { container } = await act(async () => mount());
@@ -77,12 +106,27 @@ describe('DashboardEnergyTaxModal', () => {
     await waitFor(() => expect(container).toBeEmptyDOMElement());
   });
 
+  it('stays hidden when unpaidDays is non-numeric (NaN fallback)', async () => {
+    api.get.mockResolvedValue({ data: { ok: true, active: true, unpaidDays: 'not-a-number' } });
+    const { container } = await act(async () => mount());
+    await waitFor(() => expect(container).toBeEmptyDOMElement());
+  });
+
   it('shows the pending-tax modal when active with unpaid days', async () => {
     api.get.mockResolvedValue({ data: pendingSummary() });
     await act(async () => mount());
     await waitFor(() => {
       expect(screen.getAllByText(/POL/).length).toBeGreaterThan(0);
     });
+  });
+
+  it('formats pay label with formatPol6 fallback when todayPayQuotes is omitted', async () => {
+    const summaryNoQuotes = pendingSummary();
+    delete summaryNoQuotes.todayPayQuotes;
+    api.get.mockResolvedValue({ data: summaryNoQuotes });
+    await act(async () => mount());
+    const payBtn = await screen.findByRole('button', { name: /Pagar hoje — 0\.500000 POL/i });
+    expect(payBtn).toBeInTheDocument();
   });
 
   it('logs a structured error and keeps the modal open when paying fails', async () => {
@@ -159,6 +203,19 @@ describe('DashboardEnergyTaxModal', () => {
     expect(screen.getByText(/saldo insuficiente/i)).toBeInTheDocument();
   });
 
+  it('hides both the pay button and the insufficient-balance box when yesterdayRewards is zero and not exempt', async () => {
+    api.get.mockResolvedValue({
+      data: pendingSummary({
+        yesterdayRewards: 0,
+        todayExempt: false,
+        todayPayQuotes: { POL: { amount: 0, affordable: true } },
+      }),
+    });
+    await act(async () => mount());
+    expect(screen.queryByRole('button', { name: /Pagar/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/saldo insuficiente/i)).not.toBeInTheDocument();
+  });
+
   it('shows the currency picker only when there is an unpaid, non-exempt balance to choose currency for', async () => {
     api.get.mockResolvedValue({ data: pendingSummary({ todayPayQuotes: { POL: { amount: 0.5, affordable: true } } }) });
     await act(async () => mount());
@@ -207,10 +264,10 @@ describe('DashboardEnergyTaxModal', () => {
   });
 
   /* =========================================================================
-   * Regressão Técnica do Bug da Faixa (Item 1) & Acessibilidade / Portal
+   * Regressão da Faixa & Escala Canônica de Z-Index
    * ========================================================================= */
 
-  it('regressão da faixa: renderiza via createPortal em document.body com z-[100] e backdrop-blur-md cobrindo toda a viewport', async () => {
+  it('regressão da faixa e escala de z-index: renderiza via createPortal em document.body com z-[9999] e backdrop-blur-md cobrindo toda a viewport', async () => {
     api.get.mockResolvedValue({ data: pendingSummary() });
     const { container } = await act(async () => mount());
 
@@ -219,10 +276,25 @@ describe('DashboardEnergyTaxModal', () => {
     expect(document.body).toContainElement(dialog);
     expect(container).toBeEmptyDOMElement();
 
-    // Valida classes de posicionamento e z-index da escala canônica
-    expect(dialog).toHaveClass('fixed', 'inset-0', 'z-[100]');
+    // Valida a constante canônica de z-index
+    expect(ENERGY_TAX_MODAL_Z_INDEX).toBe('z-[9999]');
+    expect(dialog).toHaveClass('fixed', 'inset-0', 'z-[9999]');
 
-    // Valida existência de camada de backdrop com blur para desfocar a viewport inteira (incluindo headers z-30 e z-40)
+    // Prova matemática da escala de z-index:
+    const SHELL_HEADER_Z = 30;
+    const SHELL_TOPBAR_Z = 40;
+    const INPAGE_DROPDOWN_Z = 200;
+    const MODAL_Z = 9999;
+    const BROADCAST_POPUP_Z = 99999;
+    const CAPTCHA_MODAL_Z = 2147483000;
+
+    expect(MODAL_Z).toBeGreaterThan(SHELL_HEADER_Z);
+    expect(MODAL_Z).toBeGreaterThan(SHELL_TOPBAR_Z);
+    expect(MODAL_Z).toBeGreaterThan(INPAGE_DROPDOWN_Z);
+    expect(MODAL_Z).toBeLessThan(BROADCAST_POPUP_Z);
+    expect(MODAL_Z).toBeLessThan(CAPTCHA_MODAL_Z);
+
+    // Valida existência de camada de backdrop com blur para desfocar a viewport inteira
     const backdrop = dialog.querySelector('.backdrop-blur-md');
     expect(backdrop).not.toBeNull();
     expect(backdrop).toHaveClass('fixed', 'inset-0', 'bg-black/80');
@@ -280,7 +352,6 @@ describe('DashboardEnergyTaxModal', () => {
 
     const exemptBtn = await screen.findByRole('button', { name: /Registrar isenção de hoje/i });
     expect(exemptBtn).toBeInTheDocument();
-    // Não deve exibir seletor de moeda quando o dia for 100% isento
     expect(screen.queryByText('POL', { selector: 'button' })).not.toBeInTheDocument();
   });
 

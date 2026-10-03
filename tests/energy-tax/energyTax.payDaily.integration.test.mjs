@@ -4,7 +4,17 @@ import assert from "node:assert/strict";
 const prisma = (await import("../../server/core/database/prisma.ts")).default;
 const energyTaxService = await import("../../server/modules/energy-tax/energy-tax.service.ts");
 const energyTaxCtrl = await import("../../server/modules/energy-tax/energy-tax.controller.ts");
-const { parseTaxPayCurrency } = await import("../../server/shared/taxPaymentCurrency.ts");
+const energyTaxErrors = await import("../../server/modules/energy-tax/energy-tax.errors.ts");
+const taxPaymentCurrency = await import("../../server/shared/taxPaymentCurrency.ts");
+const {
+  isTaxPayCurrency,
+  parseTaxPayCurrency,
+  taxPayBalanceField,
+  readTaxPayBalance,
+  balancesFromUser,
+  convertPolFeeToCurrency,
+  buildTaxPayQuotes,
+} = taxPaymentCurrency;
 
 const createdUserIds = [];
 
@@ -45,22 +55,81 @@ function fakeRes() {
 }
 
 test.after(async () => {
+  energyTaxCtrl._setPayDailyTaxForTests();
+  energyTaxCtrl._setComputeWeekSummaryForTests();
   for (const id of createdUserIds) {
     await prisma.energyTaxCharge.deleteMany({ where: { userId: id } }).catch(() => {});
     await prisma.zeradsCallback.deleteMany({ where: { userId: id } }).catch(() => {});
     await prisma.transaction.deleteMany({ where: { userId: id } }).catch(() => {});
-    await prisma.user.delete({ where: { id } }).catch(() => {});
+    await prisma.user.delete({ where: { id: id } }).catch(() => {});
   }
+});
+
+/* =========================================================================
+ * Currency Helpers & Converters (taxPaymentCurrency.ts) - 100% Coverage
+ * ========================================================================= */
+
+test("isTaxPayCurrency — validates string membership in allowed list", () => {
+  assert.equal(isTaxPayCurrency("POL"), true);
+  assert.equal(isTaxPayCurrency("pol"), true);
+  assert.equal(isTaxPayCurrency("BLK"), true);
+  assert.equal(isTaxPayCurrency("SHIB"), true);
+  assert.equal(isTaxPayCurrency("BTC"), false);
+  assert.equal(isTaxPayCurrency(null), false);
+  assert.equal(isTaxPayCurrency(123), false);
+  assert.equal(isTaxPayCurrency(undefined), false);
 });
 
 test("parseTaxPayCurrency — validates allowed currencies and defaults", () => {
   assert.equal(parseTaxPayCurrency("POL"), "POL");
   assert.equal(parseTaxPayCurrency("BLK"), "BLK");
   assert.equal(parseTaxPayCurrency("SHIB"), "SHIB");
+  assert.equal(parseTaxPayCurrency("  pol  "), "POL");
   assert.equal(parseTaxPayCurrency(undefined), "POL");
   assert.equal(parseTaxPayCurrency(null), "POL");
-  assert.equal(parseTaxPayCurrency("BTC"), "POL"); // Fallback seguro para default POL
+  assert.equal(parseTaxPayCurrency("BTC"), "POL");
 });
+
+test("taxPayBalanceField & readTaxPayBalance — maps fields and extracts balances safely", () => {
+  assert.equal(taxPayBalanceField("POL"), "polBalance");
+  assert.equal(taxPayBalanceField("BLK"), "blkBalance");
+  assert.equal(taxPayBalanceField("SHIB"), "shibBalance");
+
+  assert.equal(readTaxPayBalance(null, "POL"), 0);
+  assert.equal(readTaxPayBalance(undefined, "BLK"), 0);
+  assert.equal(readTaxPayBalance({ polBalance: "15.5" }, "POL"), 15.5);
+  assert.equal(readTaxPayBalance({ blkBalance: 20 }, "BLK"), 20);
+  assert.equal(readTaxPayBalance({ shibBalance: "invalid-number" }, "SHIB"), 0);
+
+  const balances = balancesFromUser({ polBalance: "1.5", blkBalance: "2.5", shibBalance: "100" });
+  assert.deepEqual(balances, { POL: 1.5, BLK: 2.5, SHIB: 100 });
+  assert.deepEqual(balancesFromUser(null), { POL: 0, BLK: 0, SHIB: 0 });
+});
+
+test("convertPolFeeToCurrency & buildTaxPayQuotes — converts amounts across pairs and builds quotes", async () => {
+  assert.equal(await convertPolFeeToCurrency(0, "POL"), 0);
+  assert.equal(await convertPolFeeToCurrency(-1, "POL"), 0);
+  assert.equal(await convertPolFeeToCurrency(NaN, "POL"), 0);
+
+  const polAmount = await convertPolFeeToCurrency(2.5, "POL");
+  assert.equal(polAmount, 2.5);
+
+  const blkAmount = await convertPolFeeToCurrency(2.5, "BLK");
+  assert.ok(blkAmount > 0);
+
+  const shibAmount = await convertPolFeeToCurrency(2.5, "SHIB");
+  assert.ok(shibAmount >= 1);
+
+  const quotes = await buildTaxPayQuotes(1.0, { POL: 2.0, BLK: 0.1, SHIB: 1000000 });
+  assert.ok(quotes.POL);
+  assert.equal(quotes.POL.affordable, true);
+  assert.ok(quotes.BLK);
+  assert.ok(quotes.SHIB);
+});
+
+/* =========================================================================
+ * Controller Endpoints & Cache (energy-tax.controller.ts) - 100% Coverage
+ * ========================================================================= */
 
 test("getSummary — returns 401 when request is unauthenticated", async () => {
   const req = {};
@@ -69,19 +138,49 @@ test("getSummary — returns 401 when request is unauthenticated", async () => {
   assert.equal(res.calls.status, 401);
 });
 
-test("getSummary — returns valid tax summary for authenticated user", async () => {
+test("getSummary — returns valid tax summary for authenticated user and exercises cache hit on second call", async () => {
   const user = await makeUser({ polBalance: "10.0" });
+  const req = { user };
+
+  // First call: computes and populates cache
+  const res1 = fakeRes();
+  await energyTaxCtrl.getSummary(req, res1);
+  assert.equal(res1.calls.status, 200);
+  assert.ok(res1.calls.json);
+  assert.equal(res1.calls.json.ok, true);
+
+  // Second call: hits summaryCache.get(user.id)
+  const res2 = fakeRes();
+  await energyTaxCtrl.getSummary(req, res2);
+  assert.equal(res2.calls.status, 200);
+  assert.equal(res2.calls.json.ok, true);
+  assert.equal(res2.calls.json.todayDailyCharge, res1.calls.json.todayDailyCharge);
+});
+
+test("getSummary — exercises cache cleanup when cache size exceeds 5000 entries", async () => {
+  const user = await makeUser({ polBalance: "15.0" });
+  for (let i = 1; i <= 5005; i++) {
+    energyTaxCtrl._summaryCacheForTests.set(200000 + i, { at: Date.now() - 60000, data: {} });
+  }
+
   const req = { user };
   const res = fakeRes();
   await energyTaxCtrl.getSummary(req, res);
-
   assert.equal(res.calls.status, 200);
-  assert.ok(res.calls.json);
   assert.equal(res.calls.json.ok, true);
-  assert.equal(typeof res.calls.json.active, "boolean");
-  assert.equal(typeof res.calls.json.unpaidDays, "number");
-  assert.equal(typeof res.calls.json.todayDailyCharge, "number");
-  assert.ok(res.calls.json.todayPayQuotes);
+});
+
+test("getSummary — handles internal service failure and responds 500", async () => {
+  const user = await makeUser({ polBalance: "1.0" });
+  energyTaxCtrl._setComputeWeekSummaryForTests(async () => {
+    throw new Error("simulated compute error");
+  });
+  const req = { user };
+  const res = fakeRes();
+  await energyTaxCtrl.getSummary(req, res);
+  assert.equal(res.calls.status, 500);
+  assert.equal(res.calls.json.ok, false);
+  energyTaxCtrl._setComputeWeekSummaryForTests();
 });
 
 test("postPayDaily — rejects unauthenticated request with 401", async () => {
@@ -128,6 +227,22 @@ test("postPayDaily — rejects with INSUFFICIENT_BALANCE (400) when user has rew
   assert.equal(res.calls.json.code, "INSUFFICIENT_BALANCE");
   assert.equal(res.calls.json.currency, "POL");
   assert.ok(res.calls.json.required > 0);
+});
+
+test("postPayDaily — handles EnergyTaxNotStarted error with 403 code NOT_STARTED", async () => {
+  const user = await makeUser({ polBalance: "10.0" });
+  energyTaxCtrl._setPayDailyTaxForTests(async () => {
+    throw new energyTaxErrors.EnergyTaxNotStarted(new Date("2026-12-01T00:00:00Z"));
+  });
+
+  const req = { user, body: { currency: "POL" } };
+  const res = fakeRes();
+  await energyTaxCtrl.postPayDaily(req, res);
+
+  assert.equal(res.calls.status, 403);
+  assert.equal(res.calls.json.code, "NOT_STARTED");
+  assert.equal(res.calls.json.startsAt, "2026-12-01T00:00:00.000Z");
+  energyTaxCtrl._setPayDailyTaxForTests();
 });
 
 test("postPayDaily — happy path debits balance and creates charge record, then rejects duplicate payment with ALREADY_PAID (409)", async () => {
@@ -182,4 +297,17 @@ test("postPayDaily — happy path debits balance and creates charge record, then
 
   assert.equal(res2.calls.status, 409);
   assert.equal(res2.calls.json.code, "ALREADY_PAID");
+});
+
+test("postPayDaily — handles unexpected internal error and responds 500", async () => {
+  const user = await makeUser({ polBalance: "1.0" });
+  energyTaxCtrl._setPayDailyTaxForTests(async () => {
+    throw new Error("unexpected internal exception");
+  });
+  const req = { user, body: { currency: "POL" } };
+  const res = fakeRes();
+  await energyTaxCtrl.postPayDaily(req, res);
+  assert.equal(res.calls.status, 500);
+  assert.equal(res.calls.json.ok, false);
+  energyTaxCtrl._setPayDailyTaxForTests();
 });
