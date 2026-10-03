@@ -265,7 +265,7 @@ const TREE = D('blockminer/ (current/)', 'core',
           F('index.ts', 'Fronteira pública — sempre transações em <code>$transaction</code>.'),
           F('README.md', 'Contrato de cada endpoint, moedas suportadas, invariantes financeiras, desvios documentados.'),
         ]),
-        domainModule('swap/', 'money', '<span class="badge ok" style="display:inline-block;margin-bottom:8px">✅ IMPLEMENTADO</span><br>Troca entre moedas internas (POL/SHIB/USDC). <b>Fase 2 — concluída</b>.', [
+        domainModule('swap/', 'money', '<span class="badge ok" style="display:inline-block;margin-bottom:8px">✅ IMPLEMENTADO</span><br>Troca unidirecional interna (POL/SHIB → BLK). <b>Fase 2 — concluída</b>.', [
           F('swap.controller.ts',''), F('swap.service.ts','executeSwapForUser em $transaction.'), F('swap.repository.ts',''), F('swap.routes.ts','Zod .strict().'), F('index.ts',''),
         ]),
         domainModule('transparency/', 'money', '<span class="badge ok" style="display:inline-block;margin-bottom:8px">✅ IMPLEMENTADO</span><br>Tracking público de carteiras on-chain (CRUD via Postgres real). <b>Fase 2 — concluída</b>. Busca de atividade on-chain ao vivo (Etherscan-style) e snapshot periódico ficam stub/adiados (dependem de RPC/cron, fora de escopo).', [

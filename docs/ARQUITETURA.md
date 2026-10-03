@@ -541,6 +541,27 @@ Mas **não transforme isso em 50 módulos automaticamente**.
 
 Um módulo deve existir porque existe uma **fronteira funcional real**.
 
+### 6.1 Módulo Swap (`server/modules/swap/`)
+
+O módulo de **Swap** gerencia a conversão interna unidirecional de ativos de mineração sacáveis (`POL` e `SHIB`) para a moeda de utilidade interna `BLK` (onde 1 BLK ≈ US$ 1.00).
+
+- **Estrutura interna**:
+  ```text
+  swap/
+  ├── swap.pairs.ts        # Regras de pares puros e imutáveis (POL->BLK, SHIB->BLK)
+  ├── swap.routes.ts       # Rotas Express com rate limiter e Zod schema strict
+  ├── swap.controller.ts   # Orquestração HTTP e mapeamento de erros estáveis
+  ├── swap.service.ts      # Cálculo de cotações, fallbacks conservadores e invalidação de cache
+  ├── swap.repository.ts   # Transações Prisma com lock pessimista (FOR UPDATE) e gravação no ledger
+  └── index.ts             # Fachada do módulo e exportação de tipos
+  ```
+- **Invariantes e Fronteira de Confiança**:
+  1. *Unidirecionalidade estrita*: `BLK` nunca pode ser convertido de volta para ativos sacáveis (`BLK → POL`, `BLK → SHIB`). Swaps cruzados (`POL ↔ USDC`, `POL ↔ SHIB`) são proibidos.
+  2. *Autoridade de Cotação*: O cliente nunca estipula a taxa nem o montante a receber. O cálculo é realizado exclusivamente pelo servidor com base no oráculo compartilhado `cryptoPrice` ou taxas de fallback conservadoras nomeadas (`SWAP_FALLBACK_POL_USD = 0.09`, `SWAP_FALLBACK_SHIB_USD = 0.0000055`).
+  3. *Concorrência Segura*: O repositório adquire trava pessimista na linha do usuário (`SELECT id FROM users WHERE id = ${userId} FOR UPDATE`) dentro da `$transaction` para serializar requisições concorrentes e impedir double-spending ou saldo negativo.
+  4. *Invalidação Imediata de Cache*: Ao confirmar a transação, `invalidateBalanceCache(userId)` e `invalidateAuthUserCache(userId)` são invocados síncronamente para que leituras subsequentes de `/api/wallet/balance` retornem o saldo atualizado sem atraso.
+  5. *Ledger Contábil*: Inserção atômica na tabela `transactions` com `type: 'swap'` e `status: 'completed'` registrando volume, cotação e valor em BLK recebido.
+
 ---
 
 ## 7. Admin
