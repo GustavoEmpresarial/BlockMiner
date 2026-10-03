@@ -339,40 +339,47 @@ export async function payDailyTax(
   const debitAmount = await convertPolFeeToCurrency(amountPol, currency);
   const debitDec = new Prisma.Decimal(debitAmount.toFixed(8));
 
-  const result = await prisma.$transaction(async (tx) => {
-    const user = await energyTaxRepo.findUserTaxBalancesTx(tx, userId);
-    if (!user) throw new Error("User not found");
-    const balance = balancesFromUser(user)[currency];
-    if (balance < debitAmount) {
-      throw new EnergyTaxInsufficientBalance(debitAmount, balance, currency);
-    }
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const user = await energyTaxRepo.findUserTaxBalancesTx(tx, userId);
+      if (!user) throw new Error("User not found");
+      const balance = balancesFromUser(user)[currency];
+      if (balance < debitAmount) {
+        throw new EnergyTaxInsufficientBalance(debitAmount, balance, currency);
+      }
 
-    const transaction = await energyTaxRepo.createTaxTransactionTx(tx, userId, debitDec, currency);
-    await energyTaxRepo.decrementUserBalanceTx(tx, userId, currency, debitDec);
+      const transaction = await energyTaxRepo.createTaxTransactionTx(tx, userId, debitDec, currency);
+      await energyTaxRepo.decrementUserBalanceTx(tx, userId, currency, debitDec);
 
-    const notes =
-      currency === "POL"
-        ? null
-        : `paidCurrency=${currency};debit=${debitAmount};polEquivalent=${amountPol}`;
+      const notes =
+        currency === "POL"
+          ? null
+          : `paidCurrency=${currency};debit=${debitAmount};polEquivalent=${amountPol}`;
 
-    const charge = await energyTaxRepo.createChargeTx(tx, {
-      userId,
-      periodDayStartsAt: taxedDay,
-      mode: "daily",
-      rewardsBase: new Prisma.Decimal(rewards.toFixed(8)),
-      ratePercent: new Prisma.Decimal((DAILY_PER_DAY_RATE * 100).toFixed(4)),
-      amount: amountPolDec,
-      status: "paid",
-      notes,
-      transactionId: transaction.id,
+      const charge = await energyTaxRepo.createChargeTx(tx, {
+        userId,
+        periodDayStartsAt: taxedDay,
+        mode: "daily",
+        rewardsBase: new Prisma.Decimal(rewards.toFixed(8)),
+        ratePercent: new Prisma.Decimal((DAILY_PER_DAY_RATE * 100).toFixed(4)),
+        amount: amountPolDec,
+        status: "paid",
+        notes,
+        transactionId: transaction.id,
+      });
+      return charge;
     });
-    return charge;
-  });
 
-  // NOTE: legacy also called applyUserBalanceDelta(userId, -amount) here to sync
-  // the in-memory mining engine — see file header, mining/ doesn't exist yet.
-  await checkAndUpdateEnergyBlock(userId);
-  return result;
+    // NOTE: legacy also called applyUserBalanceDelta(userId, -amount) here to sync
+    // the in-memory mining engine — see file header, mining/ doesn't exist yet.
+    await checkAndUpdateEnergyBlock(userId);
+    return result;
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      throw new EnergyTaxAlreadyPaid();
+    }
+    throw err;
+  }
 }
 
 /** Clears the legacy `energyBlocked` flag if still set. Does not block mining. */

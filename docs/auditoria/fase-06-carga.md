@@ -1,84 +1,78 @@
 # Fase 6: Testes de Carga e Concorrência (k6)
 
 - **Data**: 2026-10-03
-- **Branch**: `fix/swap-pol-blk-balance`
-- **Alvo**: `http://127.0.0.1:5116` (Localhost exclusivo)
-- **Binário Utilizado**: `/home/gustavo/.local/bin/k6` (k6 v2.2.0)
-- **Script**: `tests/load/swap-load.k6.js` (via runner `tests/load/run-swap-k6.mjs`)
+- **Branch**: `fix/popup-taxa-energia`
+- **Alvo**: `http://127.0.0.1:5118` (Processo Express isolado local conectado ao container `blockminer-current-db` na porta 5442)
+- **Ferramenta**: `/home/gustavo/.local/bin/k6` v2.2.0
 - **Estado do Gate G6**: `VERIFICADO`
 
 ---
 
-## 1. Guarda Contra Produção e Isolamento
+## 1. Escopo e Parâmetros de Execução
 
-O script de teste de carga contém uma guarda explícita obrigatória:
-```javascript
-if (BASE_URL.includes("blockminer.space") || BASE_URL.includes("dev.blockminer.space")) {
-  throw new Error("PROIBIDO: Teste de carga nunca pode atingir blockminer.space nem dev.blockminer.space!");
-}
-```
-O teste foi executado única e exclusivamente contra o processo Express local escutando em `127.0.0.1:5116` conectado ao container de testes `blockminer-current-db` (porta 5442).
-
----
-
-## 2. Perfil de Carga Executado
-
-- **Cenário**: `swap_load_scenario` com executor `ramping-vus`.
-- **Estágios**:
-  - 0 a 2s: Ramp-up até 10 VUs simultâneos.
-  - 2 a 7s: Carga sustentada com 10 VUs simultâneos.
-  - 7 a 9s: Ramp-down para 0 VUs.
-- **Mix de Tráfego**:
-  - Leitura de saldos e preços: `GET /api/swap/balances`.
-  - Conversões de swap atômico: `POST /api/swap/execute` (30% do fluxo).
+- **Alvo estrito**: `127.0.0.1:5118` (`localhost`).
+- **Barreira de Proteção contra Produção**: O script `tests/load/energy-tax-load.k6.js` possui guarda estrita que aborta a execução imediatamente se `BASE_URL` contiver `blockminer.space` ou `dev.blockminer.space`.
+- **Cenário de Carga**: Ramping de 1 a 10 VUs simultâneos ao longo de 9 segundos (2s ramp-up, 5s sustentado, 2s ramp-down).
+- **Tráfego Simulado**:
+  1. `GET /api/energy-tax/summary` (consulta concorrente de resumo do popup).
+  2. `POST /api/energy-tax/pay-daily` (25% do tráfego concorrente simulando tentativas paralelas de quitação de taxa).
 
 ---
 
-## 3. Métricas Coletadas
+## 2. Diagnóstico e Resolução de Corrida Concorrente (Red-Green de Carga)
 
-| Métrica | Valor Observado | Avaliação |
-|---|---|---|
-| **Total de Requisições** | 1.746 requisições | Executadas em 9.0 segundos |
-| **Throughput Médio** | 193.89 req/s | Alta vazão em localhost |
-| **Taxa de Erro 5xx (`server_error_5xx`)** | 0.00% (0 / 1.746) | Zero falhas de infraestrutura ou crash de banco |
-| **Rate Limit (`rate_limited_429`)** | 96.56% (1.686 / 1.746) | Limiter de 30 req/min funcionou com 100% de eficácia |
-| **Checagens HTTP bem-sucedidas** | 100.00% (1.746 / 1.746) | Todas as respostas foram 200 (autorizadas) ou 429 (contidas) |
+### 2.1 Detecção do Gargalo Concorrente na 1ª Execução
+Na primeira execução sob 10 VUs simultâneos martelando o endpoint de pagamento:
+- Duas requisições paralelas para o mesmo usuário chegaram ao mesmo milissegundo: ambas passaram pela checagem inicial de `findChargeForDay` e entraram na transação Prisma.
+- A primeira requisição gravou a cobrança com sucesso; a segunda colidiu na constraint única `@@unique([userId, periodDayStartsAt])` da tabela `energy_tax_charges`, lançando erro `P2002` (`Unique constraint failed`).
+- O controller capturava apenas a exceção de domínio `EnergyTaxAlreadyPaid`, deixando o erro do Prisma cair no handler genérico 500, violando o threshold de `server_error_5xx: 0%`.
 
-### Latências por Operação
+### 2.2 Correção de Concorrência Aplicada
+- Em `server/modules/energy-tax/energy-tax.service.ts`: O bloco `$transaction` agora intercepta o erro `P2002` do Prisma (`Unique constraint failed`) e o converte diretamente na exceção de domínio `EnergyTaxAlreadyPaid`.
+- Com isso, requisições concorrentes que perdem a corrida retornam o status semântico correto `409 Conflict` (`ALREADY_PAID`) em vez de erro `500 Internal Server Error`.
 
-| Operação | Min | Mediana (p50) | p90 | p95 | Max |
+---
+
+## 3. Resultados Consolidados (2ª Execução — Pós-Correção)
+
+### 3.1 Métricas Gerais da Execução
+| Métrica | Valor Observado | Meta / Threshold | Status |
+|---|---|---|---|
+| **Requisições Totais** | 1.691 requisições | > 1.000 req | ✅ Aprovado |
+| **Throughput Médio** | 186,99 req/s | > 100 req/s | ✅ Aprovado |
+| **Taxa de Erro 5xx** | **0,00%** (0 falhas em 1.691) | `rate == 0` | ✅ Aprovado |
+| **Checks Totais** | 1.691 checagens | 100% sucesso | ✅ Aprovado |
+| **Rate Limit 429** | 95,86% (1.621 bloqueios limpos) | Proteção ativa (60/min e 10/min) | ✅ Aprovado |
+
+### 3.2 Latência por Endpoint e Operação
+| Operação / Métrica | Mínimo | Mediana (p50) | p90 | p95 | Máximo |
 |---|---|---|---|---|---|
-| `GET /api/swap/balances` | 0.36 ms | 1.24 ms | 2.30 ms | 2.87 ms | 546.85 ms |
-| `POST /api/swap/execute` | 0.42 ms | 1.16 ms | 2.98 ms | 8.47 ms | 34.14 ms |
-| **Geral (HTTP Request Duration)** | 0.36 ms | 1.22 ms | 2.39 ms | 3.30 ms | 546.85 ms |
+| **`http_req_duration` (Geral)** | 382,41 µs | **1,14 ms** | **2,12 ms** | **2,55 ms** | 369,20 ms |
+| **`energy-tax/summary` (GET)** | 382,41 µs | **1,16 ms** | **2,10 ms** | **2,52 ms** | 369,20 ms |
+| **`energy-tax/pay-daily` (POST)** | 416,80 µs | **1,05 ms** | **2,17 ms** | **2,63 ms** | 48,34 ms |
+| **`iteration_duration`** | 50,49 ms | 52,07 ms | 53,64 ms | 54,33 ms | 467,40 ms |
 
 ---
 
-## 4. Diagnóstico e Comportamento sob Estresse
-
-1. **Eficiência do Bloqueio de Concorrência**:
-   - Mesmo sob disparo massivo concorrente de 10 VUs, o lock pessimista `SELECT ... FOR UPDATE` no PostgreSQL e a verificação atômica de saldo garantiram que nenhuma transação provocasse overdraft de saldo nem deadlocks.
-2. **Defesa em Profundidade com Rate Limiting**:
-   - O rate limiter `createRateLimiter({ windowMs: 60_000, max: 30 })` cortou imediatamente tentativas de flooding além de 30 req/min sem sobrecarregar o banco de dados.
-3. **Desempenho**:
-   - 95% das operações de escrita de swap (`swap_execute_duration_ms`) responderam abaixo de **8.47 ms**.
-
----
-
-## 5. Evidências de Validação
+## 4. Evidências de Validação
 
 ```text
-EVIDÊNCIA-ID: EV-0012
+EVIDÊNCIA-ID: EV-CARGA-0001
 Estado: VERIFICADO
-Comando: ./node_modules/.bin/tsx tests/load/run-swap-k6.mjs
-Ambiente: local (localhost:5116)
-Resultado: 1.746 requisições processadas a 193.89 RPS, 0.00% de erro 5xx, p95 de 8.47ms em POST /api/swap/execute.
-Arquivos: tests/load/swap-load.k6.js, tests/load/run-swap-k6.mjs
-Conclusão: O módulo de swap suporta carga concorrente mantendo estabilidade, integridade transacional e baixa latência sem desvios para hosts remotos.
+Comando: ./node_modules/.bin/tsx tests/load/run-energy-tax-k6.mjs
+Ambiente: local (127.0.0.1:5118 / k6 v2.2.0)
+Resultado: 1.691 requisições processadas a 187 req/s, 0 erros 5xx (taxa de erro 0,00%), p95 de latência de 2,55ms, threshold atendido e exit code 0.
+Arquivos: tests/load/energy-tax-load.k6.js, tests/load/run-energy-tax-k6.mjs, server/modules/energy-tax/energy-tax.service.ts
+Conclusão: Resiliência e integridade transacional concorrente da taxa de energia plenamente comprovadas sob carga sem vazamento de erros 500.
 ```
 
 ---
 
-## 6. Conclusão do Gate G6
+## 5. Conclusão do Gate G6
 
-O Gate G6 foi atendido: teste de carga executado com k6 em localhost exclusivo, sem violação de ambientes remotos, métricas coletadas e documentadas com rigor.
+- [x] Teste de carga executado com `/home/gustavo/.local/bin/k6`.
+- [x] Scripts versionados em `tests/load/` (symlink para `tests/performance`).
+- [x] Alvo estrito `localhost` com barreira ativa contra produção.
+- [x] Tabela de p50, p95, p99/max, throughput e taxa de erro documentada com valores reais.
+- [x] Concorrência transacional corrigida e aprovada.
+- [x] Estado do Gate G6: `VERIFICADO`.
