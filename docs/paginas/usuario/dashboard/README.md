@@ -122,6 +122,19 @@ Códigos usados:
 Não há mudança de UX/toast para o usuário final além do que já existia — os `toast.error`
 existentes continuam disparando; agora eles são precedidos por um log estruturado.
 
+### 3.4c Modal de Taxa de Energia Pendente (`DashboardEnergyTaxModal`)
+
+O componente `DashboardEnergyTaxModal.tsx` exibe um aviso modal quando o usuário logado possui dias em aberto de taxa de energia nesta semana (`unpaidDays > 0` e `active === true`):
+- **Montagem via Portal**: Renderizado via `createPortal(..., document.body)` com `z-[100]`. Isso elimina o aprisionamento no containing block de `DashboardPage` (que possui animações CSS), garantindo que o backdrop escureça e desfoque a viewport inteira (incluindo o header desktop `z-30` e a topbar mobile `z-40`), sem deixar faixas nítidas no topo.
+- **Ciclo de Vida e Scroll Lock**: Ao abrir, trava a rolagem do `document.body` (`overflow: hidden`) preservando a largura do viewport sem causar layout shift; restaura o scroll original ao fechar ou desmontar.
+- **Acessibilidade (a11y)**: Configurado com `role="dialog"`, `aria-modal="true"`, `aria-labelledby` para o título e `aria-describedby` para o subtítulo descritivo. Suporta fechamento pela tecla `Escape` e botão de fechar acessível (`aria-label`).
+- **Regras de Negócio e Cotas**:
+  - Pagamento diário opcional com desconto de 5% semana (fórmula: `0,7143%/dia × 7 dias = 5% total`), contra 15% no fechamento automático semanal de segunda-feira.
+  - Exibição de total minerado nos últimos 7 dias.
+  - Seletor de moeda de quitação (`POL`, `BLK`, `SHIB`) com verificação dinâmica de saldo (`affordable`).
+  - Dica de isenção de 100% da taxa diária ao completar 10 atividades diárias na plataforma.
+  - Ações: "Pagar hoje" (`POST /api/energy-tax/pay-daily`), link para a página completa de taxas (`/taxes`) e botão "Lembrar depois" que encerra o modal nesta visualização sem marcar como quitado.
+
 ### 3.4 Segurança — pontos verificados
 
 - **IDOR**: nenhum endpoint chamado por este módulo aceita um id de usuário vindo do client
