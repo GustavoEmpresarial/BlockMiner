@@ -16,19 +16,9 @@ const log = logger.child("energy-tax.controller");
 // In-memory per-user cache. computeWeekSummary fires ~40-60 queries (aggregates
 // rewards per day over large tables). Result barely changes second to second, so
 // serve from a short-TTL cache and invalidate on payment.
-const SUMMARY_TTL_MS = 45_000;
+const SUMMARY_TTL_MS = Number(process.env.ENERGY_TAX_SUMMARY_CACHE_TTL_MS || 45_000);
+const SUMMARY_CACHE_MAX_ENTRIES = Number(process.env.ENERGY_TAX_SUMMARY_CACHE_MAX || 5000);
 const summaryCache = new Map<number, { at: number; data: Awaited<ReturnType<typeof energyTaxService.computeWeekSummary>> }>();
-
-let computeWeekSummaryFn = energyTaxService.computeWeekSummary;
-let payDailyTaxFn = energyTaxService.payDailyTax;
-
-export const _summaryCacheForTests = summaryCache;
-export function _setComputeWeekSummaryForTests(fn?: typeof energyTaxService.computeWeekSummary): void {
-  computeWeekSummaryFn = fn || energyTaxService.computeWeekSummary;
-}
-export function _setPayDailyTaxForTests(fn?: typeof energyTaxService.payDailyTax): void {
-  payDailyTaxFn = fn || energyTaxService.payDailyTax;
-}
 
 function invalidateSummary(userId: number): void {
   summaryCache.delete(userId);
@@ -44,9 +34,9 @@ export async function getSummary(req: Request, res: Response): Promise<void> {
       res.json({ ok: true, ...cached.data });
       return;
     }
-    const summary = await computeWeekSummaryFn(user.id);
+    const summary = await energyTaxService.computeWeekSummary(user.id);
     summaryCache.set(user.id, { at: now, data: summary });
-    if (summaryCache.size > 5000) {
+    if (summaryCache.size > SUMMARY_CACHE_MAX_ENTRIES) {
       for (const [k, v] of Array.from(summaryCache.entries())) {
         if (now - v.at >= SUMMARY_TTL_MS) summaryCache.delete(k);
       }
@@ -63,7 +53,7 @@ export async function postPayDaily(req: Request, res: Response): Promise<void> {
   if (!user) return;
   try {
     const currency = parseTaxPayCurrency(req.body?.currency);
-    const charge = await payDailyTaxFn(user.id, currency);
+    const charge = await energyTaxService.payDailyTax(user.id, currency);
     invalidateSummary(user.id);
     res.json({ ok: true, charge, currency });
   } catch (err) {

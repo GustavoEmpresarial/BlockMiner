@@ -129,12 +129,38 @@ export default function DashboardEnergyTaxModal() {
     }
   }, [visible, open]);
 
-  // Handle ESC key press to close modal
+  // Handle ESC key press to close modal and Tab / Shift+Tab focus trap
   useEffect(() => {
     if (!visible || !open) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setOpen(false);
+        return;
+      }
+      if (e.key === 'Tab') {
+        const card = modalCardRef.current;
+        if (!card) return;
+        const focusableElements = card.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        );
+        const focusable = Array.from(focusableElements).filter(
+          (el) => !el.hasAttribute('disabled'),
+        );
+        if (!focusable.length) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+
+        if (e.shiftKey) {
+          if (document.activeElement === first || !card.contains(document.activeElement)) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (document.activeElement === last || !card.contains(document.activeElement)) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);

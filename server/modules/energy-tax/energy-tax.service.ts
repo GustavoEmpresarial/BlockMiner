@@ -339,8 +339,9 @@ export async function payDailyTax(
   const debitAmount = await convertPolFeeToCurrency(amountPol, currency);
   const debitDec = new Prisma.Decimal(debitAmount.toFixed(8));
 
+  let result;
   try {
-    const result = await prisma.$transaction(async (tx) => {
+    result = await prisma.$transaction(async (tx) => {
       const user = await energyTaxRepo.findUserTaxBalancesTx(tx, userId);
       if (!user) throw new Error("User not found");
       const balance = balancesFromUser(user)[currency];
@@ -369,17 +370,17 @@ export async function payDailyTax(
       });
       return charge;
     });
-
-    // NOTE: legacy also called applyUserBalanceDelta(userId, -amount) here to sync
-    // the in-memory mining engine — see file header, mining/ doesn't exist yet.
-    await checkAndUpdateEnergyBlock(userId);
-    return result;
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
       throw new EnergyTaxAlreadyPaid();
     }
     throw err;
   }
+
+  // NOTE: legacy also called applyUserBalanceDelta(userId, -amount) here to sync
+  // the in-memory mining engine — see file header, mining/ doesn't exist yet.
+  await checkAndUpdateEnergyBlock(userId);
+  return result;
 }
 
 /** Clears the legacy `energyBlocked` flag if still set. Does not block mining. */

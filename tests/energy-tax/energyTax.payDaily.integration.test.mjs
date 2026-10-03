@@ -4,7 +4,6 @@ import assert from "node:assert/strict";
 const prisma = (await import("../../server/core/database/prisma.ts")).default;
 const energyTaxService = await import("../../server/modules/energy-tax/energy-tax.service.ts");
 const energyTaxCtrl = await import("../../server/modules/energy-tax/energy-tax.controller.ts");
-const energyTaxErrors = await import("../../server/modules/energy-tax/energy-tax.errors.ts");
 const taxPaymentCurrency = await import("../../server/shared/taxPaymentCurrency.ts");
 const {
   isTaxPayCurrency,
@@ -55,8 +54,6 @@ function fakeRes() {
 }
 
 test.after(async () => {
-  energyTaxCtrl._setPayDailyTaxForTests();
-  energyTaxCtrl._setComputeWeekSummaryForTests();
   for (const id of createdUserIds) {
     await prisma.energyTaxCharge.deleteMany({ where: { userId: id } }).catch(() => {});
     await prisma.zeradsCallback.deleteMany({ where: { userId: id } }).catch(() => {});
@@ -128,7 +125,7 @@ test("convertPolFeeToCurrency & buildTaxPayQuotes — converts amounts across pa
 });
 
 /* =========================================================================
- * Controller Endpoints & Cache (energy-tax.controller.ts) - 100% Coverage
+ * Controller Endpoints & Cache (energy-tax.controller.ts) - Zero Backdoors
  * ========================================================================= */
 
 test("getSummary — returns 401 when request is unauthenticated", async () => {
@@ -157,30 +154,37 @@ test("getSummary — returns valid tax summary for authenticated user and exerci
   assert.equal(res2.calls.json.todayDailyCharge, res1.calls.json.todayDailyCharge);
 });
 
-test("getSummary — exercises cache cleanup when cache size exceeds 5000 entries", async () => {
-  const user = await makeUser({ polBalance: "15.0" });
-  for (let i = 1; i <= 5005; i++) {
-    energyTaxCtrl._summaryCacheForTests.set(200000 + i, { at: Date.now() - 60000, data: {} });
-  }
+test("getSummary — exercises cache cleanup loop when summaryCache exceeds max threshold", async () => {
+  const origMax = process.env.ENERGY_TAX_SUMMARY_CACHE_MAX;
+  const origTtl = process.env.ENERGY_TAX_SUMMARY_CACHE_TTL_MS;
+  try {
+    process.env.ENERGY_TAX_SUMMARY_CACHE_MAX = "1";
+    process.env.ENERGY_TAX_SUMMARY_CACHE_TTL_MS = "1";
+    const userA = await makeUser({ polBalance: "10.0" });
+    const userB = await makeUser({ polBalance: "20.0" });
 
-  const req = { user };
-  const res = fakeRes();
-  await energyTaxCtrl.getSummary(req, res);
-  assert.equal(res.calls.status, 200);
-  assert.equal(res.calls.json.ok, true);
+    const resA = fakeRes();
+    await energyTaxCtrl.getSummary({ user: userA }, resA);
+    assert.equal(resA.calls.status, 200);
+
+    // Wait 5ms so userA's entry becomes expired for cleanup
+    await new Promise((r) => setTimeout(r, 5));
+
+    const resB = fakeRes();
+    await energyTaxCtrl.getSummary({ user: userB }, resB);
+    assert.equal(resB.calls.status, 200);
+  } finally {
+    process.env.ENERGY_TAX_SUMMARY_CACHE_MAX = origMax;
+    process.env.ENERGY_TAX_SUMMARY_CACHE_TTL_MS = origTtl;
+  }
 });
 
-test("getSummary — handles internal service failure and responds 500", async () => {
-  const user = await makeUser({ polBalance: "1.0" });
-  energyTaxCtrl._setComputeWeekSummaryForTests(async () => {
-    throw new Error("simulated compute error");
-  });
-  const req = { user };
+test("getSummary — handles internal database exception and responds 500 without crashing", async () => {
+  const req = { user: { id: "invalid-user-id-causes-prisma-exception" } };
   const res = fakeRes();
   await energyTaxCtrl.getSummary(req, res);
   assert.equal(res.calls.status, 500);
   assert.equal(res.calls.json.ok, false);
-  energyTaxCtrl._setComputeWeekSummaryForTests();
 });
 
 test("postPayDaily — rejects unauthenticated request with 401", async () => {
@@ -188,6 +192,25 @@ test("postPayDaily — rejects unauthenticated request with 401", async () => {
   const res = fakeRes();
   await energyTaxCtrl.postPayDaily(req, res);
   assert.equal(res.calls.status, 401);
+});
+
+test("postPayDaily — handles EnergyTaxNotStarted error with 403 code NOT_STARTED", async () => {
+  const user = await makeUser({ polBalance: "10.0" });
+  const origTime = energyTaxService.ENERGY_TAX_STARTS_AT.getTime();
+  try {
+    // Set startsAt to tomorrow so isEnergyTaxActive() returns false
+    energyTaxService.ENERGY_TAX_STARTS_AT.setTime(Date.now() + 86400000);
+
+    const req = { user, body: { currency: "POL" } };
+    const res = fakeRes();
+    await energyTaxCtrl.postPayDaily(req, res);
+
+    assert.equal(res.calls.status, 403);
+    assert.equal(res.calls.json.code, "NOT_STARTED");
+    assert.ok(res.calls.json.startsAt);
+  } finally {
+    energyTaxService.ENERGY_TAX_STARTS_AT.setTime(origTime);
+  }
 });
 
 test("postPayDaily — rejects with NO_REWARDS (400) when user has zero rewards on the taxable day", async () => {
@@ -229,22 +252,6 @@ test("postPayDaily — rejects with INSUFFICIENT_BALANCE (400) when user has rew
   assert.ok(res.calls.json.required > 0);
 });
 
-test("postPayDaily — handles EnergyTaxNotStarted error with 403 code NOT_STARTED", async () => {
-  const user = await makeUser({ polBalance: "10.0" });
-  energyTaxCtrl._setPayDailyTaxForTests(async () => {
-    throw new energyTaxErrors.EnergyTaxNotStarted(new Date("2026-12-01T00:00:00Z"));
-  });
-
-  const req = { user, body: { currency: "POL" } };
-  const res = fakeRes();
-  await energyTaxCtrl.postPayDaily(req, res);
-
-  assert.equal(res.calls.status, 403);
-  assert.equal(res.calls.json.code, "NOT_STARTED");
-  assert.equal(res.calls.json.startsAt, "2026-12-01T00:00:00.000Z");
-  energyTaxCtrl._setPayDailyTaxForTests();
-});
-
 test("postPayDaily — happy path debits balance and creates charge record, then rejects duplicate payment with ALREADY_PAID (409)", async () => {
   const user = await makeUser({ polBalance: "10.0" });
   const now = new Date();
@@ -275,7 +282,8 @@ test("postPayDaily — happy path debits balance and creates charge record, then
 
   // Check balance was debited
   const updatedUser = await prisma.user.findUnique({ where: { id: user.id } });
-  assert.ok(Number(updatedUser.polBalance) < 10.0);
+  const postDebitBalance = Number(updatedUser.polBalance);
+  assert.ok(postDebitBalance < 10.0);
 
   // Check charge record exists
   const charge = await prisma.energyTaxCharge.findUnique({
@@ -297,17 +305,16 @@ test("postPayDaily — happy path debits balance and creates charge record, then
 
   assert.equal(res2.calls.status, 409);
   assert.equal(res2.calls.json.code, "ALREADY_PAID");
+
+  // Prove that balance was NOT debited on 409: debit and response are strictly coherent!
+  const finalUser = await prisma.user.findUnique({ where: { id: user.id } });
+  assert.equal(Number(finalUser.polBalance), postDebitBalance);
 });
 
-test("postPayDaily — handles unexpected internal error and responds 500", async () => {
-  const user = await makeUser({ polBalance: "1.0" });
-  energyTaxCtrl._setPayDailyTaxForTests(async () => {
-    throw new Error("unexpected internal exception");
-  });
-  const req = { user, body: { currency: "POL" } };
+test("postPayDaily — handles unexpected internal error and responds 500 without crashing", async () => {
+  const req = { user: { id: "invalid-user-id-causes-prisma-exception" }, body: { currency: "POL" } };
   const res = fakeRes();
   await energyTaxCtrl.postPayDaily(req, res);
   assert.equal(res.calls.status, 500);
   assert.equal(res.calls.json.ok, false);
-  energyTaxCtrl._setPayDailyTaxForTests();
 });

@@ -319,6 +319,40 @@ describe('DashboardEnergyTaxModal', () => {
     expect(closeBtn).toBeInTheDocument();
   });
 
+  it('acessibilidade: implementa focus trap ciclando com Tab e Shift+Tab dentro do dialog', async () => {
+    api.get.mockResolvedValue({ data: pendingSummary() });
+    await act(async () => mount());
+
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toBeInTheDocument();
+
+    const closeBtn = screen.getByLabelText(/Fechar/i);
+    const remindLaterBtn = screen.getByRole('button', { name: /Lembrar depois/i });
+
+    // Foca o último elemento e pressiona Tab -> foco cicla para o primeiro (closeBtn)
+    remindLaterBtn.focus();
+    expect(document.activeElement).toBe(remindLaterBtn);
+
+    fireEvent.keyDown(window, { key: 'Tab', shiftKey: false });
+    expect(document.activeElement).toBe(closeBtn);
+
+    // Foca o primeiro elemento e pressiona Shift+Tab -> foco cicla para o último (remindLaterBtn)
+    closeBtn.focus();
+    expect(document.activeElement).toBe(closeBtn);
+
+    fireEvent.keyDown(window, { key: 'Tab', shiftKey: true });
+    expect(document.activeElement).toBe(remindLaterBtn);
+
+    // Quando o foco está fora do dialog, Tab traz o foco para o primeiro e Shift+Tab para o último
+    document.body.focus();
+    fireEvent.keyDown(window, { key: 'Tab', shiftKey: false });
+    expect(document.activeElement).toBe(closeBtn);
+
+    document.body.focus();
+    fireEvent.keyDown(window, { key: 'Tab', shiftKey: true });
+    expect(document.activeElement).toBe(remindLaterBtn);
+  });
+
   it('teclado e interação: fecha ao pressionar a tecla Escape', async () => {
     api.get.mockResolvedValue({ data: pendingSummary() });
     await act(async () => mount());

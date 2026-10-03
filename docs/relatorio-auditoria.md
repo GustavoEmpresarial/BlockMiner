@@ -2078,14 +2078,15 @@ Executado através de `tests/security/run-kali-swap-audit.sh` utilizando o conta
 - **Antes**: O componente montava `<div className="fixed inset-0 z-[9999] ...">` como nó filho direto de `DashboardPage`. O container do dashboard possui classes de animação CSS (`animate-in fade-in`), que conforme a especificação do W3C criam um novo *stacking context* e atuam como *containing block* para elementos `position: fixed`. Com isso, a barra superior móvel (`z-40` em `Sidebar.tsx`) e o cabeçalho desktop (`sticky top-0 z-30` em `Header.tsx`), situados em nós irmãos de `<main>`, eram renderizados fora do blur e sobrepunham o modal, gerando a faixa nítida reportada pelo usuário.
 - **Depois**: Refatorado para utilizar `createPortal(modalContent, document.body)`. O modal agora é atracado diretamente à raiz do documento (`document.body`), assumindo a constante canônica `ENERGY_TAX_MODAL_Z_INDEX = 'z-[9999]'`, cobrindo integralmente 100% da viewport, sobrepondo o Header desktop (`z-30`), a topbar móvel (`z-40`) e dropdowns internos (`z-[200]`) com `backdrop-blur-md`, ao mesmo tempo em que se mantém estritamente sob comunicados administrativos globais urgentes (`BroadcastPopup` `z-[99999]`) e desafios antibot (`BmCaptchaModal` `z-[2147483000]`).
 
-### 2.2 Tratamento de Concorrência Transacional (RACE-01)
+### 2.2 Tratamento de Concorrência Transacional Estrito (RACE-01)
 - **Antes**: Sob teste de carga concorrente no k6 (10 VUs simultâneos), duas requisições de pagamento enviadas no mesmo instante passavam pela verificação de duplicidade e entravam no `$transaction`. A segunda requisição colidia na restrição de unicidade `@@unique([userId, periodDayStartsAt])` do PostgreSQL/Prisma (`P2002`), sendo tratada como erro inesperado com resposta `500 Internal Server Error`.
-- **Depois**: Em `server/modules/energy-tax/energy-tax.service.ts`, o bloco de transação intercepta explicitamente o erro `P2002` e o traduz para a exceção de domínio `EnergyTaxAlreadyPaid`, fazendo o controller responder com `409 Conflict` (`ALREADY_PAID`) de forma limpa e sem gerar exceções não tratadas no servidor.
+- **Depois**: Em `server/modules/energy-tax/energy-tax.service.ts`, o bloco de transação intercepta explicitamente o erro `P2002` de forma estreita e restrita ao `$transaction`. Com isso, a transação que colide aborta e reverte automaticamente o débito de saldo (`decrementUserBalanceTx`), traduzindo a colisão para a exceção de domínio `EnergyTaxAlreadyPaid`. O controller responde com `409 Conflict` (`ALREADY_PAID`) de forma limpa, garantindo estrita coerência contábil (saldo nunca é debitado se a resposta for 409).
 
-### 2.3 Acessibilidade e Trava de Rolagem (A11Y-01 & UX-02)
-- **Antes**: O modal era um elemento `div` genérico sem semântica acessível, sem suporte à tecla `Escape` e sem controle de foco ou rolagem do `document.body`.
+### 2.3 Acessibilidade, Focus Trap e Trava de Rolagem (A11Y-01 & UX-02)
+- **Antes**: O modal era um elemento `div` genérico sem semântica acessível, sem suporte à tecla `Escape`, sem controle de foco ou rolagem do `document.body` e sem contenção de foco (Tab vazava do modal).
 - **Depois**:
   - Adicionados `role="dialog"`, `aria-modal="true"`, `aria-labelledby="energy-tax-modal-title"` e `aria-describedby="energy-tax-modal-description"`.
+  - Implementado **Focus Trap completo**: o pressionamento de `Tab` e `Shift+Tab` cicla estritamente entre os elementos interativos do modal (`closeBtn`, botões de ação e link), impedindo que o foco escape para o fundo da página enquanto o modal estiver aberto.
   - Adicionado listener global de tecla `Escape` com limpeza adequada no ciclo de vida.
   - Implementado lock de rolagem em `document.body.style.overflow = 'hidden'` com compensação da largura da barra de rolagem (`paddingRight`), eliminando layout shifts.
   - Retorno automático de foco ao elemento anteriormente ativo no fechamento.
@@ -2099,6 +2100,10 @@ Executado através de `tests/security/run-kali-swap-audit.sh` utilizando o conta
   - Seletor tátil de moedas (POL, BLK, SHIB) com cotações automáticas e feedback de saldo.
   - Botão principal de pagamento com gradiente vibrante e deslocamento tátil no clique (`active:translate-x-1 active:translate-y-1 active:shadow-none`).
   - Preservação estrita de 100% dos textos, fórmulas, cotações e chaves de internacionalização existentes.
+
+### 2.5 Internacionalização em Espanhol (es.json)
+- **Antes**: As chaves `dashboard.energy_*` em `client/src/i18n/locales/es.json` estavam com valores residuais em inglês.
+- **Depois**: Todas as chaves `dashboard.energy_*` traduzidas com rigor para espanhol natural (`"Pagar solo hoy"`, `"Tasa de Energía pendiente"`, `"Cerrar semana completa"`, etc.), assegurando paridade e consistência para os usuários de idioma espanhol sem tocar em outras áreas fora do escopo.
 
 ---
 
