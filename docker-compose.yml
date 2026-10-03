@@ -139,7 +139,6 @@ services:
       - ./prisma:/app/prisma
       # Public CA for the data-tier Postgres. The private key stays on that VM.
       - ./storage/ntier/postgres-ca.crt:/etc/blockminer/postgres-ca.crt:ro
-      - ./docker-entrypoint.sh:/usr/local/bin/docker-entrypoint.sh:ro
     # Name used by DATABASE_URL so TLS can verify the data-tier certificate.
     extra_hosts:
       - "blockminer-db:161.97.176.125"
@@ -167,7 +166,6 @@ services:
       - "blockminer-db:161.97.176.125"
     volumes:
       - ./storage/ntier/postgres-ca.crt:/etc/blockminer/postgres-ca.crt:ro
-      - ./docker-entrypoint.sh:/usr/local/bin/docker-entrypoint.sh:ro
     restart: unless-stopped
 
   # Depósito HD custodial (docs/PROGRESSO.txt item 67) — o ÚNICO processo de todo o stack
@@ -198,7 +196,6 @@ services:
       - "blockminer-db:161.97.176.125"
     volumes:
       - ./storage/ntier/postgres-ca.crt:/etc/blockminer/postgres-ca.crt:ro
-      - ./docker-entrypoint.sh:/usr/local/bin/docker-entrypoint.sh:ro
     restart: unless-stopped
 
   nginx:
