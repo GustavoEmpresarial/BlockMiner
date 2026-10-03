@@ -2,7 +2,7 @@
 import type { Request, Response } from "express";
 import { requireSessionUser } from "../../shared/errors/httpStatusError.js";
 import * as boostsService from "./boosts.service.js";
-import { parseTaxPayCurrency } from "../../shared/taxPaymentCurrency.js";
+import { parseTaxPayCurrency, InvalidTaxPayCurrencyError } from "../../shared/taxPaymentCurrency.js";
 
 export async function getStatus(req: Request, res: Response): Promise<void> {
   const user = requireSessionUser(req, res);
@@ -14,11 +14,19 @@ export async function getStatus(req: Request, res: Response): Promise<void> {
 export async function activate(req: Request, res: Response): Promise<void> {
   const user = requireSessionUser(req, res);
   if (!user) return;
-  const currency = parseTaxPayCurrency(req.body?.currency);
-  const result = await boostsService.activateBoost(user.id, currency);
-  if (!result.ok) {
-    res.status(result.code === "INSUFFICIENT_BALANCE" ? 402 : 409).json(result);
-    return;
+  try {
+    const currency = parseTaxPayCurrency(req.body?.currency);
+    const result = await boostsService.activateBoost(user.id, currency);
+    if (!result.ok) {
+      res.status(result.code === "INSUFFICIENT_BALANCE" ? 402 : 409).json(result);
+      return;
+    }
+    res.json(result);
+  } catch (err: unknown) {
+    if (err instanceof InvalidTaxPayCurrencyError) {
+      res.status(400).json({ ok: false, code: "INVALID_CURRENCY", message: "Moeda inválida para pagamento de taxa." });
+      return;
+    }
+    throw err;
   }
-  res.json(result);
 }

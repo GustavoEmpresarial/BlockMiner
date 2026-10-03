@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 const prisma = (await import("../../server/core/database/prisma.ts")).default;
+const energyTaxRepo = await import("../../server/modules/energy-tax/energy-tax.repository.ts");
 const {
   FULL_WEEK_RATE,
   DAILY_WEEK_RATE,
@@ -507,6 +508,16 @@ test("runWeeklySweep (LOW-3) — executes Monday auto sweep on unpaid days cover
   const mondayNow = new Date("2028-09-04T03:00:00.000Z");
   const closedDays = lastSevenClosedMiningPeriodStarts(mondayNow);
 
+  // Resilient pre-cleanup: ensure window is clean even if a previous test run was aborted
+  const windowStart = closedDays[0];
+  const windowEnd = new Date(closedDays[6].getTime() + 86400000 * 2);
+  await prisma.energyTaxCharge.deleteMany({
+    where: { periodDayStartsAt: { gte: windowStart, lte: windowEnd } },
+  });
+  await prisma.zeradsCallback.deleteMany({
+    where: { callbackAt: { gte: windowStart, lte: windowEnd } },
+  });
+
   // User A has plenty of balance
   const userA = await makeUser({ polBalance: "100.0" });
   // User B has partial balance
@@ -561,10 +572,20 @@ test("runWeeklySweep (LOW-3) — executes Monday auto sweep on unpaid days cover
   assert.equal(chargeC.status, "skipped");
 });
 
-test("runWeeklySweep (MEDIUM-2) — handles idempotent P2002 duplicates and logs failures safely without crash", async () => {
+test("runWeeklySweep (LOW-4) — concurrent sweeps colliding on P2002 ignore duplicate idempotently without incrementing failures", async () => {
   const mondayNow = new Date("2028-09-11T03:00:00.000Z");
   const closedDays = lastSevenClosedMiningPeriodStarts(mondayNow);
   const targetDay = closedDays[1];
+
+  // Resilient pre-cleanup of 2028-09-11 window
+  const windowStart = closedDays[0];
+  const windowEnd = new Date(closedDays[6].getTime() + 86400000 * 2);
+  await prisma.energyTaxCharge.deleteMany({
+    where: { periodDayStartsAt: { gte: windowStart, lte: windowEnd } },
+  });
+  await prisma.zeradsCallback.deleteMany({
+    where: { callbackAt: { gte: windowStart, lte: windowEnd } },
+  });
 
   const user = await makeUser({ polBalance: "10.0" });
   await prisma.zeradsCallback.create({
@@ -580,15 +601,57 @@ test("runWeeklySweep (MEDIUM-2) — handles idempotent P2002 duplicates and logs
     },
   });
 
-  // First sweep creates the charge
-  const r1 = await runWeeklySweep(mondayNow);
-  assert.equal(r1.touched, 1);
-  assert.equal(r1.chargesCreated, 1);
-  assert.equal(r1.failures, 0);
+  // Execute two sweeps concurrently with Promise.all to force race collision on createChargeTx
+  const [r1, r2] = await Promise.all([runWeeklySweep(mondayNow), runWeeklySweep(mondayNow)]);
 
-  // Second sweep ignores existing charge and handles safely without counting failures
-  const r2 = await runWeeklySweep(mondayNow);
-  assert.equal(r2.touched, 1);
-  assert.equal(r2.chargesCreated, 0);
-  assert.equal(r2.failures, 0);
+  assert.equal(r1.touched + r2.touched, 2);
+  assert.equal(r1.chargesCreated + r2.chargesCreated, 1, "Exactly one charge created across concurrent sweeps");
+  assert.equal(r1.failures + r2.failures, 0, "Idempotent P2002 collision must NOT increment failures");
+
+  const charges = await prisma.energyTaxCharge.findMany({ where: { userId: user.id } });
+  assert.equal(charges.length, 1);
+});
+
+test("runWeeklySweep (MEDIUM-2 / LOW-4) — non-P2002 error during transaction increments failures counter", async () => {
+  const mondayNow = new Date("2028-09-18T03:00:00.000Z");
+  const closedDays = lastSevenClosedMiningPeriodStarts(mondayNow);
+  const targetDay = closedDays[1];
+
+  const windowStart = closedDays[0];
+  const windowEnd = new Date(closedDays[6].getTime() + 86400000 * 2);
+  await prisma.energyTaxCharge.deleteMany({
+    where: { periodDayStartsAt: { gte: windowStart, lte: windowEnd } },
+  });
+  await prisma.zeradsCallback.deleteMany({
+    where: { callbackAt: { gte: windowStart, lte: windowEnd } },
+  });
+
+  const user = await makeUser({ polBalance: "10.0" });
+  await prisma.zeradsCallback.create({
+    data: {
+      userId: user.id,
+      username: user.username,
+      amountZer: 10,
+      exchangeRate: 1,
+      payoutAmount: 2.0,
+      clicks: 1,
+      callbackHash: `sweep_err_${Date.now()}`,
+      callbackAt: new Date(targetDay.getTime() + 3600 * 1000),
+    },
+  });
+
+  // Temporarily stub prisma.$transaction to simulate a non-P2002 database error
+  const orig = prisma.$transaction;
+  prisma.$transaction = async () => {
+    throw new Error("simulated non-P2002 database write error");
+  };
+
+  try {
+    const result = await runWeeklySweep(mondayNow);
+    assert.equal(result.touched, 1);
+    assert.equal(result.chargesCreated, 0);
+    assert.equal(result.failures, 1, "Non-P2002 error must increment failures");
+  } finally {
+    prisma.$transaction = orig;
+  }
 });

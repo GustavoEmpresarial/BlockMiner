@@ -532,7 +532,13 @@ export async function runWeeklySweep(now: Date = new Date()): Promise<WeeklySwee
         }
       }
     }
-    await checkAndUpdateEnergyBlock(userId).catch(() => {});
+    await checkAndUpdateEnergyBlock(userId).catch((err: unknown) => {
+      log.warn("[runWeeklySweep checkAndUpdateEnergyBlock failed]", {
+        code: "ENERGY_TAX_CLEAR_BLOCK_WARN",
+        userId,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    });
     touched++;
   }
 
