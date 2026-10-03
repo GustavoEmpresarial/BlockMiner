@@ -123,3 +123,26 @@ test("activateBoost: a non-unique-violation database error propagates instead of
   const client = fakeClient({ balances: { POL: 10, BLK: 0, SHIB: 0 }, createBoostThrows: new Error("connection reset") });
   await assert.rejects(() => activateBoost(1, "POL", client), /connection reset/);
 });
+
+test("boostsController.activate: responds 400 INVALID_CURRENCY when body.currency is unsupported (e.g. ETH)", async () => {
+  const boostsCtrl = await import("../../server/modules/boosts/boosts.controller.ts");
+  const calls = { status: 200, json: null };
+  const res = {
+    status(code) {
+      calls.status = code;
+      return this;
+    },
+    json(body) {
+      calls.json = body;
+      return this;
+    },
+  };
+  const req = {
+    user: { id: 1, name: "Boost Tester", email: "boost@test.com" },
+    body: { currency: "ETH" },
+  };
+  await boostsCtrl.activate(req, res);
+  assert.equal(calls.status, 400);
+  assert.equal(calls.json.code, "INVALID_CURRENCY");
+  assert.ok(calls.json.message?.includes("Moeda inválida"));
+});

@@ -45,3 +45,26 @@ test("mapCheckinError — unrelated error returns null", () => {
   assert.equal(mapCheckinError(new Error("random")), null);
   assert.equal(mapCheckinError(null), null);
 });
+
+test("payStreakRecovery — responds 400 INVALID_CURRENCY when body.currency is unsupported (e.g. ETH)", async () => {
+  const checkinCtrl = await import("../../server/modules/checkin/checkin.controller.ts");
+  const calls = { status: 200, json: null };
+  const res = {
+    status(code) {
+      calls.status = code;
+      return this;
+    },
+    json(body) {
+      calls.json = body;
+      return this;
+    },
+  };
+  const req = {
+    user: { id: 1, name: "Checkin Tester", email: "checkin@test.com" },
+    body: { currency: "ETH" },
+  };
+  await checkinCtrl.payStreakRecovery(req, res);
+  assert.equal(calls.status, 400);
+  assert.equal(calls.json.code, "INVALID_CURRENCY");
+  assert.ok(calls.json.message?.includes("Moeda inválida"));
+});

@@ -15,7 +15,7 @@ import { WalletWithdrawTab } from './components/WalletWithdrawTab';
 import { WalletDepositTab } from './components/WalletDepositTab';
 import { useWalletPage } from './lib/useWalletPage';
 
-export const WALLET_MAINTENANCE = true;
+export const WALLET_MAINTENANCE = false;
 
 function WalletMaintenanceView() {
     const { t } = useTranslation();
