@@ -16,8 +16,11 @@
  */
 import path from "path";
 import fs from "fs/promises";
-import { accessSync, constants as fsConstants, createReadStream } from "fs";
+import { accessSync, constants as fsConstants, createReadStream, createWriteStream } from "fs";
 import { spawn } from "child_process";
+import { Transform } from "stream";
+import { createGzip } from "zlib";
+import { pipeline } from "stream/promises";
 import readline from "readline";
 import crypto from "crypto";
 import { Prisma } from "@prisma/client";
@@ -25,6 +28,9 @@ import type { AppPrisma } from "../../core/database/prisma.js";
 import { projectRoot } from "../media/index.js";
 
 /** Tables asserted as COPY targets in a successful plain dump (public schema). */
+/** Same level the backup cron already used when it gzipped the plain SQL after the fact. */
+export const BACKUP_GZIP_LEVEL = 6;
+
 export const CRITICAL_PUBLIC_TABLES = [
   "users",
   "transactions",
@@ -486,24 +492,110 @@ export async function collectPublicTableExactRowCounts(prisma: AppPrisma, tableN
   return { rowCountByTable, totalDataRows, publicTablesWithRows, publicTablesEmpty, criticalRowCounts };
 }
 
-function runPgDumpToFile({ pgDumpPath, databaseUrl, outFile }: { pgDumpPath: string; databaseUrl: string; outFile: string }) {
-  return new Promise<{ stderr: string }>((resolve, reject) => {
-    const args = ["--format=p", "--encoding=UTF8", "--no-owner", "--no-acl", "--file", outFile, "--dbname", databaseUrl];
+type PlainDumpScan = {
+  headerOk: boolean;
+  footerOk: boolean;
+  copyPublicLineCount: number;
+  found: Set<string>;
+  plainBytes: number;
+  sha256: string;
+};
 
-    const child = spawn(pgDumpPath, args, { stdio: ["ignore", "ignore", "pipe"], env: { ...process.env } });
+function observeDumpLine(state: PlainDumpScan, line: string, criticalTables: string[]) {
+  if (!state.headerOk && line.includes("PostgreSQL database dump")) state.headerOk = true;
+  if (line.includes("PostgreSQL database dump complete")) state.footerOk = true;
+  if (line.startsWith("COPY public.")) {
+    state.copyPublicLineCount += 1;
+    for (const table of criticalTables) {
+      if (line.startsWith(`COPY public.${table} `) || line.startsWith(`COPY public.${table}\t`)) state.found.add(table);
+    }
+  }
+}
 
-    let stderr = "";
-    child.stderr?.on("data", (chunk) => {
-      stderr += String(chunk || "");
-      if (stderr.length > 400_000) stderr = stderr.slice(-200_000);
-    });
+/**
+ * pg_dump writes plain SQL to stdout and this process gzips it immediately.
+ * The app disk cannot hold the uncompressed dump (about 22 GB) plus the .gz.
+ */
+function runPgDumpToGzip({
+  pgDumpPath,
+  databaseUrl,
+  gzFile,
+  criticalTables,
+}: {
+  pgDumpPath: string;
+  databaseUrl: string;
+  gzFile: string;
+  criticalTables: string[];
+}): Promise<PlainDumpScan> {
+  const args = ["--format=p", "--encoding=UTF8", "--no-owner", "--no-acl", "--dbname", databaseUrl];
+  const child = spawn(pgDumpPath, args, { stdio: ["ignore", "pipe", "pipe"], env: { ...process.env } });
+  const hash = crypto.createHash("sha256");
+  const scan: PlainDumpScan = {
+    headerOk: false,
+    footerOk: false,
+    copyPublicLineCount: 0,
+    found: new Set(),
+    plainBytes: 0,
+    sha256: "",
+  };
+  let pending = Buffer.alloc(0);
+  let stderr = "";
 
-    child.on("error", (err) => reject(new Error(`Failed to start pg_dump: ${err.message}`)));
+  child.stderr?.on("data", (chunk) => {
+    stderr += String(chunk || "");
+    if (stderr.length > 400_000) stderr = stderr.slice(-200_000);
+  });
 
-    child.on("close", (code) => {
-      if (code === 0) resolve({ stderr });
-      else reject(new Error(`pg_dump exited with code ${code}: ${stderr.slice(-8000) || "no stderr"}`));
-    });
+  const scanner = new Transform({
+    transform(chunk, _encoding, callback) {
+      const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+      hash.update(buf);
+      scan.plainBytes += buf.length;
+      const combined = pending.length > 0 ? Buffer.concat([pending, buf]) : buf;
+      let start = 0;
+      for (let i = 0; i < combined.length; i += 1) {
+        if (combined[i] !== 10) continue;
+        observeDumpLine(scan, combined.subarray(start, i).toString("utf8"), criticalTables);
+        start = i + 1;
+      }
+      pending = Buffer.from(combined.subarray(start));
+      callback(null, buf);
+    },
+    flush(callback) {
+      if (pending.length > 0) observeDumpLine(scan, pending.toString("utf8"), criticalTables);
+      pending = Buffer.alloc(0);
+      callback();
+    },
+  });
+
+  const gzip = createGzip({ level: BACKUP_GZIP_LEVEL });
+  const output = createWriteStream(gzFile);
+
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const fail = (error: Error) => {
+      if (settled) return;
+      settled = true;
+      child.kill("SIGTERM");
+      reject(error);
+    };
+
+    child.on("error", (err) => fail(new Error(`Failed to start pg_dump: ${err.message}`)));
+
+    pipeline(child.stdout, scanner, gzip, output)
+      .then(() => {
+        child.once("close", (code) => {
+          if (settled) return;
+          settled = true;
+          if (code === 0) {
+            scan.sha256 = hash.digest("hex");
+            resolve(scan);
+            return;
+          }
+          reject(new Error(`pg_dump exited with code ${code}: ${stderr.slice(-8000) || "no stderr"}`));
+        });
+      })
+      .catch((err: unknown) => fail(err instanceof Error ? err : new Error(String(err))));
   });
 }
 
@@ -550,7 +642,7 @@ export async function createPostgresSqlBackup(opts: { prisma: AppPrisma; logger?
 
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
   const filename = `backup-${timestamp}.sql`;
-  const outFile = path.join(backupsDir, filename);
+  const gzFile = path.join(backupsDir, `${filename}.gz`);
   const bundleFile = bundlePathForSqlFile(backupsDir, filename);
 
   const publicTables = await countPublicTables(prisma);
@@ -558,63 +650,58 @@ export async function createPostgresSqlBackup(opts: { prisma: AppPrisma; logger?
 
   logger?.info?.("admin_backup_start", { filename, backupsDir, pgDumpPath, publicTableCount });
 
+  let scan: PlainDumpScan;
   try {
-    await runPgDumpToFile({ pgDumpPath, databaseUrl, outFile });
+    scan = await runPgDumpToGzip({
+      pgDumpPath,
+      databaseUrl,
+      gzFile,
+      criticalTables: CRITICAL_PUBLIC_TABLES,
+    });
   } catch (err: unknown) {
     logger?.error?.("admin_backup_pg_dump_failed", { message: errMsg(err) });
     try {
-      await fs.unlink(outFile);
+      await fs.unlink(gzFile);
     } catch {
       /* ignore */
     }
     throw err;
   }
 
-  const stat = await fs.stat(outFile);
-  const sizeBytes = stat.size;
-  if (sizeBytes < 256) {
+  const gzStat = await fs.stat(gzFile);
+  const sizeBytes = scan.plainBytes;
+  const discardIncomplete = async (reason: string) => {
     try {
-      await fs.unlink(outFile);
+      await fs.unlink(gzFile);
     } catch {
       /* ignore */
     }
-    logger?.error?.("admin_backup_too_small", { sizeBytes });
+    logger?.error?.("admin_backup_incomplete", { filename, reason });
+  };
+
+  if (sizeBytes < 256 || gzStat.size < 256) {
+    await discardIncomplete("too_small");
     throw new Error("Backup file is too small; pg_dump likely failed silently");
   }
 
-  const scan = await scanPlainPgDumpForCopyLines(outFile, CRITICAL_PUBLIC_TABLES);
   const missingCritical = CRITICAL_PUBLIC_TABLES.filter((t) => !scan.found.has(t));
 
   if (!scan.headerOk) {
-    try {
-      await fs.unlink(outFile);
-    } catch {
-      /* ignore */
-    }
+    await discardIncomplete("missing_header");
     throw new Error("Backup file does not look like a PostgreSQL plain-format dump");
   }
 
   if (missingCritical.length > 0) {
-    try {
-      await fs.unlink(outFile);
-    } catch {
-      /* ignore */
-    }
+    await discardIncomplete("missing_critical_tables");
     throw new Error(`Backup validation failed: missing COPY sections for: ${missingCritical.join(", ")}`);
   }
 
-  const footerOk = await checkPgDumpFooter(outFile);
-  if (!footerOk) {
-    try {
-      await fs.unlink(outFile);
-    } catch {
-      /* ignore */
-    }
-    logger?.error?.("admin_backup_incomplete", { filename });
+  if (!scan.footerOk) {
+    await discardIncomplete("missing_footer");
     throw new Error("Backup validation failed: dump appears truncated or incomplete (missing completion footer)");
   }
 
-  const sha256 = await computeFileSha256(outFile);
+  const sha256 = scan.sha256;
 
   let rowCountAudit: BackupRowCountAudit | null = null;
   const skipRowAudit = String(process.env.BACKUP_SKIP_ROW_COUNT_AUDIT || "").trim() === "1";
@@ -671,6 +758,7 @@ export async function createPostgresSqlBackup(opts: { prisma: AppPrisma; logger?
     createdAt: nowIso,
     status: "success",
     sizeBytes,
+    gzipSizeBytes: gzStat.size,
     sha256,
     integrityStatus: "valid" as const,
     lastVerifiedAt: nowIso,
@@ -714,7 +802,7 @@ export async function createPostgresSqlBackup(opts: { prisma: AppPrisma; logger?
   return {
     name: filename,
     size: sizeBytes,
-    created: stat.mtime.toISOString(),
+    created: gzStat.mtime.toISOString(),
     status: "success",
     sha256,
     integrityStatus: "valid" as const,
