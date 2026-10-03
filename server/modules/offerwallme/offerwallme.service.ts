@@ -27,6 +27,15 @@ const log = logger.child("offerwallme.service");
 export const OFFERWALLME_API_KEY = (process.env.OFFERWALLME_API_KEY ?? "").trim();
 const SECRET_KEY = (process.env.OFFERWALLME_SECRET ?? "").trim();
 
+export function offerwallMePublisherId(): string {
+  return String(process.env.OFFERWALLME_PUBLISHER_ID || "yyu8i3jt58by9do1fbdr0fyn60yn5u").trim();
+}
+
+export function buildOfferwallMeUrl(userId: number): string {
+  const publisherId = offerwallMePublisherId();
+  return `https://offerwall.me/offerwall/${publisherId}/${userId}`;
+}
+
 /** Fixed BLK per completed offer (= 1 click). */
 export const BLK_PER_CLICK = OFFERWALL_BLK_PER_CLICK;
 const MAX_PAYOUT_USD_PER_CALLBACK = Number(process.env.OFFERWALLME_MAX_PAYOUT_USD ?? "50");
