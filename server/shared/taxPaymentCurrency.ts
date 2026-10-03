@@ -24,15 +24,24 @@ export type TaxPayQuote = {
 
 export type TaxPayQuotes = Record<TaxPayCurrency, TaxPayQuote>;
 
+export class InvalidTaxPayCurrencyError extends Error {
+  constructor(public readonly invalidValue: unknown) {
+    super(`Invalid tax pay currency: ${String(invalidValue)}. Allowed: ${TAX_PAY_CURRENCIES.join(", ")}`);
+    this.name = "InvalidTaxPayCurrencyError";
+  }
+}
+
 export function isTaxPayCurrency(value: unknown): value is TaxPayCurrency {
   return typeof value === "string" && (TAX_PAY_CURRENCIES as readonly string[]).includes(value.toUpperCase());
 }
 
-/** Normalize request body / query currency; default POL. */
+/** Normalize request body / query currency; defaults to POL if omitted. Throws if invalid string. */
 export function parseTaxPayCurrency(value: unknown): TaxPayCurrency {
-  if (typeof value !== "string") return "POL";
+  if (value === undefined || value === null || value === "") return "POL";
+  if (typeof value !== "string") throw new InvalidTaxPayCurrencyError(value);
   const upper = value.trim().toUpperCase();
-  return isTaxPayCurrency(upper) ? upper : "POL";
+  if (isTaxPayCurrency(upper)) return upper;
+  throw new InvalidTaxPayCurrencyError(value);
 }
 
 export function taxPayBalanceField(currency: TaxPayCurrency): (typeof TAX_PAY_BALANCE_FIELD)[TaxPayCurrency] {

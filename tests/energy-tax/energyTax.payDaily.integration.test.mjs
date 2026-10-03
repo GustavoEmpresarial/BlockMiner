@@ -84,7 +84,10 @@ test("parseTaxPayCurrency — validates allowed currencies and defaults", () => 
   assert.equal(parseTaxPayCurrency("  pol  "), "POL");
   assert.equal(parseTaxPayCurrency(undefined), "POL");
   assert.equal(parseTaxPayCurrency(null), "POL");
-  assert.equal(parseTaxPayCurrency("BTC"), "POL");
+  assert.equal(parseTaxPayCurrency(""), "POL");
+  assert.throws(() => parseTaxPayCurrency("ETH"), /Invalid tax pay currency: ETH/);
+  assert.throws(() => parseTaxPayCurrency("BTC"), /Invalid tax pay currency: BTC/);
+  assert.throws(() => parseTaxPayCurrency(123), /Invalid tax pay currency: 123/);
 });
 
 test("taxPayBalanceField & readTaxPayBalance — maps fields and extracts balances safely", () => {
@@ -250,6 +253,20 @@ test("postPayDaily — rejects with INSUFFICIENT_BALANCE (400) when user has rew
   assert.equal(res.calls.json.code, "INSUFFICIENT_BALANCE");
   assert.equal(res.calls.json.currency, "POL");
   assert.ok(res.calls.json.required > 0);
+});
+
+test("postPayDaily (LOW-2) — rejects invalid currency like ETH with 400 INVALID_CURRENCY without touching balance", async () => {
+  const user = await makeUser({ polBalance: "50.0" });
+  const req = { user, body: { currency: "ETH" } };
+  const res = fakeRes();
+  await energyTaxCtrl.postPayDaily(req, res);
+
+  assert.equal(res.calls.status, 400);
+  assert.equal(res.calls.json.code, "INVALID_CURRENCY");
+  assert.ok(res.calls.json.message?.includes("Moeda inválida"));
+
+  const freshUser = await prisma.user.findUnique({ where: { id: user.id } });
+  assert.equal(Number(freshUser.polBalance), 50.0);
 });
 
 test("postPayDaily — happy path debits balance and creates charge record, then rejects duplicate payment with ALREADY_PAID (409)", async () => {

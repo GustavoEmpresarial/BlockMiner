@@ -39,21 +39,40 @@ Conforme estipulado pelo Contrato V2 e pelas regras do canvas, o **gate obrigat�
 
 ## 3. Lista de Testes Criados e Alterados
 
-### 3.1 Testes Criados em `tests/energy-tax/energyTax.payDaily.integration.test.mjs` (14 testes)
+### 3.1 Testes Criados em `tests/energy-tax/energyTax.payDaily.integration.test.mjs` (15 testes)
 1. `isTaxPayCurrency — validates string membership in allowed list`
 2. `parseTaxPayCurrency — validates allowed currencies and defaults`
 3. `taxPayBalanceField & readTaxPayBalance — maps fields and extracts balances safely`
 4. `convertPolFeeToCurrency & buildTaxPayQuotes — converts amounts across pairs and builds quotes`
 5. `getSummary — returns 401 when request is unauthenticated`
 6. `getSummary — returns valid tax summary for authenticated user and exercises cache hit on second call`
-7. `getSummary — exercises cache cleanup when cache size exceeds 5000 entries`
-8. `getSummary — handles internal service failure and responds 500`
+7. `getSummary — exercises cache cleanup loop when summaryCache exceeds max threshold`
+8. `getSummary — handles internal database exception and responds 500 without crashing`
 9. `postPayDaily — rejects unauthenticated request with 401`
-10. `postPayDaily — rejects with NO_REWARDS (400) when user has zero rewards on the taxable day`
-11. `postPayDaily — rejects with INSUFFICIENT_BALANCE (400) when user has rewards but balance is 0`
-12. `postPayDaily — handles EnergyTaxNotStarted error with 403 code NOT_STARTED`
-13. `postPayDaily — happy path debits balance and creates charge record, then rejects duplicate payment with ALREADY_PAID (409)`
-14. `postPayDaily — handles unexpected internal error and responds 500`
+10. `postPayDaily — handles EnergyTaxNotStarted error with 403 code NOT_STARTED`
+11. `postPayDaily — rejects with NO_REWARDS (400) when user has zero rewards on the taxable day`
+12. `postPayDaily — rejects with INSUFFICIENT_BALANCE (400) when user has rewards but balance is 0`
+13. `postPayDaily (LOW-2) — rejects invalid currency like ETH with 400 INVALID_CURRENCY without touching balance`
+14. `postPayDaily — happy path debits balance and creates charge record, then rejects duplicate payment with ALREADY_PAID (409)`
+15. `postPayDaily — handles unexpected internal error and responds 500 without crashing`
+
+### 3.2 Testes em `tests/energy-tax/energyTax.service.test.mjs` (29 testes)
+1-14: Testes puros de taxas e calendários (FULL_WEEK_RATE 15%, DAILY_WEEK_RATE 5%, auto sweep Monday UTC, etc.)
+15. `lastSevenUtcDays & lastSevenMiningPeriodStarts — consistency`
+16. `lastSevenClosedMiningPeriodStarts — on Monday includes previous Monday, excludes today`
+17. `miningBreakdownForUtcDay — returns breakdown of rewards for a given UTC day`
+18. `checkAndUpdateEnergyBlock — clears energyBlocked flag if user was blocked`
+19. `computeConsecutiveUnpaidMiningDays & computeWeekSummary — tracks unpaid and categorized paid days`
+20. `payDailyTax — creates exempt charge with zero amount when user completed 10 activities today`
+21. `payDailyTax — settles with alternative currencies BLK and SHIB recording respective notes`
+22. `payDailyTax (HIGH-1) — concurrent race: 10 simultaneous calls collide on P2002 inside transaction, exactly 1 succeeds, balance debited ONCE`
+23. `payDailyTax (MEDIUM-1) — concurrent exempt race: 6 simultaneous calls in exempt path collide on P2002, exactly 1 succeeds`
+24. `payDailyTax (LOW-1) — throws EnergyTaxNoRewards when calculated fee is zero (dust rewards)`
+25. `payDailyTax — throws EnergyTaxNotStarted when called before feature start date`
+26. `payDailyTax — throws EnergyTaxNoRewards when taxedDay is before firstTaxableDayStart`
+27. `runWeeklySweep — no-op before feature startsAt date`
+28. `runWeeklySweep (LOW-3) — executes Monday auto sweep on unpaid days covering paid, partial and skipped regimes in isolated window`
+29. `runWeeklySweep (MEDIUM-2) — handles idempotent P2002 duplicates and logs failures safely without crash`
 
 ### 3.2 Testes em `client/src/features/dashboard/components/DashboardEnergyTaxModal.test.tsx` (26 testes)
 1. `stays hidden when the summary fetch fails, and logs the failure`
@@ -104,11 +123,50 @@ expect(MODAL_Z).toBeLessThan(BROADCAST_POPUP_Z); // 9999 < 99999
 expect(MODAL_Z).toBeLessThan(CAPTCHA_MODAL_Z); // 9999 < 2147483000
 ```
 
-### 4.1 Prova de Consistência Financeira no Catch de P2002
-O catch de colisão de constraint única `P2002` em `server/modules/energy-tax/energy-tax.service.ts` foi estritamente estreitado para cobrir apenas a chamada `prisma.$transaction`. O teste `payDailyTax — proves that on P2002 unique constraint conflict balance is NOT debited and error throws EnergyTaxAlreadyPaid` prova com banco real que:
-1. Quando duas chamadas colidem na mesma chave `(userId, periodDayStartsAt)`, a transação Prisma que falha faz rollback automático do decremento de saldo.
-2. O usuário recebe a exceção `EnergyTaxAlreadyPaid` mapeada para `HTTP 409 Conflict`.
-3. O saldo final do usuário permanece estritamente íntegro, sem débito órfão e com resposta coerente.
+### 4.1 Prova de Aceite Red-Green do Catch de P2002 Concorrente (HIGH-1)
+
+O teste `payDailyTax (HIGH-1)` em `tests/energy-tax/energyTax.service.test.mjs` dispara 10 chamadas simultâneas a `payDailyTax` com `Promise.allSettled` para o mesmo usuário e dia tributável:
+1. **Com o catch de P2002 removido (Execução Vermelha / Red)**:
+   ```text
+   # Subtest: payDailyTax (HIGH-1) — concurrent race: 10 simultaneous calls collide on P2002 inside transaction, exactly 1 succeeds, balance debited ONCE
+   not ok 22 - payDailyTax (HIGH-1) — concurrent race: 10 simultaneous calls collide on P2002 inside transaction, exactly 1 succeeds, balance debited ONCE
+     ---
+     duration_ms: 174.720721
+     type: 'test'
+     location: '/home/gustavo/Documentos/BlockMiner2.1/current/tests/energy-tax/energyTax.service.test.mjs:325:1'
+     failureType: 'testCodeFailure'
+     error: |-
+       Colliding concurrent calls must throw EnergyTaxAlreadyPaid
+       + actual - expected
+
+       + 'PrismaClientKnownRequestError'
+       - 'EnergyTaxAlreadyPaid'
+
+     code: 'ERR_ASSERTION'
+     name: 'AssertionError'
+     expected: 'EnergyTaxAlreadyPaid'
+     actual: 'PrismaClientKnownRequestError'
+   ```
+2. **Com o catch de P2002 confinado estritamente ao `$transaction` (Execução Verde / Green)**:
+   ```text
+   # Subtest: payDailyTax (HIGH-1) — concurrent race: 10 simultaneous calls collide on P2002 inside transaction, exactly 1 succeeds, balance debited ONCE
+   ok 22 - payDailyTax (HIGH-1) — concurrent race: 10 simultaneous calls collide on P2002 inside transaction, exactly 1 succeeds, balance debited ONCE
+     ---
+     duration_ms: 139.751519
+     type: 'test'
+     ...
+   ```
+3. **Garantia de Consistência Contábil**:
+   - Exatamente 1 cobrança inserida em `energy_tax_charges`.
+   - Exatamente 1 transação registrada em `transactions`.
+   - Saldo debitado uma única vez: `100 - (5.0 * (0.05 / 7)) = 99.96428571`. Todas as outras 9 chamadas foram abortadas pela transação PostgreSQL e retornaram `EnergyTaxAlreadyPaid` sem débito.
+
+### 4.2 Resoluções Adicionais do Review
+- **MEDIUM-1 (Caminho Isento Concorrente)**: `createExemptCharge` recebeu proteção equivalente `try/catch P2002 -> EnergyTaxAlreadyPaid`, validada com teste de 6 chamadas concorrentes (1 ok, 5 `EnergyTaxAlreadyPaid`, 0 erros 500).
+- **MEDIUM-2 (Logging em runWeeklySweep)**: Erros inesperados no sweep agora são registrados via logger estruturado com código estável (`ENERGY_TAX_SWEEP_EXEMPT_FAILED`, `ENERGY_TAX_SWEEP_AUTO_FAILED`), colisões P2002 idempotentes são ignoradas com log info, e falhas são retornadas no campo `failures` do resultado.
+- **LOW-1 (Dust Rewards)**: `payDailyTax` possui guarda explícita `if (amountPol <= 0) throw new EnergyTaxNoRewards();`, impedindo criação de transações e cobranças zeradas no banco.
+- **LOW-2 (Moeda Inválida)**: `parseTaxPayCurrency` rejeita moedas inválidas lançando `InvalidTaxPayCurrencyError`, respondido pelo controller como `400 Bad Request` com `code: "INVALID_CURRENCY"`.
+- **LOW-3 (Isolamento de Sweep)**: O teste do sweep semanal utiliza janela temporal dedicada e isolada (2028), operando exclusivamente sobre os usuários da fixture sem mutar dados de outros testes.
 
 ---
 

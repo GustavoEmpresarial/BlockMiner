@@ -22,7 +22,7 @@ const {
   payDailyTax,
   runWeeklySweep,
 } = await import("../../server/modules/energy-tax/energy-tax.service.ts");
-const { EnergyTaxAlreadyPaid, EnergyTaxNotStarted } = await import(
+const { EnergyTaxAlreadyPaid, EnergyTaxNotStarted, EnergyTaxInsufficientBalance } = await import(
   "../../server/modules/energy-tax/energy-tax.errors.ts"
 );
 
@@ -322,7 +322,35 @@ test("payDailyTax — settles with alternative currencies BLK and SHIB recording
   assert.ok(Number(freshUser.blkBalance) < 100.0);
 });
 
-test("payDailyTax — proves that on P2002 unique constraint conflict balance is NOT debited and error throws EnergyTaxAlreadyPaid", async () => {
+test("payDailyTax — throws EnergyTaxInsufficientBalance when balance is less than required fee", async () => {
+  const user = await makeUser({ polBalance: "0" });
+  const now = new Date();
+  const taxedDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 1, 0, 0, 0));
+
+  await prisma.zeradsCallback.create({
+    data: {
+      userId: user.id,
+      username: user.username,
+      amountZer: 10,
+      exchangeRate: 1,
+      payoutAmount: 2.0,
+      clicks: 1,
+      callbackHash: `cb_insuf_srv_${Date.now()}`,
+      callbackAt: new Date(taxedDay.getTime() + 3600 * 1000),
+    },
+  });
+
+  await assert.rejects(
+    async () => payDailyTax(user.id, "POL", now),
+    (err) => {
+      assert.ok(err instanceof EnergyTaxInsufficientBalance);
+      assert.equal(err.currency, "POL");
+      return true;
+    },
+  );
+});
+
+test("payDailyTax (HIGH-1) — concurrent race: 10 simultaneous calls collide on P2002 inside transaction, exactly 1 succeeds, balance debited ONCE", async () => {
   const user = await makeUser({ polBalance: "100.0" });
   const now = new Date();
   const taxedDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 1, 0, 0, 0));
@@ -335,35 +363,113 @@ test("payDailyTax — proves that on P2002 unique constraint conflict balance is
       exchangeRate: 1,
       payoutAmount: 5.0,
       clicks: 1,
-      callbackHash: `cb_race_${Date.now()}_${Math.random()}`,
+      callbackHash: `cb_race_${Date.now()}`,
       callbackAt: new Date(taxedDay.getTime() + 3600 * 1000),
     },
   });
 
-  // Pre-insert an EnergyTaxCharge row to simulate another request winning the race
-  await prisma.energyTaxCharge.create({
+  // 10 concurrent requests to payDailyTax
+  const results = await Promise.allSettled(
+    Array.from({ length: 10 }, () => payDailyTax(user.id, "POL", now)),
+  );
+
+  const fulfilled = results.filter((r) => r.status === "fulfilled");
+  const rejected = results.filter((r) => r.status === "rejected");
+
+  assert.equal(fulfilled.length, 1, "Exactly one concurrent payment must succeed");
+  assert.equal(rejected.length, 9, "All 9 colliding requests must be rejected with EnergyTaxAlreadyPaid");
+
+  // Every single rejected call must be EnergyTaxAlreadyPaid (NOT raw P2002)
+  for (const r of rejected) {
+    assert.equal(r.reason.name, "EnergyTaxAlreadyPaid", "Colliding concurrent calls must throw EnergyTaxAlreadyPaid");
+  }
+
+  // Exactly 1 charge row in database
+  const charges = await prisma.energyTaxCharge.findMany({ where: { userId: user.id } });
+  assert.equal(charges.length, 1);
+
+  // Exactly 1 transaction record
+  const txs = await prisma.transaction.findMany({ where: { userId: user.id } });
+  assert.equal(txs.length, 1);
+
+  // Balance debited ONCE: 100 - (5.0 * (0.05 / 7)) = 99.96428571
+  const freshUser = await prisma.user.findUnique({ where: { id: user.id } });
+  assert.equal(Number(freshUser.polBalance), 99.96428571);
+});
+
+test("payDailyTax (MEDIUM-1) — concurrent exempt race: 6 simultaneous calls in exempt path collide on P2002, exactly 1 succeeds", async () => {
+  const user = await makeUser({ polBalance: "100.0" });
+  const now = new Date();
+  const taxedDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 1, 0, 0, 0));
+  const currentPeriodStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0));
+
+  await prisma.zeradsCallback.create({
     data: {
       userId: user.id,
-      periodDayStartsAt: taxedDay,
-      mode: "daily",
-      rewardsBase: "5.0",
-      ratePercent: "0.7143",
-      amount: "0.035715",
-      status: "paid",
+      username: user.username,
+      amountZer: 10,
+      exchangeRate: 1,
+      payoutAmount: 2.0,
+      clicks: 1,
+      callbackHash: `cb_exempt_race_${Date.now()}`,
+      callbackAt: new Date(taxedDay.getTime() + 3600 * 1000),
     },
   });
 
-  // Attempting payDailyTax must catch the collision, leave balance untouched, and throw EnergyTaxAlreadyPaid
-  await assert.rejects(
-    async () => payDailyTax(user.id, "POL", now),
-    (err) => {
-      assert.ok(err instanceof EnergyTaxAlreadyPaid);
-      return true;
-    },
+  for (let i = 0; i < 10; i++) {
+    await prisma.shortlinkPower.create({
+      data: {
+        userId: user.id,
+        hashRate: 10,
+        claimedAt: new Date(currentPeriodStart.getTime() + 1000 * (i + 1)),
+        expiresAt: new Date(currentPeriodStart.getTime() + 86400000),
+      },
+    });
+  }
+
+  const results = await Promise.allSettled(
+    Array.from({ length: 6 }, () => payDailyTax(user.id, "POL", now)),
   );
 
-  const freshUser = await prisma.user.findUnique({ where: { id: user.id } });
-  assert.equal(Number(freshUser.polBalance), 100.0); // Saldo estritamente intacto
+  const fulfilled = results.filter((r) => r.status === "fulfilled");
+  const rejected = results.filter((r) => r.status === "rejected");
+
+  assert.equal(fulfilled.length, 1, "Exactly one exempt payment must succeed");
+  assert.equal(rejected.length, 5, "All 5 colliding exempt requests must be rejected with EnergyTaxAlreadyPaid");
+
+  for (const r of rejected) {
+    assert.equal(r.reason.name, "EnergyTaxAlreadyPaid", "Colliding exempt calls must throw EnergyTaxAlreadyPaid");
+  }
+
+  const charges = await prisma.energyTaxCharge.findMany({ where: { userId: user.id } });
+  assert.equal(charges.length, 1);
+  assert.equal(charges[0].mode, "exempt");
+  assert.equal(Number(charges[0].amount), 0);
+});
+
+test("payDailyTax (LOW-1) — throws EnergyTaxNoRewards when calculated fee is zero (dust rewards)", async () => {
+  const user = await makeUser({ polBalance: "10.0" });
+  const now = new Date();
+  const taxedDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 1, 0, 0, 0));
+
+  // 0.00000001 POL reward * 0.05 / 7 = 0.00000000007 POL -> rounds to 0.00000000 in .toFixed(8)
+  await prisma.zeradsCallback.create({
+    data: {
+      userId: user.id,
+      username: user.username,
+      amountZer: 1,
+      exchangeRate: 1,
+      payoutAmount: 0.00000001,
+      clicks: 1,
+      callbackHash: `cb_dust_${Date.now()}`,
+      callbackAt: new Date(taxedDay.getTime() + 3600 * 1000),
+    },
+  });
+
+  await assert.rejects(
+    async () => payDailyTax(user.id, "POL", now),
+    /EnergyTaxNoRewards|não possui recompensas/,
+  );
 });
 
 test("payDailyTax — throws EnergyTaxNotStarted when called before feature start date", async () => {
@@ -393,12 +499,12 @@ test("payDailyTax — throws EnergyTaxNoRewards when taxedDay is before firstTax
 test("runWeeklySweep — no-op before feature startsAt date", async () => {
   const pastMonday = new Date("2025-01-06T00:00:00.000Z"); // Monday before start
   const result = await runWeeklySweep(pastMonday);
-  assert.deepEqual(result, { touched: 0, chargesCreated: 0 });
+  assert.deepEqual(result, { touched: 0, chargesCreated: 0, failures: 0 });
 });
 
-test("runWeeklySweep — executes Monday auto sweep on unpaid days covering paid, partial and skipped regimes", async () => {
-  // Monday UTC
-  const mondayNow = new Date("2026-08-31T03:00:00.000Z");
+test("runWeeklySweep (LOW-3) — executes Monday auto sweep on unpaid days covering paid, partial and skipped regimes in isolated window", async () => {
+  // Monday UTC in dedicated future test window (2028-09-04) — zero collision with other users/tests
+  const mondayNow = new Date("2028-09-04T03:00:00.000Z");
   const closedDays = lastSevenClosedMiningPeriodStarts(mondayNow);
 
   // User A has plenty of balance
@@ -426,8 +532,9 @@ test("runWeeklySweep — executes Monday auto sweep on unpaid days covering paid
   }
 
   const result = await runWeeklySweep(mondayNow);
-  assert.ok(result.touched >= 3);
-  assert.ok(result.chargesCreated >= 3);
+  assert.equal(result.touched, 3, "Only the 3 test users exist in this isolated test window");
+  assert.equal(result.chargesCreated, 3);
+  assert.equal(result.failures, 0);
 
   // Check user A had auto paid charge
   const chargeA = await prisma.energyTaxCharge.findUnique({
@@ -452,4 +559,36 @@ test("runWeeklySweep — executes Monday auto sweep on unpaid days covering paid
   assert.ok(chargeC);
   assert.equal(chargeC.mode, "auto");
   assert.equal(chargeC.status, "skipped");
+});
+
+test("runWeeklySweep (MEDIUM-2) — handles idempotent P2002 duplicates and logs failures safely without crash", async () => {
+  const mondayNow = new Date("2028-09-11T03:00:00.000Z");
+  const closedDays = lastSevenClosedMiningPeriodStarts(mondayNow);
+  const targetDay = closedDays[1];
+
+  const user = await makeUser({ polBalance: "10.0" });
+  await prisma.zeradsCallback.create({
+    data: {
+      userId: user.id,
+      username: user.username,
+      amountZer: 10,
+      exchangeRate: 1,
+      payoutAmount: 2.0,
+      clicks: 1,
+      callbackHash: `sweep_dup_${Date.now()}`,
+      callbackAt: new Date(targetDay.getTime() + 3600 * 1000),
+    },
+  });
+
+  // First sweep creates the charge
+  const r1 = await runWeeklySweep(mondayNow);
+  assert.equal(r1.touched, 1);
+  assert.equal(r1.chargesCreated, 1);
+  assert.equal(r1.failures, 0);
+
+  // Second sweep ignores existing charge and handles safely without counting failures
+  const r2 = await runWeeklySweep(mondayNow);
+  assert.equal(r2.touched, 1);
+  assert.equal(r2.chargesCreated, 0);
+  assert.equal(r2.failures, 0);
 });

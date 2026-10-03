@@ -9,7 +9,7 @@ import {
   EnergyTaxNotStarted,
 } from "./energy-tax.errors.js";
 import { logger } from "../../core/logger/index.js";
-import { parseTaxPayCurrency } from "../../shared/taxPaymentCurrency.js";
+import { parseTaxPayCurrency, InvalidTaxPayCurrencyError } from "../../shared/taxPaymentCurrency.js";
 
 const log = logger.child("energy-tax.controller");
 
@@ -57,6 +57,10 @@ export async function postPayDaily(req: Request, res: Response): Promise<void> {
     invalidateSummary(user.id);
     res.json({ ok: true, charge, currency });
   } catch (err) {
+    if (err instanceof InvalidTaxPayCurrencyError) {
+      res.status(400).json({ ok: false, code: "INVALID_CURRENCY", message: "Moeda inválida para pagamento de taxa." });
+      return;
+    }
     if (err instanceof EnergyTaxNotStarted) {
       res.status(403).json({ ok: false, code: "NOT_STARTED", message: err.message, startsAt: err.startsAt.toISOString() });
       return;

@@ -19,6 +19,7 @@
  */
 import { Prisma } from "@prisma/client";
 import prisma from "../../core/database/prisma.js";
+import { logger } from "../../core/logger/index.js";
 import * as energyTaxRepo from "./energy-tax.repository.js";
 import { getUtcDayKey, getUtcPeriodStartAt, addDaysToUtcDayKey, normalizeUtcDayKey } from "../../shared/calendar/utcCalendar.js";
 import {
@@ -42,6 +43,8 @@ import {
 } from "../../shared/taxPaymentCurrency.js";
 
 export { ACTIVITY_DISCOUNT_THRESHOLD };
+
+const log = logger.child("energy-tax.service");
 
 /** Rate constants — see legacy TaxesPage spec.
  *  • FULL_WEEK_RATE  = 15% — automatic Monday 21h charge (penalty for letting it accumulate)
@@ -324,17 +327,26 @@ export async function payDailyTax(
   const { exempt } = await countTodayActivities(userId, currentPeriodStart);
 
   if (exempt) {
-    const charge = await energyTaxRepo.createExemptCharge({
-      userId,
-      periodDayStartsAt: taxedDay,
-      rewardsBase: new Prisma.Decimal(rewards.toFixed(8)),
-      notes: "Isento: 10+ atividades no dia do pagamento",
-    });
+    let charge;
+    try {
+      charge = await energyTaxRepo.createExemptCharge({
+        userId,
+        periodDayStartsAt: taxedDay,
+        rewardsBase: new Prisma.Decimal(rewards.toFixed(8)),
+        notes: "Isento: 10+ atividades no dia do pagamento",
+      });
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+        throw new EnergyTaxAlreadyPaid();
+      }
+      throw err;
+    }
     await checkAndUpdateEnergyBlock(userId);
     return charge;
   }
 
   const amountPol = Number((rewards * DAILY_PER_DAY_RATE).toFixed(8));
+  if (amountPol <= 0) throw new EnergyTaxNoRewards();
   const amountPolDec = new Prisma.Decimal(amountPol);
   const debitAmount = await convertPolFeeToCurrency(amountPol, currency);
   const debitDec = new Prisma.Decimal(debitAmount.toFixed(8));
@@ -408,10 +420,10 @@ export async function checkAndUpdateEnergyBlock(userId: number): Promise<boolean
  */
 export async function runWeeklySweep(now: Date = new Date()): Promise<WeeklySweepResult> {
   if (!isEnergyTaxActive(now)) {
-    return { touched: 0, chargesCreated: 0 };
+    return { touched: 0, chargesCreated: 0, failures: 0 };
   }
   if (!isEnergyTaxAutoSweepDay(now)) {
-    return { touched: 0, chargesCreated: 0 };
+    return { touched: 0, chargesCreated: 0, failures: 0 };
   }
 
   const days = lastSevenClosedMiningPeriodStarts(now);
@@ -423,6 +435,7 @@ export async function runWeeklySweep(now: Date = new Date()): Promise<WeeklySwee
 
   let touched = 0;
   let chargesCreated = 0;
+  let failures = 0;
 
   for (const userId of userIds) {
     const existing = await energyTaxRepo.listChargesInWindow(userId, windowStart, windowEnd);
@@ -444,8 +457,18 @@ export async function runWeeklySweep(now: Date = new Date()): Promise<WeeklySwee
             notes: "Isento: 10+ atividades (offerwall/faucet/shortlink/youtube/jogos) no dia",
           });
           chargesCreated++;
-        } catch {
-          /* keep sweeping remaining users/days */
+        } catch (err) {
+          if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+            log.info("[runWeeklySweep exempt duplicate P2002]", { userId, dayStart: dayStart.toISOString() });
+          } else {
+            failures++;
+            log.error("[runWeeklySweep exempt charge failed]", {
+              code: "ENERGY_TAX_SWEEP_EXEMPT_FAILED",
+              userId,
+              dayStart: dayStart.toISOString(),
+              error: err instanceof Error ? err.message : String(err),
+            });
+          }
         }
         continue;
       }
@@ -495,13 +518,23 @@ export async function runWeeklySweep(now: Date = new Date()): Promise<WeeklySwee
           return debit;
         });
         chargesCreated++;
-      } catch {
-        /* keep sweeping remaining users/days */
+      } catch (err) {
+        if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+          log.info("[runWeeklySweep auto duplicate P2002]", { userId, dayStart: dayStart.toISOString() });
+        } else {
+          failures++;
+          log.error("[runWeeklySweep auto charge failed]", {
+            code: "ENERGY_TAX_SWEEP_AUTO_FAILED",
+            userId,
+            dayStart: dayStart.toISOString(),
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
       }
     }
     await checkAndUpdateEnergyBlock(userId).catch(() => {});
     touched++;
   }
 
-  return { touched, chargesCreated };
+  return { touched, chargesCreated, failures };
 }
