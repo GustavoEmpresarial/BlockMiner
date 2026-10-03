@@ -7,21 +7,16 @@ const require = createRequire(import.meta.url);
 
 // Prefer compiled JS after `npm run build`; fall back to tsx register if present.
 let isValidSwapPair;
+let swapSchema;
 try {
   ({ isValidSwapPair } = require("../../dist/server/modules/swap/swap.pairs.js"));
+  ({ swapSchema } = require("../../dist/server/modules/swap/swap.routes.js"));
 } catch {
   const tsx = await import("tsx/esm/api").catch(() => null);
   if (tsx?.register) tsx.register();
   ({ isValidSwapPair } = await import("../../server/modules/swap/swap.pairs.ts"));
+  ({ swapSchema } = await import("../../server/modules/swap/swap.routes.ts"));
 }
-
-const swapSchema = z
-  .object({
-    fromAsset: z.enum(["POL", "SHIB"]),
-    toAsset: z.literal("BLK"),
-    amount: z.union([z.string().trim(), z.number()]),
-  })
-  .strict();
 
 test("isValidSwapPair accepts only POL→BLK and SHIB→BLK", () => {
   assert.equal(isValidSwapPair("POL", "BLK"), true);
