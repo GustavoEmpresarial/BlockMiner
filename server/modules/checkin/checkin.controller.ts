@@ -10,7 +10,10 @@ import { assertValidTxHash, parseOptionalChainIdFromBody } from "./checkin.chain
 import { CheckinHttpError, mapCheckinError } from "./checkin.errors.js";
 import * as checkinService from "./checkin.service.js";
 import { computeRecoveryStatus, payStreakRecoveryForUser, RecoveryInsufficientBalanceError, RecoveryNotEligibleError } from "./checkin.recovery.js";
-import { parseTaxPayCurrency } from "../../shared/taxPaymentCurrency.js";
+import {
+  parseTaxPayCurrency,
+  InvalidTaxPayCurrencyError,
+} from "../../shared/taxPaymentCurrency.js";
 
 const log = logger.child("checkin.controller");
 
@@ -209,6 +212,10 @@ export async function payStreakRecovery(req: Request, res: Response): Promise<vo
         restoredStreak: result.restoredStreak,
       });
     } catch (err: unknown) {
+      if (err instanceof InvalidTaxPayCurrencyError) {
+        res.status(400).json({ ok: false, code: "INVALID_CURRENCY", error: "invalid_currency", message: "Moeda inválida para pagamento de taxa." });
+        return;
+      }
       if (err instanceof RecoveryNotEligibleError) {
         res.status(400).json({ error: "not_eligible", reason: err.reason });
         return;

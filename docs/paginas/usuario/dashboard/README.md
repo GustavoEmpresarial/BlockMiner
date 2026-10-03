@@ -122,6 +122,21 @@ Códigos usados:
 Não há mudança de UX/toast para o usuário final além do que já existia — os `toast.error`
 existentes continuam disparando; agora eles são precedidos por um log estruturado.
 
+### 3.4c Modal de Taxa de Energia Pendente (`DashboardEnergyTaxModal`)
+
+O componente `DashboardEnergyTaxModal.tsx` exibe um aviso modal quando o usuário logado possui dias em aberto de taxa de energia nesta semana (`unpaidDays > 0` e `active === true`):
+- **Montagem via Portal**: Renderizado via `createPortal(..., document.body)` com `ENERGY_TAX_MODAL_Z_INDEX = 'z-[9999]'`. Isso elimina o aprisionamento no containing block de `DashboardPage` (que possui animações CSS), garantindo que o backdrop escureça e desfoque a viewport inteira (incluindo o header desktop `z-30` e a topbar mobile `z-40`), sem deixar faixas nítidas no topo.
+- **Ciclo de Vida e Scroll Lock**: Ao abrir, trava a rolagem do `document.body` (`overflow: hidden`) preservando a largura do viewport sem causar layout shift (compensando o `scrollbarWidth`); restaura o scroll e o foco original ao fechar ou desmontar.
+- **Acessibilidade (a11y)**: Configurado com `role="dialog"`, `aria-modal="true"`, `aria-labelledby="energy-tax-modal-title"` e `aria-describedby="energy-tax-modal-description"`. Suporta fechamento pela tecla `Escape`, clique no backdrop e botão de fechar acessível (`aria-label`).
+- **Regras de Negócio e Cotas**:
+  - Pagamento diário opcional com taxa equivalente a 5% por semana (fórmula: `0,05 / 7 ≈ 0,7143%/dia × 7 dias = 5% total`), contra 15% (`0,15 / 7 ≈ 2,1429%/dia`) no fechamento automático semanal de segunda-feira às 00:00 UTC. O badge exibe `-66%` de economia.
+  - Exibição de total minerado nos últimos 7 dias (`totalRewards7d`).
+  - Seletor de moeda de quitação (`POL`, `BLK`, `SHIB`) com verificação dinâmica de saldo (`affordable`).
+  - Isenção de 100% da taxa diária ao completar 10 atividades diárias na plataforma (`todayExempt`), transformando o botão em "Registrar isenção de hoje" (taxa zero).
+  - Resiliência contra corrida concorrente (race condition): colisão na constraint `@@unique([userId, periodDayStartsAt])` em `EnergyTaxCharge` retorna `409 ALREADY_PAID` em vez de erro 500.
+  - Ações: "Pagar hoje" (`POST /api/energy-tax/pay-daily`), link para a página completa de taxas (`/taxes`) e botão "Lembrar depois" que encerra o modal nesta visualização sem marcar como quitado.
+  - Para documentação aprofundada de produto e guia de suporte, consulte a [Seção 5](#5-modal-de-taxa-de-energia-pendente--manual-de-produto-e-suporte).
+
 ### 3.4 Segurança — pontos verificados
 
 - **IDOR**: nenhum endpoint chamado por este módulo aceita um id de usuário vindo do client
@@ -253,3 +268,101 @@ client/src/features/dashboard/
     ├── DashboardEnergyTaxModal.tsx
     └── MiningAllocationPanel.tsx
 ```
+
+---
+
+## 5. Modal de Taxa de Energia Pendente — Manual de Produto e Suporte
+
+Este capítulo consolida a documentação oficial de **Produto** e o guia operacional para equipes de **Suporte e Atendimento** referente ao popup de Taxa de Energia Pendente (`DashboardEnergyTaxModal.tsx`), conectado ao módulo `server/modules/energy-tax/`.
+
+### 5.1 Visão Geral de Produto para o Usuário Final
+
+#### 5.1.1 O que é o Popup e Qual o seu Propósito
+O popup de Taxa de Energia é uma notificação modal de alta prioridade exibida na tela inicial da Dashboard (`/dashboard`). Seu objetivo é alertar imediatamente os mineradores que possuem dias pendentes de quitação de taxa de energia nesta semana, permitindo liquidar o valor diário com um desconto de 66% em relação à taxa semanal padrão ou formalizar a isenção conquistada por engajamento.
+
+#### 5.1.2 Condições de Exibição (Gatilhos de Disparo)
+O modal só é renderizado quando **todas** as seguintes condições forem satisfeitas:
+1. **Recurso Ativo**: A data atual é igual ou posterior à data de início do sistema (`ENERGY_TAX_STARTS_AT`, padrão `2026-06-30T00:00:00.000Z`, validado por `isEnergyTaxActive()`).
+2. **Pendência em Aberto**: O campo `unpaidDays` retornado por `GET /api/energy-tax/summary` é maior que 0 (`unpaidDays > 0`).
+3. **Visibilidade Ativa na Sessão**: O usuário não dispensou o popup nesta navegação clicando em "Lembrar mais tarde", no botão fechar (`X`), na tecla `Escape` ou no backdrop.
+
+> **Importante**: Se `unpaidDays === 0`, se `active === false` ou se a requisição à API falhar, o popup permanece totalmente invisível para não atrapalhar o uso rotineiro da Dashboard.
+
+#### 5.1.3 Comparativo de Regimes de Taxa e Economia
+O modelo econômico do BlockMiner opera sob 3 regimes estritos calculados exclusivamente no servidor:
+
+| Regime | Alíquota Efetiva | Fórmula / Base de Cálculo | Quando Ocorre | Economia Visual |
+|---|---|---|---|---|
+| **Pagamento Diário Opcional** *(Recomendado)* | **5% na semana** (`DAILY_WEEK_RATE = 0.05`) | `0,05 / 7 ≈ 0,007142857` (**0,7143%/dia**) aplicado sobre a recompensa de mineração do dia fechado anterior (`yesterdayRewards`). | Manualmente pelo usuário a qualquer momento antes do sweep semanal. | **-66%** de desconto (em relação aos 15% semanais). |
+| **Fechamento Automático Semanal** *(Sweep)* | **15% na semana** (`FULL_WEEK_RATE = 0.15`) | `0,15 / 7 ≈ 0,02142857` (**2,1429%/dia**) cobrado sobre cada dia fechado da semana que não foi quitado previamente. | Toda **segunda-feira às 00:00 UTC** (`isEnergyTaxAutoSweepDay`), via cron de automação. | Sem desconto (taxa plena). |
+| **Isenção Total por Atividades** | **0% (Isento)** | Envio de encargo com `amount = 0`, `ratePercent = 0` e `mode = "exempt"`. | Quando o usuário atinge **10 atividades diárias** na plataforma. | **100% de desconto** (Taxa zero). |
+
+- **Badge `-66%`**: Destaca ao minerador que quitar a taxa diariamente custa 1/3 do valor do sweep automático semanal.
+- **Total Minerado nos Últimos 7 Dias (`totalRewards7d`)**: O modal exibe a soma dos rendimentos auferidos pelo usuário nos últimos 7 dias minerados, permitindo compreender a base de cálculo.
+
+#### 5.1.4 Isenção Total por Engajamento (10 Atividades Diárias)
+Se o minerador completar pelo menos 10 atividades no ciclo UTC corrente (`ACTIVITY_DISCOUNT_THRESHOLD = 10`), o campo `todayExempt` do resumo torna-se `true`.
+- **Atividades contabilizadas**: Reivindicações no Faucet, cliques PTC (Zerads), shortlinks completados, vídeos do YouTube assistidos, partidas em minigames e ofertas em offerwalls (OfferwallMe, MoneyRain e internas).
+- **Mudança na Interface**:
+  - O seletor de moedas é ocultado (não há débito financeiro).
+  - O botão principal muda para **"Registrar isenção de hoje"**.
+  - Ao clicar, o sistema cria o registro formal de isenção sem descontar nenhuma fração de saldo de qualquer carteira do usuário.
+
+#### 5.1.5 Moedas de Pagamento Aceitas e Cotações Dinâmicas
+Quando a taxa não está isenta, o usuário pode liquidar o débito utilizando qualquer uma das 3 moedas suportadas pelo ecossistema:
+1. **POL** (moeda base nativa de governança e mineração).
+2. **BLK** (token utilitário do jogo).
+3. **SHIB** (moeda memecoin minerável).
+
+- **Cotações**: As cotações equivalentes são calculadas pelo servidor em `buildTaxPayQuotes` (`server/shared/taxPaymentCurrency.ts`) respeitando a paridade com a taxa diária em POL.
+- **Validação de Saldo (`affordable`)**: O componente avalia se o saldo do usuário cobre o montante devido na moeda selecionada. Se o saldo for insuficiente, um card de alerta em vermelho é exibido (`Saldo insuficiente na moeda selecionada`) e o botão de pagamento é desabilitado.
+
+#### 5.1.6 Ações e Navegação Disponíveis
+- **Pagar hoje / Registrar isenção**: Submete `POST /api/energy-tax/pay-daily`, bloqueia novos cliques via estado `paying` (spinner), fecha o modal, atualiza a flag de sessão `energyHasPendingTax: false`, dispara revalidação silenciosa de sessão (`checkSession`) e exibe notificação toast de sucesso.
+- **Ir para Taxa de Energia** (`/taxes`): Fecha o modal e conduz o minerador à página dedicada `/taxes`, onde é possível auditar o histórico de encargos, ver o detalhamento dia a dia e acompanhar o cronômetro para o fechamento semanal.
+- **Lembrar mais tarde / Fechar**: Encerra a visualização do modal na sessão atual sem registrar quitação. O modal voltará a ser exibido no próximo acesso ou recarregamento enquanto existirem pendências.
+
+#### 5.1.7 Experiência Visual e Acessibilidade (A11y)
+- **Eliminação de Bug Visual via Portal**: O modal é renderizado diretamente em `document.body` através de `createPortal(modalContent, document.body)`. Isso elimina o aprisionamento provocado pelo *containing block* que o container de `DashboardPage` cria devido às animações CSS (`animate-in fade-in`), garantindo que o backdrop escureça e desfoque a tela por inteiro.
+- **Escala Canônica de Z-Index (`z-[9999]`)**: Utiliza a constante nomeada `ENERGY_TAX_MODAL_Z_INDEX = 'z-[9999]'`. O modal fica acima do Header desktop (`z-30`), Topbar móvel (`z-40`) e modais comuns (`z-[100]`), mas abaixo de comunicados de broadcast globais (`z-[99999]`) e do desafio antibot (`z-[2147483000]`).
+- **Acessibilidade W3C**: Estruturado com `role="dialog"`, `aria-modal="true"`, `aria-labelledby="energy-tax-modal-title"` e `aria-describedby="energy-tax-modal-description"`. Suporta atalho `Escape` para fechar, foco inicial no container do diálogo e restauração automática do foco ao elemento previamente ativo após o fechamento.
+- **Scroll Lock sem Layout Shift**: O fechamento do scroll do navegador (`overflow: hidden`) aplica compensação de padding correspondente à largura exata da barra de rolagem (`window.innerWidth - document.documentElement.clientWidth`), impedindo saltos visuais na página.
+
+---
+
+### 5.2 Guia Operacional e Troubleshooting para Suporte
+
+Este guia orienta operadores de atendimento e analistas de suporte no diagnóstico e resolução de dúvidas e incidentes relacionados à taxa de energia.
+
+#### 5.2.1 Matriz de Erros de API (`POST /api/energy-tax/pay-daily`)
+
+| Status HTTP | Código de Erro | Mensagem Típica | Causa Técnica | Conduta do Suporte |
+|---|---|---|---|---|
+| `401` | - | Não autenticado | Sessão expirada ou token ausente. | Solicitar que o usuário recarregue a página e realize novo login. |
+| `400` | `NO_REWARDS` | *"Você não minerou nada ontem — sem taxa pra cobrar."* | Usuário não possuía máquinas ativas minerando no dia UTC fechado anterior (`yesterdayRewards <= 0`). | Esclarecer ao usuário que nenhuma taxa é cobrada em dias nos quais não houve mineração. |
+| `400` | `INSUFFICIENT_BALANCE` | *"Saldo insuficiente: precisa de X [MOEDA], tem Y [MOEDA]."* | O saldo da carteira na moeda escolhida é menor que o montante necessário. | Orientar o usuário a selecionar outra moeda no seletor (POL, BLK ou SHIB) ou efetuar depósito/resgate de saldo. |
+| `403` | `NOT_STARTED` | *"A Taxa de Energia entra em vigor em..."* | Tentativa de pagamento antes do marco inicial de lançamento (`ENERGY_TAX_STARTS_AT`). | Informar a data oficial de início das cobranças. Nenhuma ação manual é requerida. |
+| `409` | `ALREADY_PAID` | *"Você já quitou a taxa de energia de ontem."* | O dia já foi pago anteriormente ou ocorreu clique concorrente / duplo clique simultâneo. | Confirmar ao usuário que a taxa do dia já se encontra liquidada. **Importante**: Concorrências disparam colisão única no banco (`@@unique([userId, periodDayStartsAt])`, erro Prisma `P2002`), agora tratada elegantemente com HTTP 409 em vez de erro 500. Não houve duplicidade de débito. |
+| `500` | - | *"Erro ao processar pagamento."* | Falha inesperada de infraestrutura de banco ou rede. | Registrar ticket contendo o `errorId` gerado no console do cliente e encaminhar à equipe de engenharia. |
+
+#### 5.2.2 Códigos de Erro Estruturados no Cliente (`lib/dashboard.errors.ts`)
+
+| Código | Severidade | Impacto | Origem | Comportamento na UI |
+|---|---|---|---|---|
+| `DASHBOARD_ENERGY_TAX_FETCH_FAILED` | `ERROR` | `MEDIUM` | `GET /api/energy-tax/summary` | Falha silenciosa: o modal não é aberto para não bloquear o uso da Dashboard. Log estruturado com `errorId`. |
+| `DASHBOARD_ENERGY_TAX_PAY_FAILED` | `CRITICAL` | `HIGH` | `POST /api/energy-tax/pay-daily` | Modal permanece aberto, botão de pagamento é destravado e exibe toast de erro informando a mensagem da API. |
+
+#### 5.2.3 Perguntas Frequentes (FAQ de Atendimento)
+
+**P: O usuário alega que clicou duas vezes rapidamente no botão de pagar e apareceu um aviso de erro. Ele foi cobrado duas vezes?**  
+*R*: **Não.** O banco de dados possui uma restrição de unicidade composta (`@@unique([userId, periodDayStartsAt])` na tabela `EnergyTaxCharge`). A primeira requisição processa o débito com sucesso; a segunda requisição atinge a restrição de integridade e o sistema retorna imediatamente `409 ALREADY_PAID`. Apenas um único débito é registrado na conta do usuário.
+
+**P: O usuário pergunta por que o popup apareceu se ele não comprou nenhuma taxa.**  
+*R*: O popup é um aviso preventivo do sistema. Sempre que o usuário possui mineradoras gerando recompensas e há dias úteis da semana sem quitação (`unpaidDays > 0`), o aviso surge para oferecer a quitação diária a 5% (com 66% de desconto) antes que o fechamento semanal de segunda-feira aplique a taxa de 15%.
+
+**P: Como o usuário pode obter 100% de isenção da taxa diária?**  
+*R*: O usuário precisa realizar 10 atividades diárias na plataforma antes de clicar em pagar (tais como faucets, tarefas de PTC, shortlinks, vídeos ou jogos). Quando a meta for atingida, o botão do popup muda para "Registrar isenção de hoje", permitindo quitar o dia com custo zero.
+
+**P: Fechar o modal no botão "Lembrar depois" cancela a taxa?**  
+*R*: Não cancela. Apenas oculta o aviso no navegador para que o usuário possa interagir com outras abas. Se o dia não for quitado até segunda-feira às 00:00 UTC, o sistema executará o sweep automático com alíquota semanal de 15%.
+

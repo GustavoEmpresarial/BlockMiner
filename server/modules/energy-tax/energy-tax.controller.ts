@@ -9,14 +9,15 @@ import {
   EnergyTaxNotStarted,
 } from "./energy-tax.errors.js";
 import { logger } from "../../core/logger/index.js";
-import { parseTaxPayCurrency } from "../../shared/taxPaymentCurrency.js";
+import { parseTaxPayCurrency, InvalidTaxPayCurrencyError } from "../../shared/taxPaymentCurrency.js";
 
 const log = logger.child("energy-tax.controller");
 
 // In-memory per-user cache. computeWeekSummary fires ~40-60 queries (aggregates
 // rewards per day over large tables). Result barely changes second to second, so
 // serve from a short-TTL cache and invalidate on payment.
-const SUMMARY_TTL_MS = 45_000;
+const SUMMARY_TTL_MS = Number(process.env.ENERGY_TAX_SUMMARY_CACHE_TTL_MS || 45_000);
+const SUMMARY_CACHE_MAX_ENTRIES = Number(process.env.ENERGY_TAX_SUMMARY_CACHE_MAX || 5000);
 const summaryCache = new Map<number, { at: number; data: Awaited<ReturnType<typeof energyTaxService.computeWeekSummary>> }>();
 
 function invalidateSummary(userId: number): void {
@@ -35,7 +36,7 @@ export async function getSummary(req: Request, res: Response): Promise<void> {
     }
     const summary = await energyTaxService.computeWeekSummary(user.id);
     summaryCache.set(user.id, { at: now, data: summary });
-    if (summaryCache.size > 5000) {
+    if (summaryCache.size > SUMMARY_CACHE_MAX_ENTRIES) {
       for (const [k, v] of Array.from(summaryCache.entries())) {
         if (now - v.at >= SUMMARY_TTL_MS) summaryCache.delete(k);
       }
@@ -56,6 +57,10 @@ export async function postPayDaily(req: Request, res: Response): Promise<void> {
     invalidateSummary(user.id);
     res.json({ ok: true, charge, currency });
   } catch (err) {
+    if (err instanceof InvalidTaxPayCurrencyError) {
+      res.status(400).json({ ok: false, code: "INVALID_CURRENCY", message: "Moeda inválida para pagamento de taxa." });
+      return;
+    }
     if (err instanceof EnergyTaxNotStarted) {
       res.status(403).json({ ok: false, code: "NOT_STARTED", message: err.message, startsAt: err.startsAt.toISOString() });
       return;

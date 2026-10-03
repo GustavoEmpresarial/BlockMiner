@@ -88,4 +88,4 @@ export type EnergyTaxSummary = {
   }>;
 };
 
-export type WeeklySweepResult = { touched: number; chargesCreated: number };
+export type WeeklySweepResult = { touched: number; chargesCreated: number; failures?: number };
