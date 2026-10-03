@@ -19,8 +19,9 @@ declare global {
 /**
  * Safely opens external offerwall partner URL in a new tab:
  * - Checks test/embedded harness hook (_BmPartnerIframe) first.
- * - Tries direct window.open first. If successful, returns true.
- * - Falls back to programmatic anchor click with rel="noopener" to preserve Referer header while preventing tabnabbing.
+ * - Tries direct window.open first with 'noopener' to preserve Referer header while preventing tabnabbing.
+ * - If window.open returns null or throws, popup was blocked by browser; returns false reliably.
+ * - If window.open is not available (e.g. specialized webview), falls back to programmatic anchor click.
  * - Returns true if navigation was dispatched, or false if blocked by browser.
  */
 export function openPartnerSafe(url: string): boolean {
@@ -31,14 +32,18 @@ export function openPartnerSafe(url: string): boolean {
     return Boolean(window._BmPartnerIframe(u));
   }
 
-  if (typeof window !== 'undefined') {
+  if (typeof window !== 'undefined' && typeof window.open === 'function') {
     try {
       const win = window.open(u, '_blank', 'noopener');
       if (win) {
         return true;
       }
+      // When window.open returns null, popup was blocked by the browser.
+      // Synthetic a.click() without an active user gesture will also be blocked,
+      // so return false reliably to allow UI to guide user to direct link.
+      return false;
     } catch {
-      /* popup might be blocked or restricted, try anchor click below */
+      return false;
     }
   }
 

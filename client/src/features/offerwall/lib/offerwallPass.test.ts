@@ -37,7 +37,37 @@ describe('offerwallPass', () => {
       expect(result).toBe(true);
     });
 
-    it('creates an anchor tag with rel="noopener" and target="_blank"', () => {
+    it('returns true when window.open succeeds and returns a window object', () => {
+      const fakeWin = { focus: vi.fn() } as unknown as Window;
+      const openSpy = vi.spyOn(window, 'open').mockReturnValue(fakeWin);
+
+      const result = openPartnerSafe('https://offerwall.me/offerwall/pub/1');
+      expect(openSpy).toHaveBeenCalledWith('https://offerwall.me/offerwall/pub/1', '_blank', 'noopener');
+      expect(result).toBe(true);
+    });
+
+    it('returns false when window.open is blocked and returns null', () => {
+      const openSpy = vi.spyOn(window, 'open').mockReturnValue(null);
+
+      const result = openPartnerSafe('https://offerwall.me/offerwall/pub/1');
+      expect(openSpy).toHaveBeenCalledWith('https://offerwall.me/offerwall/pub/1', '_blank', 'noopener');
+      expect(result).toBe(false);
+    });
+
+    it('returns false when window.open throws an exception', () => {
+      vi.spyOn(window, 'open').mockImplementation(() => {
+        throw new Error('Window blocked');
+      });
+
+      const result = openPartnerSafe('https://offerwall.me/offerwall/pub/1');
+      expect(result).toBe(false);
+    });
+
+    it('falls back to programmatic anchor click when window.open is not available', () => {
+      const originalOpen = window.open;
+      // @ts-expect-error test environment override
+      delete window.open;
+
       const appendSpy = vi.spyOn(document.body, 'appendChild');
       const clickSpy = vi.fn();
 
@@ -55,6 +85,8 @@ describe('offerwallPass', () => {
       expect(clickSpy).toHaveBeenCalled();
       expect(appendSpy).toHaveBeenCalled();
       expect(result).toBe(true);
+
+      window.open = originalOpen;
     });
   });
 

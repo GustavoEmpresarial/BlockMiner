@@ -89,8 +89,6 @@ const HUB_CARD_ACCENT: Record<
   },
 };
 
-const openPartner = openPartnerSafe;
-
 function readOfferwallRate(stats: Record<string, unknown> | null | undefined, fallback = DEFAULT_OFFERWALL_RATE): number {
   const raw = stats?.blkPerClick ?? stats?.exchangeRate ?? stats?.rate;
   const n = Number(raw);
@@ -474,7 +472,7 @@ function ZeradsPanel({ onBack }: { onBack: () => void }) {
             <a
               href={url}
               target="_blank"
-              rel="noopener noreferrer"
+              rel="noopener"
               className="w-full flex items-center justify-center gap-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold py-3 transition-colors text-sm"
             >
               <ExternalLink className="w-4 h-4" />
@@ -626,7 +624,7 @@ function OfferwallMePanel({ onBack }: { onBack: () => void }) {
               <a
                 href={url}
                 target="_blank"
-                rel="noopener noreferrer"
+                rel="noopener"
                 className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 text-sky-200 text-xs font-semibold border border-sky-500/30 transition-all"
               >
                 <ExternalLink className="w-3 h-3" />
@@ -688,7 +686,7 @@ function OfferwallMePanel({ onBack }: { onBack: () => void }) {
                 <a
                   href={url}
                   target="_blank"
-                  rel="noopener noreferrer"
+                  rel="noopener"
                   className="w-full flex items-center justify-center gap-2 rounded-xl bg-violet-600 hover:bg-violet-500 active:bg-violet-700 text-white font-bold py-3.5 px-6 shadow-md shadow-violet-600/30 transition-all text-sm"
                 >
                   <ExternalLink className="w-4 h-4" />
@@ -721,7 +719,7 @@ function OfferwallMePanel({ onBack }: { onBack: () => void }) {
                 <a
                   href={url}
                   target="_blank"
-                  rel="noopener noreferrer"
+                  rel="noopener"
                   className="inline-flex items-center gap-1.5 text-violet-300 hover:text-white font-semibold transition-colors"
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
