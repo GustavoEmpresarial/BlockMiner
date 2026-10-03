@@ -154,5 +154,5 @@ Evidências:
 - EV-DOC-0004: Auditoria de diff e ausência de segredos em docs/paginas/usuario/dashboard/README.md e docs/auditoria/fase-04-documentacao.md.
 Pendências:
 - Nenhuma pendência na Fase 4. Documentação de produto, técnica e de suporte 100% sincronizada com o código executável.
-Commit: <a ser preenchido após commit>
+Commit: f9ee799 docs(energy-tax): completar documentacao de produto e suporte do popup e fechar fase 4
 ```
