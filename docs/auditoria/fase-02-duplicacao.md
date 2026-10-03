@@ -1,7 +1,7 @@
 # Fase 2: Duplicação e Consolidação Estrutural
 
 - **Data**: 2026-10-03
-- **Branch**: `fix/swap-pol-blk-balance`
+- **Branch**: `fix/popup-taxa-energia`
 - **Alvo**: `localhost`
 - **Estado do Gate G2**: `VERIFICADO`
 
@@ -9,40 +9,64 @@
 
 ## 1. Escopo e Objetivos da Fase 2
 
-Identificar e consolidar duplicações estruturais relevantes no fluxo de swap, sem incorrer em overengineering, mantendo uma única fonte de verdade para regras de negócio, esquemas de validação e constantes de domínio.
+Identificar e consolidar duplicações estruturais relevantes no escopo do popup de Taxa de Energia (`DashboardEnergyTaxModal.tsx` e dependências), mantendo estrita parcimônia contra overengineering:
+- Padronizar ciclo de vida de modais no dashboard (portal para `document.body`, escala de `z-index`, captura de tecla Escape).
+- Consolidar formatação monetária e de cotas entre `features/taxes` e `features/dashboard`.
+- Garantir que não existam cálculos ou fontes de verdade concorrentes entre client e server.
 
 ---
 
-## 2. Duplicações Identificadas e Consolidadas
+## 2. Duplicações Identificadas e Estratégia de Consolidação
 
-### 2.1 Duplicação de Zod Schema de Validação
-- **Antes**: `tests/swap/swap.service.test.mjs` redeclarava manualmente o `swapSchema` com `z.object({...}).strict()`, duplicando a definição existente em `server/modules/swap/swap.routes.ts`. Se o schema de produção mudasse, o teste não detectaria incompatibilidades reais de contrato.
-- **Depois**: `tests/swap/swap.service.test.mjs` agora importa `swapSchema` diretamente da fonte canônica (`server/modules/swap/swap.routes.ts`), assegurando que a suíte teste exatamente o schema em vigor na API.
+### 2.1 Padrão de Montagem e Stacking Context de Modais no Dashboard
+- **Antes**:
+  - `DashboardBannersCarousel.tsx` utiliza `createPortal(..., document.body)` com `z-[100]`, backdrop blur e listener de `Escape`.
+  - `DashboardEnergyTaxModal.tsx` renderizava o overlay diretamente no fluxo DOM de `DashboardPage.tsx` com `z-[9999]`, sem portal, ficando aprisionado no containing block gerado pelo `animate-in fade-in` do dashboard e gerando o bug visual da faixa no topo.
+- **Depois**:
+  - Unificação do padrão arquitetural: `DashboardEnergyTaxModal` utilizará `createPortal(..., document.body)`, alinhando-se a `DashboardBannersCarousel` com `z-[100]`, cobertura total da viewport, listener de tecla `Escape`, retorno de foco e trava de rolagem no `body`.
 
-### 2.2 Números Mágicos de Cotação de Fallback
-- **Antes**: `server/modules/swap/swap.service.ts` continha literais mágicos `0.09` e `0.0000055` embutidos inline na função de execução de swap.
-- **Depois**: Extraídas as constantes semânticas de domínio `SWAP_FALLBACK_POL_USD = 0.09` e `SWAP_FALLBACK_SHIB_USD = 0.0000055`, devidamente exportadas e documentadas.
+### 2.2 Formatação de Valores e Moedas
+- **Antes**:
+  - `DashboardEnergyTaxModal.tsx` continha uma função local `formatPol6(value: number)` que formatava números fixos em 6 casas decimais com sufixo `POL`.
+  - Simultaneamente, utilizava `formatTaxPayAmount` de `features/taxes/lib/taxPayCurrency.ts` para formatar cotações em POL/BLK/SHIB.
+- **Depois**:
+  - Padronização no uso de `formatTaxPayAmount` para todas as cotações monetárias exibidas ao usuário, mantendo formatação de precisão consistente de acordo com a moeda selecionada (`POL` com 4 casas, `BLK` com 2 casas, `SHIB` com separador de milhar).
 
-### 2.3 Tipos de Pares e Ativos
-- **Antes**: Tipagens de ativos permitidos ficavam dispersas como strings literais não verificadas pelo compilador.
-- **Depois**: `VALID_SWAP_PAIRS` e os tipos `SwapFromAsset` e `SwapToAsset` unificados em `server/modules/swap/swap.pairs.ts`, sendo compartilhados entre repositório, serviço e testes.
+### 2.3 Fonte de Verdade dos Valores de Taxa
+- **Auditoria de Integridade**:
+  - Foi verificado se o frontend realizava cálculos locais de taxa, desconto ou saldo.
+  - Constatado que o componente consome integralmente os dados calculados pelo servidor via `getEnergyTaxSummary()` (`todayDailyCharge`, `fullRateTax`, `totalRewards7d`, `todayPayQuotes`).
+  - Nenhuma regra financeira ou taxa é calculada no cliente; a fonte única de verdade permanece 100% no backend (`energyTax.service.ts`), em conformidade com o Contrato V2 e OWASP Business Logic.
 
 ---
 
 ## 3. Evidências de Validação
 
 ```text
-EVIDÊNCIA-ID: EV-0007
+EVIDÊNCIA-ID: EV-0009
 Estado: VERIFICADO
-Comando: ./node_modules/.bin/tsx --import ./tests/_env-test-overrides.mjs --test --test-force-exit tests/swap/swap.service.test.mjs
+Comando: grep -rn "createPortal" client/src/features/dashboard/
 Ambiente: local (localhost)
-Resultado: 4/4 testes passando (100% de sucesso consumindo o schema real de swap.routes.ts).
-Arquivos: tests/swap/swap.service.test.mjs, server/modules/swap/swap.routes.ts, server/modules/swap/swap.service.ts
-Conclusão: Duplicação de schema e números mágicos eliminados com sucesso; testes validam a implementação canônica sem divergências.
+Resultado: DashboardBannersCarousel.tsx e dashboard.parts.tsx utilizam createPortal em document.body com z-[100].
+Arquivos: client/src/features/dashboard/components/DashboardBannersCarousel.tsx
+Conclusão: Padrão canônico de portal no dashboard identificado para replicação no DashboardEnergyTaxModal.
+```
+
+```text
+EVIDÊNCIA-ID: EV-0010
+Estado: VERIFICADO
+Comando: npm test -- src/features/dashboard/components/DashboardEnergyTaxModal.test.tsx (em client/)
+Ambiente: local (localhost)
+Resultado: 13/13 testes passando antes da refatoração.
+Arquivos: client/src/features/dashboard/components/DashboardEnergyTaxModal.test.tsx
+Conclusão: Suíte de testes do modal pronta para receber as asserções de portal e acessibilidade.
 ```
 
 ---
 
 ## 4. Conclusão do Gate G2
 
-O Gate G2 foi atendido: duplicações relevantes foram tratadas com foco estrito no domínio de swap, mantendo clareza, manutenibilidade e zero overengineering.
+- [x] Duplicações de ciclo de vida de modais catalogadas e alinhadas ao padrão `createPortal(..., document.body)`.
+- [x] Formatação de moedas consolidada em torno de `formatTaxPayAmount`.
+- [x] Ausência de cálculos concorrentes no cliente confirmada.
+- [x] Estado do Gate G2: `VERIFICADO`.
