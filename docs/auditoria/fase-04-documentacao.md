@@ -101,5 +101,5 @@ Estado: VERIFICADO
 Mudanças: Criação de README.md e docs/api.md; criação de docs/architecture.md e alinhamento de docs/ARQUITETURA.md; atualização detalhada de server/modules/swap/README.md com taxas de fallback, códigos de erro e travas de concorrência; consolidação de docs/auditoria/fase-04-documentacao.md; alinhamento de tipagem TxClient em swap.repository.ts.
 Evidências: 12/12 testes passando em tests/swap/*.test.mjs (EV-DOC-0001); 0 erros de typecheck no módulo swap/ (EV-DOC-0002); conformidade estrita de contratos de payload e erro verificados contra código e fixtures.
 Pendências: Nenhuma.
-Commit: a ser gerado na branch fix/swap-pol-blk-balance.
+Commit: 91c0883 docs(product): atualizar documentacao de produto, api, arquitetura e auditoria da fase 4
 ```
