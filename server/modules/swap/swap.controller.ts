@@ -31,12 +31,23 @@ export async function executeSwap(req: Request, res: Response): Promise<void> {
       return;
     }
     if (!Number.isFinite(amountNum) || amountNum <= 0) {
-      res.status(400).json({ ok: false, message: "Invalid amount" });
+      res.status(400).json({
+        ok: false,
+        code: "SWAP_INVALID_AMOUNT",
+        message: "Invalid amount",
+      });
       return;
     }
-    const { rate, output } = await swapService.executeSwapForUser(user.id, fromAsset as string, toAsset as string, amountNum);
-    res.json({ ok: true, rate, output });
+    const { rate, output, balances } = await swapService.executeSwapForUser(
+      user.id,
+      fromAsset as string,
+      toAsset as string,
+      amountNum,
+    );
+    res.json({ ok: true, rate, output, balances });
   } catch (e: unknown) {
-    res.status(400).json({ ok: false, message: e instanceof Error ? e.message : String(e) });
+    const code = (e as { code?: string })?.code || "SWAP_ERROR";
+    const message = e instanceof Error ? e.message : String(e);
+    res.status(400).json({ ok: false, code, message });
   }
 }

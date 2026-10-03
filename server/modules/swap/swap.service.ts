@@ -3,6 +3,8 @@ import prisma from "../../core/database/prisma.js";
 import * as swapRepo from "./swap.repository.js";
 import { getPolUsdPrice, getShibUsdPrice } from "../../shared/cryptoPrice/cryptoPrice.js";
 import { isValidSwapPair, type SwapFromAsset, type SwapToAsset } from "./swap.pairs.js";
+import { invalidateBalanceCache } from "../wallet/balance/balance.service.js";
+import { invalidateAuthUserCache } from "../../shared/security/authUser.js";
 
 export { getPolUsdPrice, getShibUsdPrice };
 export { VALID_SWAP_PAIRS, isValidSwapPair } from "./swap.pairs.js";
@@ -27,6 +29,11 @@ export type UserSwapBalances = {
 export type ExecuteSwapResult = {
   rate: number;
   output: number;
+  balances: {
+    POL: number;
+    SHIB: number;
+    BLK: number;
+  };
 };
 
 export async function getBalancesForUser(userId: number): Promise<UserSwapBalances> {
@@ -49,10 +56,14 @@ export async function executeSwapForUser(
   amountNum: number,
 ): Promise<ExecuteSwapResult> {
   if (!isValidSwapPair(fromAsset, toAsset)) {
-    throw new Error(`Swap ${fromAsset}→${toAsset} not supported`);
+    const err = new Error(`Swap ${fromAsset}→${toAsset} not supported`);
+    Object.assign(err, { code: "SWAP_INVALID_PAIR" });
+    throw err;
   }
   if (!(amountNum > 0) || !Number.isFinite(amountNum)) {
-    throw new Error("Invalid amount");
+    const err = new Error("Invalid amount");
+    Object.assign(err, { code: "SWAP_INVALID_AMOUNT" });
+    throw err;
   }
   const polPrice = await getPolUsdPrice();
   const shibPrice = await getShibUsdPrice();
@@ -68,30 +79,51 @@ export async function executeSwapForUser(
     rate = safeShib;
     output = Number((amountNum * safeShib).toFixed(8));
   } else {
-    throw new Error(`Swap ${fromAsset}→${toAsset} not supported`);
+    const err = new Error(`Swap ${fromAsset}→${toAsset} not supported`);
+    Object.assign(err, { code: "SWAP_INVALID_PAIR" });
+    throw err;
   }
 
   if (!(output > 0)) {
-    throw new Error("Output amount too small");
+    const err = new Error("Output amount too small");
+    Object.assign(err, { code: "SWAP_OUTPUT_TOO_SMALL" });
+    throw err;
   }
 
-  await prisma.$transaction(async (tx) => {
+  const updatedBalances = await prisma.$transaction(async (tx) => {
     const user = await swapRepo.findUserBalancesTx(tx, userId);
     if (!user) {
-      throw new Error("User not found");
+      const err = new Error("User not found");
+      Object.assign(err, { code: "SWAP_USER_NOT_FOUND" });
+      throw err;
     }
+    let updated: swapRepo.SwapBalancesRow;
     if (fromAsset === "POL") {
       if (Number(user.polBalance) < amountNum) {
-        throw new Error("Insufficient POL balance");
+        const err = new Error("Insufficient POL balance");
+        Object.assign(err, { code: "SWAP_INSUFFICIENT_BALANCE" });
+        throw err;
       }
-      await swapRepo.updatePolToBlkTx(tx, userId, amountNum, output);
+      updated = await swapRepo.updatePolToBlkTx(tx, userId, amountNum, output);
     } else {
       if (Number(user.shibBalance) < amountNum) {
-        throw new Error("Insufficient SHIB balance");
+        const err = new Error("Insufficient SHIB balance");
+        Object.assign(err, { code: "SWAP_INSUFFICIENT_BALANCE" });
+        throw err;
       }
-      await swapRepo.updateShibToBlkTx(tx, userId, amountNum, output);
+      updated = await swapRepo.updateShibToBlkTx(tx, userId, amountNum, output);
     }
+    await swapRepo.createSwapTransactionTx(tx, userId, fromAsset, amountNum, rate, output);
+    return {
+      POL: Number(updated.polBalance),
+      SHIB: Number(updated.shibBalance),
+      BLK: Number(updated.blkBalance),
+    };
   });
 
-  return { rate, output };
+  // Invalidar caches em memória para que leituras subsequentes reflitam o novo saldo sem atraso
+  invalidateBalanceCache(userId);
+  invalidateAuthUserCache(userId);
+
+  return { rate, output, balances: updatedBalances };
 }

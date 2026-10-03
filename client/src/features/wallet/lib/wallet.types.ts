@@ -108,6 +108,11 @@ export type SwapExecuteResponse = {
   message?: string;
   rate?: number;
   output?: number;
+  balances?: {
+    POL: number;
+    SHIB: number;
+    BLK: number;
+  };
   code?: string;
 };
 
