@@ -19,7 +19,8 @@ declare global {
 /**
  * Safely opens external offerwall partner URL in a new tab:
  * - Checks test/embedded harness hook (_BmPartnerIframe) first.
- * - Tries direct window.open first with 'noopener' to preserve Referer header while preventing tabnabbing.
+ * - Calls window.open without 'noopener' so the browser returns a WindowProxy on success rather than
+ *   forcing null by spec, then detaches win.opener = null to prevent tabnabbing while keeping Referer.
  * - If window.open returns null or throws, popup was blocked by browser; returns false reliably.
  * - If window.open is not available (e.g. specialized webview), falls back to programmatic anchor click.
  * - Returns true if navigation was dispatched, or false if blocked by browser.
@@ -34,8 +35,13 @@ export function openPartnerSafe(url: string): boolean {
 
   if (typeof window !== 'undefined' && typeof window.open === 'function') {
     try {
-      const win = window.open(u, '_blank', 'noopener');
+      const win = window.open(u, '_blank');
       if (win) {
+        try {
+          win.opener = null;
+        } catch {
+          /* ignore cross-origin access restriction */
+        }
         return true;
       }
       // When window.open returns null, popup was blocked by the browser.

@@ -37,12 +37,13 @@ describe('offerwallPass', () => {
       expect(result).toBe(true);
     });
 
-    it('returns true when window.open succeeds and returns a window object', () => {
-      const fakeWin = { focus: vi.fn() } as unknown as Window;
+    it('returns true when window.open succeeds and detaches opener', () => {
+      const fakeWin = { focus: vi.fn(), opener: window } as unknown as Window;
       const openSpy = vi.spyOn(window, 'open').mockReturnValue(fakeWin);
 
       const result = openPartnerSafe('https://offerwall.me/offerwall/pub/1');
-      expect(openSpy).toHaveBeenCalledWith('https://offerwall.me/offerwall/pub/1', '_blank', 'noopener');
+      expect(openSpy).toHaveBeenCalledWith('https://offerwall.me/offerwall/pub/1', '_blank');
+      expect(fakeWin.opener).toBeNull();
       expect(result).toBe(true);
     });
 
@@ -50,7 +51,7 @@ describe('offerwallPass', () => {
       const openSpy = vi.spyOn(window, 'open').mockReturnValue(null);
 
       const result = openPartnerSafe('https://offerwall.me/offerwall/pub/1');
-      expect(openSpy).toHaveBeenCalledWith('https://offerwall.me/offerwall/pub/1', '_blank', 'noopener');
+      expect(openSpy).toHaveBeenCalledWith('https://offerwall.me/offerwall/pub/1', '_blank');
       expect(result).toBe(false);
     });
 
