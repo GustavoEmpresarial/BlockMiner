@@ -85,7 +85,7 @@ test("REGRESSÃO: swap SHIB->BLK deve debitar shibBalance e creditar blkBalance 
 
   const fresh = await balanceService.getBalanceForUser(user.id);
   assert.equal(fresh.shibBalance, 300000, "SHIB deve diminuir para 300.000");
-  assert.equal(fresh.blkBalance, 1 + swapResult.output, "BLK deve ser incrementado");
+  assert.equal(fresh.blkBalance, Number((1 + swapResult.output).toFixed(8)), "BLK deve ser incrementado");
 });
 
 test("INTEGRIDADE DO LEDGER: swap gera registro na tabela transactions", async () => {

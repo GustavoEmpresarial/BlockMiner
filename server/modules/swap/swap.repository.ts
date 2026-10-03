@@ -1,5 +1,5 @@
 import type { Prisma } from "@prisma/client";
-import prisma from "../../core/database/prisma.js";
+import prisma, { type TxClient } from "../../core/database/prisma.js";
 
 export type SwapBalancesRow = {
   polBalance: Prisma.Decimal;
@@ -15,7 +15,7 @@ export async function findUserBalances(userId: number): Promise<SwapBalancesRow 
 }
 
 export async function findUserBalancesTx(
-  tx: Prisma.TransactionClient,
+  tx: TxClient,
   userId: number,
 ): Promise<SwapBalancesRow | null> {
   await tx.$queryRaw`SELECT id FROM users WHERE id = ${userId} FOR UPDATE`;
@@ -26,7 +26,7 @@ export async function findUserBalancesTx(
 }
 
 export async function updatePolToBlkTx(
-  tx: Prisma.TransactionClient,
+  tx: TxClient,
   userId: number,
   amountNum: number,
   output: number,
@@ -42,7 +42,7 @@ export async function updatePolToBlkTx(
 }
 
 export async function updateShibToBlkTx(
-  tx: Prisma.TransactionClient,
+  tx: TxClient,
   userId: number,
   amountNum: number,
   output: number,
@@ -58,7 +58,7 @@ export async function updateShibToBlkTx(
 }
 
 export async function createSwapTransactionTx(
-  tx: Prisma.TransactionClient,
+  tx: TxClient,
   userId: number,
   fromAsset: string,
   amountNum: number,
