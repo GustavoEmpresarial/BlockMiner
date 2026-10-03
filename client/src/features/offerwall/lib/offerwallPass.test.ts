@@ -21,19 +21,20 @@ describe('offerwallPass', () => {
   });
 
   describe('openPartnerSafe', () => {
-    it('does nothing when url is empty or whitespace', () => {
+    it('returns false when url is empty or whitespace', () => {
       const openSpy = vi.spyOn(window, 'open');
-      openPartnerSafe('');
-      openPartnerSafe('   ');
+      expect(openPartnerSafe('')).toBe(false);
+      expect(openPartnerSafe('   ')).toBe(false);
       expect(openSpy).not.toHaveBeenCalled();
     });
 
-    it('delegates to _BmPartnerIframe if available on window', () => {
+    it('delegates to _BmPartnerIframe if available on window and returns its boolean result', () => {
       const mockHarness = vi.fn().mockReturnValue(true);
       window._BmPartnerIframe = mockHarness;
 
-      openPartnerSafe('https://offerwall.me/offerwall/pub/1');
+      const result = openPartnerSafe('https://offerwall.me/offerwall/pub/1');
       expect(mockHarness).toHaveBeenCalledWith('https://offerwall.me/offerwall/pub/1');
+      expect(result).toBe(true);
     });
 
     it('creates an anchor tag with rel="noopener" and target="_blank"', () => {
@@ -49,21 +50,25 @@ describe('offerwallPass', () => {
         return el;
       });
 
-      openPartnerSafe('https://offerwall.me/offerwall/pub/42');
+      const result = openPartnerSafe('https://offerwall.me/offerwall/pub/42');
 
       expect(clickSpy).toHaveBeenCalled();
       expect(appendSpy).toHaveBeenCalled();
+      expect(result).toBe(true);
     });
   });
 
   describe('fetchOfferwallLinkWithPass', () => {
-    it('returns url directly on successful 200 response', async () => {
+    it('returns { ok: true, url } directly on successful 200 response', async () => {
       vi.mocked(api.get).mockResolvedValueOnce({
         data: { ok: true, url: 'https://offerwall.me/offerwall/yyu8i3jt58by9do1fbdr0fyn60yn5u/123' },
       });
 
-      const url = await fetchOfferwallLinkWithPass('offerwallme', '/offerwallme/link');
-      expect(url).toBe('https://offerwall.me/offerwall/yyu8i3jt58by9do1fbdr0fyn60yn5u/123');
+      const res = await fetchOfferwallLinkWithPass('offerwallme', '/offerwallme/link');
+      expect(res).toEqual({
+        ok: true,
+        url: 'https://offerwall.me/offerwall/yyu8i3jt58by9do1fbdr0fyn60yn5u/123',
+      });
       expect(api.get).toHaveBeenCalledWith('/offerwallme/link');
     });
 
@@ -89,21 +94,65 @@ describe('offerwallPass', () => {
         data: { ok: true, url: 'https://offerwall.me/offerwall/yyu8i3jt58by9do1fbdr0fyn60yn5u/123' },
       });
 
-      const url = await fetchOfferwallLinkWithPass('offerwallme', '/offerwallme/link');
+      const res = await fetchOfferwallLinkWithPass('offerwallme', '/offerwallme/link');
 
       expect(ensureMock).toHaveBeenCalledWith('offerwallme');
       expect(api.get).toHaveBeenCalledTimes(2);
       expect(api.get).toHaveBeenLastCalledWith('/offerwallme/link', {
         headers: { 'x-bm-captcha-pass': 'test-pass-token-abc' },
       });
-      expect(url).toBe('https://offerwall.me/offerwall/yyu8i3jt58by9do1fbdr0fyn60yn5u/123');
+      expect(res).toEqual({
+        ok: true,
+        url: 'https://offerwall.me/offerwall/yyu8i3jt58by9do1fbdr0fyn60yn5u/123',
+      });
     });
 
-    it('returns null if request fails without captcha or retry fails', async () => {
+    it('returns { ok: false, code: "CAPTCHA_CANCELLED" } if user cancels captcha', async () => {
+      vi.mocked(api.get).mockRejectedValueOnce({
+        response: {
+          status: 403,
+          data: { ok: false, code: 'CAPTCHA_PASS_REQUIRED' },
+        },
+      });
+
+      window.BmCaptchaGate = {
+        ensure: vi.fn().mockRejectedValue(new Error('User closed captcha modal')),
+        show: vi.fn(),
+        openWithPass: vi.fn(),
+      };
+
+      const res = await fetchOfferwallLinkWithPass('offerwallme', '/offerwallme/link');
+      expect(res).toEqual({
+        ok: false,
+        code: 'CAPTCHA_CANCELLED',
+        message: 'Captcha verification cancelled',
+      });
+    });
+
+    it('returns { ok: false, code: "NETWORK_ERROR" } on connection loss', async () => {
       vi.mocked(api.get).mockRejectedValueOnce(new Error('Network error'));
 
-      const url = await fetchOfferwallLinkWithPass('offerwallme', '/offerwallme/link');
-      expect(url).toBeNull();
+      const res = await fetchOfferwallLinkWithPass('offerwallme', '/offerwallme/link');
+      expect(res).toEqual({
+        ok: false,
+        code: 'NETWORK_ERROR',
+        message: 'Network connection failed',
+      });
+    });
+
+    it('returns { ok: false, code: "UNAUTHENTICATED" } on 401', async () => {
+      vi.mocked(api.get).mockRejectedValueOnce({
+        response: {
+          status: 401,
+        },
+      });
+
+      const res = await fetchOfferwallLinkWithPass('offerwallme', '/offerwallme/link');
+      expect(res).toEqual({
+        ok: false,
+        code: 'UNAUTHENTICATED',
+        message: 'Authentication required',
+      });
     });
   });
 });

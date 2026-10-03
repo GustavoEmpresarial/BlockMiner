@@ -19,16 +19,27 @@ declare global {
 /**
  * Safely opens external offerwall partner URL in a new tab:
  * - Checks test/embedded harness hook (_BmPartnerIframe) first.
- * - Uses programmatic anchor tag with rel="noopener" to preserve Referer header while preventing tabnabbing.
- * - Falls back to window.open if DOM anchor execution is blocked.
+ * - Tries direct window.open first. If successful, returns true.
+ * - Falls back to programmatic anchor click with rel="noopener" to preserve Referer header while preventing tabnabbing.
+ * - Returns true if navigation was dispatched, or false if blocked by browser.
  */
-export function openPartnerSafe(url: string): void {
+export function openPartnerSafe(url: string): boolean {
   const u = String(url || '').trim();
-  if (!u) return;
+  if (!u) return false;
 
   if (typeof window !== 'undefined' && typeof window._BmPartnerIframe === 'function') {
-    window._BmPartnerIframe(u);
-    return;
+    return Boolean(window._BmPartnerIframe(u));
+  }
+
+  if (typeof window !== 'undefined') {
+    try {
+      const win = window.open(u, '_blank', 'noopener');
+      if (win) {
+        return true;
+      }
+    } catch {
+      /* popup might be blocked or restricted, try anchor click below */
+    }
   }
 
   if (typeof document !== 'undefined' && document.body) {
@@ -42,49 +53,84 @@ export function openPartnerSafe(url: string): void {
       document.body.appendChild(a);
       a.click();
       a.remove();
-      return;
+      return true;
     } catch {
-      /* fallback to window.open below */
+      return false;
     }
   }
 
-  if (typeof window !== 'undefined') {
-    window.open(u, '_blank', 'noopener');
-  }
+  return false;
 }
+
+export type OfferwallPassResult =
+  | { ok: true; url: string }
+  | {
+      ok: false;
+      code: 'CAPTCHA_CANCELLED' | 'CAPTCHA_REQUIRED' | 'UNAUTHENTICATED' | 'NETWORK_ERROR' | 'SERVER_ERROR';
+      message?: string;
+    };
 
 /**
  * Resolves an external offerwall link (e.g. /offerwallme/link, /zerads/link).
  * Handles BM Captcha pass requirements transparently:
  * 1. Attempts direct fetch (succeeds when BM_CAPTCHA_ENABLED=0 or pass already held).
  * 2. If rejected with 403 CAPTCHA_PASS_REQUIRED, triggers window.BmCaptchaGate.ensure(provider) and retries.
+ * 3. Returns a structured result with error classifications for observability and UI feedback.
  */
 export async function fetchOfferwallLinkWithPass(
   provider: BmCaptchaProvider,
   endpoint: string,
-): Promise<string | null> {
+): Promise<OfferwallPassResult> {
   try {
     const res = await api.get(endpoint);
     const initialUrl = (res.data?.url as string | undefined) ?? null;
-    if (initialUrl) return initialUrl;
+    if (initialUrl) {
+      return { ok: true, url: initialUrl };
+    }
   } catch (err: unknown) {
     const status = (err as { response?: { status?: number } })?.response?.status;
     const code = (err as { response?: { data?: { code?: string } } })?.response?.data?.code;
 
+    if (status === 401) {
+      return { ok: false, code: 'UNAUTHENTICATED', message: 'Authentication required' };
+    }
+
     if (status === 403 && (code === 'CAPTCHA_PASS_REQUIRED' || code === 'CAPTCHA_PASS_INVALID')) {
       if (typeof window !== 'undefined' && window.BmCaptchaGate?.ensure) {
+        let passToken = '';
         try {
-          const passToken = await window.BmCaptchaGate.ensure(provider);
+          passToken = await window.BmCaptchaGate.ensure(provider);
+        } catch {
+          return { ok: false, code: 'CAPTCHA_CANCELLED', message: 'Captcha verification cancelled' };
+        }
+
+        try {
           const retryRes = await api.get(endpoint, {
             headers: passToken ? { 'x-bm-captcha-pass': passToken } : undefined,
           });
-          return (retryRes.data?.url as string | undefined) ?? null;
-        } catch {
-          return null;
+          const retryUrl = (retryRes.data?.url as string | undefined) ?? null;
+          if (retryUrl) {
+            return { ok: true, url: retryUrl };
+          }
+          return { ok: false, code: 'SERVER_ERROR', message: 'Empty URL response from server' };
+        } catch (retryErr: unknown) {
+          const rStatus = (retryErr as { response?: { status?: number } })?.response?.status;
+          if (!rStatus) {
+            return { ok: false, code: 'NETWORK_ERROR', message: 'Network connection failed' };
+          }
+          return { ok: false, code: 'SERVER_ERROR', message: 'Failed to retrieve offerwall link' };
         }
       }
+
+      return { ok: false, code: 'CAPTCHA_REQUIRED', message: 'Captcha verification required' };
     }
+
+    if (!status) {
+      return { ok: false, code: 'NETWORK_ERROR', message: 'Network connection failed' };
+    }
+
+    return { ok: false, code: 'SERVER_ERROR', message: 'Server error loading offerwall' };
   }
 
-  return null;
+  return { ok: false, code: 'SERVER_ERROR', message: 'Unknown error' };
 }

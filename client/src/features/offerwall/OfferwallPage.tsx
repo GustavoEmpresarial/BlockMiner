@@ -4,6 +4,8 @@
  */
 import { useEffect, useState, type ComponentType } from 'react';
 import {
+  AlertCircle,
+  CheckCircle2,
   Clock,
   Coins,
   ExternalLink,
@@ -14,6 +16,7 @@ import {
   CloudRain,
   type LucideProps,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { api } from '../../shared/auth/auth.store';
 import { t } from './lib/offerwall.i18n';
 import { openPartnerSafe, fetchOfferwallLinkWithPass } from './lib/offerwallPass';
@@ -339,14 +342,39 @@ function ZeradsPanel({ onBack }: { onBack: () => void }) {
   const [tab, setTab] = useState<OfferwallTab>('stats');
   const { stats, history, histLoading } = useStatsAndHistory('/zerads/stats', '/zerads/history?page=1');
   const [opening, setOpening] = useState(false);
+  const [url, setUrl] = useState<string | null>(null);
+  const [popupBlocked, setPopupBlocked] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const openZerads = async () => {
     setOpening(true);
+    setPopupBlocked(false);
+    setErrorMsg(null);
     try {
-      const url = await fetchOfferwallLinkWithPass('zerads', '/zerads/link');
-      if (url) openPartner(url);
-    } catch {
-      /* ignore */
+      const res = await fetchOfferwallLinkWithPass('zerads', '/zerads/link');
+      if (res.ok) {
+        setUrl(res.url);
+        const opened = openPartnerSafe(res.url);
+        if (!opened) {
+          setPopupBlocked(true);
+          toast.warning(t('offerwall.offerwallme.popup_blocked_hint'));
+        }
+      } else {
+        if (res.code === 'CAPTCHA_CANCELLED') {
+          toast.info(t('offerwall.offerwallme.captcha_cancelled'));
+        } else if (res.code === 'NETWORK_ERROR') {
+          setErrorMsg(t('offerwall.offerwallme.network_error'));
+          toast.error(t('offerwall.offerwallme.network_error'));
+        } else {
+          const msg = res.message || t('zerads.load_error');
+          setErrorMsg(msg);
+          toast.error(msg);
+        }
+      }
+    } catch (err: unknown) {
+      const msg = (err as Error)?.message || t('zerads.load_error');
+      setErrorMsg(msg);
+      toast.error(msg);
     } finally {
       setOpening(false);
     }
@@ -424,15 +452,45 @@ function ZeradsPanel({ onBack }: { onBack: () => void }) {
       offersContent={
         <div className="p-6 space-y-3">
           <p className="text-sm text-gray-400 text-center">{t('zerads.credits_delay_note')}</p>
-          <button
-            type="button"
-            disabled={opening}
-            onClick={() => void openZerads()}
-            className="w-full flex items-center justify-center gap-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold py-3 disabled:opacity-60"
-          >
-            {opening ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-            {t('zerads.start_earning')}
-          </button>
+          {popupBlocked && (
+            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 text-amber-400" />
+              <span>{t('offerwall.offerwallme.popup_blocked_hint')}</span>
+            </div>
+          )}
+          {errorMsg && (
+            <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-200 text-xs flex items-center justify-between gap-2">
+              <span>{errorMsg}</span>
+              <button
+                type="button"
+                onClick={() => void openZerads()}
+                className="text-xs text-red-300 underline hover:text-white font-semibold shrink-0"
+              >
+                {t('offerwall.offerwallme.retry')}
+              </button>
+            </div>
+          )}
+          {url ? (
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full flex items-center justify-center gap-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold py-3 transition-colors text-sm"
+            >
+              <ExternalLink className="w-4 h-4" />
+              {t('zerads.start_earning')}
+            </a>
+          ) : (
+            <button
+              type="button"
+              disabled={opening}
+              onClick={() => void openZerads()}
+              className="w-full flex items-center justify-center gap-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold py-3 disabled:opacity-60 text-sm"
+            >
+              {opening ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+              {t('zerads.start_earning')}
+            </button>
+          )}
         </div>
       }
     />
@@ -445,23 +503,52 @@ function OfferwallMePanel({ onBack }: { onBack: () => void }) {
   const [url, setUrl] = useState<string | null>(null);
   const [loadingUrl, setLoadingUrl] = useState(false);
   const [opening, setOpening] = useState(false);
+  const [popupBlocked, setPopupBlocked] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const resolveUrl = async (autoOpen = false): Promise<string | null> => {
     if (url) {
-      if (autoOpen) openPartner(url);
+      if (autoOpen) {
+        const opened = openPartnerSafe(url);
+        if (!opened) {
+          setPopupBlocked(true);
+          toast.warning(t('offerwall.offerwallme.popup_blocked_hint'));
+        }
+      }
       return url;
     }
     setLoadingUrl(true);
     if (autoOpen) setOpening(true);
+    setPopupBlocked(false);
+    setErrorMsg(null);
     try {
-      const link = await fetchOfferwallLinkWithPass('offerwallme', '/offerwallme/link');
-      if (link) {
-        setUrl(link);
-        if (autoOpen) openPartner(link);
-        return link;
+      const res = await fetchOfferwallLinkWithPass('offerwallme', '/offerwallme/link');
+      if (res.ok) {
+        setUrl(res.url);
+        if (autoOpen) {
+          const opened = openPartnerSafe(res.url);
+          if (!opened) {
+            setPopupBlocked(true);
+            toast.warning(t('offerwall.offerwallme.popup_blocked_hint'));
+          }
+        }
+        return res.url;
+      } else {
+        if (res.code === 'CAPTCHA_CANCELLED') {
+          toast.info(t('offerwall.offerwallme.captcha_cancelled'));
+        } else if (res.code === 'NETWORK_ERROR') {
+          setErrorMsg(t('offerwall.offerwallme.network_error'));
+          toast.error(t('offerwall.offerwallme.network_error'));
+        } else {
+          const msg = res.message || t('offerwall.offerwallme.load_error');
+          setErrorMsg(msg);
+          toast.error(msg);
+        }
       }
-    } catch {
-      /* ignore */
+    } catch (err: unknown) {
+      const msg = (err as Error)?.message || t('offerwall.offerwallme.load_error');
+      setErrorMsg(msg);
+      toast.error(msg);
     } finally {
       setLoadingUrl(false);
       if (autoOpen) setOpening(false);
@@ -535,15 +622,27 @@ function OfferwallMePanel({ onBack }: { onBack: () => void }) {
         <div className="rounded-xl border border-sky-500/25 bg-sky-500/8 px-4 py-3 text-xs text-sky-200 leading-relaxed space-y-2">
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <p className="font-black uppercase tracking-wider text-sky-300 text-[10px]">{t('offerwall.offerwallme.new_flow_title')}</p>
-            <button
-              type="button"
-              onClick={() => void resolveUrl(true)}
-              disabled={opening || loadingUrl}
-              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 text-sky-200 text-xs font-semibold border border-sky-500/30 transition-all disabled:opacity-50"
-            >
-              {opening || loadingUrl ? <Loader2 className="w-3 h-3 animate-spin" /> : <ExternalLink className="w-3 h-3" />}
-              {t('offerwall.offerwallme.open_direct')}
-            </button>
+            {url ? (
+              <a
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 text-sky-200 text-xs font-semibold border border-sky-500/30 transition-all"
+              >
+                <ExternalLink className="w-3 h-3" />
+                {t('offerwall.offerwallme.open_direct')}
+              </a>
+            ) : (
+              <button
+                type="button"
+                onClick={() => void resolveUrl(true)}
+                disabled={opening || loadingUrl}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 text-sky-200 text-xs font-semibold border border-sky-500/30 transition-all disabled:opacity-50"
+              >
+                {opening || loadingUrl ? <Loader2 className="w-3 h-3 animate-spin" /> : <ExternalLink className="w-3 h-3" />}
+                {t('offerwall.offerwallme.open_direct')}
+              </button>
+            )}
           </div>
           <p>{t('offerwall.offerwallme.new_flow_body')}</p>
           <p className="text-sky-200/80">{t('offerwall.offerwallme.new_flow_hint')}</p>
@@ -564,15 +663,53 @@ function OfferwallMePanel({ onBack }: { onBack: () => void }) {
               </p>
             </div>
 
-            <button
-              type="button"
-              disabled={opening || loadingUrl}
-              onClick={() => void resolveUrl(true)}
-              className="w-full flex items-center justify-center gap-2 rounded-xl bg-violet-600 hover:bg-violet-500 active:bg-violet-700 text-white font-bold py-3.5 px-6 shadow-md shadow-violet-600/30 transition-all disabled:opacity-60 text-sm"
-            >
-              {opening || loadingUrl ? <Loader2 className="w-4 h-4 animate-spin" /> : <ExternalLink className="w-4 h-4" />}
-              {t('offerwall.offerwallme.open_direct')}
-            </button>
+            {popupBlocked && (
+              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 text-amber-400" />
+                <span>{t('offerwall.offerwallme.popup_blocked_hint')}</span>
+              </div>
+            )}
+
+            {errorMsg && (
+              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-200 text-xs flex items-center justify-between gap-2">
+                <span>{errorMsg}</span>
+                <button
+                  type="button"
+                  onClick={() => void resolveUrl(true)}
+                  className="text-xs text-red-300 underline hover:text-white font-semibold shrink-0"
+                >
+                  {t('offerwall.offerwallme.retry')}
+                </button>
+              </div>
+            )}
+
+            {url ? (
+              <div className="space-y-2">
+                <a
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-violet-600 hover:bg-violet-500 active:bg-violet-700 text-white font-bold py-3.5 px-6 shadow-md shadow-violet-600/30 transition-all text-sm"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  {t('offerwall.offerwallme.open_direct')}
+                </a>
+                <div className="flex items-center justify-center gap-1.5 text-xs text-emerald-400">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>{t('offerwall.offerwallme.link_ready_hint')}</span>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                disabled={opening || loadingUrl}
+                onClick={() => void resolveUrl(true)}
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-violet-600 hover:bg-violet-500 active:bg-violet-700 text-white font-bold py-3.5 px-6 shadow-md shadow-violet-600/30 transition-all disabled:opacity-60 text-sm"
+              >
+                {opening || loadingUrl ? <Loader2 className="w-4 h-4 animate-spin" /> : <ExternalLink className="w-4 h-4" />}
+                {loadingUrl ? t('offerwall.offerwallme.generating_link') : t('offerwall.offerwallme.open_direct')}
+              </button>
+            )}
           </div>
 
           <div className="rounded-2xl border border-white/10 bg-slate-950/40 overflow-hidden">
@@ -580,15 +717,27 @@ function OfferwallMePanel({ onBack }: { onBack: () => void }) {
               <span className="text-gray-400 font-medium">
                 {t('offerwall.offerwallme.embedded_view_title')}
               </span>
-              <button
-                type="button"
-                disabled={opening || loadingUrl}
-                onClick={() => void resolveUrl(true)}
-                className="inline-flex items-center gap-1.5 text-violet-300 hover:text-white font-semibold transition-colors disabled:opacity-50"
-              >
-                <ExternalLink className="w-3.5 h-3.5" />
-                {t('offerwall.offerwallme.open_in_new_tab')}
-              </button>
+              {url ? (
+                <a
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-violet-300 hover:text-white font-semibold transition-colors"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  {t('offerwall.offerwallme.open_in_new_tab')}
+                </a>
+              ) : (
+                <button
+                  type="button"
+                  disabled={opening || loadingUrl}
+                  onClick={() => void resolveUrl(true)}
+                  className="inline-flex items-center gap-1.5 text-violet-300 hover:text-white font-semibold transition-colors disabled:opacity-50"
+                >
+                  {opening || loadingUrl ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ExternalLink className="w-3.5 h-3.5" />}
+                  {t('offerwall.offerwallme.open_in_new_tab')}
+                </button>
+              )}
             </div>
             {url ? (
               <EmbedFrame title="Offerwall.me" url={url} loading={loadingUrl} />
