@@ -21,6 +21,15 @@ interface Window {
   ethereum?: import('viem').EIP1193Provider;
   trustwallet?: import('viem').EIP1193Provider;
   trustWallet?: import('viem').EIP1193Provider;
+  BmCaptchaGate?: {
+    ensure: (provider: string) => Promise<string>;
+    show: (provider: string) => Promise<string>;
+    openWithPass: (
+      provider: string,
+      fetchUrlWithPass: (pass: string) => Promise<string>,
+      onUrl?: (url: string) => void,
+    ) => Promise<string>;
+  };
 }
 
 interface Navigator {

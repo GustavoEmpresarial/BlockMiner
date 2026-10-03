@@ -16,9 +16,7 @@ function getClientIp(req: Request): string {
 }
 
 /** Offerwall.me publisher wall id — env override. */
-export function offerwallMePublisherId(): string {
-  return String(process.env.OFFERWALLME_PUBLISHER_ID || "yyu8i3jt58by9do1fbdr0fyn60yn5u").trim();
-}
+export const offerwallMePublisherId = offerwallmeService.offerwallMePublisherId;
 
 export async function offerwallMePostback(req: Request, res: Response): Promise<void> {
   const clientIp = getClientIp(req);
@@ -104,14 +102,37 @@ export async function getOfferwallMeEmbed(req: Request, res: Response): Promise<
       passToken: extractPassToken(req as never),
     });
     if (!pass.ok) {
-      res.status(pass.status).json({ ok: false, code: pass.code });
+      res.status(pass.status).json({ ok: false, code: pass.code, reason: pass.code });
       return;
     }
-    const publisherId = offerwallMePublisherId();
-    const url = `https://offerwall.me/offerwall/${publisherId}/${user.id}`;
+    const url = offerwallmeService.buildOfferwallMeUrl(user.id);
     res.json({ ok: true, url });
   } catch (error: unknown) {
     log.error("embed failed", { error: String(error) });
     res.status(500).json({ ok: false, message: "Error loading embed." });
+  }
+}
+
+/**
+ * GET /api/offerwallme/link — direct offerwall URL for the authenticated user.
+ */
+export async function getOfferwallMeLink(req: Request, res: Response): Promise<void> {
+  try {
+    const user = requireSessionUser(req, res);
+    if (!user) return;
+    const pass = await consumeOfferwallPass({
+      userId: user.id,
+      provider: "offerwallme",
+      passToken: extractPassToken(req as never),
+    });
+    if (!pass.ok) {
+      res.status(pass.status).json({ ok: false, code: pass.code, reason: pass.code });
+      return;
+    }
+    const url = offerwallmeService.buildOfferwallMeUrl(user.id);
+    res.json({ ok: true, url });
+  } catch (error: unknown) {
+    log.error("link failed", { error: String(error) });
+    res.status(500).json({ ok: false, message: "Error loading link." });
   }
 }

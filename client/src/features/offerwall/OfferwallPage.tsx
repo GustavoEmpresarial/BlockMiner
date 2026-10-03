@@ -6,6 +6,7 @@ import { useEffect, useState, type ComponentType } from 'react';
 import {
   Clock,
   Coins,
+  ExternalLink,
   LayoutGrid,
   Loader2,
   Wrench,
@@ -15,6 +16,7 @@ import {
 } from 'lucide-react';
 import { api } from '../../shared/auth/auth.store';
 import { t } from './lib/offerwall.i18n';
+import { openPartnerSafe, fetchOfferwallLinkWithPass } from './lib/offerwallPass';
 import type { BmCaptchaProvider } from '../bm-captcha/bm-captcha.types';
 import {
   OfferwallProviderShell,
@@ -84,19 +86,7 @@ const HUB_CARD_ACCENT: Record<
   },
 };
 
-declare global {
-  interface Window {
-    _BmPartnerIframe?: (url: string) => boolean;
-  }
-}
-
-function openPartner(url: string) {
-  if (typeof window._BmPartnerIframe === 'function') {
-    window._BmPartnerIframe(url);
-    return;
-  }
-  window.open(url, '_blank', 'noopener,noreferrer');
-}
+const openPartner = openPartnerSafe;
 
 function readOfferwallRate(stats: Record<string, unknown> | null | undefined, fallback = DEFAULT_OFFERWALL_RATE): number {
   const raw = stats?.blkPerClick ?? stats?.exchangeRate ?? stats?.rate;
@@ -353,8 +343,7 @@ function ZeradsPanel({ onBack }: { onBack: () => void }) {
   const openZerads = async () => {
     setOpening(true);
     try {
-      const res = await api.get('/zerads/link');
-      const url = res.data?.url as string | undefined;
+      const url = await fetchOfferwallLinkWithPass('zerads', '/zerads/link');
       if (url) openPartner(url);
     } catch {
       /* ignore */
@@ -454,17 +443,42 @@ function OfferwallMePanel({ onBack }: { onBack: () => void }) {
   const [tab, setTab] = useState<OfferwallTab>('stats');
   const { stats, history, histLoading } = useStatsAndHistory('/offerwallme/stats', '/offerwallme/history?page=1');
   const [url, setUrl] = useState<string | null>(null);
+  const [loadingUrl, setLoadingUrl] = useState(false);
+  const [opening, setOpening] = useState(false);
+
+  const resolveUrl = async (autoOpen = false): Promise<string | null> => {
+    if (url) {
+      if (autoOpen) openPartner(url);
+      return url;
+    }
+    setLoadingUrl(true);
+    if (autoOpen) setOpening(true);
+    try {
+      const link = await fetchOfferwallLinkWithPass('offerwallme', '/offerwallme/link');
+      if (link) {
+        setUrl(link);
+        if (autoOpen) openPartner(link);
+        return link;
+      }
+    } catch {
+      /* ignore */
+    } finally {
+      setLoadingUrl(false);
+      if (autoOpen) setOpening(false);
+    }
+    return null;
+  };
 
   useEffect(() => {
     if (tab !== 'offers' || url) return;
     let dead = false;
     api
-      .get('/offerwallme/embed')
+      .get('/offerwallme/link')
       .then((res) => {
-        if (!dead) setUrl((res.data?.url as string | undefined) ?? null);
+        if (!dead && res.data?.url) setUrl(res.data.url as string);
       })
       .catch(() => {
-        if (!dead) setUrl(null);
+        /* If captcha or error, will resolve on user gesture via resolveUrl */
       });
     return () => {
       dead = true;
@@ -518,13 +532,85 @@ function OfferwallMePanel({ onBack }: { onBack: () => void }) {
       historyRows={history}
       historyColumns={usdOfferHistoryCols()}
       banner={
-        <div className="rounded-xl border border-sky-500/25 bg-sky-500/8 px-4 py-3 text-xs text-sky-200 leading-relaxed space-y-1.5">
-          <p className="font-black uppercase tracking-wider text-sky-300 text-[10px]">{t('offerwall.offerwallme.new_flow_title')}</p>
+        <div className="rounded-xl border border-sky-500/25 bg-sky-500/8 px-4 py-3 text-xs text-sky-200 leading-relaxed space-y-2">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <p className="font-black uppercase tracking-wider text-sky-300 text-[10px]">{t('offerwall.offerwallme.new_flow_title')}</p>
+            <button
+              type="button"
+              onClick={() => void resolveUrl(true)}
+              disabled={opening || loadingUrl}
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 text-sky-200 text-xs font-semibold border border-sky-500/30 transition-all disabled:opacity-50"
+            >
+              {opening || loadingUrl ? <Loader2 className="w-3 h-3 animate-spin" /> : <ExternalLink className="w-3 h-3" />}
+              {t('offerwall.offerwallme.open_direct')}
+            </button>
+          </div>
           <p>{t('offerwall.offerwallme.new_flow_body')}</p>
           <p className="text-sky-200/80">{t('offerwall.offerwallme.new_flow_hint')}</p>
         </div>
       }
-      offersContent={<EmbedFrame title="Offerwall.me" url={url} />}
+      offersContent={
+        <div className="space-y-4 p-4 sm:p-6">
+          <div className="rounded-2xl border border-violet-500/30 bg-gradient-to-br from-violet-950/40 via-slate-900/60 to-slate-950/80 p-5 space-y-4 shadow-lg shadow-violet-950/20">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-300 border border-violet-500/30">
+                  {t('offerwall.offerwallme.recommended_badge')}
+                </span>
+                <h3 className="text-base font-bold text-white">{t('offerwall.offerwallme.direct_title')}</h3>
+              </div>
+              <p className="text-xs text-gray-300 mt-1 leading-relaxed">
+                {t('offerwall.offerwallme.open_direct_recommended')}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              disabled={opening || loadingUrl}
+              onClick={() => void resolveUrl(true)}
+              className="w-full flex items-center justify-center gap-2 rounded-xl bg-violet-600 hover:bg-violet-500 active:bg-violet-700 text-white font-bold py-3.5 px-6 shadow-md shadow-violet-600/30 transition-all disabled:opacity-60 text-sm"
+            >
+              {opening || loadingUrl ? <Loader2 className="w-4 h-4 animate-spin" /> : <ExternalLink className="w-4 h-4" />}
+              {t('offerwall.offerwallme.open_direct')}
+            </button>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-slate-950/40 overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 bg-white/5 border-b border-white/10 text-xs">
+              <span className="text-gray-400 font-medium">
+                {t('offerwall.offerwallme.embedded_view_title')}
+              </span>
+              <button
+                type="button"
+                disabled={opening || loadingUrl}
+                onClick={() => void resolveUrl(true)}
+                className="inline-flex items-center gap-1.5 text-violet-300 hover:text-white font-semibold transition-colors disabled:opacity-50"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                {t('offerwall.offerwallme.open_in_new_tab')}
+              </button>
+            </div>
+            {url ? (
+              <EmbedFrame title="Offerwall.me" url={url} loading={loadingUrl} />
+            ) : (
+              <div className="p-8 text-center space-y-3">
+                <p className="text-sm text-gray-400">
+                  {t('offerwall.offerwallme.iframe_hint')}
+                </p>
+                <button
+                  type="button"
+                  disabled={loadingUrl || opening}
+                  onClick={() => void resolveUrl(false)}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-semibold border border-white/15 transition-all disabled:opacity-50"
+                >
+                  {loadingUrl ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                  {t('offerwall.offerwallme.load_embed_button')}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      }
     />
   );
 }

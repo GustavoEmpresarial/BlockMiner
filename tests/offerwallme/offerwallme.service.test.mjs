@@ -54,3 +54,20 @@ test("processPostback: debug=1 postbacks are acknowledged without crediting", as
   );
   assert.equal(result.kind, "ok");
 });
+
+test("buildOfferwallMeUrl: constructs URL with default publisher id and userId", () => {
+  const url = service.buildOfferwallMeUrl(42);
+  assert.equal(url, "https://offerwall.me/offerwall/yyu8i3jt58by9do1fbdr0fyn60yn5u/42");
+});
+
+test("offerwallMePublisherId: allows overriding via OFFERWALLME_PUBLISHER_ID", () => {
+  const orig = process.env.OFFERWALLME_PUBLISHER_ID;
+  try {
+    process.env.OFFERWALLME_PUBLISHER_ID = "custom-wall-id";
+    assert.equal(service.offerwallMePublisherId(), "custom-wall-id");
+    assert.equal(service.buildOfferwallMeUrl(99), "https://offerwall.me/offerwall/custom-wall-id/99");
+  } finally {
+    if (orig !== undefined) process.env.OFFERWALLME_PUBLISHER_ID = orig;
+    else delete process.env.OFFERWALLME_PUBLISHER_ID;
+  }
+});
