@@ -445,4 +445,63 @@ describe('DashboardPage — balance currency switch', () => {
       vi.useRealTimers();
     }
   });
+
+  it('renders DashboardEnergyTaxModal via portal when energy-tax has unpaid days, and pays successfully from dashboard', async () => {
+    installHappyApiMock();
+    api.get.mockImplementation(async (url: string) => {
+      if (url === '/energy-tax/summary') {
+        return {
+          data: {
+            ok: true,
+            active: true,
+            unpaidDays: 3,
+            todayDailyCharge: 0.002,
+            todayPaid: false,
+            todayExempt: false,
+            yesterdayRewards: 0.05,
+            fullRateTax: 0.015,
+            dailyRateTax: 0.005,
+            totalRewards7d: 0.1,
+            todayPayQuotes: {
+              POL: { amount: 0.002, balance: 1.0, affordable: true },
+            },
+          },
+        };
+      }
+      if (url === '/mining/cycle') return { data: okCyclePayload() };
+      if (url === '/wallet/balance') return { data: { ok: true, balance: 1.23, blkBalance: 4, shibBalance: 5 } };
+      if (url === '/rooms/slots') return { data: { ok: true, freeRacks: 2, inventoryCount: 3 } };
+      if (url === '/wallet/withdraw-fee-info')
+        return { data: { ok: true, completionsToday: 3, requiredForWaiver: 10, feeWaived: false, feeAlreadyChargedToday: false } };
+      if (url === '/banners') return { data: { ok: true, banners: [] } };
+      return { data: { ok: true } };
+    });
+    api.post.mockResolvedValue({ data: { ok: true } });
+
+    await act(async () => {
+      await mountPage();
+    });
+
+    // O modal deve estar montado em document.body via portal
+    const dialog = await screen.findByRole('dialog');
+    expect(document.body).toContainElement(dialog);
+    expect(dialog).toHaveClass('fixed', 'inset-0', 'z-[100]');
+
+    // O título e o botão de pagar aparecem no DOM
+    expect(screen.getByText('Taxa de Energia pendente')).toBeInTheDocument();
+    const payBtn = screen.getByRole('button', { name: /Pagar hoje/i });
+    expect(payBtn).toBeInTheDocument();
+
+    // Paga via modal
+    await act(async () => {
+      fireEvent.click(payBtn);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(api.post).toHaveBeenCalledWith('/energy-tax/pay-daily', { currency: 'POL' });
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+  });
 });
