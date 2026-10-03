@@ -7,6 +7,10 @@ import { isValidSwapPair, type SwapFromAsset, type SwapToAsset } from "./swap.pa
 export { getPolUsdPrice, getShibUsdPrice };
 export { VALID_SWAP_PAIRS, isValidSwapPair } from "./swap.pairs.js";
 
+/** Fallback conservative asset prices in USD if live oracle/cryptoPrice fails */
+export const SWAP_FALLBACK_POL_USD = 0.09;
+export const SWAP_FALLBACK_SHIB_USD = 0.0000055;
+
 export type UserSwapBalances = {
   balances: {
     POL: number;
@@ -52,8 +56,8 @@ export async function executeSwapForUser(
   }
   const polPrice = await getPolUsdPrice();
   const shibPrice = await getShibUsdPrice();
-  const safePol = polPrice > 0 ? polPrice : 0.09;
-  const safeShib = shibPrice > 0 ? shibPrice : 0.0000055;
+  const safePol = polPrice > 0 ? polPrice : SWAP_FALLBACK_POL_USD;
+  const safeShib = shibPrice > 0 ? shibPrice : SWAP_FALLBACK_SHIB_USD;
   let rate: number;
   let output: number;
 
