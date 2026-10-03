@@ -190,14 +190,18 @@ fi
 def _restore_runtime_artifacts() -> str:
     return r'''
 # Restore preserved artifacts when git tree has no dist/ (gitignored).
-if [[ -d "$BM_KEEP/dist-from-container" ]]; then
-  rm -rf "$APP_ROOT/dist"
-  mv "$BM_KEEP/dist-from-container" "$APP_ROOT/dist"
-elif [[ -d "$BM_KEEP/dist" ]]; then
+if [[ -d "$BM_KEEP/dist" ]]; then
   rm -rf "$APP_ROOT/dist"
   mv "$BM_KEEP/dist" "$APP_ROOT/dist"
+elif [[ -d "$BM_KEEP/dist-from-container" ]]; then
+  rm -rf "$APP_ROOT/dist"
+  mv "$BM_KEEP/dist-from-container" "$APP_ROOT/dist"
 fi
-if [[ -d "$BM_KEEP/client-dist-from-container" ]]; then
+if [[ -d "$BM_KEEP/client/dist" ]]; then
+  mkdir -p "$APP_ROOT/client"
+  rm -rf "$APP_ROOT/client/dist"
+  mv "$BM_KEEP/client/dist" "$APP_ROOT/client/dist"
+elif [[ -d "$BM_KEEP/client-dist-from-container" ]]; then
   mkdir -p "$APP_ROOT/client"
   # Preserve cartrush game assets if the new tree lacks them.
   if [[ -d "$APP_ROOT/client/dist/games/cartrush" ]]; then
@@ -207,10 +211,6 @@ if [[ -d "$BM_KEEP/client-dist-from-container" ]]; then
   fi
   rm -rf "$APP_ROOT/client/dist"
   mv "$BM_KEEP/client-dist-from-container" "$APP_ROOT/client/dist"
-elif [[ -d "$BM_KEEP/client/dist" ]]; then
-  mkdir -p "$APP_ROOT/client"
-  rm -rf "$APP_ROOT/client/dist"
-  mv "$BM_KEEP/client/dist" "$APP_ROOT/client/dist"
 fi
 for path in storage/uploads; do
   if [[ -d "$BM_KEEP/$path" ]]; then
@@ -225,6 +225,10 @@ rm -rf "$BM_KEEP"
 
 def _skip_server_build() -> bool:
     return os.environ.get("SKIP_SERVER_BUILD", "").strip().lower() in ("1", "true", "yes", "y", "on")
+
+
+def _skip_client_build() -> bool:
+    return os.environ.get("SKIP_CLIENT_BUILD", "").strip().lower() in ("1", "true", "yes", "y", "on")
 
 
 def _build_server_on_vm() -> str:
@@ -261,6 +265,7 @@ elif command -v docker >/dev/null 2>&1; then
   echo "[vm] building server via node container (host has no npm)"
   docker run --rm \
     -v "$APP_ROOT:/app" \
+    -v /root/.npm:/root/.npm \
     -w /app \
     node:22-bookworm-slim \
     bash -lc 'npm ci --no-audit --no-fund && npm run build; true'
@@ -300,7 +305,12 @@ install_fresh_client_dist() {
   fi
   echo "[vm] client build OK (client/dist replaced; previous chunks dropped)"
 }
-if [[ -f "$APP_ROOT/client/package.json" ]]; then
+if [[ "${SKIP_CLIENT_BUILD:-0}" == "1" ]]; then
+  echo "[vm] SKIP_CLIENT_BUILD=1 — keeping previous client dist/"
+  if [[ -f "$APP_ROOT/client/dist.next/index.html" ]]; then
+    install_fresh_client_dist || true
+  fi
+elif [[ -f "$APP_ROOT/client/package.json" ]]; then
   rm -rf "$APP_ROOT/client/dist.next"
   if command -v npm >/dev/null 2>&1; then
     echo "[vm] building client SPA with host npm"
@@ -315,6 +325,7 @@ if [[ -f "$APP_ROOT/client/package.json" ]]; then
     echo "[vm] building client SPA via node container"
     if docker run --rm \
       -v "$APP_ROOT/client:/app" \
+      -v /root/.npm:/root/.npm \
       -w /app \
       node:22-bookworm-slim \
       bash -lc 'npm ci --no-audit --no-fund && npm run build -- --outDir dist.next'; then
@@ -336,6 +347,8 @@ def _remote_git_script(
     app_root: str, git_url: str, git_ref: str, *, compose_file: str, container_app: str, health_port: int
 ) -> str:
     no_cache = "export BLOCKMINER_DOCKER_BUILD_NO_CACHE=1\n" if _docker_no_cache_enabled() else ""
+    skip_server = "export SKIP_SERVER_BUILD=1\n" if _skip_server_build() else ""
+    skip_client = "export SKIP_CLIENT_BUILD=1\n" if _skip_client_build() else ""
     env_backup, env_restore = _env_backup_restore()
     pull = f'''command -v git >/dev/null 2>&1 || {{ apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq git; }}
 mkdir -p "$(dirname "$APP_ROOT")"
@@ -384,11 +397,11 @@ echo "[vm] git sync OK @ $(cd "$APP_ROOT" && git rev-parse --short HEAD 2>/dev/n
 '''
     if _skip_docker():
         return f"""set -euo pipefail
-{no_cache}APP_ROOT={shlex.quote(app_root)}
+{no_cache}{skip_server}{skip_client}APP_ROOT={shlex.quote(app_root)}
 {pull}echo "[vm] SKIP_DOCKER=1"
 """
     return f"""set -euo pipefail
-{no_cache}APP_ROOT={shlex.quote(app_root)}
+{no_cache}{skip_server}{skip_client}APP_ROOT={shlex.quote(app_root)}
 {pull}{_docker_stack(compose_file, health_port)}
 """
 
