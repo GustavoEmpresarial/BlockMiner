@@ -143,7 +143,9 @@ if [[ "${{BLOCKMINER_DOCKER_BUILD_NO_CACHE:-0}}" == "1" ]]; then
 else
   compose build app
 fi
-compose up -d --remove-orphans db redis kafka phd nginx stats-materializer
+compose up -d --remove-orphans redis kafka phd nginx stats-materializer
+# `db` is profile local-db. Naming it on the command line starts an empty local Postgres.
+docker rm -f blockminer-current-db >/dev/null 2>&1 || true
 # Force-recreate app so bind mounts (client/dist, dist/) pick up fresh directory inodes
 # after git pull / SPA rebuild — otherwise Docker can keep an empty stale mount.
 compose up -d --force-recreate --no-deps app
