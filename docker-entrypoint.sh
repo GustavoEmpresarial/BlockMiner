@@ -8,8 +8,19 @@ echo "Starting blockminer-current container..."
 # backend/_server_vendor (não existe mais — current/ é uma árvore TS única).
 
 wait_for_db() {
-  echo "Waiting for database at db:5432..."
-  while ! nc -z db 5432; do
+  db_host=db
+  db_port=5432
+  if [ -n "$DATABASE_URL" ]; then
+    rest=${DATABASE_URL##*@}
+    hostport=${rest%%/*}
+    hostport=${hostport%%\?*}
+    db_host=${hostport%%:*}
+    case "$hostport" in
+      *:*) db_port=${hostport##*:} ;;
+    esac
+  fi
+  echo "Waiting for database at ${db_host}:${db_port}..."
+  while ! nc -z "$db_host" "$db_port"; do
     sleep 1
   done
   echo "Database is up and reachable!"

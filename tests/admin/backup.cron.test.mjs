@@ -9,34 +9,22 @@ import {
 } from "../../server/cron/backup.cron.js";
 import { pruneOldBackups, deleteSqlBackup } from "../../server/modules/admin/admin.backups.service.js";
 
-test("calculateMsUntilNextRun: schedules for today when target hour is in the future", () => {
-  const base = new Date("2026-09-27T01:00:00.000Z");
-  // Target 03:00 UTC (in 2 hours)
-  const ms = calculateMsUntilNextRun("0 3 * * *", base);
-  // Expected roughly 2 hours (within 1 hour variance for timezone)
-  assert.ok(ms > 0, "ms must be positive");
-  assert.ok(ms <= 24 * 60 * 60 * 1000, "ms must not exceed 24 hours");
+test("calculateMsUntilNextRun: next 00:00 UTC is the same UTC day when still before midnight", () => {
+  const base = new Date("2026-10-02T18:20:00.000Z");
+  const ms = calculateMsUntilNextRun("0 0 * * *", base);
+  assert.equal(ms, (5 * 60 + 40) * 60 * 1000);
 });
 
-test("calculateMsUntilNextRun: rolls over to next day when target hour has passed", () => {
-  const base = new Date("2026-09-27T04:00:00.000Z");
-  // Target 03:00 (already passed today)
-  const ms = calculateMsUntilNextRun("0 3 * * *", base);
-  assert.ok(ms > 0, "ms must be positive");
-  assert.ok(ms <= 24 * 60 * 60 * 1000, "ms must not exceed 24 hours");
+test("calculateMsUntilNextRun: exactly 00:00 UTC waits a full day", () => {
+  const base = new Date("2026-10-02T00:00:00.000Z");
+  const ms = calculateMsUntilNextRun("0 0 * * *", base);
+  assert.equal(ms, 24 * 60 * 60 * 1000);
 });
 
-test("calculateMsUntilNextRun: parses minute and hour correctly", () => {
-  const base = new Date();
-  base.setHours(10, 0, 0, 0);
-
-  // Target 10:30 (30 minutes in the future)
-  const ms = calculateMsUntilNextRun("30 10 * * *", base);
-  assert.equal(ms, 30 * 60 * 1000);
-
-  // Target 09:30 (already passed today -> tomorrow at 09:30, 23.5 hours later)
-  const msPassed = calculateMsUntilNextRun("30 9 * * *", base);
-  assert.equal(msPassed, 23.5 * 60 * 60 * 1000);
+test("calculateMsUntilNextRun: parses minute and hour in UTC", () => {
+  const base = new Date("2026-09-27T10:00:00.000Z");
+  assert.equal(calculateMsUntilNextRun("30 10 * * *", base), 30 * 60 * 1000);
+  assert.equal(calculateMsUntilNextRun("30 9 * * *", base), 23.5 * 60 * 60 * 1000);
 });
 
 test("startBackupCron: returns stop handle and can be disabled via BACKUP_ENABLED=false", () => {

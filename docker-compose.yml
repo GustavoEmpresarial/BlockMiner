@@ -21,6 +21,7 @@ x-default-logging: &default-logging
 
 services:
   db:
+    profiles: ["local-db"]
     container_name: blockminer-current-db
     image: postgres:15-alpine
     logging: *default-logging
@@ -100,8 +101,6 @@ services:
       retries: 5
       start_period: 60s
     depends_on:
-      db:
-        condition: service_healthy
       redis:
         condition: service_healthy
       kafka:
@@ -113,7 +112,8 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-      DATABASE_URL: "postgresql://blockminer:${DB_PASSWORD:?set DB_PASSWORD in .env}@db:5432/blockminer?schema=public"
+      # Production sets DATABASE_URL in .env to the data-tier host. Unset keeps the local `db` service.
+      DATABASE_URL: "${DATABASE_URL:-postgresql://blockminer:${DB_PASSWORD:?set DB_PASSWORD in .env}@db:5432/blockminer?schema=public}"
       # Hardcoded (not `${REDIS_URL:-...}`) on purpose: this always resolves via Docker's internal
       # DNS to the `redis` service in THIS compose file — there's no legitimate reason to override
       # it. A `${VAR:-default}` here previously read the ambient current/.env (Compose auto-loads
@@ -137,6 +137,12 @@ services:
       # `prisma generate` after recreate misses fields like User.satspaySubject and
       # SatsPay login returns INTERNAL_ERROR.
       - ./prisma:/app/prisma
+      # Public CA for the data-tier Postgres. The private key stays on that VM.
+      - ./storage/ntier/postgres-ca.crt:/etc/blockminer/postgres-ca.crt:ro
+      - ./docker-entrypoint.sh:/usr/local/bin/docker-entrypoint.sh:ro
+    # Name used by DATABASE_URL so TLS can verify the data-tier certificate.
+    extra_hosts:
+      - "blockminer-db:161.97.176.125"
     restart: unless-stopped
 
   # Materializes bm.earnings.v1 into user_stats_earnings_* for GET /api/stats/earnings.
@@ -146,8 +152,6 @@ services:
     image: blockminer-current-app:latest
     command: ["node", "dist/server/bootstrap/statsMaterializer.js"]
     depends_on:
-      db:
-        condition: service_healthy
       kafka:
         condition: service_healthy
     env_file:
@@ -156,9 +160,14 @@ services:
         required: false
     environment:
       NODE_ENV: production
-      DATABASE_URL: "postgresql://blockminer:${DB_PASSWORD:?set DB_PASSWORD in .env}@db:5432/blockminer?schema=public"
+      DATABASE_URL: "${DATABASE_URL:-postgresql://blockminer:${DB_PASSWORD:?set DB_PASSWORD in .env}@db:5432/blockminer?schema=public}"
       KAFKA_BROKERS: "kafka:9092"
       ROLE: "stats-materializer"
+    extra_hosts:
+      - "blockminer-db:161.97.176.125"
+    volumes:
+      - ./storage/ntier/postgres-ca.crt:/etc/blockminer/postgres-ca.crt:ro
+      - ./docker-entrypoint.sh:/usr/local/bin/docker-entrypoint.sh:ro
     restart: unless-stopped
 
   # Depósito HD custodial (docs/PROGRESSO.txt item 67) — o ÚNICO processo de todo o stack
@@ -177,7 +186,7 @@ services:
     command: ["node", "dist/server/phd-bootstrap/phdServer.js"]
     environment:
       NODE_ENV: production
-      DATABASE_URL: "postgresql://blockminer:${DB_PASSWORD:?set DB_PASSWORD in .env}@db:5432/blockminer?schema=public"
+      DATABASE_URL: "${DATABASE_URL:-postgresql://blockminer:${DB_PASSWORD:?set DB_PASSWORD in .env}@db:5432/blockminer?schema=public}"
       PHD_PORT: "${PHD_PORT:-3847}"
       PHD_INTERNAL_TOKEN: "${PHD_INTERNAL_TOKEN:?set PHD_INTERNAL_TOKEN in .env}"
       POLYGON_HD_MNEMONIC: "${POLYGON_HD_MNEMONIC:?set POLYGON_HD_MNEMONIC in .env}"
@@ -185,9 +194,11 @@ services:
       POLYGON_HD_SWEEP_TO_ADDRESS: "${POLYGON_HD_SWEEP_TO_ADDRESS:-}"
       POLYGON_HD_AUTO_SWEEP: "${POLYGON_HD_AUTO_SWEEP:-}"
       POLYGON_HD_SWEEP_CRON_MS: "${POLYGON_HD_SWEEP_CRON_MS:-}"
-    depends_on:
-      db:
-        condition: service_healthy
+    extra_hosts:
+      - "blockminer-db:161.97.176.125"
+    volumes:
+      - ./storage/ntier/postgres-ca.crt:/etc/blockminer/postgres-ca.crt:ro
+      - ./docker-entrypoint.sh:/usr/local/bin/docker-entrypoint.sh:ro
     restart: unless-stopped
 
   nginx:

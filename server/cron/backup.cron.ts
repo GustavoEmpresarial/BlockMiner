@@ -7,7 +7,7 @@
  *
  * Configurable via .env:
  * - BACKUP_ENABLED (default: true)
- * - BACKUP_CRON (default: "0 3 * * *" -> 03:00 daily)
+ * - BACKUP_CRON (default: "0 0 * * *" -> 00:00 UTC daily)
  * - BACKUP_RUN_ON_STARTUP (default: false, runs once on boot after delay)
  * - BACKUP_STARTUP_DELAY_MS (default: 60000ms = 60s)
  * - BACKUP_RETENTION_DAYS (default: 7)
@@ -32,18 +32,30 @@ import {
 
 const log = logger.child("BackupCron");
 
+/** Daily at 00:00 UTC. Hour and minute are read in UTC, not the host timezone. */
+export const BACKUP_CRON_UTC_DEFAULT = "0 0 * * *";
+
 let isRunning = false;
 
 export function calculateMsUntilNextRun(cronExpr: string, now: Date = new Date()): number {
   const parts = cronExpr.trim().split(/\s+/);
-  const targetMinute = parseInt(parts[0], 10) || 0;
-  const targetHour = parseInt(parts[1], 10) || 3;
+  const parsedMinute = Number.parseInt(parts[0] ?? "", 10);
+  const parsedHour = Number.parseInt(parts[1] ?? "", 10);
+  const targetMinute = Number.isFinite(parsedMinute) ? parsedMinute : 0;
+  const targetHour = Number.isFinite(parsedHour) ? parsedHour : 0;
 
-  const next = new Date(now);
-  next.setHours(targetHour, targetMinute, 0, 0);
+  const next = new Date(Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate(),
+    targetHour,
+    targetMinute,
+    0,
+    0,
+  ));
 
   if (next.getTime() <= now.getTime()) {
-    next.setDate(next.getDate() + 1);
+    next.setUTCDate(next.getUTCDate() + 1);
   }
 
   return next.getTime() - now.getTime();
@@ -86,20 +98,27 @@ export async function runDatabaseBackupJob(): Promise<{
     const sqlPath = path.join(backupsDir, backup.name);
     const gzPath = path.join(backupsDir, `${backup.name}.gz`);
 
-    // 2. Compress .sql to .sql.gz
-    const compressed = await compressSqlToGzip(sqlPath, gzPath);
+    // The dump is already gzipped while pg_dump runs, so the plain SQL is not
+    // stored. Recompress only if an older caller left a raw .sql behind.
+    let compressed = false;
+    try {
+      await fs.access(gzPath);
+      compressed = true;
+    } catch {
+      compressed = await compressSqlToGzip(sqlPath, gzPath);
+      if (compressed) {
+        try {
+          await fs.unlink(sqlPath);
+          log.info("admin_backup_uncompressed_reclaimed", { filename: backup.name });
+        } catch {
+          /* ignore */
+        }
+      }
+    }
     log.info("admin_backup_compression_done", {
       filename: backup.name,
       compressed,
     });
-    if (compressed) {
-      try {
-        await fs.unlink(sqlPath);
-        log.info("admin_backup_uncompressed_reclaimed", { filename: backup.name });
-      } catch {
-        /* ignore */
-      }
-    }
 
     // 3. Sync to Google Drive if authorized
     let driveUploaded = false;
@@ -174,7 +193,7 @@ export function startBackupCron(): { stop: () => void } {
     return { stop: () => {} };
   }
 
-  const cronExpr = String(process.env.BACKUP_CRON || "0 3 * * *");
+  const cronExpr = String(process.env.BACKUP_CRON || BACKUP_CRON_UTC_DEFAULT);
   const runOnStartup =
     process.env.BACKUP_RUN_ON_STARTUP === "true" ||
     process.env.BACKUP_RUN_ON_STARTUP === "1";

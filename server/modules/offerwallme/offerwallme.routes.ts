@@ -16,3 +16,4 @@ offerwallMeRouter.post("/postback", postbackLimiter, offerwallmeController.offer
 offerwallMeRouter.get("/history", requireAuth, limiter, offerwallmeController.getOfferwallMeHistory);
 offerwallMeRouter.get("/stats", requireAuth, limiter, offerwallmeController.getOfferwallMeStats);
 offerwallMeRouter.get("/embed", requireAuth, limiter, offerwallmeController.getOfferwallMeEmbed);
+offerwallMeRouter.get("/link", requireAuth, limiter, offerwallmeController.getOfferwallMeLink);
