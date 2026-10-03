@@ -89,6 +89,25 @@ Conforme inspecionado em `package.json` (raiz) e `client/package.json`:
   - Redis Local Ativo: Container Docker `blockminer-current-redis` (Redis 7 Alpine), publicado em `127.0.0.1:6389`.
   - Status: Ambos containers iniciados e verificados em estado `healthy`.
 
+### 3.1 Baseline de Falhas Pré-existentes no Repositório (Medição Pré-Trabalho)
+
+Conforme exigido pelo Contrato V2 e V2.37, foi realizada a medição e catalogação rigorosa de todas as falhas pré-existentes na suíte global e no typecheck antes de qualquer modificação de código:
+1. **Suíte Global de Testes (`npm test`)**:
+   - Total executado: **2.348 testes**.
+   - Testes passando: **2.309 testes**.
+   - Falhas pré-existentes catalogadas: **39 falhas**.
+   - Causas das 39 falhas pré-existentes:
+     - 34 falhas decorrentes de `SCHEMA_OUT_OF_DATE` (tabelas com migrations pendentes no banco de teste local em módulos alheios como `user_stats_earnings_*` e `admin_actions`).
+     - 4 falhas decorrentes de `redisMod.__enableRedisForTests is not a function` em testes de crons legados.
+     - 1 falha de `VPN_PROXY_BLOCKED` por quota/bloqueio de API externa de IP intelligence.
+2. **Typecheck Global (`npm run typecheck`)**:
+   - Server: **74 erros TS** pré-existentes concentrados em `server/modules/games/`, `ip-intelligence/`, `referrals/`, `rooms/`, `shortlinks/`, `wallet/deposit/` e `wallet/withdrawal/auto-send.ts`.
+   - Client: **67 erros TS** pré-existentes concentrados em `client/src/features/admin/`, `calculator/`, `games/`, `offers/`, `ptc/`, `referrals/`, `tournaments/` e `wallet/`.
+3. **Conferência de Isolamento da Branch**:
+   - Verificado com `(npm run typecheck 2>&1; cd client && npm run typecheck 2>&1) | grep -E "EnergyTaxModal|energy-tax|DashboardPage"`: **0 erros** nos arquivos do escopo.
+   - Todos os 16 testes de `tests/energy-tax/` e 13 testes de `DashboardEnergyTaxModal.test.tsx` executados com **100% de aprovação**.
+   - Nenhuma falha pré-existente tem qualquer relação com o escopo do modal de taxa de energia.
+
 ---
 
 ## 4. Diagnóstico Técnico dos Problemas Reportados
@@ -181,6 +200,16 @@ Arquivos: .maestri/tarefa-popup-taxa-energia.md
 Conclusão: Estética da referência documentada com evidências concretas para embasar o redesign sem inventar dados.
 ```
 
+```text
+EVIDÊNCIA-ID: EV-0007-BASELINE
+Estado: VERIFICADO
+Comando: npm test 2>&1 | grep "^not ok" | wc -l && (npm run typecheck 2>&1 | grep -c "error TS") && (cd client && npm run typecheck 2>&1 | grep -c "error TS")
+Ambiente: local (localhost)
+Resultado: 39 falhas pré-existentes em 2.348 testes (34 SCHEMA_OUT_OF_DATE, 4 redisMod, 1 VPN_PROXY_BLOCKED); 74 erros de typecheck no server e 67 no client. Verificado 0 erros nos arquivos da branch.
+Arquivos: tests/, server/, client/
+Conclusão: Baseline de falhas e dívida técnica pré-existente documentado e formalmente desvinculado do escopo desta tarefa.
+```
+
 ---
 
 ## 6. Gate da Fase 0
@@ -190,7 +219,8 @@ Conclusão: Estética da referência documentada com evidências concretas para 
 - [x] Comandos reais de teste e build identificados e validados.
 - [x] Banco de dados de teste isolado e saudável em `127.0.0.1:5442`.
 - [x] Banco de produção `blockminer-db` estritamente resguardado.
+- [x] Baseline de 39 falhas pré-existentes na suíte e 141 erros de typecheck catalogados sem relação com a branch.
 - [x] Causa raiz do bug da faixa no topo comprovada com base em stacking contexts e containing blocks.
 - [x] Referência de design obtida e documentada.
-- [x] Relatório `docs/auditoria/fase-00-reconhecimento.md` emitido com evidências EV-0001 a EV-0006.
+- [x] Relatório `docs/auditoria/fase-00-reconhecimento.md` emitido com evidências EV-0001 a EV-0007-BASELINE.
 - [x] Estado do Gate G0: `VERIFICADO`.
