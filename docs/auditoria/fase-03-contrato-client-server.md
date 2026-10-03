@@ -1,7 +1,7 @@
 # Fase 3: Contrato Client ↔ Servidor
 
 - **Data**: 2026-10-03
-- **Branch**: `fix/swap-pol-blk-balance`
+- **Branch**: `fix/popup-taxa-energia`
 - **Alvo**: `localhost`
 - **Estado do Gate G3**: `VERIFICADO`
 
@@ -11,94 +11,112 @@
 
 | Método | Rota Exata | Chamada Client (SPA) | Autenticação | Rate Limit | Objetivo |
 |---|---|---|---|---|---|
-| `GET` | `/api/swap/balances` | `walletApi.getSwapBalances()` | `requireAuth` | 30 req / 60s | Obter saldos e cotações (POL, SHIB, BLK) |
-| `POST` | `/api/swap/execute` | `walletApi.postSwapExecute(body)` | `requireAuth` | 30 req / 60s | Executar conversão atômica de POL/SHIB para BLK |
-| `GET` | `/api/wallet/balance` | `walletApi.getBalance()` (via `onRefresh`) | `requireAuth` | Padrão | Atualizar saldos consolidados da carteira pós-swap |
+| `GET` | `/api/energy-tax/summary` | `dashboardApi.getEnergyTaxSummary()` | `requireAuth` | 60 req / 60s | Obter resumo da taxa semanal, cotações em POL/BLK/SHIB e status de isenção/pagamento |
+| `POST` | `/api/energy-tax/pay-daily` | `api.post('/energy-tax/pay-daily', { currency })` | `requireAuth` | 10 req / 60s | Efetuar liquidação diária da taxa de energia com a moeda selecionada |
+| `GET` | `/api/auth/session` | `checkSession({ silent: true })` | Cookie / Bearer | Padrão | Revalidar sessão e atualizar flags de estado do usuário pós-pagamento |
 
 ---
 
 ## 2. Matriz de Divergências Encontradas e Soluções
 
-| Item | Frontend Esperado (`client`) | Backend Anterior (`server`) | Divergência | Resolução Padronizada |
+| Item | Frontend (`client`) | Backend (`server`) | Divergência | Resolução Padronizada |
 |---|---|---|---|---|
-| **Payload Response `POST /api/swap/execute`** | Espera refletir novos saldos ou invocar `onRefresh()` | Devolvia apenas `{ ok: true, rate, output }` | O backend não retornava os saldos consolidados pós-transação na mesma resposta | O response de sucesso passa a incluir `balances: { POL, SHIB, BLK }` atualizados |
-| **Invalidação de Cache de Saldo** | Espera que `walletApi.getBalance()` reflita o novo saldo de POL reduzido | Mantinha `balanceCache` em memória por 10s sem invalidação | O saldo antigo era servido da memória pelo TTL de 10s | `executeSwapForUser` dispara `invalidateBalanceCache(userId)` e `invalidateAuthUserCache(userId)` |
-| **Códigos de Erro (`code`)** | Tratamento por `res.data.code` ou mensagem estável | Retornava strings ad-hoc em `message` sem `code` estável (exceto `invalid_pair`) | Falta de rastreabilidade de código estável | Padronização dos códigos: `SWAP_INVALID_PAIR`, `SWAP_INVALID_AMOUNT`, `SWAP_INSUFFICIENT_BALANCE`, `SWAP_OUTPUT_TOO_SMALL`, `SWAP_USER_NOT_FOUND` |
-| **Strict Schema** | Envia apenas `fromAsset`, `toAsset`, `amount` | Schema com `.strict()` já ativo | Nenhuma divergência estrutural no body aceito | Mantido `.strict()` contra mass assignment |
+| **Contrato de Rota GET** | `GET /energy-tax/summary` via wrapper `getEnergyTaxSummary()` | Montado em `/api/energy-tax/summary` | Nenhuma divergência | Contrato validado e idêntico |
+| **Contrato de Rota POST** | `POST /energy-tax/pay-daily` enviando `{ currency: TaxPayCurrency }` | `postPayDaily` aceita `{ currency }` validado por `parseTaxPayCurrency` | Nenhuma divergência | Contrato validado e idêntico |
+| **Moedas Suportadas** | `'POL'`, `'BLK'`, `'SHIB'` | `parseTaxPayCurrency` valida `'POL' \| 'BLK' \| 'SHIB'` | Nenhuma divergência | Enum tipado e sincronizado |
+| **Estrutura de Cotações (`todayPayQuotes`)** | `TaxPayQuotes` (`Record<'POL'\|'BLK'\|'SHIB', { amount, balance, affordable }>`) | `todayPayQuotes` com `amount`, `balance`, `affordable` por moeda | Nenhuma divergência | Tipos compatíveis e testados |
+| **Códigos de Erro** | `logDashboardError` captura `code` e `status` HTTP | `NOT_STARTED` (403), `ALREADY_PAID` (409), `NO_REWARDS` (400), `INSUFFICIENT_BALANCE` (400) | Nenhuma divergência | Códigos de erro estáveis e tipados |
 
 ---
 
-## 3. Contrato Tipado Final
+## 3. Especificação do Contrato Tipado
 
-### 3.1 `GET /api/swap/balances`
-- **Request**: Sem body. Header `Authorization: Bearer <token>` ou Cookie de sessão.
+### 3.1 `GET /api/energy-tax/summary`
+- **Autenticação**: Obrigatória (`requireAuth`). Rejeita 401 se deslogado.
+- **Headers**: `Accept: application/json`, `Cookie: ...` ou `Authorization: Bearer <token>`.
 - **Response 200 OK**:
 ```json
 {
   "ok": true,
-  "balances": {
-    "POL": 10.5,
-    "SHIB": 500000,
-    "BLK": 25.0
-  },
-  "prices": {
-    "POL": 0.0912,
-    "SHIB": 0.0000056,
-    "BLK": 1.0
+  "active": true,
+  "unpaidDays": 2,
+  "todayDailyCharge": 0.00142857,
+  "todayPaid": false,
+  "todayExempt": false,
+  "yesterdayRewards": 0.02,
+  "fullRateTax": 0.003,
+  "dailyRateTax": 0.001,
+  "totalRewards7d": 0.02,
+  "todayPayQuotes": {
+    "POL": {
+      "amount": 0.00142857,
+      "balance": 1.5,
+      "affordable": true
+    },
+    "BLK": {
+      "amount": 0.015,
+      "balance": 10.0,
+      "affordable": true
+    },
+    "SHIB": {
+      "amount": 250,
+      "balance": 0,
+      "affordable": false
+    }
   }
 }
 ```
-- **Response 401 Unauthorized**:
+- **Response 500 Internal Server Error**:
 ```json
 {
   "ok": false,
-  "code": "AUTH_REQUIRED",
-  "message": "Autenticação necessária."
+  "message": "Erro ao carregar resumo."
 }
 ```
 
-### 3.2 `POST /api/swap/execute`
-- **Request Body (Zod strict)**:
+### 3.2 `POST /api/energy-tax/pay-daily`
+- **Autenticação**: Obrigatória (`requireAuth`).
+- **Rate Limit**: 10 requisições por 60 segundos por IP/usuário.
+- **Request Body**:
 ```json
 {
-  "fromAsset": "POL",
-  "toAsset": "BLK",
-  "amount": 5.0
+  "currency": "POL"
 }
 ```
+*(Valores aceitos em `currency`: `"POL" | "BLK" | "SHIB"`)*.
 - **Response 200 OK**:
 ```json
 {
   "ok": true,
-  "rate": 0.0912,
-  "output": 0.456,
-  "balances": {
-    "POL": 5.5,
-    "SHIB": 500000,
-    "BLK": 25.456
-  }
+  "charge": 0.00142857,
+  "currency": "POL"
 }
 ```
-- **Response 400 Bad Request (Exemplos de Erros com Códigos Estáveis)**:
+- **Response 400 Bad Request (Sem recompensas)**:
 ```json
 {
   "ok": false,
-  "code": "SWAP_INSUFFICIENT_BALANCE",
-  "message": "Insufficient POL balance"
+  "code": "NO_REWARDS",
+  "message": "Você não possui recompensas pendentes para tributação hoje."
 }
 ```
+- **Response 400 Bad Request (Saldo insuficiente)**:
 ```json
 {
   "ok": false,
-  "code": "SWAP_INVALID_AMOUNT",
-  "message": "Invalid amount"
+  "code": "INSUFFICIENT_BALANCE",
+  "message": "Saldo insuficiente em POL.",
+  "required": 0.00142857,
+  "available": 0.0001,
+  "currency": "POL"
 }
 ```
+- **Response 409 Conflict (Já pago hoje)**:
 ```json
 {
   "ok": false,
-  "code": "SWAP_INVALID_PAIR",
-  "message": "Swap BLK→POL not supported (only POL→BLK and SHIB→BLK)"
+  "code": "ALREADY_PAID",
+  "message": "Taxa de energia de hoje já foi quitada."
 }
 ```
 
@@ -107,17 +125,30 @@
 ## 4. Evidências de Validação
 
 ```text
-EVIDÊNCIA-ID: EV-0008
+EVIDÊNCIA-ID: EV-0011
 Estado: VERIFICADO
-Comando: ./node_modules/.bin/tsx --import ./tests/_env-test-overrides.mjs --test --test-force-exit tests/swap/swap.service.test.mjs
+Comando: ./node_modules/.bin/tsx --import ./tests/_env-test-overrides.mjs --test --test-force-exit tests/energy-tax/energyTax.service.test.mjs
 Ambiente: local (localhost)
-Resultado: 4/4 testes passando com validação rigorosa de contrato para pares válidos, pares inválidos e Zod strict schema.
-Arquivos: tests/swap/swap.service.test.mjs, server/modules/swap/swap.routes.ts
-Conclusão: O contrato client/server foi formalizado e não apresenta ambiguidades de tipos ou rotas.
+Resultado: 16 testes de cálculo, taxas e datas de vigência aprovados com sucesso.
+Arquivos: tests/energy-tax/energyTax.service.test.mjs
+Conclusão: Regras de negócio de taxas do backend satisfazem integralmente as premissas do contrato.
+```
+
+```text
+EVIDÊNCIA-ID: EV-0012
+Estado: VERIFICADO
+Comando: npm test -- src/features/dashboard/components/DashboardEnergyTaxModal.test.tsx (em client/)
+Ambiente: local (localhost)
+Resultado: 13 testes do componente aprovados, cobrindo cenários de sucesso, erro de API, isenção e seleção de moeda.
+Arquivos: client/src/features/dashboard/components/DashboardEnergyTaxModal.test.tsx
+Conclusão: Consumo do contrato pelo client verificado e aprovado.
 ```
 
 ---
 
 ## 5. Conclusão do Gate G3
 
-O Gate G3 foi atendido: divergências mapeadas, contrato com códigos estáveis documentado e tipos rigorosamente alinhados entre frontend e backend.
+- [x] Inventário completo de endpoints e chamadas client documentado.
+- [x] Matriz de divergências revisada e validada (zero divergências estruturais).
+- [x] Contrato de request, response e códigos de erro estáveis formalizados.
+- [x] Estado do Gate G3: `VERIFICADO`.
