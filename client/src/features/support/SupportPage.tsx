@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type ChangeEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { Headphones, Loader2, MessageSquarePlus, RefreshCw, Send, X } from 'lucide-react';
 import { toast } from 'sonner';
@@ -350,39 +351,42 @@ export default function SupportPage() {
         </div>
       </div>
 
-      {modalOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
-          <div className="w-full max-w-lg rounded-2xl border border-slate-800 bg-slate-950 p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-black text-white">{t('support_tickets.modal_title')}</h2>
-              <button type="button" onClick={() => setModalOpen(false)} aria-label={t('support_tickets.close')}>
-                <X className="w-5 h-5 text-slate-400" />
-              </button>
-            </div>
-            <input
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              placeholder={t('support_tickets.field_subject')}
-              className="w-full rounded-xl bg-slate-900 border border-slate-800 px-3 py-2 text-sm text-white"
-            />
-            <textarea
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder={t('support_tickets.field_message')}
-              className="w-full min-h-[120px] rounded-xl bg-slate-900 border border-slate-800 px-3 py-2 text-sm text-white"
-            />
-            <input type="file" accept="image/*" multiple onChange={(e) => onPickFiles(e, setCreateFiles, createFiles)} />
-            <button
-              type="button"
-              disabled={sending}
-              onClick={() => void submitCreate()}
-              className="w-full py-3 rounded-xl bg-primary text-slate-950 font-black text-sm uppercase"
-            >
-              {sending ? t('support_tickets.submitting') : t('support_tickets.submit')}
-            </button>
-          </div>
-        </div>
-      ) : null}
+      {modalOpen && typeof document !== 'undefined'
+        ? createPortal(
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
+              <div className="w-full max-w-lg rounded-2xl border border-slate-800 bg-slate-950 p-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-black text-white">{t('support_tickets.modal_title')}</h2>
+                  <button type="button" onClick={() => setModalOpen(false)} aria-label={t('support_tickets.close')}>
+                    <X className="w-5 h-5 text-slate-400" />
+                  </button>
+                </div>
+                <input
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  placeholder={t('support_tickets.field_subject')}
+                  className="w-full rounded-xl bg-slate-900 border border-slate-800 px-3 py-2 text-sm text-white"
+                />
+                <textarea
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder={t('support_tickets.field_message')}
+                  className="w-full min-h-[120px] rounded-xl bg-slate-900 border border-slate-800 px-3 py-2 text-sm text-white"
+                />
+                <input type="file" accept="image/*" multiple onChange={(e) => onPickFiles(e, setCreateFiles, createFiles)} />
+                <button
+                  type="button"
+                  disabled={sending}
+                  onClick={() => void submitCreate()}
+                  className="w-full py-3 rounded-xl bg-primary text-slate-950 font-black text-sm uppercase"
+                >
+                  {sending ? t('support_tickets.submitting') : t('support_tickets.submit')}
+                </button>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }
