@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom/vitest';
 import { describe, expect, it, vi, afterEach, beforeEach } from 'vitest';
-import { render, screen, cleanup, act, waitFor } from '@testing-library/react';
+import { render, screen, cleanup, act, waitFor, fireEvent } from '@testing-library/react';
 import { I18nextProvider } from 'react-i18next';
 import { MemoryRouter } from 'react-router-dom';
 import i18next from 'i18next';
@@ -171,6 +171,23 @@ describe('Dashboard Redesign Quality & Requirements', () => {
       expect(rootDiv).toBeInTheDocument();
       expect(rootDiv.className).not.toContain('animate-in');
       expect(rootDiv.className).not.toContain('fade-in');
+    });
+
+    it('HOTFIX: abre o modal de alocacao montado via portal em document.body fora de container space-y-10 para nao receber margin-top', async () => {
+      const { container } = await mountDashboard();
+      await waitFor(() => {
+        expect(screen.getByText(/Satoshi/)).toBeInTheDocument();
+      });
+
+      const editBtn = screen.getByText((t) => t.toLowerCase().includes('editar') || t.toLowerCase().includes('edit'));
+      fireEvent.click(editBtn);
+
+      const dialog = await screen.findByRole('dialog');
+      expect(dialog).toBeInTheDocument();
+      expect(document.body).toContainElement(dialog);
+      const rootDiv = container.firstElementChild as HTMLElement;
+      expect(rootDiv).not.toContainElement(dialog);
+      expect(dialog.parentElement).toBe(document.body);
     });
   });
 
