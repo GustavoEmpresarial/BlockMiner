@@ -137,7 +137,7 @@ export function LegalDocumentPage({
   );
 
   return (
-    <div className="min-h-screen bg-[#02070f] text-white print:bg-white print:text-black">
+    <div className="min-h-screen bg-background text-white print:bg-white print:text-black">
       <div className="print:hidden pointer-events-none fixed left-0 right-0 top-0 z-50 h-0.5 bg-white/10" aria-hidden>
         <div
           className="h-full bg-gradient-to-r from-sky-500 to-cyan-400 transition-[width] duration-150 ease-out"

@@ -77,7 +77,7 @@ export function LandingAdsBanner({ layered = false }: { layered?: boolean }) {
 export function LandingHeader({ onCtaClick }: { onCtaClick: LandingCtaHandler }) {
   const { copy, featureCards, howSteps, testimonials, games, faqItems } = useLandingContent();
   return (
-    <header className="relative z-20 border-b border-white/[0.07] bg-[#02070f]/90 backdrop-blur-xl sticky top-0">
+    <header className="relative z-20 border-b border-white/[0.07] bg-slate-950/90 backdrop-blur-xl sticky top-0">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5 sm:px-8">
         <Link to="/" className="flex items-center gap-3" aria-label={copy.nav.brandAria}>
           <BrandLogo variant="header" interactive />
@@ -347,7 +347,7 @@ export function LandingHowItWorks() {
 export function LandingFeatures() {
   const { copy, featureCards, howSteps, testimonials, games, faqItems } = useLandingContent();
   return (
-    <section id="features" className="border-y border-white/[0.07] bg-[#040c18]/70 py-20 sm:py-28">
+    <section id="features" className="border-y border-white/[0.07] bg-slate-950/70 py-20 sm:py-28">
       <div className="mx-auto max-w-6xl px-5 sm:px-8">
         <div className="text-center mb-16">
           <p className="text-xs uppercase tracking-[0.32em] text-violet-400 font-mono">{copy.features.kicker}</p>
@@ -486,7 +486,7 @@ export function LandingCommunityStats({
 export function LandingTestimonials() {
   const { copy, featureCards, howSteps, testimonials, games, faqItems } = useLandingContent();
   return (
-    <section className="border-y border-white/[0.07] bg-[#040c18]/70 py-20 sm:py-24">
+    <section className="border-y border-white/[0.07] bg-slate-950/70 py-20 sm:py-24">
       <div className="mx-auto max-w-6xl px-5 sm:px-8">
         <h2 className="text-center text-3xl font-black text-white sm:text-4xl">{copy.testimonials.title}</h2>
         <p className="mt-2 text-center text-xs text-slate-600">{copy.testimonials.disclaimer}</p>
@@ -560,7 +560,7 @@ export function LandingGames() {
 export function LandingCrypto() {
   const { copy, featureCards, howSteps, testimonials, games, faqItems } = useLandingContent();
   return (
-    <section className="border-y border-white/[0.07] bg-[#040c18]/70 py-16 sm:py-20">
+    <section className="border-y border-white/[0.07] bg-slate-950/70 py-16 sm:py-20">
       <div className="mx-auto max-w-6xl px-5 sm:px-8 text-center">
         <h2 className="text-2xl font-black text-white sm:text-3xl">{copy.crypto.title}</h2>
         <p className="mt-3 max-w-2xl mx-auto text-sm text-slate-400">{copy.crypto.subtitle}</p>

@@ -90,7 +90,7 @@ export function MethodologyModal({ open, onClose }: Props) {
       <div
         ref={cardRef}
         tabIndex={-1}
-        className="relative w-full max-w-lg rounded-3xl border-2 border-primary/30 bg-[#0d111d] text-white shadow-[0_0_35px_rgba(59,130,246,0.2),8px_8px_0px_#000000] overflow-hidden outline-none animate-in zoom-in-95 duration-200 max-h-[min(90dvh,90vh)] flex flex-col"
+        className="relative w-full max-w-lg rounded-3xl border-2 border-primary/30 bg-surface text-white shadow-[0_0_35px_rgba(61,129,246,0.2),8px_8px_0px_#000000] overflow-hidden outline-none animate-in zoom-in-95 duration-200 max-h-[min(90dvh,90vh)] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-3 px-6 py-4 border-b border-white/10 bg-slate-900/60 shrink-0">

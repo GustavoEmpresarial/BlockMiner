@@ -59,7 +59,7 @@ export function Chain2048Board({ board, sessionId, traces, moveEpoch, t }: Chain
           {Array.from({ length: size * size }, (_, i) => (
             <div
               key={`slot-${i}`}
-              className="rounded-md border border-sky-500/25 bg-[#0a1628] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:rounded-lg"
+              className="rounded-md border border-sky-500/25 bg-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:rounded-lg"
             />
           ))}
         </div>

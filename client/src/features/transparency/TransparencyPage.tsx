@@ -517,7 +517,7 @@ export default function Transparency() {
           {/* ── P2: Intuitive Sub-Navigation Hub (Sticky Tab Bar) ─────────── */}
           <nav
             aria-label="Navegação de Transparência"
-            className="sticky top-14 md:top-20 z-20 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 py-3 bg-[#020617]/90 backdrop-blur-md border-y border-slate-800 shadow-md"
+            className="sticky top-14 md:top-20 z-20 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 py-3 bg-slate-950/90 backdrop-blur-md border-y border-slate-800 shadow-md"
           >
             <div
               ref={tabListRef}
