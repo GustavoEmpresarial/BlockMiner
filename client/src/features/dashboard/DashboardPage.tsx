@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isAxiosError } from 'axios';
-import { Activity, Check, Copy, Gift, Users, Wifi } from 'lucide-react';
+import { Activity, Check, Copy, Gift, RefreshCw, Users, Wifi, WifiOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuthStore } from '../../shared/auth/auth.store';
 import { useGameStore, type MiningStatsSnapshot } from '../shell/lib/game.store';
@@ -68,6 +68,8 @@ function mergeCycleWithSocket(
   return base;
 }
 
+type DashboardSyncState = 'synced' | 'syncing' | 'reconnecting' | 'offline';
+
 function splitHashrateLabel(formatted: string): [string, string] {
   const parts = formatted.trim().split(/\s+/);
   if (parts.length < 2) return [formatted, 'H/s'];
@@ -82,6 +84,9 @@ export default function DashboardPage() {
   const initSocket = useGameStore((s) => s.initSocket);
   const socketStats = useGameStore((s) => s.stats);
 
+  const [syncState, setSyncState] = useState<DashboardSyncState>(() =>
+    typeof navigator !== 'undefined' && !navigator.onLine ? 'offline' : 'syncing',
+  );
   const [referralCopied, setReferralCopied] = useState(false);
   const [friendCode, setFriendCode] = useState('');
   const [linkingReferral, setLinkingReferral] = useState(false);
@@ -157,27 +162,64 @@ export default function DashboardPage() {
     };
   }, []);
 
+  useEffect(() => {
+    const handleOnline = () => {
+      setSyncState('syncing');
+    };
+    const handleOffline = () => {
+      setSyncState('offline');
+    };
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   useDashboardPoll(async () => {
     try {
       const data = await getMiningCycle();
-      if (!data?.ok) return;
+      if (!data?.ok) {
+        if (typeof navigator !== 'undefined' && !navigator.onLine) setSyncState('offline');
+        else setSyncState('reconnecting');
+        return;
+      }
       setCycleRest(data);
       const nowMs = Date.now();
       blockAnchorRef.current = nextBlockCountdownAnchor(data, blockAnchorRef.current, nowMs);
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        setSyncState('offline');
+      } else {
+        setSyncState('synced');
+      }
     } catch (err: unknown) {
       logDashboardError('DASHBOARD_CYCLE_FETCH_FAILED', err);
+      if (typeof navigator !== 'undefined' && !navigator.onLine) setSyncState('offline');
+      else setSyncState('reconnecting');
     }
   }, DASHBOARD_REST_POLL_MS);
 
   useDashboardPoll(async () => {
     try {
       const data = await getWalletBalance();
-      if (data?.ok === false) return;
+      if (data?.ok === false) {
+        if (typeof navigator !== 'undefined' && !navigator.onLine) setSyncState('offline');
+        else setSyncState('reconnecting');
+        return;
+      }
       const mapped = mapWalletBalancePayload(data);
       setWalletBalances(mapped);
       setBlkBalance(mapped.BLK);
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        setSyncState('offline');
+      } else {
+        setSyncState('synced');
+      }
     } catch (err: unknown) {
       logDashboardError('DASHBOARD_BALANCE_FETCH_FAILED', err);
+      if (typeof navigator !== 'undefined' && !navigator.onLine) setSyncState('offline');
+      else setSyncState('reconnecting');
     }
   }, DASHBOARD_REST_POLL_MS);
 
@@ -295,22 +337,54 @@ export default function DashboardPage() {
 
   const displayName = displayDashboardUserName(user?.name);
 
+  // Containing-block neutral container: no CSS animation/filter/transform on the root
+  // to prevent trapping fixed-position descendants (e.g. modals, popovers, tooltips).
   return (
-    <div className="space-y-10 animate-in fade-in duration-700">
+    <div className="space-y-10">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
           <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight mb-3">
             {t('dashboard.welcome', { name: displayName })}
           </h1>
-          <p className="text-gray-500 font-medium max-w-xl text-sm md:text-base leading-relaxed">
+          <p className="text-slate-400 font-medium max-w-xl text-sm md:text-base leading-relaxed">
             {t('dashboard.subtitle')}
           </p>
         </div>
-        <div className="flex items-center gap-2.5 px-5 py-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
-          <Wifi className="w-4 h-4 text-emerald-400" />
-          <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">
-            {t('dashboard.synced')}
-          </span>
+        <div
+          data-testid="sync-status-badge"
+          role="status"
+          aria-live="polite"
+          className={`flex items-center gap-2.5 px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl border text-[10px] font-bold uppercase tracking-widest transition-colors ${
+            syncState === 'synced'
+              ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-400'
+              : syncState === 'syncing'
+                ? 'bg-sky-500/10 border-sky-500/25 text-sky-400'
+                : syncState === 'offline'
+                  ? 'bg-rose-500/10 border-rose-500/25 text-rose-400'
+                  : 'bg-amber-500/10 border-amber-500/25 text-amber-400'
+          }`}
+        >
+          {syncState === 'synced' ? (
+            <>
+              <Wifi className="w-4 h-4 text-emerald-400 shrink-0" aria-hidden />
+              <span>{t('dashboard.synced')}</span>
+            </>
+          ) : syncState === 'syncing' ? (
+            <>
+              <RefreshCw className="w-4 h-4 text-sky-400 animate-spin shrink-0" aria-hidden />
+              <span>{t('dashboard.syncing')}</span>
+            </>
+          ) : syncState === 'offline' ? (
+            <>
+              <WifiOff className="w-4 h-4 text-rose-400 shrink-0" aria-hidden />
+              <span>{t('dashboard.offline')}</span>
+            </>
+          ) : (
+            <>
+              <WifiOff className="w-4 h-4 text-amber-400 shrink-0" aria-hidden />
+              <span>{t('dashboard.sync_error')}</span>
+            </>
+          )}
         </div>
       </div>
 
@@ -406,7 +480,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
         <div className="lg:col-span-2 space-y-8">
           <DashboardHistory blockHistory={blockHistory} tokenSymbol={cycle?.tokenSymbol} />
-          <div className="bg-surface border border-gray-800/50 rounded-[2rem] p-6 md:p-8 shadow-xl relative overflow-hidden group">
+          <div className="bg-surface border border-gray-800/50 rounded-2xl p-6 md:p-8 shadow-xl relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none">
               <Users className="w-32 h-32 text-primary -rotate-12" />
             </div>
@@ -420,19 +494,19 @@ export default function DashboardPage() {
                     {t('dashboard.affiliate_title')}
                   </h2>
                 </div>
-                <p className="text-sm text-gray-500 font-medium leading-relaxed">
+                <p className="text-sm text-slate-400 font-medium leading-relaxed">
                   {t('dashboard.affiliate_description')}
                 </p>
                 <div className="flex items-center gap-6 pt-1">
                   <div className="flex flex-col">
-                    <span className="text-[10px] font-black text-gray-600 uppercase tracking-widest mb-1">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
                       {t('dashboard.affiliate_active_referrals')}
                     </span>
                     <span className="text-2xl font-black text-white">{miner?.referralCount ?? 0}</span>
                   </div>
                   <div className="w-px h-10 bg-gray-800" />
                   <div className="flex flex-col">
-                    <span className="text-[10px] font-black text-gray-600 uppercase tracking-widest mb-1">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
                       {t('dashboard.affiliate_bonus_label')}
                     </span>
                     <span className="text-2xl font-black text-emerald-400">
@@ -443,12 +517,12 @@ export default function DashboardPage() {
               </div>
               <div className="flex-1 max-w-sm space-y-4 w-full">
                 <div className="space-y-2">
-                  <span className="text-[10px] font-black text-gray-600 uppercase tracking-widest ml-2">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">
                     {t('dashboard.referral_link_label')}
                   </span>
                   {user?.id != null ? (
                     <div className="flex items-center gap-2 ml-2">
-                      <span className="text-[10px] text-gray-600 uppercase tracking-widest">
+                      <span className="text-[10px] text-slate-400 uppercase tracking-widest">
                         {t('dashboard.referral_code_label')}
                       </span>
                       <span className="text-xs font-black text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-lg tracking-widest select-all">
@@ -456,19 +530,19 @@ export default function DashboardPage() {
                       </span>
                     </div>
                   ) : null}
-                  <div className="relative flex items-center bg-gray-950 border border-gray-800 rounded-2xl p-1.5 focus-within:border-primary/50 transition-all shadow-inner">
+                  <div className="relative flex items-center bg-gray-950 border border-gray-800 rounded-xl p-1.5 focus-within:border-primary/50 transition-all shadow-inner">
                     <input
                       type="text"
                       readOnly
                       value={referralUrl || '—'}
-                      className="bg-transparent border-none text-xs font-bold text-gray-400 px-4 w-full focus:outline-none"
+                      className="bg-transparent border-none text-xs font-bold text-slate-300 px-4 w-full focus:outline-none"
                       aria-label={t('dashboard.referral_link_aria')}
                     />
                     <button
                       type="button"
                       onClick={() => void copyReferral()}
                       disabled={!referralUrl}
-                      className="bg-gray-800 hover:bg-gray-700 text-white p-3 rounded-xl transition-all active:scale-95 disabled:opacity-40 disabled:pointer-events-none"
+                      className="bg-gray-800 hover:bg-gray-700 text-white p-3 rounded-lg transition-all active:scale-95 disabled:opacity-40 disabled:pointer-events-none"
                     >
                       {referralCopied ? (
                         <Check className="w-4 h-4 text-emerald-400" />
@@ -479,11 +553,11 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <div className="space-y-2 pt-3 border-t border-gray-800/60">
-                  <span className="text-[10px] font-black text-gray-600 uppercase tracking-widest ml-2">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">
                     {t('dashboard.have_friend_code')}
                   </span>
-                  <div className="relative flex items-center bg-gray-950 border border-gray-800 rounded-2xl p-1.5 focus-within:border-amber-500/50 transition-all shadow-inner">
-                    <Gift className="w-4 h-4 text-gray-600 ml-3 shrink-0" aria-hidden />
+                  <div className="relative flex items-center bg-gray-950 border border-gray-800 rounded-xl p-1.5 focus-within:border-amber-500/50 transition-all shadow-inner">
+                    <Gift className="w-4 h-4 text-slate-500 ml-3 shrink-0" aria-hidden />
                     <input
                       type="text"
                       placeholder={t('dashboard.paste_code_placeholder')}
@@ -495,13 +569,13 @@ export default function DashboardPage() {
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') void linkFriendReferral();
                       }}
-                      className="bg-transparent border-none text-xs font-bold text-gray-400 placeholder:text-gray-700 px-3 w-full focus:outline-none"
+                      className="bg-transparent border-none text-xs font-bold text-slate-300 placeholder:text-slate-500 px-3 w-full focus:outline-none"
                     />
                     <button
                       type="button"
                       onClick={() => void linkFriendReferral()}
                       disabled={!sanitizeReferralInput(friendCode) || linkingReferral}
-                      className="bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 text-[10px] font-black uppercase px-3 py-2 rounded-xl transition-all active:scale-95 disabled:opacity-40 disabled:pointer-events-none shrink-0"
+                      className="bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 text-[10px] font-black uppercase px-3 py-2 rounded-lg transition-all active:scale-95 disabled:opacity-40 disabled:pointer-events-none shrink-0"
                     >
                       {linkingReferral ? '...' : t('dashboard.link_referral')}
                     </button>

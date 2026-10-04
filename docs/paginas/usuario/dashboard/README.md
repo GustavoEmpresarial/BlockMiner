@@ -210,6 +210,14 @@ teria efeito real (as demais chamadas do módulo são só leitura).
   padrão amplo no `server/`. Isso é **project-wide**, fora do escopo deste módulo de
   dashboard; reportado ao usuário diretamente fora deste doc também.
 
+### 3.4 Redesign e Resolução de Ressalvas (2026-10-04)
+
+1. **P1 — Badge de Sincronização Dinâmico**: O selo de sincronização em `DashboardPage.tsx` agora lê o estado real de conectividade via `navigator.onLine`, listeners de `online`/`offline` e resultado de polling de `/api/mining/cycle` e `/api/wallet/balance`. Possui 4 estados visuais (`synced`, `syncing`, `reconnecting`, `offline`) com `role="status"` e `aria-live="polite"` para acessibilidade.
+2. **P2 — Localização Completa em Espanhol**: Tradução autêntica de 85 chaves de prosa em `client/src/i18n/locales/es.json` (eliminando o fallback não intencional para inglês). Apenas 5 termos permanecem legitimamente iguais por serem tickers (`POL`, `SHIB`, `BLK`), porcentagens literais (`10%`) ou nomes universais.
+3. **P3 — Eliminação do Containing Block na Raiz**: Removida a classe `animate-in fade-in duration-700` do contêiner raiz de `DashboardPage.tsx`, eliminando o aprisionamento de componentes com `position: fixed` (modais, popovers e tooltips).
+4. **P4 — Unificação da Escala de Raios**: Padronização da escala visual em `rounded-2xl` para cards principais (eliminando `rounded-[2rem]` avulso no card de afiliados e `rounded-3xl`), `rounded-xl` para subcards/botões/inputs, `rounded-lg` para tags e `rounded-full` para moedas e barras.
+5. **P5 — Conformidade WCAG AA e Acessibilidade Semântica**: Substituição de textos cinza de baixo contraste (`text-gray-500/600/700`) por `text-slate-400`/`text-slate-300` com taxa de contraste $\ge 4.5:1$. Adição do atributo `scope="col"` a todos os elementos `<th>` da tabela de histórico de blocos.
+
 ### 3.5 Testes adicionados (zero testes existiam antes desta passada)
 
 | Arquivo | Cobre |
