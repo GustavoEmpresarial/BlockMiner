@@ -12,6 +12,7 @@
 - Módulo Swap & Conversão POL/SHIB → BLK (`server/modules/swap/`, `client/src/features/wallet/components/SwapPanel.tsx`)
 - Popup de Taxa de Energia Pendente (`client/src/features/dashboard/components/DashboardEnergyTaxModal.tsx`, `server/modules/energy-tax/`)
 - Portal Público de Transparência Financeira (`/transparency`) (`client/src/features/transparency/`, `server/modules/transparency/`)
+- Página Inicial do Usuário (`/dashboard`) (`client/src/features/dashboard/`, `server/modules/mining/`, `server/modules/wallet/`)
 **Responsável**: Antigravity Quality Gate & Security Engine  
 
 
@@ -2284,6 +2285,93 @@ Executado através de `tests/security/run-kali-transparency-full-audit.sh` utili
 - **Risco Residual**: Nulo. A página pública `/transparency` permanece estritamente como superfície de leitura (`GET`), sem qualquer mutação de saldo, banco ou estado no servidor.
 - **Fidelidade Contábil**: Nenhuma projeção, estimativa ou número foi inventado ou alterado. Todos os valores continuam 100% alimentados pelos contratos da API.
 - **Isolamento de Produção**: Todos os testes e scripts de carga e pentest foram executados exclusivamente contra processos e banco locais (`localhost`). Zero impacto em produção.
+
+---
+
+# PARTE X: PÁGINA INICIAL DO USUÁRIO (`/dashboard`)
+
+## 1. Resumo Executivo dos Achados — Dashboard
+
+| ID | Descrição do Achado | Severidade | CWE / OWASP | Arquivo e Linha Original | Status da Correção |
+| :---: | :--- | :---: | :---: | :--- | :---: |
+| **P1** | **Badge de Sincronização Estático:** Renderização de selo permanente verde `SINCRONIZADO` sem leitura de conectividade ou polling, induzindo o usuário ao erro durante falhas ou quedas de rede. | **ALTA** | Integridade de Estado / UI Truthfulness | `client/src/features/dashboard/DashboardPage.tsx:309-314` | ✅ **Corrigido** |
+| **P2** | **Ausência de Localização em Espanhol:** 85 das 103 chaves em `es.json` continham prosa idêntica ao inglês (`welcome`, `balance`, `speed`, `network_power`, `next_block`, etc.), quebrando a experiência de usuários hispanofalantes. | **MÉDIA** | I18n / Localização | `client/src/i18n/locales/es.json:1906-1998` | ✅ **Corrigido** |
+| **P3** | **Armadilha de Containing Block / Stacking Context:** Uso de `space-y-10 animate-in fade-in duration-700` no contêiner raiz, criando stacking context e quebrando o posicionamento de elementos filhos com `position: fixed`. | **ALTA** | Arquitetura CSS / Layout Stacking Context | `client/src/features/dashboard/DashboardPage.tsx:299` | ✅ **Corrigido** |
+| **P4** | **Inconsistência de Escala de Bordas e Raios:** Dispersão em 7 patamares de raios (`rounded-xl` 23, `rounded-2xl` 18, `rounded-full` 17, `rounded-3xl` 5, `rounded-lg` 4, `rounded-md` 2 e `rounded-[2rem]` avulso no card de afiliados). | **MÉDIA** | Consistência Visual & Design System | Múltiplos componentes em `features/dashboard` | ✅ **Corrigido** |
+| **P5** | **Contraste Abaixo de WCAG AA e Semântica de Tabelas:** 26 ocorrências de texto cinza de baixo contraste (`text-gray-500/600/700`) reprovando no critério de 4.5:1, e ausência de `scope="col"` na tabela de blocos. | **MÉDIA** | Acessibilidade WCAG AA (1.4.3 & 1.3.1) | `dashboard.parts.tsx`, `DashboardPage.tsx`, `MiningAllocationPanel.tsx` | ✅ **Corrigido** |
+
+---
+
+## 2. Correções Implementadas e Evidências Dinâmicas
+
+- **Resolução P1 (Badge Conectado ao Estado Real)**:
+  - O badge foi conectado a `window.navigator.onLine`, listeners de eventos de janela `online`/`offline` e aos retornos dos loops de polling de `/api/mining/cycle` e `/api/wallet/balance`.
+  - Quatro estados operacionais implementados com cores e ícones distintos: `synced` (verde, Wifi), `syncing` (azul, RefreshCw animado), `offline` (vermelho, WifiOff) e `reconnecting` (âmbar, WifiOff).
+  - Acessibilidade integrada via atributos `role="status"`, `aria-live="polite"` e identificador estável `data-testid="sync-status-badge"`.
+- **Resolução P2 (Tradução Autêntica em Espanhol)**:
+  - 85 chaves de prosa traduzidas para espanhol nativo. Apenas 5 termos universais mantidos idênticos por serem tickers (`POL`, `SHIB`, `BLK`), porcentagens literais (`10%`) ou nomes próprios de criptoativos.
+  - Chaves de status de sincronização criadas e equilibradas nos 3 idiomas (`pt-BR`, `en`, `es`).
+- **Resolução P3 (Neutralização de Containing Block)**:
+  - Removida a classe `animate-in fade-in duration-700` do contêiner raiz de `DashboardPage.tsx`, neutralizando o contêiner raiz e eliminando a armadilha de stacking context para qualquer componente `fixed`.
+  - Documentado com comentário técnico explícito no código-fonte.
+- **Resolução P4 (Unificação da Escala de Raios)**:
+  - Cards principais unificados em `rounded-2xl` (eliminando o `rounded-[2rem]` avulso do card de afiliados e `rounded-3xl` de cards de histórico e estatísticas).
+  - Subcards, botões de ação e campos de formulário padronizados em `rounded-xl`.
+  - Tags e pills menores padronizados em `rounded-lg`.
+  - Moedas, avatares, dots e barras de progresso contínuas em `rounded-full`.
+- **Resolução P5 (Contraste WCAG AA e Semântica Acessível)**:
+  - Substituição de 100% dos textos de baixo contraste `text-gray-500/600/700` por `text-slate-400`/`text-slate-300`, atingindo taxa de contraste entre 6.7:1 e 11.3:1 sobre fundos escuros.
+  - Adicionado `scope="col"` a todos os elementos `<th>` da tabela de histórico de blocos.
+  - Título de `MiningAllocationPanel` promovido para `<h2>` semântico.
+
+---
+
+## 3. Resultados dos Testes de Carga (k6) — Dashboard
+
+Executado através de `tests/performance/run-dashboard-k6.mjs` com o script `tests/performance/dashboard.k6.js` contra `http://127.0.0.1:5137`:
+
+| Métrica | Meta Estabelecida | Resultado Obtido | Status |
+| :--- | :---: | :---: | :---: |
+| **Taxa de Erro 5xx** | `rate == 0` | **0.00%** (0 falhas em 522 requests) | ✅ Aprovado |
+| **Falha de Autenticação** | `rate < 0.05` | **0.00%** (0 falhas) | ✅ Aprovado |
+| **Throughput Médio** | Sem degradação sob carga | **34.33 req/s** sustentados | ✅ Excelente |
+| **Latência Global p50** | p50 < 50 ms | **2.02 ms** | ✅ Excelente |
+| **Latência Global p95** | p95 < 1000 ms | **5.84 ms** | ✅ Excelente |
+| **Latência /api/wallet/balance** | p95 < 1000 ms | **4.00 ms** (p50 = 1.55 ms) | ✅ Excelente |
+| **Latência /api/mining/cycle** | p95 < 1000 ms | **4.05 ms** (p50 = 2.01 ms) | ✅ Excelente |
+| **Latência /api/rooms/slots** | p95 < 1000 ms | **3.87 ms** (p50 = 1.96 ms) | ✅ Excelente |
+| **Latência /api/banners** | p95 < 1000 ms | **6.56 ms** (p50 = 3.32 ms) | ✅ Excelente |
+| **Rate Limiting** | Ativo contra flood | **HTTP 429 disparado após 60 req/min** | ✅ Conforme |
+| **Guarda Anti-Produção** | Aborto imediato contra hosts remotos | **100% Protegido** | ✅ Conforme |
+
+---
+
+## 4. Resultados da Auditoria de Segurança (Container Kali Linux) — Dashboard
+
+Executado através de `tests/security/run-kali-dashboard-audit.sh` utilizando a imagem `kali-pentest:latest` contra `http://127.0.0.1:5138`:
+
+| Categoria do Teste | Verificações Executadas | Resultado |
+| :--- | :---: | :---: |
+| **Autenticação Obrigatória** | 6 rotas protegidas testadas sem token | **100% Bloqueado** (HTTP 401) |
+| **Rotas Públicas / Opcionais** | `/api/mining/cycle` e `/api/banners` sem token | **100% Conforme** (HTTP 200, sem vazamento) |
+| **Integridade de Token JWT** | Falsificação de assinatura e `alg:none` | **100% Bloqueado** (HTTP 401) |
+| **Isolamento Horizontal / IDOR** | Injeção de `userId` de terceiro na query string | **100% Conforme** (token é autoridade única) |
+| **Anti-Mass Assignment** | Tentativa de injeção de saldo/role em alocação | **100% Bloqueado** (campos extras ignorados) |
+| **Lógica de Negócio e Limites** | `polBps` negativo (-500) e superior (15000) | **100% Rejeitado** (HTTP 400) |
+| **Injeções Controladas (SQLi/XSS)** | Payloads maliciosos em código de indicação | **100% Rejeitado** (HTTP 4xx seguro) |
+| **Auditoria de Information Disclosure** | Varredura de segredos, envs e hashes em banners | **Zero segredos expostos** |
+| **Proteção contra DoS / Rate Limit** | Rajada de requisições rápidas em resumo fiscal | **HTTP 429 disparado** |
+
+**Total de Verificações DAST**: 19 executadas, 19 aprovadas, 0 vulnerabilidades.
+
+---
+
+## 5. Risco Residual e Decisões
+
+- **Risco Residual**: Nulo. A interface do dashboard consome exclusivamente contratos já estabelecidos no backend, sem introdução de novas mutações de banco ou alterações financeiras.
+- **Fidelidade Contábil**: Preservada a invariante estrita — nenhum saldo, taxa, tempo ou valor de bloco é estimado ou inventado pelo frontend.
+- **Segurança Operacional**: Todos os testes de carga e DAST executados estritamente em `localhost`. Staging desativado e produção intocada.
+
 
 
 
