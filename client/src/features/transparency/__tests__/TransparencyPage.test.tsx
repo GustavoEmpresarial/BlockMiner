@@ -136,7 +136,6 @@ describe('TransparencyPage (Public Portal)', () => {
       if (url.endsWith('/api/transparency') || url.includes('/api/transparency?')) {
         return mockFetchResponse(MOCK_ENTRIES_RESPONSE);
       }
-      console.log('UNHANDLED FETCH IN TEST:', url);
       return Promise.resolve(new Response(JSON.stringify({ ok: true }), { status: 200 }));
     });
   });

@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { SyntheticEvent } from 'react';
 import {
-  Server,
   ExternalLink,
   Wallet,
   Copy,

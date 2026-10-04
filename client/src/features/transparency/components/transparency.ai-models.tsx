@@ -183,7 +183,6 @@ export function Generic3DViewer({ src, fallbackImg, alt }: { src: string; fallba
 }
 
 export function AiInfrastructure3DSection() {
-  const { t } = useTranslation();
   const [selectedId, setSelectedId] = useState<string>('claude');
   const [scriptReady, setScriptReady] = useState(false);
 

@@ -40,7 +40,6 @@ export function CustomPieTooltip(props: unknown) {
 }
 
 export function CustomBarTooltip(props: unknown) {
-  const { t } = useTranslation();
   const { active, payload, label } = props as {
     active?: boolean;
     payload?: readonly RechartsTooltipPayloadEntry[];
@@ -58,7 +57,6 @@ export function CustomBarTooltip(props: unknown) {
 }
 
 export function PieLabel(props: PieLabelRenderProps) {
-  const { t } = useTranslation();
   const { cx = 0, cy = 0, midAngle = 0, innerRadius = 0, outerRadius = 0, percent = 0 } = props;
   if (percent < 0.06) return null;
   const RADIAN = Math.PI / 180;
