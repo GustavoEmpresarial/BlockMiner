@@ -106,6 +106,7 @@ describe('TopNav Component', () => {
     // Press Escape to close
     fireEvent.keyDown(dashboardItem, { key: 'Escape' });
     expect(miningGroupBtn).toHaveAttribute('aria-expanded', 'false');
+    expect(miningGroupBtn).toHaveFocus();
   });
 
   it('opens mobile navigation drawer via hamburger button and closes with close button', async () => {
