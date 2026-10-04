@@ -188,6 +188,213 @@ export default function Transparency() {
     }
   };
 
+  // ── Helper rendering functions for section blocks ──
+  const renderOverview = () => (
+    <div className="space-y-6">
+      {pieData.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Donut Chart Card */}
+          <section
+            aria-labelledby="overview-donut-title"
+            className="rounded-3xl border-2 border-slate-800 bg-slate-900/60 p-5 sm:p-6 space-y-4 shadow-[4px_4px_0px_#000000]"
+          >
+            <div className="flex items-center gap-2.5 pb-2 border-b border-slate-800/80">
+              <div className="w-8 h-8 rounded-xl bg-primary/10 border border-primary/25 flex items-center justify-center text-primary shadow-[2px_2px_0px_#000000]">
+                <BarChart2 className="w-4 h-4" aria-hidden="true" />
+              </div>
+              <h2 id="overview-donut-title" className="text-xs font-black text-slate-300 uppercase tracking-widest">
+                {t('transparency.charts.monthly_distribution')}
+              </h2>
+            </div>
+
+            <div className="flex items-center gap-6 flex-wrap">
+              <div style={{ width: 200, height: 180, flexShrink: 0 }} aria-hidden="true">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={52}
+                      outerRadius={80}
+                      paddingAngle={3}
+                      dataKey="value"
+                      labelLine={false}
+                      label={PieLabel}
+                    >
+                      {pieData.map((entry, i) => (
+                        <Cell key={i} fill={entry.color} strokeWidth={0} />
+                      ))}
+                    </Pie>
+                    <RTooltip content={CustomPieTooltip} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Accessible textual breakdown alongside chart */}
+              <ul aria-label="Valores da Distribuição Mensal" className="flex flex-col gap-2 text-xs flex-1 list-none p-0 m-0">
+                {pieData.map((d, i) => (
+                  <li key={i} className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0 shadow-[1px_1px_0px_#000000]" style={{ background: d.color }} aria-hidden="true" />
+                    <span className="text-slate-400 font-medium">{d.name}</span>
+                    <span className="text-white font-black ml-auto font-mono">{fmt(d.value, true)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </section>
+
+          {/* Bar Chart Card */}
+          <section
+            aria-labelledby="overview-bar-title"
+            className="rounded-3xl border-2 border-slate-800 bg-slate-900/60 p-5 sm:p-6 space-y-4 shadow-[4px_4px_0px_#000000]"
+          >
+            <div className="flex items-center gap-2.5 pb-2 border-b border-slate-800/80">
+              <div className="w-8 h-8 rounded-xl bg-primary/10 border border-primary/25 flex items-center justify-center text-primary shadow-[2px_2px_0px_#000000]">
+                <Activity className="w-4 h-4" aria-hidden="true" />
+              </div>
+              <h2 id="overview-bar-title" className="text-xs font-black text-slate-300 uppercase tracking-widest">
+                {t('transparency.charts.cost_by_category')}
+              </h2>
+            </div>
+
+            <div aria-hidden="true">
+              <ResponsiveContainer width="100%" height={180}>
+                <BarChart data={barData} barSize={28} margin={{ top: 0, right: 0, left: -10, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                  <XAxis dataKey="cat" tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 700 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: '#94a3b8', fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={(v) => fmt(v, true)} />
+                  <RTooltip content={CustomBarTooltip} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
+                  <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+                    {barData.map((entry, i) => (
+                      <Cell key={i} fill={entry.color} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {/* Horizontal Category Weight Bars */}
+      {Object.keys(byCategory).length > 0 && (
+        <section
+          aria-labelledby="overview-weights-title"
+          className="rounded-3xl border-2 border-slate-800 bg-slate-900/60 p-5 sm:p-6 space-y-4 shadow-[4px_4px_0px_#000000]"
+        >
+          <div className="flex items-center gap-2.5 pb-2 border-b border-slate-800/80 flex-wrap">
+            <div className="w-8 h-8 rounded-xl bg-primary/10 border border-primary/25 flex items-center justify-center text-primary shadow-[2px_2px_0px_#000000]">
+              <TrendingDown className="w-4 h-4" aria-hidden="true" />
+            </div>
+            <h2 id="overview-weights-title" className="text-xs font-black text-slate-300 uppercase tracking-widest">
+              {t('transparency.charts.weight_by_category')}
+            </h2>
+            <span className="ml-auto text-xs font-mono font-bold text-slate-400">
+              {t('transparency.charts.total_monthly', { total: fmt(totalMonthly) })}
+            </span>
+          </div>
+
+          <div className="space-y-4">
+            {CATEGORY_ORDER.filter((c): c is CategoryKey => Boolean(byCategory[c])).map((c) => (
+              <CategoryBar
+                key={c}
+                catKey={c}
+                monthly={byCategory[c].reduce((s, e) => s + toMonthly(e.amountUsd, e.period), 0)}
+                totalMonthly={totalMonthly}
+                count={byCategory[c].length}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+    </div>
+  );
+
+  const renderExpenses = () => (
+    <div className="space-y-6">
+      {/* Expense Breakdown Table (Solving P4: I18n Table Headers) */}
+      {expenses.length > 0 && (
+        <section
+          aria-labelledby="expenses-table-title"
+          className="rounded-3xl border-2 border-slate-800 bg-slate-900/60 overflow-hidden shadow-[4px_4px_0px_#000000]"
+          data-testid="expenses-table-section"
+        >
+          <div className="px-5 sm:px-6 py-4 border-b border-slate-800 bg-slate-950/40 flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shadow-[2px_2px_0px_#000000]">
+                <Receipt className="w-4 h-4" aria-hidden="true" />
+              </div>
+              <h2 id="expenses-table-title" className="text-xs font-black text-slate-200 uppercase tracking-wider">
+                {t('transparency.table.title')}
+              </h2>
+            </div>
+            <span className="text-xs font-mono font-bold text-slate-300 px-2.5 py-1 rounded-full border border-slate-700 bg-slate-950 shadow-[1px_1px_0px_#000000]">
+              {t('transparency.table.items_count', { count: expenses.length })}
+            </span>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="border-b border-slate-800 bg-slate-950/60 text-[10px] uppercase font-black text-slate-400 tracking-wider">
+                <tr>
+                  <th scope="col" className="py-3 px-4 sm:px-6">
+                    {t('transparency.table.col_name')}
+                  </th>
+                  <th scope="col" className="py-3 px-4 hidden md:table-cell">
+                    {t('transparency.table.col_provider')}
+                  </th>
+                  <th scope="col" className="py-3 px-4 text-right">
+                    {t('transparency.table.col_amount')}
+                  </th>
+                  <th scope="col" className="py-3 px-4 text-right sm:pr-6">
+                    {t('transparency.table.col_status')}
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60">
+                {expenses.map((e) => (
+                  <EntryRow key={e.id} entry={e} />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      {/* Income / Revenue / Sponsorships */}
+      {incomes.length > 0 && (
+        <section
+          aria-labelledby="income-section-title"
+          className="rounded-3xl border-2 border-emerald-500/30 bg-emerald-950/15 overflow-hidden shadow-[4px_4px_0px_#000000]"
+          data-testid="income-section"
+        >
+          <div className="px-5 sm:px-6 py-4 border-b border-emerald-500/20 bg-emerald-950/30 flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shadow-[2px_2px_0px_#000000]">
+                <TrendingUp className="w-4 h-4" aria-hidden="true" />
+              </div>
+              <h2 id="income-section-title" className="text-xs font-black text-emerald-300 uppercase tracking-widest">
+                {t('transparency.income_section.title')}
+              </h2>
+            </div>
+            <span className="text-xs font-mono font-black text-emerald-400 bg-emerald-950/60 px-3 py-1 rounded-full border border-emerald-500/30">
+              {fmt(totalIncMonthly, true)}
+              <span className="text-emerald-500 font-normal ml-0.5">{t('transparency.income_section.per_month')}</span>
+            </span>
+          </div>
+          <div className="p-4 sm:p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {incomes.map((e) => (
+                <IncomeCard key={e.id} entry={e} />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+    </div>
+  );
+
   return (
     <div className="space-y-8 pb-12" data-testid="transparency-page">
       {/* ── Hero Banner: High contrast, transparent & audited badge ──────────────── */}
@@ -327,7 +534,7 @@ export default function Transparency() {
                     role="tab"
                     id={`tab-${tab.key}`}
                     aria-selected={isSelected}
-                    aria-controls={`panel-${tab.key}`}
+                    aria-controls={tab.key === 'all' ? 'panel-all' : `panel-${tab.key}`}
                     tabIndex={isSelected ? 0 : -1}
                     onClick={() => setActiveTab(tab.key)}
                     onKeyDown={(e) => handleTabKeyDown(e, idx)}
@@ -345,241 +552,44 @@ export default function Transparency() {
             </div>
           </nav>
 
-          {/* ── Section Content Panels ────────────────────────────────────── */}
-
-          {/* 1. VISÃO GERAL: Gráficos Recharts (Donut + Bar) & Categorias ── */}
-          {(activeTab === 'all' || activeTab === 'overview') && (
-            <div id="panel-overview" role="tabpanel" aria-labelledby="tab-overview" className="space-y-6">
-              {pieData.length > 0 && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  {/* Donut Chart Card */}
-                  <section
-                    aria-labelledby="overview-donut-title"
-                    className="rounded-3xl border-2 border-slate-800 bg-slate-900/60 p-5 sm:p-6 space-y-4 shadow-[4px_4px_0px_#000000]"
-                  >
-                    <div className="flex items-center gap-2.5 pb-2 border-b border-slate-800/80">
-                      <div className="w-8 h-8 rounded-xl bg-primary/10 border border-primary/25 flex items-center justify-center text-primary shadow-[2px_2px_0px_#000000]">
-                        <BarChart2 className="w-4 h-4" aria-hidden="true" />
-                      </div>
-                      <h2 id="overview-donut-title" className="text-xs font-black text-slate-300 uppercase tracking-widest">
-                        {t('transparency.charts.monthly_distribution')}
-                      </h2>
-                    </div>
-
-                    <div className="flex items-center gap-6 flex-wrap">
-                      <div style={{ width: 200, height: 180, flexShrink: 0 }} aria-hidden="true">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <PieChart>
-                            <Pie
-                              data={pieData}
-                              cx="50%"
-                              cy="50%"
-                              innerRadius={52}
-                              outerRadius={80}
-                              paddingAngle={3}
-                              dataKey="value"
-                              labelLine={false}
-                              label={PieLabel}
-                            >
-                              {pieData.map((entry, i) => (
-                                <Cell key={i} fill={entry.color} strokeWidth={0} />
-                              ))}
-                            </Pie>
-                            <RTooltip content={CustomPieTooltip} />
-                          </PieChart>
-                        </ResponsiveContainer>
-                      </div>
-
-                      {/* Accessible textual breakdown alongside chart */}
-                      <ul aria-label="Valores da Distribuição Mensal" className="flex flex-col gap-2 text-xs flex-1 list-none p-0 m-0">
-                        {pieData.map((d, i) => (
-                          <li key={i} className="flex items-center gap-2">
-                            <span className="w-2.5 h-2.5 rounded-full shrink-0 shadow-[1px_1px_0px_#000000]" style={{ background: d.color }} aria-hidden="true" />
-                            <span className="text-slate-400 font-medium">{d.name}</span>
-                            <span className="text-white font-black ml-auto font-mono">{fmt(d.value, true)}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </section>
-
-                  {/* Bar Chart Card */}
-                  <section
-                    aria-labelledby="overview-bar-title"
-                    className="rounded-3xl border-2 border-slate-800 bg-slate-900/60 p-5 sm:p-6 space-y-4 shadow-[4px_4px_0px_#000000]"
-                  >
-                    <div className="flex items-center gap-2.5 pb-2 border-b border-slate-800/80">
-                      <div className="w-8 h-8 rounded-xl bg-primary/10 border border-primary/25 flex items-center justify-center text-primary shadow-[2px_2px_0px_#000000]">
-                        <Activity className="w-4 h-4" aria-hidden="true" />
-                      </div>
-                      <h2 id="overview-bar-title" className="text-xs font-black text-slate-300 uppercase tracking-widest">
-                        {t('transparency.charts.cost_by_category')}
-                      </h2>
-                    </div>
-
-                    <div aria-hidden="true">
-                      <ResponsiveContainer width="100%" height={180}>
-                        <BarChart data={barData} barSize={28} margin={{ top: 0, right: 0, left: -10, bottom: 0 }}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                          <XAxis dataKey="cat" tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 700 }} axisLine={false} tickLine={false} />
-                          <YAxis tick={{ fill: '#94a3b8', fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={(v) => fmt(v, true)} />
-                          <RTooltip content={CustomBarTooltip} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
-                          <Bar dataKey="value" radius={[6, 6, 0, 0]}>
-                            {barData.map((entry, i) => (
-                              <Cell key={i} fill={entry.color} />
-                            ))}
-                          </Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </section>
+          {/* ── Section Content Panels with Validated ARIA Controls ──────── */}
+          {activeTab === 'all' ? (
+            <div id="panel-all" role="tabpanel" aria-labelledby="tab-all" className="space-y-8">
+              <div id="section-overview" className="space-y-6">
+                {renderOverview()}
+              </div>
+              <div id="section-expenses" className="space-y-6">
+                {renderExpenses()}
+              </div>
+              <div id="section-treasury">
+                <WalletsLiveSection />
+              </div>
+              <div id="section-infrastructure" className="space-y-6">
+                <AiInfrastructure3DSection />
+                <HardwareSection />
+              </div>
+              <div id="section-withdrawals">
+                <WithdrawalsSection />
+              </div>
+            </div>
+          ) : (
+            <div id={`panel-${activeTab}`} role="tabpanel" aria-labelledby={`tab-${activeTab}`} className="space-y-8">
+              {activeTab === 'overview' && renderOverview()}
+              {activeTab === 'expenses' && renderExpenses()}
+              {activeTab === 'treasury' && <WalletsLiveSection />}
+              {activeTab === 'infrastructure' && (
+                <div className="space-y-6">
+                  <AiInfrastructure3DSection />
+                  <HardwareSection />
                 </div>
               )}
-
-              {/* Horizontal Category Weight Bars */}
-              {Object.keys(byCategory).length > 0 && (
-                <section
-                  aria-labelledby="overview-weights-title"
-                  className="rounded-3xl border-2 border-slate-800 bg-slate-900/60 p-5 sm:p-6 space-y-4 shadow-[4px_4px_0px_#000000]"
-                >
-                  <div className="flex items-center gap-2.5 pb-2 border-b border-slate-800/80 flex-wrap">
-                    <div className="w-8 h-8 rounded-xl bg-primary/10 border border-primary/25 flex items-center justify-center text-primary shadow-[2px_2px_0px_#000000]">
-                      <TrendingDown className="w-4 h-4" aria-hidden="true" />
-                    </div>
-                    <h2 id="overview-weights-title" className="text-xs font-black text-slate-300 uppercase tracking-widest">
-                      {t('transparency.charts.weight_by_category')}
-                    </h2>
-                    <span className="ml-auto text-xs font-mono font-bold text-slate-400">
-                      {t('transparency.charts.total_monthly', { total: fmt(totalMonthly) })}
-                    </span>
-                  </div>
-
-                  <div className="space-y-4">
-                    {CATEGORY_ORDER.filter((c): c is CategoryKey => Boolean(byCategory[c])).map((c) => (
-                      <CategoryBar
-                        key={c}
-                        catKey={c}
-                        monthly={byCategory[c].reduce((s, e) => s + toMonthly(e.amountUsd, e.period), 0)}
-                        totalMonthly={totalMonthly}
-                        count={byCategory[c].length}
-                      />
-                    ))}
-                  </div>
-                </section>
-              )}
-            </div>
-          )}
-
-          {/* 2. CUSTOS E RECEITAS: Tabela Detalhada & Cards de Entrada ─────── */}
-          {(activeTab === 'all' || activeTab === 'expenses') && (
-            <div id="panel-expenses" role="tabpanel" aria-labelledby="tab-expenses" className="space-y-6">
-              {/* Expense Breakdown Table (Solving P4: I18n Table Headers) */}
-              {expenses.length > 0 && (
-                <section
-                  aria-labelledby="expenses-table-title"
-                  className="rounded-3xl border-2 border-slate-800 bg-slate-900/60 overflow-hidden shadow-[4px_4px_0px_#000000]"
-                  data-testid="expenses-table-section"
-                >
-                  <div className="px-5 sm:px-6 py-4 border-b border-slate-800 bg-slate-950/40 flex items-center justify-between gap-3 flex-wrap">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shadow-[2px_2px_0px_#000000]">
-                        <Receipt className="w-4 h-4" aria-hidden="true" />
-                      </div>
-                      <h2 id="expenses-table-title" className="text-xs font-black text-slate-200 uppercase tracking-wider">
-                        {t('transparency.table.title')}
-                      </h2>
-                    </div>
-                    <span className="text-xs font-mono font-bold text-slate-300 px-2.5 py-1 rounded-full border border-slate-700 bg-slate-950 shadow-[1px_1px_0px_#000000]">
-                      {t('transparency.table.items_count', { count: expenses.length })}
-                    </span>
-                  </div>
-
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs">
-                      <thead className="border-b border-slate-800 bg-slate-950/60 text-[10px] uppercase font-black text-slate-400 tracking-wider">
-                        <tr>
-                          <th scope="col" className="py-3 px-4 sm:px-6">
-                            {t('transparency.table.col_name')}
-                          </th>
-                          <th scope="col" className="py-3 px-4 hidden md:table-cell">
-                            {t('transparency.table.col_provider')}
-                          </th>
-                          <th scope="col" className="py-3 px-4 text-right">
-                            {t('transparency.table.col_amount')}
-                          </th>
-                          <th scope="col" className="py-3 px-4 text-right sm:pr-6">
-                            {t('transparency.table.col_status')}
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-800/60">
-                        {expenses.map((e) => (
-                          <EntryRow key={e.id} entry={e} />
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </section>
-              )}
-
-              {/* Income / Revenue / Sponsorships */}
-              {incomes.length > 0 && (
-                <section
-                  aria-labelledby="income-section-title"
-                  className="rounded-3xl border-2 border-emerald-500/30 bg-emerald-950/15 overflow-hidden shadow-[4px_4px_0px_#000000]"
-                  data-testid="income-section"
-                >
-                  <div className="px-5 sm:px-6 py-4 border-b border-emerald-500/20 bg-emerald-950/30 flex items-center justify-between gap-3 flex-wrap">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shadow-[2px_2px_0px_#000000]">
-                        <TrendingUp className="w-4 h-4" aria-hidden="true" />
-                      </div>
-                      <h2 id="income-section-title" className="text-xs font-black text-emerald-300 uppercase tracking-widest">
-                        {t('transparency.income_section.title')}
-                      </h2>
-                    </div>
-                    <span className="text-xs font-mono font-black text-emerald-400 bg-emerald-950/60 px-3 py-1 rounded-full border border-emerald-500/30">
-                      {fmt(totalIncMonthly, true)}
-                      <span className="text-emerald-500 font-normal ml-0.5">{t('transparency.income_section.per_month')}</span>
-                    </span>
-                  </div>
-                  <div className="p-4 sm:p-6">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {incomes.map((e) => (
-                        <IncomeCard key={e.id} entry={e} />
-                      ))}
-                    </div>
-                  </div>
-                </section>
-              )}
-            </div>
-          )}
-
-          {/* 3. TESOURARIA E CARTEIRAS: On-Chain Live Feed ─────────────────── */}
-          {(activeTab === 'all' || activeTab === 'treasury') && (
-            <div id="panel-treasury" role="tabpanel" aria-labelledby="tab-treasury">
-              <WalletsLiveSection />
-            </div>
-          )}
-
-          {/* 4. INFRAESTRUTURA 3D: Servidores IA & Hardware ASIC ──────────── */}
-          {(activeTab === 'all' || activeTab === 'infrastructure') && (
-            <div id="panel-infrastructure" role="tabpanel" aria-labelledby="tab-infrastructure" className="space-y-6">
-              <AiInfrastructure3DSection />
-              <HardwareSection />
-            </div>
-          )}
-
-          {/* 5. SAQUES COMPROVADOS: Métricas On-chain de Retiradas ─────────── */}
-          {(activeTab === 'all' || activeTab === 'withdrawals') && (
-            <div id="panel-withdrawals" role="tabpanel" aria-labelledby="tab-withdrawals">
-              <WithdrawalsSection />
+              {activeTab === 'withdrawals' && <WithdrawalsSection />}
             </div>
           )}
 
           {/* ── Footer note & Methodology modal trigger ──────────────────── */}
           <footer className="text-center pt-4 pb-2 space-y-2">
-            <p className="text-[11px] text-slate-500">{t('transparency.footer_note')}</p>
+            <p className="text-[11px] text-slate-400">{t('transparency.footer_note')}</p>
             <button
               type="button"
               onClick={() => setMethodologyOpen(true)}

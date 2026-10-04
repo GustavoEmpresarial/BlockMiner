@@ -404,7 +404,7 @@ describe('TransparencyPage (Public Portal)', () => {
     expect(screen.getByText('Antminer S19J Pro')).toBeInTheDocument();
   });
 
-  it('P1 — applies rich visual hierarchy to all heavy sections (withdrawals, hardware, AI, income)', async () => {
+  it('P1 & A11y — semantic structure, stable testids, and heading hierarchy across all heavy sections', async () => {
     renderWithI18n(<Transparency />);
 
     await waitFor(() => {
@@ -415,21 +415,88 @@ describe('TransparencyPage (Public Portal)', () => {
       expect(screen.getByTestId('expenses-table-section')).toBeInTheDocument();
     });
 
-    // Verify tactile borders and shadows across all heavy sections (no border-white/8 or bg-white/2)
+    // Semantic section element verification (stable across cosmetic CSS adjustments)
     const withdrawalsSection = screen.getByTestId('withdrawals-section');
-    expect(withdrawalsSection).toHaveClass('border-2', 'border-sky-500/30');
+    expect(withdrawalsSection.tagName.toLowerCase()).toBe('section');
+    expect(withdrawalsSection).toHaveAttribute('aria-labelledby');
 
-    const hardwareSection = screen.getByTestId('hardware-asset-card');
-    expect(hardwareSection).toHaveClass('border-2', 'border-amber-500/30');
+    const hardwareCard = screen.getByTestId('hardware-asset-card');
+    expect(hardwareCard.tagName.toLowerCase()).toBe('section');
+    expect(hardwareCard).toHaveAttribute('aria-labelledby');
 
     const aiSection = screen.getByTestId('ai-infrastructure-3d-section');
-    expect(aiSection).toHaveClass('border-2', 'border-violet-500/30');
+    expect(aiSection.tagName.toLowerCase()).toBe('section');
 
     const incomeSection = screen.getByTestId('income-section');
-    expect(incomeSection).toHaveClass('border-2', 'border-emerald-500/30');
+    expect(incomeSection.tagName.toLowerCase()).toBe('section');
+    expect(incomeSection).toHaveAttribute('aria-labelledby');
 
     const expensesSection = screen.getByTestId('expenses-table-section');
-    expect(expensesSection).toHaveClass('border-2', 'border-slate-800');
+    expect(expensesSection.tagName.toLowerCase()).toBe('section');
+    expect(expensesSection).toHaveAttribute('aria-labelledby');
+
+    // Item 4: WalletsLiveSection heading promoted to h2 for accessible document structure
+    const walletHeading = screen.getByRole('heading', { level: 2, name: /Carteiras do Projeto/i });
+    expect(walletHeading).toBeInTheDocument();
+  });
+
+  it('Item 1 (A11y) — aria-controls targets real, existing role="tabpanel" in the DOM for all tabs', async () => {
+    renderWithI18n(<Transparency />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('tablist')).toBeInTheDocument();
+    });
+
+    // Default tab 'all': must target a valid #panel-all element with role="tabpanel"
+    const allTab = screen.getByRole('tab', { name: /Todos os Dados/i });
+    const allControlsId = allTab.getAttribute('aria-controls');
+    expect(allControlsId).toBe('panel-all');
+
+    const panelAll = document.getElementById(allControlsId!);
+    expect(panelAll).not.toBeNull();
+    expect(panelAll).toHaveAttribute('role', 'tabpanel');
+    expect(panelAll).toHaveAttribute('aria-labelledby', 'tab-all');
+
+    // Click each tab and verify its aria-controls targets a real tabpanel in the DOM
+    const tabKeys = ['overview', 'expenses', 'treasury', 'infrastructure', 'withdrawals'];
+    for (const key of tabKeys) {
+      const tabBtn = document.getElementById(`tab-${key}`);
+      expect(tabBtn).not.toBeNull();
+      fireEvent.click(tabBtn!);
+
+      const targetId = tabBtn!.getAttribute('aria-controls');
+      expect(targetId).toBe(`panel-${key}`);
+
+      const targetPanel = document.getElementById(targetId!);
+      expect(targetPanel).not.toBeNull();
+      expect(targetPanel).toHaveAttribute('role', 'tabpanel');
+      expect(targetPanel).toHaveAttribute('aria-labelledby', `tab-${key}`);
+    }
+  });
+
+  it('Item 3 (A11y) — table headers have scope="col" in expenses table and hardware profit table', async () => {
+    renderWithI18n(<Transparency />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('expenses-table-section')).toBeInTheDocument();
+      expect(screen.getByTestId('hardware-profit-history')).toBeInTheDocument();
+    });
+
+    // Expenses table th have scope="col"
+    const expensesTable = screen.getByTestId('expenses-table-section');
+    const expensesThList = expensesTable.querySelectorAll('th');
+    expect(expensesThList.length).toBe(4);
+    for (const th of Array.from(expensesThList)) {
+      expect(th).toHaveAttribute('scope', 'col');
+    }
+
+    // Hardware profit history th have scope="col"
+    const hardwareTable = screen.getByTestId('hardware-profit-history');
+    const hardwareThList = hardwareTable.querySelectorAll('th');
+    expect(hardwareThList.length).toBe(3);
+    for (const th of Array.from(hardwareThList)) {
+      expect(th).toHaveAttribute('scope', 'col');
+    }
   });
 
   it('Spanish translation — renders genuine Spanish prose for page titles, badges, and errors', async () => {

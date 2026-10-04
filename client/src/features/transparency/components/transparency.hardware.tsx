@@ -160,6 +160,7 @@ function HardwareAssetCard({ asset }: { asset: TransparencyHardwareAsset }) {
 
   return (
     <section
+      aria-labelledby="hardware-section-title"
       className="rounded-3xl border-2 border-amber-500/30 bg-gradient-to-br from-[#0c1220] via-slate-900 to-amber-950/15 overflow-hidden shadow-[4px_4px_0px_#000000]"
       data-testid="hardware-asset-card"
     >
@@ -168,7 +169,7 @@ function HardwareAssetCard({ asset }: { asset: TransparencyHardwareAsset }) {
           <Cpu className="w-5 h-5 text-amber-400" aria-hidden="true" />
         </div>
         <div className="flex-1 min-w-0">
-          <h2 className="text-xs font-black text-amber-300 uppercase tracking-widest">{t('transparency.hardware.section_title')}</h2>
+          <h2 id="hardware-section-title" className="text-xs font-black text-amber-300 uppercase tracking-widest">{t('transparency.hardware.section_title')}</h2>
           <p className="text-[11px] text-slate-400 mt-0.5">{t('transparency.hardware.section_subtitle')}</p>
         </div>
         {asset.status === 'running' && (
@@ -281,9 +282,9 @@ function HardwareAssetCard({ asset }: { asset: TransparencyHardwareAsset }) {
                   <table className="w-full text-left text-[11px]" data-testid="hardware-profit-history">
                     <thead>
                       <tr className="border-b border-slate-800 bg-slate-950/80 text-[10px] uppercase tracking-wider text-slate-400 font-bold">
-                        <th className="px-3 py-2.5 font-mono">{t('transparency.hardware.profit_date')}</th>
-                        <th className="px-3 py-2.5 font-mono">{t('transparency.hardware.profit_sats')}</th>
-                        <th className="px-3 py-2.5 font-mono">{t('transparency.hardware.profit_usd')}</th>
+                        <th scope="col" className="px-3 py-2.5 font-mono">{t('transparency.hardware.profit_date')}</th>
+                        <th scope="col" className="px-3 py-2.5 font-mono">{t('transparency.hardware.profit_sats')}</th>
+                        <th scope="col" className="px-3 py-2.5 font-mono">{t('transparency.hardware.profit_usd')}</th>
                       </tr>
                     </thead>
                     <tbody>

@@ -150,9 +150,9 @@ export function CategoryBar({
             <Icon className="w-3 h-3" style={{ color: style.color }} />
           </span>
           <span className="font-bold text-gray-300">{t(`transparency.category.${catKey}`, catKey)}</span>
-          <span className="text-gray-600 text-[10px]">{count}x</span>
+          <span className="text-slate-400 text-xs font-medium">{count}x</span>
         </div>
-        <span className="font-black text-white">{fmt(monthly)}<span className="text-gray-600 text-[10px] ml-0.5">{t('transparency.charts.per_month')}</span></span>
+        <span className="font-black text-white">{fmt(monthly)}<span className="text-slate-400 text-xs font-normal ml-0.5">{t('transparency.charts.per_month')}</span></span>
       </div>
       <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
         <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: style.color }} />
@@ -296,14 +296,14 @@ export function EntryRow({ entry }: { entry: TransparencyEntry }) {
                 {entry.provider} <ExternalLink className="w-3 h-3" />
               </a>
             : <span className={`text-xs font-semibold ${style.tw}`}>{entry.provider}</span>
-        ) : <span className="text-xs text-gray-700">&#8212;</span>}
+        ) : <span className="text-xs text-slate-400 font-bold">&#8212;</span>}
       </td>
       <td className="py-3 px-4 text-right whitespace-nowrap">
         <div>
           <span className="text-sm font-black text-white">{fmt(entry.amountUsd)}</span>
-          <span className="text-[11px] text-gray-600 ml-1">/{t(`transparency.period.${periodKey}`)}</span>
+          <span className="text-xs text-slate-400 ml-1 font-medium">/{t(`transparency.period.${periodKey}`)}</span>
           {entry.amountOriginal != null ? (
-            <div className="text-[10px] text-gray-600 mt-0.5">
+            <div className="text-[11px] text-slate-400 mt-0.5 font-mono">
               {Number(entry.amountOriginal).toLocaleString('en-US', { maximumFractionDigits: 8 })} {entry.currencyCode || 'USD'}
             </div>
           ) : null}

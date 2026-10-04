@@ -96,14 +96,14 @@ export function WalletCard({ wallet, loading }: { wallet: TrackedWalletEntry; lo
         </div>
 
         <div className={`rounded-2xl border-2 ${isDeprecated ? 'border-red-500/20' : isManualValue ? 'border-amber-500/30' : 'border-slate-800'} bg-slate-950/80 p-4 shadow-[3px_3px_0px_#000000]`}>
-          <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-2 flex-wrap">
+          <p className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold mb-2 flex items-center gap-2 flex-wrap">
             <span>
               {isManualValue ? t('transparency.wallets.manual_value_label', 'Valor declarado') : modeLabel}
               {' · '}
               {!isManualValue && mode === 'current_balance' && wallet.chains && wallet.chains.length > 1 ? t('transparency.wallets.multi_chain') : 'Polygon'}
             </span>
             {!isManualValue && mode === 'current_balance' && wallet.fetchedAt && (
-              <span className="text-gray-700 normal-case tracking-normal font-normal">
+              <span className="text-slate-400 normal-case tracking-normal font-medium">
                 · {t('transparency.wallets.updated')} {new Date(wallet.fetchedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </span>
             )}
@@ -123,12 +123,12 @@ export function WalletCard({ wallet, loading }: { wallet: TrackedWalletEntry; lo
               ? <>
                   {wallet.valueUsd != null
                     ? <>
-                        <p className="text-2xl font-black text-white">
+                        <p className="text-2xl font-black text-white font-mono">
                           ${wallet.valueUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          <span className="text-sm text-gray-500 ml-2">USD</span>
+                          <span className="text-sm font-bold text-slate-400 ml-2">USD</span>
                         </p>
                         {wallet.valuePol != null && (
-                          <p className="text-[11px] text-gray-500 mt-0.5">
+                          <p className="text-[11px] text-slate-400 mt-0.5 font-medium">
                             {wallet.valuePol.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} {t('transparency.wallets.pol_liquid')}
                           </p>
                         )}
@@ -157,32 +157,32 @@ export function WalletCard({ wallet, loading }: { wallet: TrackedWalletEntry; lo
                           </div>
                         )}
                       </>
-                    : <p className="text-sm text-gray-600">{t('transparency.wallets.unavailable')}</p>
+                    : <p className="text-sm text-slate-400 font-medium">{t('transparency.wallets.unavailable')}</p>
                   }
                 </>
               : wallet.valueUsd != null || wallet.valuePol != null
                 ? <>
                     {wallet.valueUsd != null
-                      ? <p className="text-2xl font-black text-white">
+                      ? <p className="text-2xl font-black text-white font-mono">
                           ${wallet.valueUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          <span className="text-sm text-gray-500 ml-2">USD</span>
+                          <span className="text-sm font-bold text-slate-400 ml-2">USD</span>
                         </p>
                       : null
                     }
                     {wallet.valuePol != null && (
-                      <p className="text-[11px] text-gray-500 mt-0.5">
+                      <p className="text-[11px] text-slate-400 mt-0.5 font-medium">
                         {wallet.valuePol.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
                         <span className={`ml-1 ${cfg.valueBadge}`}>{wallet.assetSymbol || 'POL'}</span>
                       </p>
                     )}
                   </>
-                : <p className="text-sm text-gray-600">{t('transparency.wallets.unavailable')}</p>
+                : <p className="text-sm text-slate-400 font-medium">{t('transparency.wallets.unavailable')}</p>
           }
         </div>
 
         {!loading && mode === 'current_balance' && wallet.chains && wallet.chains.length > 1 && (
           <div className="space-y-1.5">
-            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-2">
               <Activity className="w-3 h-3 text-amber-400" aria-hidden="true" />
               {t('transparency.wallets.chains_breakdown')}
             </p>
@@ -190,11 +190,11 @@ export function WalletCard({ wallet, loading }: { wallet: TrackedWalletEntry; lo
               <div key={c.chainId} className="flex items-center justify-between gap-2 rounded-lg bg-black/20 px-3 py-2">
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="text-[10px] font-black text-white bg-white/8 rounded px-1.5 py-0.5 shrink-0 uppercase">{c.name}</span>
-                  <span className="text-[10px] text-gray-500">
+                  <span className="text-[10px] text-slate-400 font-medium">
                     {c.nativeBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} {c.nativeSymbol}
                   </span>
                   {c.tokens.length > 0 && (
-                    <span className="text-[9px] text-gray-700">+{c.tokens.length} token{c.tokens.length !== 1 ? 's' : ''}</span>
+                    <span className="text-[10px] text-slate-400 font-medium">+{c.tokens.length} token{c.tokens.length !== 1 ? 's' : ''}</span>
                   )}
                 </div>
                 <span className="text-[11px] font-black text-white shrink-0">
@@ -250,9 +250,9 @@ export function LiquidityPoolsPanel({ wallets }: { wallets: TrackedWalletEntry[]
       <div className="space-y-4">
         <div className="flex items-center gap-2">
           <ImageIcon className="w-4 h-4 text-violet-400" aria-hidden="true" />
-          <p className="text-xs font-black text-slate-300 uppercase tracking-widest">
+          <h2 className="text-xs font-black text-slate-300 uppercase tracking-widest">
             {t('transparency.wallets.tab_liquidity_pools')}
-          </p>
+          </h2>
         </div>
         <div className="rounded-3xl border-2 border-slate-800 bg-slate-900/60 p-6 text-center text-sm text-slate-400 shadow-[4px_4px_0px_#000000]">
           {t('transparency.wallets.no_liquidity_pools')}
@@ -265,9 +265,9 @@ export function LiquidityPoolsPanel({ wallets }: { wallets: TrackedWalletEntry[]
     <div className="space-y-4">
       <div className="flex items-center gap-2">
         <ImageIcon className="w-4 h-4 text-violet-400" aria-hidden="true" />
-        <p className="text-xs font-black text-slate-300 uppercase tracking-widest">
+        <h2 className="text-xs font-black text-slate-300 uppercase tracking-widest">
           {t('transparency.wallets.tab_liquidity_pools')}
-        </p>
+        </h2>
       </div>
       <div className="space-y-5">
         {Object.entries(grouped).map(([chainName, chainPools]) => (
@@ -445,9 +445,9 @@ function ExternalInvestmentsPanel() {
   if (investments.length === 0) {
     return (
       <div className="rounded-3xl border-2 border-slate-800 bg-slate-900/60 px-4 py-10 text-center shadow-[4px_4px_0px_#000000]">
-        <p className="text-sm font-black text-white uppercase tracking-widest">
+        <h2 className="text-sm font-black text-white uppercase tracking-widest">
           {t('transparency.wallets.tab_external_investments', 'Outros Investimentos')}
-        </p>
+        </h2>
         <p className="mt-2 text-sm text-slate-400">
           {t('transparency.external_investments.empty', 'Nenhum investimento externo cadastrado no momento.')}
         </p>
@@ -551,7 +551,7 @@ export function WalletsLiveSection() {
         <>
       <div className="flex items-center gap-2">
         <Wallet className="w-4 h-4 text-violet-400" aria-hidden="true" />
-        <p className="text-xs font-black text-slate-300 uppercase tracking-widest">{t('transparency.wallets.section_title')}</p>
+        <h2 className="text-xs font-black text-slate-300 uppercase tracking-widest">{t('transparency.wallets.section_title')}</h2>
         {warming && (
           <span className="ml-2 flex items-center gap-1.5 text-[10px] text-amber-400 font-medium">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
@@ -584,9 +584,9 @@ export function WalletsLiveSection() {
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 text-amber-400" aria-hidden="true" />
-                <p className="text-xs font-black text-slate-400 uppercase tracking-widest">
+                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">
                   {t('transparency.wallets.legacy_section_title')}
-                </p>
+                </h3>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {legacyWallets.map(w => (
@@ -610,9 +610,9 @@ export function WalletsLiveSection() {
 
       {activeTab === 'bot_sport' && (
         <div className="rounded-3xl border-2 border-slate-800 bg-slate-900/60 px-4 py-10 text-center shadow-[4px_4px_0px_#000000]">
-          <p className="text-sm font-black text-white uppercase tracking-widest">
+          <h2 className="text-sm font-black text-white uppercase tracking-widest">
             {t('transparency.wallets.tab_bot_sport')}
-          </p>
+          </h2>
           <p className="mt-2 text-sm text-slate-400">
             {t('transparency.wallets.coming_soon')}
           </p>
