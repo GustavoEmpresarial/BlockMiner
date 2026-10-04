@@ -2,8 +2,7 @@ import { Suspense, useEffect } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../shared/auth/auth.store';
 import { useGameStore } from './lib/game.store';
-import Sidebar from './components/Sidebar';
-import Header from './components/Header';
+import TopNav from './components/TopNav';
 import BroadcastPopup from './broadcast/BroadcastPopup';
 import PtcSessionManager from '../ptc/components/PtcSessionManager';
 import ShortlinkBackgroundRunner from '../shortlinks/components/ShortlinkBackgroundRunner';
@@ -40,13 +39,12 @@ export default function ProtectedLayout() {
   }
 
   return (
-    <div className="flex min-h-[100dvh] bg-background text-white">
-      <Sidebar />
-      <div className="flex min-w-0 flex-1 flex-col pt-14 md:pt-0 pb-16 md:pb-0">
-        <Header />
+    <div className="flex min-h-[100dvh] flex-col bg-background text-white">
+      <TopNav />
+      <div className="flex min-w-0 flex-1 flex-col pt-16 pb-20 lg:pb-0">
         <main className="flex-1 overflow-x-hidden px-4 py-6 sm:px-6 lg:px-8 supports-[padding:max(0px)]:pb-[max(1rem,env(safe-area-inset-bottom))]">
           <div className={fullWidth ? 'mx-auto w-full max-w-none' : 'mx-auto w-full max-w-7xl'}>
-            <div className="sticky top-14 z-20 md:top-20">
+            <div className="sticky top-20 z-20">
               <EmailVerifyBanner />
             </div>
             <Suspense
