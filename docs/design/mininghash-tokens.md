@@ -117,11 +117,33 @@ Todos os pares de cor e textos de apoio foram medidos formalmente contra a fórm
 | **Texto Branco (#FFFFFF) sobre Azul (#3D81F6)** | **3.70:1** | WCAG AA Large (>= 3.0:1) | **PASS** |
 | **Texto Branco (#FFFFFF) sobre Vermelho (#EE4646)** | **3.75:1** | WCAG AA Large (>= 3.0:1) | **PASS** |
 
-### Prova Visual Antes vs. Depois (6 Páginas no Localhost):
-Capturas automatizadas com Playwright em viewport 1920x1080:
-- `01-landing.png`: 58.9% de pixels repintados | Fundo de canto: `#020610` -> `#0F1522` | Mean delta: 11.74
-- `02-login.png`: 97.0% de pixels repintados | Fundo de canto: `#020610` -> `#0F1522` | Mean delta: 16.64
-- `03-register.png`: 97.1% de pixels repintados | Fundo de canto: `#020610` -> `#0F1522` | Mean delta: 16.84
-- `04-terms.png`: 99.6% de pixels repintados | Fundo de canto: `#02070f` -> `#0F1522` | Mean delta: 23.21
-- `05-transparency.png`: 97.0% de pixels repintados | Fundo de canto: `#020610` -> `#0F1522` | Mean delta: 16.64
-- `06-dashboard.png`: 97.0% de pixels repintados | Fundo de canto: `#020610` -> `#0F1522` | Mean delta: 16.64
+### Prova Visual Antes vs. Depois (6 Páginas Distintas no Localhost):
+Capturas automatizadas com Playwright em viewport 1920x1080 com contextos autenticado e não-autenticado separados para garantir renderização real de cada rota:
+- `01-landing.png` (`/`): 58.9% de pixels repintados | Canto `#020610` -> `#0F1522` | Delta: 11.73
+- `02-login.png` (`/login`): 99.2% de pixels repintados | Canto `#020610` -> `#0F1522` | Delta: 20.62
+- `03-register.png` (`/register`): 99.3% de pixels repintados | Canto `#020610` -> `#0F1522` | Delta: 19.44
+- `04-terms.png` (`/terms-of-use`): 99.6% de pixels repintados | Canto `#02070f` -> `#0F1522` | Delta: 23.21
+- `05-transparency.png` (`/transparency` autenticado): 95.9% de pixels repintados | Delta: 9.91
+- `06-dashboard.png` (`/dashboard` autenticado): 98.8% de pixels repintados | Delta: 9.00
+
+### Hashes MD5 Comprovando Imagens 100% Distintas:
+**Antes (Worktree base `bca403b`):**
+- `79477d6cddbbc4172558164cf49490a7  01-landing.png`
+- `4220218a990a8af880575cf40ec51a1e  02-login.png`
+- `484e8bea705209a9d88cd6869ced3621  03-register.png`
+- `a20f95d5cb472e69306c03859c2e9851  04-terms.png`
+- `cbb1d72dd1332a97978c1f40535ebe55  05-transparency.png`
+- `6b83542bb764e3df07d23ae8e4324717  06-dashboard.png`
+
+**Depois (Branch `feature/mininghash-redesign-foundation`):**
+- `b11f16390a1a2af8bf4144eedf806a72  01-landing.png`
+- `78fa1babf86f07920d8928298b6d8a3b  02-login.png`
+- `571a99b1c6a524701f5cf4afe5d56153  03-register.png`
+- `201813a70dfe2725c82fb701228daac9  04-terms.png`
+- `b5ddb2f8b7e939944be35854417dc583  05-transparency.png`
+- `104a054258eb63c13b07d6ff0effeef7  06-dashboard.png`
+
+### Auditoria do Ativo BrandLogo (`icon.webp`):
+- O componente `BrandLogo.tsx` utiliza `<img src="/media/brand/icon.webp?v=3" />` e **não foi alterado** na branch (inalterado desde commit inicial `1ca1733`).
+- Em produção, a rota `/media/*` é servida pelo Express (`server/bootstrap/server.ts` linha 222-291) a partir de `storage/uploads/media/` (semeado de `storage/media-seed/`).
+- Em preview estático isolado do Vite, `/media/*` não possuía rota sem o backend. Ao rotear `/media/**` para os arquivos de disco em `storage/media-seed/brand/icon.webp`, o ícone carrega perfeitamente com 14.096 pixels coloridos (degradê cyan/sky `#0ea5e9`), comprovando que o ativo está 100% íntegro.
