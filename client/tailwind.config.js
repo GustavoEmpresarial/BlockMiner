@@ -1,8 +1,7 @@
 /** @type {import('tailwindcss').Config} */
-/** @type {import('tailwindcss').Config} */
 
-// MiningHash Navy Palette (medida pixel-a-pixel nas capturas do MiningHash e calibrada para WCAG AA)
-const mininghashNavy = {
+// Paleta navy medida a partir de referência visual externa e calibrada para WCAG AA
+const brandNavy = {
   50: '#F8FAFC',  // Texto primário em títulos e destaques (15.5:1 em card)
   100: '#E8EDF5', // Texto claro
   200: '#CAD4E0', // Texto secundário (links da navbar - 10.8:1 em card)
@@ -35,8 +34,8 @@ export default {
         'primary-hover': '#2563EB',
         accent: '#17B880',
         'accent-hover': '#149E6D',
-        slate: mininghashNavy,
-        gray: mininghashNavy,
+        slate: brandNavy,
+        gray: brandNavy,
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif'],
