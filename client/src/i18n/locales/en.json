@@ -3512,6 +3512,14 @@
     "connection_error": "Connection error.",
     "no_entries": "No entries published yet.",
     "footer_note": "Values in USD. Period conversions are estimates. Manually updated by the BlockMiner team.",
+    "nav": {
+      "all": "All Data",
+      "overview": "Overview & Charts",
+      "financials": "Costs & Revenue",
+      "treasury": "Treasury & Wallets",
+      "infrastructure": "Hardware & 3D AI",
+      "withdrawals": "Verified Payouts"
+    },
     "external_investments": {
       "invested": "Invested",
       "withdrawn": "Withdrawn",
@@ -3591,11 +3599,12 @@
       "per_month": "/month"
     },
     "table": {
-      "title": "Full Breakdown",
-      "col_name": "Name / Category",
+      "title": "Operating Costs & Subscriptions Breakdown",
+      "col_name": "Item / Description",
       "col_provider": "Provider",
-      "col_amount": "Amount / Period",
-      "col_status": "Status"
+      "col_amount": "Value (USD)",
+      "col_status": "Status",
+      "items_count": "{{count}} registered items"
     },
     "status": {
       "paid": "Paid",

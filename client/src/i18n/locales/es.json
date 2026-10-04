@@ -3511,33 +3511,41 @@
     "loading_error": "Could not load data.",
     "connection_error": "Connection error.",
     "no_entries": "No entries published yet.",
-    "footer_note": "Values in USD. Period conversions are estimates. Manually updated by the BlockMiner team.",
+    "footer_note": "Valores en USD. Las conversiones de período son estimaciones. Actualizado manualmente por el equipo de BlockMiner.",
+    "nav": {
+      "all": "Todos los Datos",
+      "overview": "Visión General",
+      "financials": "Costes e Ingresos",
+      "treasury": "Tesorería y Carteras",
+      "infrastructure": "Hardware e IA 3D",
+      "withdrawals": "Retiros Comprobados"
+    },
     "external_investments": {
-      "invested": "Invested",
-      "withdrawn": "Withdrawn",
-      "roi_forecast": "ROI forecast",
-      "empty": "No external investments listed right now."
+      "invested": "Invertido",
+      "withdrawn": "Retirado",
+      "roi_forecast": "Previsión de ROI",
+      "empty": "No hay inversiones externas registradas en este momento."
     },
     "hardware": {
-      "section_title": "Owned hardware",
-      "section_subtitle": "ASIC mining equipment acquired by the operation",
+      "section_title": "Hardware propio",
+      "section_subtitle": "Equipos de minería ASIC adquiridos por la operación",
       "status_running": "En operación",
       "status_maintenance": "Mantenimiento",
       "status_retired": "Retirado",
       "manufacturer": "Bitmain",
       "model": "Antminer S19J Pro",
-      "description": "Dedicated SHA-256 ASIC for Bitcoin mining. 100 TH/s nominal hashrate, 29.5 J/TH energy efficiency. Added to the project's treasury as a productive asset and liquidity backing.",
-      "purchase_title": "Purchase & delivery",
-      "purchase_body": "Unit purchased on the open market and shipped directly to the hosting warehouse. The full transit took {{weeks}} weeks before the rig was racked and brought online.",
-      "cost_label": "Acquisition cost",
-      "transit_label": "Transit time",
-      "weeks": "{{count}} weeks",
-      "spec_algorithm": "Algorithm",
+      "description": "ASIC SHA-256 dedicado a la minería de Bitcoin. 100 TH/s de hashrate nominal, 29.5 J/TH de eficiencia energética. Añadido a la tesorería del proyecto como activo productivo y respaldo de liquidez.",
+      "purchase_title": "Compra y entrega",
+      "purchase_body": "Unidad comprada en el mercado y enviada directamente al almacén de hosting. El tránsito total tomó {{weeks}} semanas antes de que el equipo se instalara en el rack y entrara en operación.",
+      "cost_label": "Coste de adquisición",
+      "transit_label": "Tiempo de tránsito",
+      "weeks": "{{count}} semanas",
+      "spec_algorithm": "Algoritmo",
       "spec_hashrate": "Hashrate",
-      "spec_power": "Power",
-      "spec_efficiency": "Efficiency",
-      "spec_voltage": "Voltage",
-      "spec_manufacturer": "Manufacturer",
+      "spec_power": "Consumo",
+      "spec_efficiency": "Eficiencia",
+      "spec_voltage": "Voltaje",
+      "spec_manufacturer": "Fabricante",
       "viewer_loading": "Cargando 3D…",
       "viewer_hint": "Arrastra para girar · scroll para zoom",
       "viewer_error": "Error al cargar el visor 3D.",
@@ -3556,15 +3564,15 @@
       "roi_estimate": "Estimación: ~{{days}} días restantes (prom. ${{daily}}/día)"
     },
     "kpi": {
-      "monthly_cost": "Monthly Cost",
-      "monthly_cost_sub": "Recurring expenses",
-      "total_income": "Total Revenue",
-      "total_income_sub": "Monthly income",
-      "net_balance": "Net Balance",
-      "net_positive": "Positive balance",
-      "net_deficit": "Monthly deficit",
-      "annual_cost": "Annual Cost",
-      "annual_cost_sub": "{{paid}} paid, {{pending}} pending",
+      "monthly_cost": "Coste Mensual",
+      "monthly_cost_sub": "Gastos recurrentes",
+      "total_income": "Total Ingresos",
+      "total_income_sub": "Ingresos mensuales",
+      "net_balance": "Saldo Neto",
+      "net_positive": "Saldo positivo",
+      "net_deficit": "Déficit mensual",
+      "annual_cost": "Coste Anual",
+      "annual_cost_sub": "{{paid}} pagado(s), {{pending}} pendiente(s)",
       "treasury": "Tesorería",
       "treasury_sub": "Carteras rastreadas (USD)"
     },
@@ -3584,60 +3592,61 @@
       "offchain_body": "Activos como ASIC en hosting o USD en exchange usan valor declarado con nota explicativa."
     },
     "charts": {
-      "monthly_distribution": "Monthly Distribution",
-      "cost_by_category": "Cost by Category / Month",
-      "weight_by_category": "Weight by Category",
-      "total_monthly": "{{total}}/month total",
-      "per_month": "/month"
+      "monthly_distribution": "Distribución Mensual",
+      "cost_by_category": "Coste por Categoría / Mes",
+      "weight_by_category": "Peso por Categoría",
+      "total_monthly": "{{total}}/mes en total",
+      "per_month": "/mes"
     },
     "table": {
-      "title": "Full Breakdown",
-      "col_name": "Name / Category",
-      "col_provider": "Provider",
-      "col_amount": "Amount / Period",
-      "col_status": "Status"
+      "title": "Desglose de Costes Operativos y Suscripciones",
+      "col_name": "Ítem / Descripción",
+      "col_provider": "Proveedor",
+      "col_amount": "Valor USD",
+      "col_status": "Estado",
+      "items_count": "{{count}} ítems registrados"
     },
     "status": {
-      "paid": "Paid",
-      "pending": "Pending",
-      "received": "Received"
+      "paid": "Pagado",
+      "pending": "Pendiente",
+      "received": "Recibido"
     },
     "period": {
-      "daily": "daily",
-      "monthly": "monthly",
-      "annual": "annual",
-      "one_time": "one-time"
+      "daily": "diario",
+      "monthly": "mensual",
+      "annual": "anual",
+      "one_time": "único"
     },
     "category": {
-      "infrastructure": "Infrastructure",
-      "tooling": "Tooling",
+      "infrastructure": "Infraestructura",
+      "tooling": "Herramientas",
       "marketing": "Marketing",
-      "payroll": "Payroll",
+      "payroll": "Equipo",
       "legal": "Legal",
-      "misc": "Misc"
+      "misc": "Otros"
     },
     "income_category": {
-      "revenue": "Operating Revenue",
-      "sponsorship": "Sponsorship",
-      "donation": "Donation",
-      "investment_return": "Investment Return",
-      "other": "Other"
+      "revenue": "Ingreso Operativo",
+      "sponsorship": "Patrocinio",
+      "donation": "Donación",
+      "investment_return": "Retorno de Inversión",
+      "other": "Otro"
     },
     "income_section": {
-      "title": "Revenue, Sponsorships & Donations",
-      "per_month": "/month"
+      "title": "Ingresos, Patrocinios y Donaciones",
+      "per_month": "/mes"
     },
     "wallet": {
-      "title": "Investment Wallet",
-      "subtitle": "Polygon Network — On-chain real-time",
-      "native_balance": "Current Balance",
-      "balance_note": "Current on-chain balance",
-      "total_received": "Total Received (Deposits)",
-      "may_be_truncated": "Partial history — very active wallet",
-      "unavailable": "Unavailable",
+      "title": "Cartera de Inversiones",
+      "subtitle": "Polygon Network — On-chain en tiempo real",
+      "native_balance": "Saldo Actual",
+      "balance_note": "Saldo on-chain actual",
+      "total_received": "Total Recibido (Depósitos)",
+      "may_be_truncated": "Historial parcial — cartera muy activa",
+      "unavailable": "No disponible",
       "debank": "DeBank",
       "polygonscan": "Polygonscan",
-      "active_pools": "Active Pool Positions"
+      "active_pools": "Posiciones Activas en Pools"
     },
     "withdrawals": {
       "title": "Withdrawal Wallet",
