@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom/vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -83,12 +83,12 @@ describe('TopNav Component', () => {
     // Avatar
     expect(screen.getByLabelText(/Definições do perfil de TesterMiner/i)).toBeInTheDocument();
 
-    // Logout button (Sair da Conta)
-    const logoutBtns = screen.getAllByRole('button', { name: /(sidebar\.logout|Sair da Conta)/i });
+    // Logout button (Sair da Conta / common.logout)
+    const logoutBtns = screen.getAllByRole('button', { name: /(common\.logout|sidebar\.logout|Sair da Conta|Logout)/i });
     expect(logoutBtns.length).toBeGreaterThanOrEqual(1);
   });
 
-  it('opens dropdown menu on click and closes on Escape returning focus to trigger', async () => {
+  it('opens dropdown menu on click, focuses submenu item, and closes on Escape returning focus to trigger', async () => {
     const user = userEvent.setup();
     renderTopNav();
 
@@ -103,10 +103,18 @@ describe('TopNav Component', () => {
     const dashboardItem = screen.getByRole('menuitem', { name: /(sidebar\.dashboard|Dashboard)/i });
     expect(dashboardItem).toBeInTheDocument();
 
-    // Press Escape to close
+    // Explicitly focus the submenu child item (moving focus away from the trigger)
+    dashboardItem.focus();
+    expect(dashboardItem).toHaveFocus();
+    expect(miningGroupBtn).not.toHaveFocus();
+
+    // Press Escape while focused on the child item
     fireEvent.keyDown(dashboardItem, { key: 'Escape' });
+
+    // Menu must be closed and focus MUST have returned to the trigger button
     expect(miningGroupBtn).toHaveAttribute('aria-expanded', 'false');
     expect(miningGroupBtn).toHaveFocus();
+    expect(dashboardItem).not.toHaveFocus();
   });
 
   it('opens mobile navigation drawer via hamburger button and closes with close button', async () => {
@@ -132,15 +140,11 @@ describe('TopNav Component', () => {
     const bottomNav = screen.getByLabelText('Navegação Rápida Inferior');
     expect(bottomNav).toBeInTheDocument();
 
-    // Contains links to key destinations
-    const links = screen.getAllByRole('link');
+    // Scoped strictly within bottomNav (preventing leaks from header links)
+    const links = within(bottomNav).getAllByRole('link');
     const bottomNavHrefs = links.map((l) => l.getAttribute('href'));
 
-    expect(bottomNavHrefs).toContain('/dashboard');
-    expect(bottomNavHrefs).toContain('/inventory');
-    expect(bottomNavHrefs).toContain('/tasks');
-    expect(bottomNavHrefs).toContain('/shop');
-    expect(bottomNavHrefs).toContain('/wallet');
+    expect(bottomNavHrefs).toEqual(['/dashboard', '/inventory', '/tasks', '/shop', '/wallet']);
   });
 
   it('calls logout when the logout button is clicked', async () => {

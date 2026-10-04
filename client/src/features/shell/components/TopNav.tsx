@@ -1,9 +1,8 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type FocusEvent as ReactFocusEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
-  AlertTriangle,
   BarChart3,
   Bell,
   BookOpen,
@@ -19,7 +18,6 @@ import {
   Gift,
   Globe,
   Inbox,
-  Info,
   LayoutDashboard,
   LayoutGrid,
   LifeBuoy,
@@ -36,7 +34,6 @@ import {
   Sparkles,
   Star,
   Tag,
-  TrendingUp,
   Trophy,
   UserPlus,
   Users,
@@ -50,15 +47,13 @@ import { api, useAuthStore } from '../../../shared/auth/auth.store';
 import { getActiveOfferEvents, isActiveOffersPayloadLive } from '../../offers/lib/offers.api';
 import BrandLogo from '../../../shared/components/BrandLogo';
 import LanguageSwitcher from '../../../shared/components/LanguageSwitcher';
-import CommunityShortcuts from './CommunityShortcuts';
 import { useGameStore } from '../lib/game.store';
 import { usePtcSessionStore } from '../../ptc/lib/ptcSession.store';
 import { useOfferwallTimerStore } from '../../offerwall/lib/offerwallTimer.store';
 
-const TOPNAV_POLL_TOURNAMENTS_MS = 60_000;
-const TOPNAV_POLL_TAX_MS = 5 * 60_000;
-const TOPNAV_POLL_OFFERS_MS = 60_000;
-const TOPNAV_POLL_INBOX_MS = 45_000;
+const TOPNAV_POLL_INTERVAL_MS = 60_000;
+const TOPNAV_NOTIFICATIONS_POLL_MS = 45_000;
+const TOPNAV_SUBMENU_FOCUS_DELAY_MS = 50;
 
 interface HeaderNotification {
   id: string | number;
@@ -104,10 +99,10 @@ function PtcGlobalTimer() {
     return (
       <Link
         to="/ptc"
-        className="hidden xl:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[11px] font-bold uppercase tracking-wider animate-pulse hover:bg-emerald-500/25 transition-colors"
+        className="hidden xl:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[11px] font-bold uppercase tracking-wider animate-pulse hover:bg-emerald-500/25 transition-colors focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
       >
         <Check className="w-3.5 h-3.5" />
-        PTC Pronto
+        <span>PTC Pronto</span>
       </Link>
     );
   }
@@ -116,7 +111,7 @@ function PtcGlobalTimer() {
   return (
     <Link
       to="/ptc"
-      className="hidden xl:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/25 text-primary text-[11px] font-mono font-bold hover:bg-primary/20 transition-colors"
+      className="hidden xl:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/25 text-primary text-[11px] font-mono font-bold hover:bg-primary/20 transition-colors focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
     >
       <Clock className="w-3.5 h-3.5 animate-spin" style={{ animationDuration: '4s' }} />
       <span>{remaining}s</span>
@@ -129,7 +124,6 @@ function OfferwallGlobalTimer() {
   const isActive = useOfferwallTimerStore((s) => s.isActive);
   const elapsed = useOfferwallTimerStore((s) => s.elapsed);
   const minSec = useOfferwallTimerStore((s) => s.minSec);
-  const isPaused = useOfferwallTimerStore((s) => s.isPaused);
   const canSubmit = useOfferwallTimerStore((s) => s.canSubmit);
 
   if (!isActive) return null;
@@ -140,7 +134,7 @@ function OfferwallGlobalTimer() {
     return (
       <Link
         to="/internal-offerwall"
-        className="hidden xl:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[11px] font-bold uppercase tracking-wider animate-pulse hover:bg-emerald-500/25 transition-colors"
+        className="hidden xl:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[11px] font-bold uppercase tracking-wider animate-pulse hover:bg-emerald-500/25 transition-colors focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
       >
         <Check className="w-3.5 h-3.5" />
         {t('header.offerwall_done', { defaultValue: 'Offerwall Pronto' })}
@@ -151,7 +145,7 @@ function OfferwallGlobalTimer() {
   return (
     <Link
       to="/internal-offerwall"
-      className="hidden xl:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/25 text-amber-300 text-[11px] font-mono font-bold hover:bg-amber-500/20 transition-colors"
+      className="hidden xl:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/25 text-amber-300 text-[11px] font-mono font-bold hover:bg-amber-500/20 transition-colors focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
     >
       <Clock className="w-3.5 h-3.5" />
       <span>{remaining}s</span>
@@ -192,11 +186,10 @@ export default function TopNav() {
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
-  // Badges state
+  // Live polling state
   const [activeTournaments, setActiveTournaments] = useState(0);
   const [energyTaxDue, setEnergyTaxDue] = useState(false);
   const [offersLive, setOffersLive] = useState(false);
-  const [inboxPending, setInboxPending] = useState(0);
   const [balancePol, setBalancePol] = useState<string | null>(null);
 
   const navRef = useRef<HTMLElement | null>(null);
@@ -205,17 +198,15 @@ export default function TopNav() {
 
   const unreadCount = (notifications || []).filter((n) => !n.isRead).length;
 
-  // Polls for live data
   useEffect(() => {
     let cancelled = false;
 
     const poll = async () => {
       try {
-        const [resT, resTax, resO, resI, resB] = await Promise.allSettled([
+        const [resT, resTax, resO, resB] = await Promise.allSettled([
           api.get('/tournaments'),
           api.get('/energy-tax/summary'),
           getActiveOfferEvents(),
-          api.get('/reward-inbox'),
           api.get('/wallet/balance'),
         ]);
 
@@ -238,15 +229,6 @@ export default function TopNav() {
           setOffersLive(isActiveOffersPayloadLive(resO.value.data));
         }
 
-        if (resI.status === 'fulfilled') {
-          const items = Array.isArray(resI.value.data?.items)
-            ? resI.value.data.items
-            : Array.isArray(resI.value.data)
-              ? resI.value.data
-              : [];
-          setInboxPending(items.length);
-        }
-
         if (resB.status === 'fulfilled' && resB.value.data) {
           const d = resB.value.data;
           const bal = d.balances?.POL ?? d.balancePol ?? d.balance;
@@ -258,21 +240,20 @@ export default function TopNav() {
     };
 
     void poll();
-    const interval = window.setInterval(() => void poll(), TOPNAV_POLL_TOURNAMENTS_MS);
+    const interval = window.setInterval(() => void poll(), TOPNAV_POLL_INTERVAL_MS);
     return () => {
       cancelled = true;
       window.clearInterval(interval);
     };
   }, []);
 
-  // Notifications poll
   useEffect(() => {
     void fetchNotifications();
-    const interval = window.setInterval(() => void fetchNotifications(), 45_000);
+    const interval = window.setInterval(() => void fetchNotifications(), TOPNAV_NOTIFICATIONS_POLL_MS);
     return () => window.clearInterval(interval);
   }, [fetchNotifications]);
 
-  // Click outside to close dropdowns
+  // Click outside closes dropdowns
   useEffect(() => {
     const handleDocumentClick = (e: MouseEvent) => {
       const target = e.target;
@@ -388,7 +369,6 @@ export default function TopNav() {
     [activeTournaments, energyTaxDue, offersLive],
   );
 
-  // Check which group is currently active by matching URL
   const currentGroupId = useMemo(() => {
     for (const group of navGroups) {
       if (group.items.some((item) => location.pathname === item.path || location.pathname.startsWith(`${item.path}/`))) {
@@ -398,27 +378,37 @@ export default function TopNav() {
     return null;
   }, [location.pathname, navGroups]);
 
-  // Keyboard navigation for dropdown menus
+  // Keyboard navigation for trigger buttons
   const handleGroupTriggerKeyDown = (e: ReactKeyboardEvent, groupId: string) => {
-    if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
+    if (e.key === 'ArrowDown') {
       e.preventDefault();
       setActiveGroup(groupId);
       setTimeout(() => {
-        const first = subMenuRefs.current[groupId]?.[0];
-        first?.focus();
-      }, 50);
+        subMenuRefs.current[groupId]?.[0]?.focus();
+      }, TOPNAV_SUBMENU_FOCUS_DELAY_MS);
+    } else if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      if (activeGroup === groupId) {
+        setActiveGroup(null);
+      } else {
+        setActiveGroup(groupId);
+        setTimeout(() => {
+          subMenuRefs.current[groupId]?.[0]?.focus();
+        }, TOPNAV_SUBMENU_FOCUS_DELAY_MS);
+      }
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       setActiveGroup(groupId);
       setTimeout(() => {
         const items = subMenuRefs.current[groupId];
         if (items && items.length > 0) items[items.length - 1]?.focus();
-      }, 50);
+      }, TOPNAV_SUBMENU_FOCUS_DELAY_MS);
     } else if (e.key === 'Escape') {
       setActiveGroup(null);
     }
   };
 
+  // Keyboard navigation for submenu items
   const handleSubItemKeyDown = (e: ReactKeyboardEvent, groupId: string, index: number, total: number) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
@@ -428,11 +418,28 @@ export default function TopNav() {
       e.preventDefault();
       const prev = (index - 1 + total) % total;
       subMenuRefs.current[groupId]?.[prev]?.focus();
+    } else if (e.key === ' ') {
+      e.preventDefault();
+      const group = navGroups.find((g) => g.id === groupId);
+      const item = group?.items[index];
+      if (item) {
+        setActiveGroup(null);
+        navigate(item.path);
+      }
     } else if (e.key === 'Escape') {
       e.preventDefault();
       setActiveGroup(null);
       const trigger = document.getElementById(`nav-group-btn-${groupId}`);
       trigger?.focus();
+    }
+  };
+
+  // Auto-close dropdown when focus leaves group container
+  const handleGroupBlur = (e: ReactFocusEvent<HTMLDivElement>, groupId: string) => {
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      if (activeGroup === groupId) {
+        setActiveGroup(null);
+      }
     }
   };
 
@@ -463,15 +470,15 @@ export default function TopNav() {
         aria-label="Navegação Principal"
         className="fixed top-0 left-0 right-0 z-40 h-16 bg-slate-950/95 backdrop-blur-md border-b border-slate-800/80 transition-colors"
       >
-        <div className="max-w-7xl mx-auto h-full px-4 sm:px-6 flex items-center justify-between gap-3">
-          {/* Left: Brand Logo */}
-          <div className="flex items-center gap-3 shrink-0">
-            <Link to="/dashboard" className="flex items-center gap-2 group" aria-label="BlockMiner Home">
+        <div className="max-w-7xl mx-auto h-full px-3 sm:px-6 flex items-center justify-between gap-2 sm:gap-4">
+          {/* Left: Brand Logo (compact container on mobile) */}
+          <div className="flex items-center min-w-0 shrink">
+            <Link to="/dashboard" className="flex items-center gap-1.5 group shrink min-w-0" aria-label="BlockMiner Home">
               <BrandLogo variant="header" interactive />
             </Link>
           </div>
 
-          {/* Center: Desktop Navigation Groups (>= 1024px) */}
+          {/* Center: Desktop Navigation Groups (hidden on < 1024px) */}
           <nav aria-label="Menu Principal" className="hidden lg:flex items-center gap-1.5 shrink-0">
             {navGroups.map((group) => {
               const isGroupOpen = activeGroup === group.id;
@@ -480,7 +487,7 @@ export default function TopNav() {
               const hasAlert = group.items.some((it) => it.badge);
 
               return (
-                <div key={group.id} className="relative">
+                <div key={group.id} className="relative" onBlur={(e) => handleGroupBlur(e, group.id)}>
                   <button
                     id={`nav-group-btn-${group.id}`}
                     type="button"
@@ -539,7 +546,7 @@ export default function TopNav() {
                               onKeyDown={(e) => handleSubItemKeyDown(e, group.id, idx, group.items.length)}
                               className={[
                                 'flex items-center justify-between gap-3 px-3 py-2 rounded-xl text-xs transition-colors outline-none',
-                                'focus-visible:ring-1 focus-visible:ring-primary focus-visible:bg-slate-800',
+                                'focus-visible:ring-2 focus-visible:ring-primary focus-visible:bg-slate-800',
                                 isSubActive
                                   ? 'bg-emerald-500/15 text-emerald-400 font-bold border border-emerald-500/30'
                                   : 'text-slate-300 hover:text-white hover:bg-slate-800/80 font-medium',
@@ -569,16 +576,17 @@ export default function TopNav() {
             })}
           </nav>
 
-          {/* Right Section: Timers, Balance, Notifications, Language, Avatar, Logout */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          {/* Right Section: Prioritized controls (fits safely in 320px) */}
+          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0 ml-auto">
+            {/* Desktop Timers */}
             <OfferwallGlobalTimer />
             <PtcGlobalTimer />
 
-            {/* Chat Toggle */}
+            {/* Desktop Community Chat */}
             <button
               type="button"
               onClick={toggleChat}
-              className="p-2 text-slate-400 hover:text-white hover:bg-slate-800/80 rounded-xl transition-colors relative"
+              className="hidden lg:flex p-2 text-slate-400 hover:text-white hover:bg-slate-800/80 rounded-xl transition-colors relative outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
               title={t('header.community')}
               aria-label="Abrir Chat"
             >
@@ -586,14 +594,14 @@ export default function TopNav() {
               {hasMention && <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-primary animate-pulse" />}
             </button>
 
-            {/* Notifications Bell */}
+            {/* Notifications Bell (visible on all screens) */}
             <div className="relative" ref={notificationRef}>
               <button
                 type="button"
                 aria-expanded={notificationsOpen}
                 aria-label={`Notificações${unreadCount > 0 ? ` (${unreadCount} não lidas)` : ''}`}
                 onClick={() => setNotificationsOpen(!notificationsOpen)}
-                className={`p-2 rounded-xl transition-colors relative ${notificationsOpen ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800/80'}`}
+                className={`p-2 rounded-xl transition-colors relative outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${notificationsOpen ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800/80'}`}
               >
                 <Bell className="w-4 h-4" />
                 {unreadCount > 0 && (
@@ -609,7 +617,7 @@ export default function TopNav() {
                       <button
                         type="button"
                         onClick={() => markNotificationRead('all')}
-                        className="text-[10px] font-bold text-primary hover:text-primary-hover uppercase tracking-wider"
+                        className="text-[10px] font-bold text-primary hover:text-primary-hover uppercase tracking-wider outline-none focus-visible:underline"
                       >
                         {t('header.mark_all_read')}
                       </button>
@@ -617,8 +625,8 @@ export default function TopNav() {
                   </div>
                   <div className="max-h-[340px] overflow-y-auto divide-y divide-slate-800/40">
                     {(notifications || []).length === 0 ? (
-                      <div className="py-8 text-center text-slate-500">
-                        <Inbox className="w-8 h-8 mx-auto opacity-30 mb-2" />
+                      <div className="py-8 text-center text-slate-400">
+                        <Inbox className="w-8 h-8 mx-auto opacity-40 mb-2" />
                         <p className="text-[11px] font-bold uppercase tracking-wider">{t('header.no_alerts')}</p>
                       </div>
                     ) : (
@@ -638,50 +646,50 @@ export default function TopNav() {
               )}
             </div>
 
-            {/* Language Switcher (hidden on extra small screens) */}
-            <div className="hidden sm:block">
+            {/* Desktop Language Switcher */}
+            <div className="hidden lg:block">
               <LanguageSwitcher />
             </div>
 
-            {/* Balance Pill (MiningHash Style) */}
+            {/* Balance Pill (Compact on mobile, full on desktop) */}
             <Link
               to="/wallet"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700/90 border border-slate-700/80 text-xs font-bold text-slate-100 shadow-sm transition-all duration-150"
+              className="flex items-center gap-1 sm:gap-1.5 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700/90 border border-slate-700/80 text-[11px] sm:text-xs font-bold text-slate-100 shadow-sm transition-all duration-150 outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 shrink-0"
               title="Ver Carteira"
               aria-label={`Saldo: ${balancePol ? `${balancePol} POL` : 'Carteira'}`}
             >
-              <div className="w-2 h-2 rounded-full bg-primary" aria-hidden="true" />
-              <span>{balancePol ? `${balancePol} POL` : '0.00 POL'}</span>
+              <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-primary shrink-0" aria-hidden="true" />
+              <span className="truncate max-w-[64px] sm:max-w-none">{balancePol ? `${balancePol} POL` : '0.00 POL'}</span>
             </Link>
 
-            {/* User Avatar */}
+            {/* Desktop User Avatar (moved into drawer on mobile) */}
             <Link
               to="/settings"
-              className="w-9 h-9 rounded-xl bg-slate-800/90 hover:bg-slate-700/90 border border-slate-700/80 flex items-center justify-center text-white text-xs font-black shadow-sm transition-all duration-150 outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              className="hidden lg:flex w-9 h-9 rounded-xl bg-slate-800/90 hover:bg-slate-700/90 border border-slate-700/80 items-center justify-center text-white text-xs font-black shadow-sm transition-all duration-150 outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 shrink-0"
               title={displayUser}
               aria-label={`Definições do perfil de ${displayUser}`}
             >
               {initial}
             </Link>
 
-            {/* Sair / Logout Red Button (MiningHash Style) */}
+            {/* Desktop Sair / Logout Button (moved into drawer on mobile) */}
             <button
               type="button"
               onClick={() => void handleLogout()}
-              className="w-9 h-9 rounded-xl bg-red-500/15 hover:bg-red-500/25 border border-red-500/40 text-red-400 hover:text-red-300 flex items-center justify-center transition-all duration-150 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-red-500"
-              title={t('sidebar.logout')}
-              aria-label={t('sidebar.logout')}
+              className="hidden lg:flex w-9 h-9 rounded-xl bg-red-500/15 hover:bg-red-500/25 border border-red-500/40 text-red-400 hover:text-red-300 items-center justify-center transition-all duration-150 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 shrink-0"
+              title={t('common.logout')}
+              aria-label={t('common.logout')}
             >
               <LogOut className="w-4 h-4" />
             </button>
 
-            {/* Mobile Hamburger Button (< 1024px) */}
+            {/* Mobile Hamburger Button (< 1024px) - GUARANTEED ALWAYS VISIBLE & RIGHTMOST */}
             <button
               type="button"
               onClick={() => setMobileDrawerOpen(true)}
               aria-expanded={mobileDrawerOpen}
               aria-label="Abrir menu de navegação completo"
-              className="lg:hidden p-2 rounded-xl border border-slate-700/80 bg-slate-800/90 text-slate-300 hover:text-white transition-colors"
+              className="lg:hidden p-2 rounded-xl border border-slate-700/80 bg-slate-800/90 text-slate-300 hover:text-white transition-colors shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
             >
               <Menu className="w-5 h-5" />
             </button>
@@ -715,13 +723,35 @@ export default function TopNav() {
                   type="button"
                   onClick={() => setMobileDrawerOpen(false)}
                   aria-label="Fechar menu"
-                  className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                  className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              {/* Drawer Content */}
+              {/* User Profile Card */}
+              <div className="p-4 border-b border-slate-800 bg-slate-900/40 flex items-center justify-between gap-3 shrink-0">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-9 h-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-white text-xs font-black shrink-0">
+                    {initial}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-white truncate">{displayUser}</p>
+                    <p className="text-[11px] text-slate-400 truncate">{user?.email || 'miner@blockminer.space'}</p>
+                  </div>
+                </div>
+                <Link
+                  to="/settings"
+                  onClick={() => setMobileDrawerOpen(false)}
+                  className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  title={t('header.settings', { defaultValue: 'Definições' })}
+                  aria-label="Definições de Perfil"
+                >
+                  <Settings className="w-4 h-4" />
+                </Link>
+              </div>
+
+              {/* Drawer Navigation Links */}
               <div className="flex-1 overflow-y-auto p-4 space-y-6">
                 {navGroups.map((group) => {
                   const GroupIcon = group.icon;
@@ -741,7 +771,8 @@ export default function TopNav() {
                               to={item.path}
                               onClick={() => setMobileDrawerOpen(false)}
                               className={[
-                                'flex items-center justify-between gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-colors',
+                                'flex items-center justify-between gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-colors outline-none',
+                                'focus-visible:ring-2 focus-visible:ring-primary',
                                 isItemActive
                                   ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
                                   : 'text-slate-300 hover:text-white hover:bg-slate-900 border border-transparent',
@@ -750,7 +781,7 @@ export default function TopNav() {
                                 .join(' ')}
                             >
                               <div className="flex items-center gap-2.5 min-w-0">
-                                <ItemIcon className={`w-3.5 h-3.5 shrink-0 ${isItemActive ? 'text-emerald-400' : 'text-slate-500'}`} />
+                                <ItemIcon className={`w-3.5 h-3.5 shrink-0 ${isItemActive ? 'text-emerald-400' : 'text-slate-400'}`} />
                                 <span className="truncate">{t(item.labelKey)}</span>
                               </div>
                               {item.badge && (
@@ -768,6 +799,7 @@ export default function TopNav() {
                   );
                 })}
 
+                {/* Mobile Drawer Bottom Actions */}
                 <div className="pt-4 border-t border-slate-800/80 space-y-3">
                   <div className="flex items-center justify-between px-2">
                     <span className="text-xs font-bold text-slate-400">Idioma:</span>
@@ -779,10 +811,10 @@ export default function TopNav() {
                       setMobileDrawerOpen(false);
                       void handleLogout();
                     }}
-                    className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-red-500/15 text-red-400 border border-red-500/30 text-xs font-bold uppercase tracking-wider hover:bg-red-500/25 transition-colors"
+                    className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-red-500/15 text-red-400 border border-red-500/30 text-xs font-bold uppercase tracking-wider hover:bg-red-500/25 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-red-500"
                   >
                     <LogOut className="w-4 h-4" />
-                    <span>{t('sidebar.logout')}</span>
+                    <span>{t('common.logout')}</span>
                   </button>
                 </div>
               </div>
@@ -811,7 +843,7 @@ export default function TopNav() {
               key={item.page}
               to={item.path}
               className={[
-                'flex flex-col items-center justify-center gap-1 w-14 py-1 rounded-xl transition-colors',
+                'flex flex-col items-center justify-center gap-1 w-14 py-1 rounded-xl transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary',
                 isActive ? 'text-emerald-400 font-bold' : 'text-slate-400 hover:text-slate-200',
               ].join(' ')}
               aria-current={isActive ? 'page' : undefined}

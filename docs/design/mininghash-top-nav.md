@@ -124,29 +124,57 @@ ecf6a33411c2a6c6205dfc81bc1d8688  06-transparency-mobile-320.png
 5ca4100c6ac76f0ad3352b32d4036fb6  06-transparency-tablet-768.png
 ```
 
-### Hashes MD5 Depois (Com TopNav):
+### Hashes MD5 Depois (Com TopNav e Header Mobile Otimizado):
 ```
-5bc1d7cd7046d43b38bbbeeea3e298b3  01-landing-desktop-1440.png
-f3ecaca6b864f301397aa5eb3ceeeaa1  01-landing-mobile-320.png
+43607cc3f32a933785183607589ad597  01-landing-desktop-1440.png
+0a86acf03101d3b54596dcde5061b1f3  01-landing-mobile-320.png
 c11f85b9eb3f2eaf052606c1a4643308  01-landing-tablet-768.png
 ba684183892cb63a6961277aa528fed7  02-login-desktop-1440.png
 ced1740e76628e5c6b93072696cba9e5  02-login-mobile-320.png
 ac73634ddde22cf8fcb38ae0cb9ea467  02-login-tablet-768.png
-e7774fad93c8dc93c37b7cf5eb67db57  03-dashboard-desktop-1440.png
-abdc79049c7f91fbd2858b5316959e78  03-dashboard-mobile-320.png
-76dee7606c3c98ab6751844f7e6140b0  03-dashboard-tablet-768.png
-e39e3aafb32a241d78ae7e616caf4f59  04-inventory-desktop-1440.png
-88f30ef406fbf0760d243e0d8b987e11  04-inventory-mobile-320.png
-cf07d5716e2ec464b0057dad08e39ad1  04-inventory-tablet-768.png
-d7cff015ac9026e2af6e63c1a515f139  05-shop-desktop-1440.png
-08ac74dc28b5672f3c9d768f645e9e08  05-shop-mobile-320.png
-cce06b5dd9eee527e4d0b07fc997550b  05-shop-tablet-768.png
-043a8cb7ebd456b7f059724cebffe39e  06-transparency-desktop-1440.png
-948b2b401b8ebe3392e37f548f1b3b9b  06-transparency-mobile-320.png
-3f5933ecab950d0d503f2abc919b4f8d  06-transparency-tablet-768.png
+6da632b75eee2aba5eb6ffd93923e74a  03-dashboard-desktop-1440.png
+a07f74d57daf544733ce90847646f16b  03-dashboard-mobile-320.png
+bb4674770d74ca350fb7cc0bcfe6c4a9  03-dashboard-tablet-768.png
+b358544cfd555e033ac6afaa06ecfc74  04-inventory-desktop-1440.png
+40c26b0c56d66ad03c75890e94724a80  04-inventory-mobile-320.png
+aa1645b9986391b71e65d099696f184b  04-inventory-tablet-768.png
+03bcdf0e3e4ab0fda5478097933026ea  05-shop-desktop-1440.png
+bea36d6fa2a270c3dad456d70f3d6945  05-shop-mobile-320.png
+615b5f5dd4f805238b42202d503690bf  05-shop-tablet-768.png
+988045afcd7890ca00eb9c8ed25828f5  06-transparency-desktop-1440.png
+948f4b39123d44d131747b319fa1ca47  06-transparency-mobile-320.png
+5bd779b9b903db6c74f62dc913a87fa4  06-transparency-tablet-768.png
 ```
 
-### Prova de Alcance Integral das Rotas:
-- Total de rotas do fallback de usuário: **30 rotas**.
-- Total de rotas presentes e navegáveis na TopNav: **31 rotas** (todas as 30 rotas originais + rota de perfil/settings).
-- Rotas inalcançáveis: **zero (0)**.
+### Prova de Alcance Integral das Rotas e Mobile 320px/360px/414px:
+- **Resoluções Testadas**: 320px, 360px e 414px.
+- **Posição do Hamburger**: Em 320px (`x=270, right=308 <= 320`), em 360px (`x=310, right=348 <= 360`), em 414px (`x=364, right=402 <= 414`). O botão está 100% visível, clicável e nunca sofre corte.
+- **Total de Rotas no Mobile Drawer + Bottom Nav**: 32 rotas únicas (todas as 31 rotas da aplicação, incluindo `/settings`, mais links auxiliares).
+- **Rotas Inalcançáveis**: **zero (0)**.
+
+---
+
+## 7. Auditoria de Modais Legados e Stacking Context
+Auditamos todos os arquivos da pasta `client/src/features/` em busca de modais com `fixed inset-0` e verificamos o uso de `createPortal`:
+
+- **Modais com Portal (Imunes a Stacking Context)**:
+  - `TopNav.tsx` (Mobile Drawer — `createPortal(document.body)`)
+  - `SupportPage.tsx` (Ticket Modal — atualizado para `createPortal(document.body)`)
+  - `DashboardBannersCarousel.tsx` (`createPortal`)
+  - `DashboardEnergyTaxModal.tsx` (`createPortal`)
+  - `MiningAllocationPanel.tsx` (`createPortal`)
+  - `ShopPurchaseModal.tsx` (`createPortal`)
+  - `machines.slotModal.tsx` (`createPortal`)
+  - `machines.dismantleModal.tsx` (`createPortal`)
+  - `machines.quantityModal.tsx` (`createPortal`)
+  - `OffersPage.tsx` (`createPortal`)
+  - `transparency.methodology.tsx` (`createPortal`)
+
+- **Modais Legados sem Portal (Mapeados para saneamento futuro)**:
+  - `burn-events/BurnEventsPage.tsx` (Modal de queima)
+  - `internal-offerwall/internalOfferwall.parts.tsx` (Modal de detalhes de oferta)
+  - `read-earn/ReadEarnPage.tsx` (Modal de leitura)
+  - `inventory2/components/Inventory2RoomContent.tsx` (Diálogos de sala)
+  - `games/components/GameTurnstileModal.tsx` (Turnstile captcha gate)
+  - `bm-captcha/BmCaptchaModal.tsx` (Anti-bot captcha modal)
+  - `shell/broadcast/BroadcastPopup.tsx` (Broadcast de aviso global)
