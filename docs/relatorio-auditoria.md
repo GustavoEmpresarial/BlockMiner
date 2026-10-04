@@ -2235,6 +2235,13 @@ Executado através de `tests/security/run-kali-energy-tax-audit.sh` utilizando o
     17. `wallets.tab_bot_sport`: `'Bot Sport'` (nome próprio de produto)
     18. `withdrawals.hot_wallets`: `'hot wallets'` (termo técnico de custódia)
 
+### 2.7 Resolução das Ressalvas de Acessibilidade (Revisor PR)
+- **Item 1 (ARIA Controls na aba 'all')**: Criado o contêiner `<div id="panel-all" role="tabpanel" aria-labelledby="tab-all">` envolvendo todas as seções quando a aba padrão está selecionada. Todas as 6 abas agora apontam para um painel real e existente no DOM com `role="tabpanel"`.
+- **Item 2 (Contraste WCAG AA >= 4.5:1)**: Substituídos todos os usos residuais de `text-gray-600` e `text-gray-700` em `transparency.charts.tsx` e `transparency.wallets.tsx` por `text-slate-400` e `text-slate-300`, com contraste medido entre 6.7:1 e 11.3:1 sobre fundos escuros `#0f172a` e `#020617`.
+- **Item 3 (Cabeçalhos de Tabela Associados `scope="col"`)**: Adicionado `scope="col"` em todos os elementos `<th>` da tabela de histórico de lucros de hardware em `transparency.hardware.tsx`.
+- **Item 4 (Hierarquia de Headings Semânticos)**: Título da seção de carteiras em `WalletsLiveSection` promovido de `<p>` para `<h2 className="...">`, mantendo h1 único no topo seguido de h2 consistentes em cada seção.
+- **Item 5 (Testes Desacoplados de Estilo)**: Asserções frágeis de classes CSS de cor substituídas por testes de estrutura semântica (`<section aria-labelledby="...">`), `data-testid`, existência e integridade dos painéis ARIA e presença de `scope="col"`.
+
 ---
 
 ## 3. Resultados dos Testes de Carga (k6) — Transparência
