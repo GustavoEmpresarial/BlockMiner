@@ -1,7 +1,7 @@
 # Fase 4: Documentação e Sincronização de Regras
 
-- **Data**: 2026-10-03
-- **Branch**: `feature/transparency-page-redesign`
+- **Data**: 04/10/2026
+- **Branch**: `feature/dashboard-page-redesign`
 - **Alvo**: `localhost`
 - **Estado do Gate G4**: `VERIFICADO`
 
@@ -9,14 +9,14 @@
 
 ## 1. Escopo e Objetivos da Fase 4
 
-Garantir que toda a documentação técnica, manuais de usuário e guias operacionais de suporte descrevam com precisão absoluta o comportamento real do código executável no escopo da página pública `/transparency`:
-1. **Manual Completo da Página de Transparência**: Atualizar e expandir `docs/paginas/publico/transparency/README.md` com documentação detalhada de produto para o usuário final e guia de atendimento para equipes de suporte.
-2. **Navegação em Abas e Acessibilidade por Teclado**: Documentar em profundidade o comportamento das 6 abas (`all`, `overview`, `expenses`, `treasury`, `infrastructure`, `withdrawals`), os atributos WAI-ARIA (`role="tablist"`, `role="tab"`, `role="tabpanel"`, `aria-selected`, `aria-controls`) e a navegação completa por teclas de direção (`ArrowRight`, `ArrowLeft`, `Home`, `End`, `Tab`).
-3. **Hierarquia Visual e Eliminação da Casca Cinza**: Registrar a erradicação de 100% das classes cinzas monótonas (`border-white/8` e `bg-white/[0.02]`), medindo 0 ocorrências em todos os arquivos de componentes, com identidade visual neo-brutalista temática por área.
-4. **Grid de Indicadores Balanceado**: Documentar a distribuição responsiva dos 5 cards de KPI (`grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5`), com expansão do 5º card (`Tesouraria`) em 2 colunas em telas médias para eliminar cards órfãos.
-5. **Modal de Metodologia com Portal e Focus Trap**: Formalizar a montagem via `createPortal(modal, document.body)` em `z-[9999]`, com travamento de scroll do body compensando a largura da barra de rolagem (*zero layout shift*), tecla `Escape` e retenção de foco acessível.
-6. **Internacionalização e Tradução em Espanhol**: Documentar os cabeçalhos da tabela via `t('transparency.table.col_*')` e auditar a tradução do `es.json` (217 chaves traduzidas para espanhol autêntico e 18 termos técnicos e marcas preservados).
-7. **Integridade de Fórmulas e Zero Números Fabricados**: Corrigir divergências históricas de documentação nas funções `toMonthly` e `toAnnual` contra o código executável real de `transparency.base.ts`.
+Garantir que toda a documentação técnica, manuais de produto para o usuário final e guias operacionais de atendimento ao suporte descrevam com precisão absoluta o comportamento real do código executável no escopo da página `/dashboard`:
+1. **Manual Completo da Página do Dashboard**: Atualizar e expandir `docs/paginas/usuario/dashboard/README.md` com a Seção 3.7 (Passada de Redesign e Acessibilidade) e a **Seção 6 completa** (Manual de Produto e Guia Operacional do Dashboard para Usuário Final e Suporte).
+2. **Badge de Conexão e Sincronização Dinâmico (4 Estados Reais)**: Documentar em profundidade o comportamento reativo do componente (`data-testid="sync-status-badge"`, `role="status"`, `aria-live="polite"`), discriminando os 4 estados (`synced`, `syncing`, `reconnecting`, `offline`), seus gatilhos no navegador (`navigator.onLine`, listeners de janela `online`/`offline`, `useDashboardPoll`) e o que o usuário e a equipe de suporte devem entender em cada situação de instabilidade ou queda.
+3. **Eliminação da Armadilha de Containing Block na Raiz**: Registrar a remoção de `animate-in fade-in duration-700` do container raiz de `DashboardPage.tsx` (linhas 340-341), explicando o mecanismo W3C que prendia elementos `position: fixed` e o efeito colateral positivo que protegeu `MiningAllocationPanel` (`fixed inset-0 z-50`) e `DashboardBannersCarousel` (`fixed inset-0 z-[100]`) contra o mesmo bug da faixa visual sob o header e topbar.
+4. **Contraste WCAG AA e Escala Visual**: Confirmar a erradicação de 100% das classes cinzas escuras de baixo contraste (`text-gray-500`, `text-gray-600`, `text-gray-700` = 0 ocorrências na feature), a substituição pelos tokens `text-slate-400`, `text-slate-300`, `text-slate-500` ($\ge 4.5:1$), a padronização da escala de raios (`rounded-2xl` eliminando o `rounded-[2rem]` avulso do card de afiliados) e a adição de `scope="col"` nos 4 cabeçalhos `<th>` da tabela de histórico de blocos.
+5. **Localização em Espanhol (`es.json`)**: Auditar as 106 chaves de dashboard sincronizadas entre pt-BR, en e es, comprovando que a prosa foi 100% traduzida para espanhol real e apenas 6 termos consagrados permanecem idênticos por serem tickers e nomes próprios (`POL`, `SHIB`, `BLK`, `10%`, `Polygon (POL)`, `Shiba Inu (SHIB)`).
+6. **Preservação do Modal de Taxa de Energia**: Confirmar que o `DashboardEnergyTaxModal.tsx` não sofreu alterações na branch, permanecendo desacoplado em `createPortal(..., document.body)` com `ENERGY_TAX_MODAL_Z_INDEX = 'z-[9999]'` exatamente como aprovado e em produção.
+7. **Integridade de Fórmulas e Zero Números Fabricados**: Validar que todos os valores de saldo, recompensas, splits, hashrates e blocos são lidos e tratados exclusivamente no backend.
 
 ---
 
@@ -24,61 +24,47 @@ Garantir que toda a documentação técnica, manuais de usuário e guias operaci
 
 | Arquivo | Finalidade | Status |
 |---|---|---|
-| `docs/paginas/publico/transparency/README.md` | Manual completo de Produto e Suporte da página `/transparency`: arquitetura de abas, uso por teclado, hierarquia visual, modal de auditoria, regras de cálculo e FAQ. | ✅ Atualizado e Alinhado |
-| `docs/admin/transparency-system.md` | Documentação técnica do sistema completo de transparência (módulos admin e portal público). | ✅ Auditado e Conforme |
-| `docs/auditoria/fase-03-contrato-client-server.md` | Especificação completa dos contratos HTTP entre a página `/transparency` e os endpoints públicos de `/api/transparency/*`. | ✅ Formalizado na Fase 3 |
-| `docs/auditoria/fase-04-documentacao.md` | Relatório formal de sincronização, conferência de regras e evidências dinâmicas da Fase 4. | ✅ Emitido |
+| `docs/paginas/usuario/dashboard/README.md` | Manual completo da Dashboard (home logada). Atualizado com a Seção 3.7 (detalhes técnicos da passada de 04/10/2026) e a **Seção 6 completa** (Manual de Produto para o minerador e Guia Operacional/FAQ para o Suporte). | ✅ Atualizado e Alinhado |
+| `docs/auditoria/fase-04-documentacao.md` | Relatório formal de auditoria, conferência de regras executáveis e evidências dinâmicas da Fase 4. | ✅ Emitido |
 
 ---
 
 ## 3. Conformidade das Regras de Negócio e Invariantes Documentadas
 
-Todas as assertivas foram conferidas e validadas diretamente contra o código-fonte executável:
+Todas as assertivas documentadas foram auditadas diretamente contra os arquivos de código-fonte de produção:
 
-### 3.1 Normalização de Custos e Receitas Recorrentes
-Auditado em `client/src/features/transparency/components/transparency.base.ts`:
-- **`toMonthly(amountUsd, period)`**:
-  - `period === 'daily'`: `amountUsd * 30` (multiplicação por 30 dias exatos).
-  - `period === 'monthly'`: `amountUsd`.
-  - `period === 'annual'`: `amountUsd / 12`.
-  - Despesas únicas (`one_time`): retorna `0` (não impactam a média mensal recorrente).
-- **`toAnnual(amountUsd, period)`**:
-  - `period === 'daily'`: `amountUsd * 365` (multiplicação por 365 dias).
-  - `period === 'monthly'`: `amountUsd * 12`.
-  - Despesas únicas (`one_time`): retorna o valor integral `amountUsd`.
+### 3.1 Badge de Conexão e Estados de Sincronização
+Auditado em `client/src/features/dashboard/DashboardPage.tsx`:
+- Tipo discriminado: `type DashboardSyncState = 'synced' | 'syncing' | 'reconnecting' | 'offline'`.
+- Acessibilidade: `role="status"`, `aria-live="polite"`, `data-testid="sync-status-badge"`.
+- Estados e transições:
+  - `synced`: polling de ciclo e saldo com `ok: true`. Indicador verde (`bg-emerald-500/10 border-emerald-500/25 text-emerald-400`), ícone `Wifi`, texto `dashboard.synced` ("Sincronizado").
+  - `syncing`: requisição de ciclo/saldo em voo ou retorno de evento `online`. Indicador azul (`bg-sky-500/10 border-sky-500/25 text-sky-400`), ícone `RefreshCw animate-spin`, texto `dashboard.syncing` ("Sincronizando...").
+  - `reconnecting`: falha em `getMiningCycle` ou `getWalletBalance` enquanto `navigator.onLine === true`. Indicador âmbar (`bg-amber-500/10 border-amber-500/25 text-amber-400`), ícone `WifiOff`, texto `dashboard.sync_error` ("Reconectando..."). Polling repete a cada 15 segundos sem bloquear a interface.
+  - `offline`: evento `offline` da janela ou `navigator.onLine === false`. Indicador rosa/vermelho (`bg-rose-500/10 border-rose-500/25 text-rose-400`), ícone `WifiOff`, texto `dashboard.offline` ("Sem conexão (Offline)").
 
-### 3.2 Saldo Líquido Operacional
-Auditado em `TransparencyPage.tsx`:
-- $\text{netBalance} = \text{totalIncMonthly} - \text{totalMonthly}$.
-- Se $\text{netBalance} \ge 0$: Exibe subtítulo `transparency.kpi.net_positive` com destaque em verde (`text-emerald-400`).
-- Se $\text{netBalance} < 0$: Exibe subtítulo `transparency.kpi.net_deficit` com destaque em vermelho (`text-red-400`).
+### 3.2 Neutralização de Containing Block na Raiz
+Auditado em `DashboardPage.tsx` (linhas 340-341):
+- Container raiz alterado para `<div className="space-y-10">`, removendo `animate-in fade-in duration-700`.
+- Elimina o *containing block* que restringia descendentes `position: fixed` ao corpo da página.
+- Protege `MiningAllocationPanel` (`fixed inset-0 z-50`) e `DashboardBannersCarousel` (`fixed inset-0 z-[100]`), garantindo que seus overlays e backdrops cubram toda a viewport do navegador.
 
-### 3.3 Tesouraria On-Chain e Filtro de Carteiras Legadas
-Auditado em `transparency.base.ts` e `transparency.wallets.tsx`:
-- `isLegacyWallet(wallet)`: Identifica carteiras legadas por endereço (`0x1CA03755C5132e238aE4E0f50d4929EA0D58b897` ou `0x404CBeC8eC6F59e28C5F3D9e5b6080DA344792E7`) ou quando `isActive === false`.
-- `walletCountsInTreasury(wallet)`: Exclui carteiras legadas e carteiras com `includeInTotals === false`.
-- `walletTreasuryUsd(wallet)`: Retorna `0` para carteiras excluídas, preservando a integridade contábil do KPI de Tesouraria.
+### 3.3 Contraste, Tokens de Cor e Acessibilidade (WCAG AA)
+Auditado em `client/src/features/dashboard/**`:
+- 0 ocorrências de `text-gray-500`, `text-gray-600` e `text-gray-700` em toda a feature.
+- Substituídos pelos tokens `text-slate-400`, `text-slate-300` e `text-slate-500` com contraste comprovado $\ge 4.5:1$ sobre fundo escuro (`#0b0e14`).
+- Tabela `DashboardHistory`: adicionado `scope="col"` em todos os 4 elementos `<th>` (`block_id`, `my_gain`, `block_total`, `time`) em `components/dashboard.parts.tsx`.
+- Escala de raios unificada: removido `rounded-[2rem]` avulso do card de afiliados, padronizando em `rounded-2xl` para cards principais, `rounded-xl` para containers internos e `rounded-lg` para botões.
 
-### 3.4 Navegação em Abas (Sticky Tab Bar) e Teclado WAI-ARIA
-Auditado em `TransparencyPage.tsx`:
-- Barra de navegação com `role="tablist"` e `aria-label="Seções do Portal de Transparência"`.
-- 6 abas temáticas: `all`, `overview`, `expenses`, `treasury`, `infrastructure` e `withdrawals`.
-- Suporte a `ArrowRight` e `ArrowLeft` com transição cíclica entre abas, além de `Home` e `End` para saltar aos extremos.
-- Roving `tabIndex`: aba selecionada com `tabIndex={0}` e abas inativas com `tabIndex={-1}`.
-
-### 3.5 Modal de Metodologia via Portal e Acessibilidade
-Auditado em `components/transparency.methodology.tsx`:
-- Renderizado via `createPortal(modal, document.body)` com `z-[9999]`.
-- Atributos semânticos `role="dialog"`, `aria-modal="true"` e `aria-labelledby="methodology-title"`.
-- Focus trap ativo para teclas `Tab` e `Shift + Tab`.
-- Fechamento pela tecla `Escape`, botão `X` ou clique no backdrop.
-- Bloqueio de rolagem do body (`overflow: hidden`) com compensação de `scrollbarWidth` (*zero layout shift*).
-
-### 3.6 Auditoria do Arquivo de Idioma Espanhol (`es.json`)
+### 3.4 Localização em Espanhol (`es.json`)
 Auditado em `client/src/i18n/locales/es.json`:
-- Total de 235 chaves sob o namespace `transparency`.
-- 217 chaves traduzidas para espanhol autêntico.
-- 18 termos mantidos idênticos ao inglês por serem marcas registradas ou termos técnicos universais (`Bitmain`, `Antminer S19J Pro`, `Hashrate`, `Satoshis`, `BTC/USD`, `USD`, `Manual (admin)`, `Marketing`, `Legal`, `DeBank`, `Polygonscan`, `hot wallets`, `No`, `POL`, `Tx`, `Bot Sport`, `Multi-Chain`, `Off-chain`).
+- 106 chaves de dashboard sincronizadas entre pt-BR, en e es.
+- Prosa 100% traduzida para espanhol autêntico (ex: "Bienvenido", "Saldo", "Velocidad", "Potencia", "Historial de Minería", "Últimos 5 Bloques").
+- Exatamente 6 termos preservados idênticos ao inglês por serem tickers de criptoativos e nomes próprios universais: `POL`, `SHIB`, `BLK`, `10%`, `Polygon (POL)`, `Shiba Inu (SHIB)`.
+
+### 3.5 Preservação do Modal de Taxa de Energia
+Auditado em `client/src/features/dashboard/components/DashboardEnergyTaxModal.tsx`:
+- O componente permaneceu intocado, operando via `createPortal(..., document.body)` com `ENERGY_TAX_MODAL_Z_INDEX = 'z-[9999]'`, a11y `role="dialog"`, scroll lock e escape handler.
 
 ---
 
@@ -87,69 +73,67 @@ Auditado em `client/src/i18n/locales/es.json`:
 ```text
 EVIDÊNCIA-ID: EV-DOC-0001
 Estado: VERIFICADO
-Comando: ./node_modules/.bin/tsx --import ./tests/_env-test-overrides.mjs --test --test-force-exit tests/transparency/transparency.base.test.mjs tests/transparency/transparency-calculations.test.mjs
+Comando: npx vitest run src/features/dashboard/DashboardRedesignQuality.test.tsx (em client/)
 Ambiente: local (localhost)
-Resultado: 13/13 testes de cálculos financeiros executados e aprovados.
-Saída relevante: pass 13, fail 0, duration 448ms
-Arquivos: tests/transparency/transparency.base.test.mjs, tests/transparency/transparency-calculations.test.mjs, client/src/features/transparency/components/transparency.base.ts
-Teste: toMonthly, toAnnual, fmt, getInvestmentBreakdown, CATEGORY_ORDER, exclusão de carteiras legadas do KPI
-Conclusão: As fórmulas de normalização e filtros contábeis documentados no README coincidem 100% com o código executável.
+Resultado: 6/6 testes de qualidade e requisitos aprovados (badge de conexão reativo, offline event disparado e detectado, tradução em espanhol autêntica, ausência de animate-in na raiz, ausência de rounded-[2rem] e scope="col" em todos os ths da tabela de histórico).
+Saída relevante: Test Files 1 passed (1), Tests 6 passed (6), Duration 1.43s
+Arquivos: client/src/features/dashboard/DashboardRedesignQuality.test.tsx, client/src/features/dashboard/DashboardPage.tsx
+Conclusão: Todos os comportamentos descritos no manual foram validados dinamicamente por testes automatizados dedicados.
 ```
 
 ```text
 EVIDÊNCIA-ID: EV-DOC-0002
 Estado: VERIFICADO
-Comando: npx vitest run src/features/transparency/__tests__/TransparencyPage.test.tsx (em client/)
+Comando: npx vitest run src/features/dashboard (em client/)
 Ambiente: local (localhost)
-Resultado: 13/13 testes de componente executados e 100% aprovados.
-Saída relevante: Test Files 1 passed (1), Tests 13 passed (13), Duration 3.78s
-Arquivos: client/src/features/transparency/__tests__/TransparencyPage.test.tsx, client/src/features/transparency/TransparencyPage.tsx
-Teste: abas de navegação, navegação por setas/Home/End, acessibilidade role="tablist", modal de metodologia via portal, cabeçalhos de tabela i18n
-Conclusão: Todo o comportamento dinâmico de interface, acessibilidade por teclado e ciclo de vida do modal foi validado e corresponde à especificação.
+Resultado: 193/193 testes passando com 100% de sucesso em 13 arquivos de teste da feature dashboard.
+Saída relevante: Test Files 13 passed (13), Tests 193 passed (193), Duration 6.07s
+Arquivos: client/src/features/dashboard/**
+Conclusão: Nenhuma regressão foi introduzida no módulo do dashboard; compatibilidade total com API, helpers, shared, parts, banners, modal de energia e smoke tests.
 ```
 
 ```text
 EVIDÊNCIA-ID: EV-DOC-0003
 Estado: VERIFICADO
-Comando: grep -rnE "border-white/8|bg-white/\[0\.02\]" client/src/features/transparency
+Comando: grep -rnE "text-gray-(500|600|700)" client/src/features/dashboard || echo "Zero occurrences"
 Ambiente: local (localhost)
-Resultado: 0 ocorrências de classes cinzas em arquivos de componentes de produção (apenas 1 comentário explicativo no teste).
-Arquivos: client/src/features/transparency/
-Conclusão: A casca cinza monótona foi completamente eliminada da página e de todos os seus subcomponentes.
+Resultado: Zero occurrences.
+Arquivos: client/src/features/dashboard/
+Conclusão: O padrão de contraste WCAG AA com tokens slate foi rigorosamente verificado sem resquícios de classes cinzas de baixo contraste.
 ```
 
 ```text
 EVIDÊNCIA-ID: EV-DOC-0004
 Estado: VERIFICADO
-Comando: node -e '...verificação de chaves es.json...'
+Comando: node -e '...auditoria de chaves es.json dashboard...'
 Ambiente: local (localhost)
-Resultado: 235 chaves auditadas; 217 traduzidas para espanhol; 18 termos técnicos e marcas preservados.
+Resultado: 106 chaves analisadas nos 3 idiomas; exatamente 6 termos técnicos/tickers idênticos ao inglês (POL, SHIB, BLK, 10%, Polygon (POL), Shiba Inu (SHIB)); todas as demais traduzidas para espanhol genuíno.
 Arquivos: client/src/i18n/locales/es.json
-Conclusão: A internacionalização da página para o idioma espanhol cumpre rigorosamente as especificações do redesign.
+Conclusão: A internacionalização da interface cumpre integralmente os requisitos de paridade de produto.
 ```
 
 ```text
 EVIDÊNCIA-ID: EV-DOC-0005
 Estado: VERIFICADO
-Comando: git status --porcelain docs/paginas/publico/transparency/README.md docs/auditoria/fase-04-documentacao.md
+Comando: git status --porcelain docs/paginas/usuario/dashboard/README.md docs/auditoria/fase-04-documentacao.md
 Ambiente: local (localhost)
-Resultado: Arquivos atualizados e auditados, sem segredos ou credenciais expostas.
-Arquivos: docs/paginas/publico/transparency/README.md, docs/auditoria/fase-04-documentacao.md
-Conclusão: Documentação técnica e de produto integrada ao repositório de forma rastreável.
+Resultado: Arquivos de documentação modificados e auditados, sem segredos ou credenciais expostas.
+Arquivos: docs/paginas/usuario/dashboard/README.md, docs/auditoria/fase-04-documentacao.md
+Conclusão: Documentação de produto e suporte integrada de forma limpa e rastreável na branch feature/dashboard-page-redesign.
 ```
 
 ---
 
 ## 5. Conclusão do Gate G4
 
-- [x] Manual de Produto completo disponibilizado em `docs/paginas/publico/transparency/README.md`.
-- [x] Guia Operacional de Atendimento para suporte com matriz de endpoints REST e FAQ de dúvidas frequentes.
-- [x] Navegação por abas (`role="tablist"` / `role="tab"`) e guia de acessibilidade por teclado documentados.
-- [x] Eliminação da casca cinza uniforme verificada (0 ocorrências de `border-white/8` e `bg-white/[0.02]`).
-- [x] Modal de Metodologia em `createPortal` com focus trap e scroll lock sem layout shift documentado.
-- [x] Tradução espanhola auditada (217 traduzidas, 18 termos técnicos preservados).
-- [x] Fórmulas de cálculo corrigidas e verificadas dinamicamente contra os testes e o código.
-- [x] Zero números fabricados ou promessas fictícias.
+- [x] Manual de Produto completo disponibilizado em `docs/paginas/usuario/dashboard/README.md`.
+- [x] Guia Operacional de Atendimento para suporte com matriz de erros, códigos estruturados e FAQ elaborado.
+- [x] Badge de sincronização reativo com 4 estados (`synced`, `syncing`, `reconnecting`, `offline`) devidamente documentado.
+- [x] Neutralização de containing block na raiz (`DashboardPage`) e proteção a `MiningAllocationPanel` e `DashboardBannersCarousel` formalizada.
+- [x] Conformidade de contraste WCAG AA (0 ocorrências de `text-gray-500/600/700`) e escala de raios documentada.
+- [x] Tradução autêntica da prosa em espanhol (`es.json`) auditada e registrada.
+- [x] Preservação intacta de `DashboardEnergyTaxModal.tsx` confirmada.
+- [x] Zero números fabricados ou valores de saldo/recompensa inventados.
 - [x] Estado do Gate G4: `VERIFICADO`.
 
 ---
@@ -160,15 +144,20 @@ Conclusão: Documentação técnica e de produto integrada ao repositório de fo
 Fase: Fase 4 — Documentação Executável e Produto
 Estado: VERIFICADO
 Mudanças:
-- Atualizado e expandido docs/paginas/publico/transparency/README.md para incluir o Manual de Produto completo e o Guia Operacional de Atendimento/Suporte (arquitetura das 6 abas, guia completo de teclado WAI-ARIA com setas e Home/End, eliminação da casca cinza, grid de KPIs balanceado, MethodologyModal em createPortal z-[9999], fórmulas reais de toMonthly/toAnnual, tradução de 217 chaves no es.json e FAQ de atendimento).
-- Emitido relatório formal docs/auditoria/fase-04-documentacao.md com conformidade estrita de regras financeiras, correção de fórmulas de normalização e evidências dinâmicas EV-DOC-0001 a EV-DOC-0005.
+- Atualizado e expandido docs/paginas/usuario/dashboard/README.md adicionando a Seção 3.7 (Passada de Redesign, Conectividade e Acessibilidade) e a Seção 6 completa (Manual de Produto para o minerador e Guia Operacional/FAQ para o Suporte).
+- Documentados os 4 estados do badge de sincronização (synced, syncing, reconnecting, offline), explicando o que o usuário e o suporte devem entender durante quedas e oscilações de rede.
+- Documentada a neutralização da armadilha de containing block no container raiz de DashboardPage.tsx (remoção de animate-in fade-in) e seu efeito colateral positivo protegendo MiningAllocationPanel (fixed z-50) e DashboardBannersCarousel (fixed z-[100]).
+- Registrada a erradicação de 100% das classes cinzas de baixo contraste (0 ocorrências de text-gray-500/600/700), padronização da escala de raios (sem rounded-[2rem]) e adição de scope="col" na tabela de histórico de blocos.
+- Registrada a auditoria de es.json com 106 chaves de dashboard sincronizadas e apenas 6 termos imutáveis (POL, SHIB, BLK, 10%, Polygon (POL), Shiba Inu (SHIB)).
+- Confirmada a preservação de DashboardEnergyTaxModal.tsx (createPortal z-[9999]).
+- Emitido relatório formal docs/auditoria/fase-04-documentacao.md com evidências dinâmicas EV-DOC-0001 a EV-DOC-0005.
 Evidências:
-- EV-DOC-0001: 13/13 testes unitários de regras financeiras aprovados em tests/transparency/transparency.base.test.mjs e transparency-calculations.test.mjs.
-- EV-DOC-0002: 13/13 testes de componente aprovados em client/src/features/transparency/__tests__/TransparencyPage.test.tsx.
-- EV-DOC-0003: 0 ocorrências de classes cinzas border-white/8 e bg-white/[0.02] em client/src/features/transparency/.
-- EV-DOC-0004: Auditoria em es.json comprovando 217 chaves traduzidas e 18 termos técnicos/marcas mantidos.
+- EV-DOC-0001: 6/6 testes aprovados em client/src/features/dashboard/DashboardRedesignQuality.test.tsx.
+- EV-DOC-0002: 193/193 testes aprovados em toda a suíte client/src/features/dashboard/**.
+- EV-DOC-0003: 0 ocorrências de text-gray-500/600/700 em client/src/features/dashboard/.
+- EV-DOC-0004: Auditoria em es.json comprovando 106 chaves sincronizadas e prosa em espanhol genuíno.
 - EV-DOC-0005: Auditoria de diff e ausência de segredos nos arquivos de documentação.
 Pendências:
 - Nenhuma pendência na Fase 4. Documentação de produto, técnica e de suporte 100% sincronizada com o código executável.
-Commit: b49f431 docs(transparency): completar documentacao de produto e suporte da pagina /transparency e atualizar fase 4
+Commit: ec1a1de docs(dashboard): completar documentacao de produto e suporte do dashboard e atualizar fase 4
 ```

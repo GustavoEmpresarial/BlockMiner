@@ -1,149 +1,71 @@
-# Fase 3: Contrato Client ↔ Servidor
+# Fase 3 — Contrato Client ↔ Servidor da Página /dashboard
 
-- **Data**: 2026-10-03
-- **Branch**: `feature/transparency-page-redesign`
-- **Alvo**: `localhost`
-- **Estado do Gate G3**: `VERIFICADO`
+**Data**: 04/10/2026  
+**Responsável**: Executor (Antigravity / Gemini 3.8 Flash High)  
+**Ambiente**: Localhost (127.0.0.1)  
+**Branch de Trabalho**: `feature/dashboard-page-redesign`
 
 ---
 
-## 1. Inventário de Endpoints e Chamadas Client
+## 1. Inventário de Endpoints Consumidos pela Feature `/dashboard`
 
-A página `/transparency` consome exclusivamente a superfície pública de leitura montada em `/api/transparency`:
-
-| Método | Rota Exata | Chamador Client (SPA) | Autenticação | Rate Limit | Resposta Esperada (200) |
+| Método | Rota | Autenticação | Rate Limit | Handler no Servidor | Finalidade no Dashboard |
 |---|---|---|---|---|---|
-| `GET` | `/api/transparency` | `TransparencyPage.tsx:63` | Pública | 60 req / 60s | `{ ok: true, entries: TransparencyEntry[], asOf: string }` |
-| `GET` | `/api/transparency/wallets-live` | `TransparencyPage.tsx:67` | Pública | 60 req / 60s | `{ ok: true, wallets: TrackedWalletEntry[], asOf: string }` |
-| `GET` | `/api/transparency/external-investments` | `transparency.wallets.tsx:432` | Pública | 60 req / 60s | `{ ok: true, investments: ExternalInvestmentEntry[] }` |
-| `GET` | `/api/transparency/hardware-assets` | `transparency.hardware.tsx:143` | Pública | 60 req / 60s | `{ ok: true, assets: HardwareAssetEntry[] }` |
-| `GET` | `/api/transparency/withdrawal-stats` | `transparency.withdrawals.tsx:13` | Pública | 60 req / 60s | `{ ok: true, totalPol: number, totalCount: number, totalUsd: number \| null }` |
+| `GET` | `/api/wallet/balance` | `requireAuth` | Padrão API | `balance.controller.ts:getBalance` | Saldo em carteira (POL, BLK, SHIB) |
+| `GET` | `/api/mining/cycle` | `authenticateTokenOptional` | Padrão API | `mining.controller.ts:getMiningCycle` | Snapshot da rede, minerador e blocos |
+| `PATCH` | `/api/mining/allocation` | `requireAuth` | Padrão API | `mining.controller.ts:patchMiningAllocation` | Atualiza divisão de hashrate POL/SHIB |
+| `POST` | `/api/user/link-referral` | `requireAuth` | Padrão API | `user.controller.ts:linkReferral` | Vincula código de indicação de amigo |
+| `GET` | `/api/rooms/slots` | `requireAuth` | Padrão API | `rooms.controller.ts:getSlotsSummary` | Racks livres e itens no inventário |
+| `GET` | `/api/wallet/withdraw-fee-info` | `requireAuth` | Padrão API | `withdrawal.controller.ts:getWithdrawFeeInfo` | Progresso de isenção de taxa de saque |
+| `GET` | `/api/energy-tax/summary` | `requireAuth` | 60 req/min | `energy-tax.controller.ts:getSummary` | Status de cobrança da taxa de energia |
+| `GET` | `/api/banners` | Público | Padrão API | `banners.controller.ts:getActiveBanners` | Banners ativos para o carrossel |
 
 ---
 
-## 2. Matriz de Divergências Encontradas e Soluções
+## 2. Matriz de Divergências de Contrato
 
-| Item | Frontend (`client`) | Backend (`server`) | Divergência | Resolução Padronizada |
+| Parâmetro / Aspecto | Frontend (`client/src/features/dashboard`) | Backend (`server/`) | Divergência | Resolução |
 |---|---|---|---|---|
-| **Rotas e Métodos** | Todos utilizam `GET` relativo a `/api/transparency/*` | Express router montado em `/api/transparency` com `publicLimiter` | Nenhuma divergência | Contratos de rota alinhados |
-| **Campos de Entradas (`entries`)** | Consome `id`, `name`, `amountUsd`, `period`, `category`, `type`, `isPaid`, `provider`, `providerUrl`, `imageUrl` | Retorna exatamente essas propriedades tipadas com `Prisma.Decimal` convertido para número | Nenhuma divergência | Schema consistente |
-| **Campos de Carteiras (`wallets`)** | Consome `address`, `label`, `valueUsd`, `totalUsd`, `chain`, `displayMode`, `isActive`, `includeInTotals`, `liquidityPools` | `mapWalletForPublic` normaliza flags legadas e provê `valueUsd` e `liquidityPools` | Nenhuma divergência | Tipos compatíveis |
-| **Cabeçalhos de Tabela Hardcoded (P4)** | Tabelas continham cabeçalhos fixos em português no JSX | Frontend deve ler via i18n (`transparency.table.col_*`) | Divergência de internacionalização (P4) | Chaves padronizadas no i18n nos 3 idiomas |
+| `/api/wallet/balance` | Consome `balance`, `polBalance`, `blkBalance`, `shibBalance` via `mapWalletBalancePayload` | Retorna `{ ok: true, balance, polBalance, blkBalance, shibBalance, ... }` | Nenhuma | Conforme |
+| `/api/mining/cycle` | Consome `blockHistory`, `miner`, `blockReward`, `blockRewardShib`, `blockCountdownSeconds` | Retorna snapshot sanitizado com histórico e miner | Nenhuma | Conforme |
+| `/api/mining/allocation` | Envia `{ polBps: number }` (0 a 10000) | Valida via schema Zod e converte no motor de mineração | Nenhuma | Conforme |
+| `/api/user/link-referral` | Envia `{ refCode: string }` sanitizado | Valida e vincula patrocinador | Nenhuma | Conforme |
+| `/api/rooms/slots` | Consome `freeRacks`, `inventoryCount` | Retorna contagens agregadas de racks e inventário | Nenhuma | Conforme |
+| `/api/wallet/withdraw-fee-info` | Consome `feeWaived`, `completionsToday`, `requiredForWaiver`, `feeAlreadyChargedToday` | Retorna progresso e waiver | Nenhuma | Conforme |
+| `/api/energy-tax/summary` | Consome `active`, `unpaidDays`, `todayPaid`, `todayExempt` | Retorna status de auditoria fiscal de mineração | Nenhuma | Conforme |
+| `/api/banners` | Consome array `banners` com `id`, `title`, `message`, `imageUrl`, `link`, `endsAt` | Retorna lista de banners ativos | Nenhuma | Conforme |
+
+**Resultado da Matriz de Divergências**: **0 divergências** entre cliente e servidor.
 
 ---
 
-## 3. Especificação do Contrato Tipado
+## 3. Regra Especial de Dinheiro e Recompensa
 
-### 3.1 `GET /api/transparency`
-- **Request**: Sem body, sem parâmetros obrigatórios.
-- **Headers**: `Accept: application/json`.
-- **Response 200 OK**:
-```json
-{
-  "ok": true,
-  "entries": [
-    {
-      "id": 1,
-      "type": "expense",
-      "category": "infrastructure",
-      "name": "Hetzner Dedicated Server",
-      "provider": "Hetzner",
-      "providerUrl": "https://hetzner.com",
-      "imageUrl": "/media/transparency/hetzner.png",
-      "amountUsd": 120.0,
-      "amountOriginal": null,
-      "currencyCode": "USD",
-      "period": "monthly",
-      "isPaid": true,
-      "isActive": true,
-      "isOnChain": false,
-      "blockchain": null,
-      "direction": null,
-      "referenceUrl": null,
-      "notes": null,
-      "sortOrder": 1,
-      "updatedAt": "2026-09-20T00:00:00.000Z"
-    }
-  ],
-  "asOf": "2026-09-20T00:00:00Z"
-}
-```
-
-### 3.2 `GET /api/transparency/wallets-live`
-- **Request**: Sem body.
-- **Response 200 OK**:
-```json
-{
-  "ok": true,
-  "wallets": [
-    {
-      "id": 1,
-      "label": "Polygon Treasury",
-      "address": "0x56a655787f73ffab2cbdb702008adacb60f1c9fc",
-      "chain": "polygon",
-      "assetSymbol": "USDC",
-      "explorerBaseUrl": "https://polygonscan.com/address",
-      "displayMode": "live",
-      "isActive": true,
-      "includeInTotals": true,
-      "manualUsdValue": null,
-      "manualValueNote": null,
-      "warming": false,
-      "totalUsd": 25000.0,
-      "valueUsd": 25000.0,
-      "valuePol": 1500.0,
-      "chains": [],
-      "tokens": [],
-      "nfts": [],
-      "fetchedAt": "2026-09-20T00:00:00.000Z",
-      "liquidityPools": []
-    }
-  ],
-  "asOf": "2026-09-20T00:00:00Z"
-}
-```
-
-### 3.3 `GET /api/transparency/withdrawal-stats`
-- **Request**: Sem body.
-- **Response 200 OK**:
-```json
-{
-  "ok": true,
-  "totalPol": 1450.25,
-  "totalCount": 320,
-  "totalUsd": 145.02
-}
-```
+- O frontend é **estritamente passivo** em relação a saldos, hashrate e recompensas.
+- Nenhum valor monetário é manipulado ou enviado como autoridade pelo cliente.
+- Valores ausentes ou em carregamento degradam com segurança para valores neutros (`—`, `0` ou estado vazio honesto), conforme requisito invariante.
 
 ---
 
-## 4. Evidências de Validação
+## 4. Evidências da Fase 3
 
 ```text
-EVIDÊNCIA-ID: EV-0010
+EVIDÊNCIA-ID: EV-0006
 Estado: VERIFICADO
-Comando: ./node_modules/.bin/tsx --import ./tests/_env-test-overrides.mjs --test --test-force-exit tests/transparency/transparency.public.exports.test.mjs
-Ambiente: local (localhost)
-Resultado: 4/4 testes passando com 100% de sucesso, confirmando que os handlers públicos mapeiam corretamente wallets, snapshots, pools de liquidez e valores em USD.
-Arquivos: tests/transparency/transparency.public.exports.test.mjs, server/modules/transparency/transparency.controller.ts
-Conclusão: Contratos da API pública verificados dinamicamente com respostas íntegras e estáveis.
-```
-
-```text
-EVIDÊNCIA-ID: EV-0011
-Estado: VERIFICADO
-Comando: npm test -- src/features/transparency (em client/)
-Ambiente: local (localhost / vitest v3.2.7)
-Resultado: 3/3 testes passando com 100% de sucesso, confirmando que o client consome os contratos sem incompatibilidades.
-Arquivos: client/src/features/transparency/__tests__/TransparencyPage.test.tsx
-Conclusão: Consumo dos contratos pelo frontend validado e sem divergências.
+Comando: npx vitest run features/dashboard/lib/dashboard.api.test.ts
+Ambiente: local
+Resultado: 9 testes passando (100% de sucesso nos contratos da API)
+Arquivos: client/src/features/dashboard/lib/dashboard.api.ts
+Conclusão: Contratos de endpoints e schemas validados sem divergência.
 ```
 
 ---
 
-## 5. Conclusão do Gate G3
+## 5. Critérios do Gate da Fase 3
 
-- [x] Inventário completo de endpoints públicos e chamadores client documentado.
-- [x] Matriz de divergências revisada e validada (zero divergências estruturais na API).
-- [x] Contratos tipados de leitura pública formalizados e verificados por testes.
-- [x] Estado do Gate G3: `VERIFICADO`.
+- [x] Todos os 8 endpoints consumidos inventariados e mapeados para rotas do servidor.
+- [x] Matriz de divergências preenchida e sem pendências.
+- [x] Schemas de entrada e saída validados.
+- [x] Regra de inviolabilidade de dados financeiros respeitada.
+- [x] Testes de API da feature executados e verdes.
+- [x] Commit separado da fase concluído.

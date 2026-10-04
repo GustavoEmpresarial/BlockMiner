@@ -81,15 +81,15 @@ export function MiningAllocationPanel({
         <div className="relative flex flex-col gap-5">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
             <div>
-              <h3 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
+              <h2 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
                 <Sliders className="w-4 h-4 text-indigo-400" />
                 {t('dashboard.mining_allocation_title')}
-              </h3>
-              <p className="text-[11px] text-gray-500 mt-1.5 max-w-xl leading-relaxed">
+              </h2>
+              <p className="text-[11px] text-slate-400 mt-1.5 max-w-xl leading-relaxed">
                 {t('dashboard.mining_allocation_description')}
               </p>
             </div>
-            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest self-start sm:self-auto">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest self-start sm:self-auto">
               {savingAlloc
                 ? t('dashboard.mining_allocation_saving')
                 : t('dashboard.mining_allocation_applies_next_block')}
@@ -134,7 +134,7 @@ export function MiningAllocationPanel({
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 flex-1 text-[11px] font-medium">
               <div className="flex items-center justify-between bg-indigo-500/5 border border-indigo-500/15 rounded-xl px-4 py-2.5">
-                <span className="text-gray-500 uppercase tracking-widest text-[9px] font-black">
+                <span className="text-slate-400 uppercase tracking-widest text-[9px] font-black">
                   {t('dashboard.mining_allocation_estimated_pol')}
                 </span>
                 <span className="text-indigo-300 font-black tabular-nums">
@@ -142,7 +142,7 @@ export function MiningAllocationPanel({
                 </span>
               </div>
               <div className="flex items-center justify-between bg-amber-500/5 border border-amber-500/15 rounded-xl px-4 py-2.5">
-                <span className="text-gray-500 uppercase tracking-widest text-[9px] font-black">
+                <span className="text-slate-400 uppercase tracking-widest text-[9px] font-black">
                   {t('dashboard.mining_allocation_estimated_shib')}
                 </span>
                 <span className="text-amber-300 font-black tabular-nums">
@@ -180,7 +180,7 @@ export function MiningAllocationPanel({
               type="button"
               onClick={onCloseModal}
               disabled={savingAlloc}
-              className="absolute top-4 right-4 text-gray-500 hover:text-white transition disabled:opacity-50 z-10"
+              className="absolute top-4 right-4 text-slate-400 hover:text-white transition disabled:opacity-50 z-10"
               aria-label={t('common.close')}
             >
               <X className="w-5 h-5" />
@@ -191,7 +191,7 @@ export function MiningAllocationPanel({
                 <Sliders className="w-4 h-4 text-indigo-400" />
                 {t('dashboard.mining_allocation_modal_title')}
               </h3>
-              <p className="text-[11px] text-gray-500 mt-2 leading-relaxed">
+              <p className="text-[11px] text-slate-400 mt-2 leading-relaxed">
                 {t('dashboard.mining_allocation_modal_description')}
               </p>
             </div>
@@ -352,7 +352,7 @@ export function MiningAllocationPanel({
 
             {draftError && <p className="text-[11px] font-bold text-red-400 mb-3">{draftError}</p>}
 
-            <p className="text-[10px] text-gray-500 mb-5">{t('dashboard.mining_allocation_modal_hint')}</p>
+            <p className="text-[10px] text-slate-400 mb-5">{t('dashboard.mining_allocation_modal_hint')}</p>
 
             <div className="flex items-center justify-end gap-2">
               <button

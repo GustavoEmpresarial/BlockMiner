@@ -1,186 +1,150 @@
-# Fase 0: Reconhecimento e Preflight
+# Fase 0 — Reconhecimento e Baseline do Redesign da Página /dashboard
 
-- **Data**: 2026-10-03
-- **Branch**: `feature/transparency-page-redesign`
-- **Commit Base**: `d443356` (`docs(auditoria): fase 9 relatorio de deploy staging e producao`)
-- **Alvo**: `localhost` (Ambiente Local Isolado)
-- **Estado do Gate G0**: `VERIFICADO`
-
----
-
-## 1. Contexto do Repositório e Árvore do Escopo
-
-O projeto **BlockMiner 2.1** é uma aplicação Fullstack composta por:
-- **Frontend**: Single Page Application (SPA) em React 19, Vite, TypeScript, TailwindCSS, Zustand/Axios, i18next, Recharts.
-- **Backend**: Node.js (ES Modules, TypeScript 5.8), Express 5, Prisma ORM 7.9, PostgreSQL 15, Redis 7.
-- **Arquitetura**: Monolito Modular (`server/modules/`, `server/core/`, `server/shared/`, `client/src/features/`).
-- **Página Alvo**: Página pública de Transparência Financeira (`/transparency`).
-
-### Árvore da Superfície Mapeada (`client/src/features/transparency/`)
-```text
-client/src/
-├── app/
-│   └── App.tsx                                        # Linha 165: Rota pública /transparency
-├── features/
-│   └── transparency/
-│       ├── index.ts                                   # Barrel export
-│       ├── TransparencyPage.tsx                       # Página principal (414 linhas, orquestra 11 seções)
-│       ├── components/
-│       │   ├── transparency.shared.tsx                # Re-exports de componentes
-│       │   ├── transparency.base.ts                   # Tipos, formatadores e helper walletTreasuryUsd
-│       │   ├── transparency.charts.tsx                # StatCard, CategoryBar, tooltips, PieLabel (Recharts)
-│       │   ├── transparency.wallets.tsx               # WalletsLiveSection (carteiras e tesouraria)
-│       │   ├── transparency.hardware.tsx              # HardwareSection (ASICs e ROI Lightning)
-│       │   ├── transparency.ai-models.tsx             # AiInfrastructure3DSection (modelos IA e servidores)
-│       │   ├── transparency.withdrawals.tsx           # WithdrawalsSection (saques recentes e métricas)
-│       │   └── transparency.methodology.tsx           # MethodologyModal (diálogo explicativo)
-│       └── __tests__/
-│           └── TransparencyPage.test.tsx              # Testes unitários/renderização da página
-├── shared/
-│   └── components/
-│       └── TransparencyErrorBoundary.tsx              # Error boundary dedicado para /transparency
-└── i18n/locales/
-    ├── pt-BR.json                                     # Chave raiz "transparency" (27 chaves)
-    ├── en.json
-    └── es.json
-server/
-└── modules/
-    └── transparency/
-        ├── transparency.controller.ts                 # Endpoints públicos /api/transparency/*
-        ├── transparency.routes.ts                     # Rotas REST
-        ├── transparency.service.ts                    # Agregações de tesouraria, hardware, saques
-        └── transparency.repository.ts                 # Acesso a dados de entradas e carteiras
-tests/
-└── transparency/                                      # 13 arquivos de testes dedicados (68 testes)
-```
+**Data**: 04/10/2026  
+**Responsável**: Executor (Antigravity / Gemini 3.8 Flash High)  
+**Ambiente**: Localhost (127.0.0.1)  
+**Branch de Trabalho**: `feature/dashboard-page-redesign` (criada a partir de `develop` commit `f4a5872`)
 
 ---
 
-## 2. Inventário de Comandos e Scripts Reais
+## 1. Identificação de Ambiente e Isolamento Git
 
-Conforme inspecionado em `package.json` (raiz) e `client/package.json`:
-- **Frontend (client/)**:
-  - Testes: `npm test` (`vitest run`)
-  - Teste focado: `npm test -- src/features/transparency`
-  - Build: `npm run build` (`vite build`)
-  - Lint: `npm run lint` (`eslint .`)
-  - Typecheck: `npm run typecheck` (`tsc --noEmit -p tsconfig.json`)
-- **Backend (raiz/)**:
-  - Build: `npm run build` (`tsc -p tsconfig.json`)
-  - Typecheck: `npm run typecheck` (`tsc --noEmit -p tsconfig.json`)
-  - Testes Globais: `npm test` (`tsx --import ./tests/_env-test-overrides.mjs --test --test-force-exit --experimental-test-module-mocks tests/**/*.test.mjs`)
-  - Testes focados: `./node_modules/.bin/tsx --import ./tests/_env-test-overrides.mjs --test --test-force-exit tests/transparency/*.test.mjs`
-  - Prisma Generate: `npm run prisma:generate` (`prisma generate --schema prisma/schema.prisma`)
-  - Proibidos terminantemente: `prisma migrate reset`, `deploy.sh`.
+- **Branch Base**: `develop` no commit `f4a5872` (`docs(auditoria): fase 9 relatorio de deploy do redesign de transparencia`).
+- **Branch Ativa**: `feature/dashboard-page-redesign`.
+- **Status do Git Inicial**: Árvore de trabalho limpa para arquivos rastreados (arquivos untracked preservados: `.maestri/`, imagens e symlinks de teste `tests/integration/` e `tests/load`).
+- **Target de Banco de Testes**:
+  - PostgreSQL de teste: `127.0.0.1:5442` (container `blockminer-current-db`, saudável).
+  - Redis de teste: `127.0.0.1:6389` (container `blockminer-current-redis`, saudável).
+  - Banco de Produção: `blockminer-db` — estritamente intocado e protegido por barreira.
+  - Alvo de testes e ferramentas: `localhost` exclusivamente. Staging foi desativado em 04/10/2026 e não existe neste canvas.
 
 ---
 
-## 3. Inventário de Banco de Dados, Serviços e Isolamento
+## 2. Comandos Reais dos package.json
 
-- **Ambiente Alvo**: Estritamente `localhost`. Vedado qualquer acesso ou mutação contra `blockminer.space` ou `dev.blockminer.space`.
-- **Banco de Produção Proibido**: Hostname `blockminer-db` (161.97.176.125) - estritamente isolado.
-- **Banco de Teste Local Ativo**:
-  - Container Docker: `blockminer-current-db` (PostgreSQL 15 Alpine), publicado em `127.0.0.1:5442` (Healthy).
-  - Redis Local Ativo: Container Docker `blockminer-current-redis` (Redis 7 Alpine), publicado em `127.0.0.1:6389` (Healthy).
+### Raiz (`package.json`)
+- `build`: `tsc -p tsconfig.json`
+- `typecheck`: `tsc --noEmit -p tsconfig.json`
+- `dev`: `tsx watch server/bootstrap/server.ts`
+- `start`: `node dist/server/bootstrap/server.js`
+- `test`: `tsx --import ./tests/_env-test-overrides.mjs --test --test-force-exit --experimental-test-module-mocks tests/**/*.test.mjs`
+- `test:coverage`: `tsx --import ./tests/_env-test-overrides.mjs --test --test-force-exit --experimental-test-module-mocks --experimental-test-coverage tests/**/*.test.mjs`
 
-### 3.1 Baseline de Falhas Pré-existentes no Repositório (Medição Pré-Trabalho)
-
-Conforme exigido pelo Contrato V2 e V2.37, foi realizada a medição e catalogação rigorosa de todas as falhas pré-existentes na suíte global e no typecheck antes de qualquer modificação de código:
-1. **Suíte Global de Testes (`npm test`)**:
-   - Total de testes executados: **2.348+ testes**.
-   - Falhas pré-existentes catalogadas: **37 falhas** (oscilação esperada entre 35 e 45 decorrente de migrations pendentes em banco local `SCHEMA_OUT_OF_DATE`, testes de crons legados com `redisMod.__enableRedisForTests`, e `VPN_PROXY_BLOCKED`).
-2. **Typecheck Global (`npm run typecheck`)**:
-   - Server: **74 erros TS** pré-existentes em módulos fora do escopo (`games/`, `ip-intelligence/`, `referrals/`, `rooms/`, `shortlinks/`, `wallet/`).
-   - Client: **68 erros TS** pré-existentes em áreas não relacionadas (`admin/`, `calculator/`, `games/`, `offers/`, `ptc/`, `referrals/`, `tournaments/`, `wallet/`).
-3. **Conferência de Isolamento da Branch**:
-   - Verificado com `(npm run typecheck 2>&1; cd client && npm run typecheck 2>&1) | grep -iE "features/transparency|server/modules/transparency"`: **0 erros** nos arquivos do escopo.
-   - Testes existentes de transparência no frontend: **3/3 aprovados**.
-   - Testes existentes de transparência no backend: **68/68 aprovados**.
-   - Nenhuma falha pré-existente possui qualquer relação com o escopo desta tarefa.
+### Cliente (`client/package.json`)
+- `build`: `vite build`
+- `typecheck`: `tsc --noEmit -p tsconfig.json`
+- `dev`: `vite`
+- `test`: `vitest run`
+- `test:watch`: `vitest`
+- `lint`: `eslint .`
+- `smoke`: `node scripts/smoke-client.mjs`
 
 ---
 
-## 4. Problemas Técnicos e Diagnóstico de Layout Inicial
+## 3. Baseline Pré-existente Registrado
 
-Conforme mapeado no briefing e inspecionado no código-fonte:
-1. **P1 — Ausência de Hierarquia Visual**:
-   - Quase todas as seções compartilham o container idêntico `rounded-2xl border border-white/8 bg-white/[0.02] p-6` com títulos idênticos `text-xs font-black text-gray-400 uppercase tracking-widest`. Falta ênfase, ritmo visual e contraste de importância.
-2. **P2 — Layout Não Intuitivo (Scroll Único com 11 Seções Pesadas)**:
-   - A página empilha sequencialmente 11 seções densas sem índice, âncoras, barra de navegação rápida ou sistema de abas/filtros. Isso sobrecarrega a experiência de leitura do usuário.
-   - Solução proposta: Navegação intuitiva por seções/abas temáticas (ex: "Visão Geral / KPIs & Gráficos", "Tesouraria & Carteiras", "Receitas & Despesas", "Infraestrutura (Hardware & IA)", "Saques Recentes") com controle acessível via teclado e scroll suave para âncoras.
-3. **P3 — Grid de KPIs Quebrado**:
-   - `grid-cols-2 lg:grid-cols-5` com 5 itens deixa um card órfão esticado na última linha entre viewports pequenas e grandes.
-4. **P4 — Strings Hardcoded fora do i18n**:
-   - Em `TransparencyPage.tsx:354-357`, os cabeçalhos de tabela "Item / Descrição", "Provedor", "Valor USD" e "Status" estão fixos em português, aparecendo sem tradução nos idiomas inglês e espanhol.
-5. **Invariantes Financeiras e de Segurança**:
-   - Nenhum número será inventado ou estimado.
-   - Zero excessive data exposure: a página é pública, nenhum dado novo além dos já fornecidos pela API será exposto.
-   - Contrato da API de transparência preservado integralmente.
+Antes de qualquer edição em arquivos do projeto, o baseline de testes e typecheck foi catalogado dinamicamente:
+
+### 3.1 Testes da Feature `/dashboard`
+- **Comando**: `npx vitest run features/dashboard` (no diretório `client`)
+- **Resultado**: 12 arquivos de teste executados, **187 testes passando**, 0 falhas, 0 skips.
+- **Duração**: 6.20s.
+
+### 3.2 Suíte Global Backend
+- **Comando**: `npm test` (na raiz do projeto)
+- **Resultado**: 2386 testes executados, **2350 passaram**, **35 falhas pré-existentes**, 1 skipped.
+- **Causa das 35 falhas**: divergências pré-existentes de seed/dados no banco de teste local (`blockminer-current-db`).
+
+### 3.3 Typecheck Server
+- **Comando**: `npm run typecheck` (na raiz)
+- **Resultado**: **74 erros pré-existentes** catalogados (módulos auth, games, mining, rooms, shortlinks, wallet).
+
+### 3.4 Typecheck Client
+- **Comando**: `npm run typecheck` (no diretório `client`)
+- **Resultado**: **67 erros pré-existentes** catalogados (nenhum erro de compilação nos arquivos funcionais de `features/dashboard`; apenas 1 erro em `DashboardEnergyTaxModal.test.tsx` referente a mock de propriedade, componente intocado).
 
 ---
 
-## 5. Evidências Coletadas
+## 4. Superfície Mapeada da Feature `/dashboard`
+
+- **Página Principal**: `client/src/features/dashboard/DashboardPage.tsx` (531 linhas).
+- **Componentes**:
+  - `client/src/features/dashboard/components/dashboard.parts.tsx` (555 linhas): `DashboardCards`, `DashboardHistory`, `DashboardEfficiencyCard`, `DashboardActivityCard`.
+  - `client/src/features/dashboard/components/MiningAllocationPanel.tsx` (382 linhas): painel de alocação de poder de mineração.
+  - `client/src/features/dashboard/components/DashboardEnergyTaxModal.tsx` (373 linhas): **INTOCADO**, em produção com portal.
+  - `client/src/features/dashboard/components/DashboardBannersCarousel.tsx` (342 linhas): carrossel de banners com timer.
+- **Bibliotecas / Helpers**:
+  - `client/src/features/dashboard/lib/dashboard.api.ts`
+  - `client/src/features/dashboard/lib/dashboard.helpers.ts`
+  - `client/src/features/dashboard/lib/dashboard.errors.ts`
+  - `client/src/features/dashboard/lib/dashboard.config.ts`
+  - `client/src/features/dashboard/lib/useDashboardPoll.ts`
+  - `client/src/features/dashboard/lib/miningSocket.types.ts`
+  - `client/src/features/dashboard/lib/dashboardBalanceCurrency.ts`
+  - `client/src/features/dashboard/lib/dashboardCoinLogos.ts`
+  - `client/src/features/dashboard/lib/shared.ts`
+- **Internacionalização (i18n)**:
+  - Chave raiz `dashboard` com 103 chaves em `client/src/i18n/locales/{pt-BR,en,es}.json`.
+
+---
+
+## 5. Problemas Concretos Mapeados para Resolução
+
+1. **P1 — Badge "SINCRONIZADO" estático e falso**:
+   - `DashboardPage.tsx:309-313`: renderiza ícone de Wifi verde e texto `t('dashboard.synced')` sem qualquer leitura de estado de rede/polling.
+   - Solução: Conectar ao estado real do `useDashboardPoll` (estados: conectado/sincronizado, atualizando, reconectando/erro) com `aria-live="polite"`.
+2. **P2 — Localização em Espanhol (es.json)**:
+   - 85 das 103 chaves estão com valores em inglês (ex.: welcome, balance, speed, history_title, etc.).
+   - Solução: Traduzir prosa legítima para espanhol autêntico, mantendo idênticos apenas marcas e termos técnicos universais, documentando contagem exata.
+3. **P3 — Armadilha de Containing Block na Raiz**:
+   - `DashboardPage.tsx:299`: container raiz possui `space-y-10 animate-in fade-in duration-700`. Cria stacking context e quebra componentes com `position: fixed`.
+   - Solução: Mover a animação para o conteúdo interno que não afeta fixed elements, mantendo o container pai neutro e documentado.
+4. **P4 — Escala Inconsistente de Raios (Border Radius)**:
+   - Dispersão: `rounded-xl` (23), `rounded-2xl` (18), `rounded-full` (17), `rounded-3xl` (5), `rounded-lg` (4), `rounded-md` (2), `rounded-[2rem]` (1).
+   - Solução: Padronizar em escala coerente: `rounded-2xl` para cards principais, `rounded-xl` para subcards/inputs, `rounded-lg` para botões/pills pequenos, `rounded-full` para badges circulares e avatares.
+5. **P5 — Contraste WCAG AA**:
+   - 24 ocorrências de `text-gray-500`, `text-gray-600` e `text-gray-700` em textos de apoio sobre fundos escuros (`slate-900`/`slate-950`).
+   - Solução: Ajustar para `text-slate-400` / `text-slate-300`, garantindo ratio $\ge 4.5:1$.
+
+---
+
+## 6. Evidências da Fase 0
 
 ```text
 EVIDÊNCIA-ID: EV-0001
 Estado: VERIFICADO
-Comando: git status --short && git branch --show-current && git log -n 1 --oneline
-Ambiente: local (localhost)
-Resultado: Branch ativa 'feature/transparency-page-redesign' criada a partir de develop no commit d443356. Árvore limpa exceto arquivos pré-existentes não monitorados (.maestri/, imagens na raiz e symlinks tests/load e tests/integration/security).
+Comando: git checkout -b feature/dashboard-page-redesign
+Ambiente: local
+Resultado: Branch feature/dashboard-page-redesign criada a partir de develop (f4a5872)
 Arquivos: N/A
-Conclusão: Isolamento Git confirmado na branch designada para a tarefa.
-```
+Conclusão: Isolamento git estabelecido antes de qualquer modificação de código.
 
-```text
 EVIDÊNCIA-ID: EV-0002
 Estado: VERIFICADO
-Comando: docker ps
-Ambiente: local (localhost)
-Resultado: Containers 'blockminer-current-db' (porta 5442) e 'blockminer-current-redis' (porta 6389) ativos e saudáveis há mais de 6 horas.
-Arquivos: docker-compose.yml
-Conclusão: Banco de teste local e cache Redis isolados e disponíveis em localhost.
-```
+Comando: npx vitest run features/dashboard
+Ambiente: local
+Resultado: 12 arquivos de teste, 187 testes passando, 0 falhas
+Arquivos: client/src/features/dashboard/**/*
+Conclusão: Base de testes da feature 100% verde antes de alterações.
 
-```text
 EVIDÊNCIA-ID: EV-0003
 Estado: VERIFICADO
-Comando: npm test -- src/features/transparency (em client/)
-Ambiente: local (localhost / vitest v3.2.7)
-Resultado: 3/3 testes passando com 100% de sucesso em 350ms.
-Arquivos: client/src/features/transparency/__tests__/TransparencyPage.test.tsx
-Conclusão: Linha de base de testes do frontend de transparência verificada antes de qualquer alteração de código.
-```
-
-```text
-EVIDÊNCIA-ID: EV-0004
-Estado: VERIFICADO
-Comando: ./node_modules/.bin/tsx --import ./tests/_env-test-overrides.mjs --test --test-force-exit tests/transparency/*.test.mjs
-Ambiente: local (localhost / PostgreSQL 5442)
-Resultado: 68/68 testes de backend de transparência passando com 100% de sucesso em 2.82s.
-Arquivos: tests/transparency/*.test.mjs
-Conclusão: Backend do módulo de transparência íntegro e operacional no ambiente de testes.
-```
-
-```text
-EVIDÊNCIA-ID: EV-0005-BASELINE
-Estado: VERIFICADO
-Comando: timeout 180 npm test 2>&1 | grep "^not ok" | wc -l && (npm run typecheck 2>&1 | grep -c "error TS") && (cd client && npm run typecheck 2>&1 | grep -c "error TS")
-Ambiente: local (localhost)
-Resultado: 37 falhas pré-existentes na suíte global (oscilação documentada entre 35 e 45); 74 erros TS no server e 68 no client. Verificado 0 erros nos arquivos de transparência.
-Arquivos: tests/, server/, client/
-Conclusão: Baseline de falhas e dívida técnica pré-existente documentado e formalmente desvinculado do escopo desta tarefa.
+Comando: npm run typecheck (client) && npm run typecheck (server)
+Ambiente: local
+Resultado: 67 erros no client (0 em dashboard funcional, 1 em teste do modal intocado) e 74 no server
+Arquivos: Vários módulos
+Conclusão: Baselines de typecheck confirmados e classificados como pré-existentes.
 ```
 
 ---
 
-## 6. Gate da Fase 0
+## 7. Critérios do Gate da Fase 0
 
-- [x] Branch `feature/transparency-page-redesign` confirmada e registrada a partir de `develop`.
-- [x] Árvore inicial de arquivos inspecionada.
-- [x] Comandos reais de teste e build identificados e validados.
-- [x] Banco de dados de teste isolado e saudável em `127.0.0.1:5442`.
-- [x] Banco de produção `blockminer-db` estritamente resguardado.
-- [x] Baseline de 37 falhas pré-existentes na suíte e 142 erros de typecheck catalogados sem relação com a branch.
-- [x] Diagnóstico dos problemas P1 a P4 fundamentado na inspeção de código.
-- [x] Relatório `docs/auditoria/fase-00-reconhecimento.md` emitido com evidências EV-0001 a EV-0005-BASELINE.
-- [x] Estado do Gate G0: `VERIFICADO`.
+- [x] Branch criada antes de editar.
+- [x] Árvore inicial do Git e status documentados.
+- [x] Comandos reais do package.json verificados.
+- [x] Banco de testes e Redis locais identificados (`127.0.0.1:5442`, `127.0.0.1:6389`).
+- [x] Nenhuma conexão com banco de produção (`blockminer-db`).
+- [x] Falhas e erros pré-existentes catalogados e diferenciados.
+- [x] 187 testes da feature confirmados verdes.
+- [x] Orquestrador informado via `maestri ask`.
