@@ -105,7 +105,7 @@ describe('MiningAllocationPanel', () => {
       </I18nextProvider>,
     );
 
-    const overlay = document.querySelector('.fixed.inset-0');
+    const overlay = document.querySelector<HTMLElement>('.fixed.inset-0');
     expect(overlay).not.toBeNull();
     // Acceptance criterion: must be anchored in document.body
     expect(document.body).toContainElement(overlay);
