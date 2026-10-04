@@ -224,7 +224,7 @@ export default function DashboardEnergyTaxModal() {
       <div
         ref={modalCardRef}
         tabIndex={-1}
-        className="relative z-10 w-full max-w-lg rounded-t-3xl sm:rounded-3xl border-2 border-amber-500/40 bg-[#0d111d] text-white shadow-[0_0_35px_rgba(245,158,11,0.2),8px_8px_0px_#000000] flex flex-col gap-3 sm:gap-4 p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-5 sm:p-6 max-h-[min(92dvh,92vh)] overflow-y-auto outline-none transition-all my-auto"
+        className="relative z-10 w-full max-w-lg rounded-t-3xl sm:rounded-3xl border-2 border-amber-500/40 bg-surface text-white shadow-[0_0_35px_rgba(245,158,11,0.2),8px_8px_0px_#000000] flex flex-col gap-3 sm:gap-4 p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-5 sm:p-6 max-h-[min(92dvh,92vh)] overflow-y-auto outline-none transition-all my-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}

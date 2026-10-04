@@ -101,7 +101,7 @@ export function Chain2048Tile(props: Chain2048TileProps) {
   }, [num, slug]);
 
   const shellClass =
-    "relative flex aspect-square items-center justify-center overflow-hidden rounded border border-sky-500/35 bg-[#0a1628] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]";
+    "relative flex aspect-square items-center justify-center overflow-hidden rounded border border-sky-500/35 bg-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]";
 
   const content = tileInner(num, row, col, t, Boolean(reduceMotion), tileTransition, imgOk, () =>
     setImgOk(false),

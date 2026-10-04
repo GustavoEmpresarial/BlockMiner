@@ -72,7 +72,7 @@ function OrbitMiner() {
   }, []);
 
   if (failed) {
-    return <div className="w-full h-full bg-[#0B0F19]" />;
+    return <div className="w-full h-full bg-slate-950" />;
   }
 
   return <div ref={hostRef} className="w-full h-full" />;
@@ -87,7 +87,7 @@ export function StreamersMinerShowcase() {
         <p className="text-sm font-black text-white">{t('ranking.social.miner_static_title')}</p>
         <p className="text-[10px] text-gray-500">{t('ranking.social.miner_static_body')}</p>
         <video
-          className="w-full h-[280px] sm:h-[360px] rounded-2xl bg-[#0B0F19] object-contain"
+          className="w-full h-[280px] sm:h-[360px] rounded-2xl bg-slate-950 object-contain"
           src={STREAMERS_MINER_SPIN}
           autoPlay
           muted
@@ -98,7 +98,7 @@ export function StreamersMinerShowcase() {
       <section className="space-y-2">
         <p className="text-sm font-black text-white">{t('ranking.social.miner_orbit_title')}</p>
         <p className="text-[10px] text-gray-500">{t('ranking.social.miner_orbit_body')}</p>
-        <div className="w-full h-[280px] sm:h-[360px] rounded-2xl overflow-hidden bg-[#0B0F19]">
+        <div className="w-full h-[280px] sm:h-[360px] rounded-2xl overflow-hidden bg-slate-950">
           <OrbitMiner />
         </div>
       </section>

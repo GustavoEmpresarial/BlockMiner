@@ -18,9 +18,9 @@ export default function AuthShell({ children, hideAuthCta }: AuthShellProps) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden bg-[#020511] text-slate-100 flex flex-col">
+    <div className="relative min-h-screen overflow-x-hidden bg-background text-slate-100 flex flex-col">
       <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden>
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-950 via-[#020511] to-[#060a14]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-950 via-slate-950 to-slate-900" />
         <div className="absolute -top-48 left-1/2 h-[min(420px,70vw)] w-[min(420px,70vw)] -translate-x-1/2 rounded-full bg-sky-600/10 blur-3xl" />
         <div
           className="absolute inset-0 opacity-50"
@@ -32,7 +32,7 @@ export default function AuthShell({ children, hideAuthCta }: AuthShellProps) {
         />
       </div>
 
-      <header className="relative z-30 border-b border-white/[0.06] bg-[#02070f]/90 backdrop-blur-xl">
+      <header className="relative z-30 border-b border-white/[0.06] bg-slate-950/90 backdrop-blur-xl">
         <div className="mx-auto flex h-14 max-w-lg sm:max-w-xl items-center justify-between gap-3 px-4 sm:px-6">
           <Link to="/" className="flex items-center gap-2 min-w-0" aria-label={t('landing.nav.brand_aria')}>
             <BrandLogo variant="header" interactive />
@@ -68,7 +68,7 @@ export default function AuthShell({ children, hideAuthCta }: AuthShellProps) {
           </div>
         </div>
         {menuOpen && (
-          <div className="sm:hidden border-t border-white/[0.06] px-4 py-3 space-y-1 bg-[#02070f]">
+          <div className="sm:hidden border-t border-white/[0.06] px-4 py-3 space-y-1 bg-slate-950">
             <Link to="/" onClick={() => setMenuOpen(false)} className="block rounded-lg px-3 py-2.5 text-sm text-white hover:bg-white/5">
               {t('common.back', { defaultValue: 'Voltar' })}
             </Link>

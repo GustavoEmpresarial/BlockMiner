@@ -563,10 +563,10 @@ export default function GameSessionPage() {
   if (!activeGame) return null;
 
   return (
-    <div className="fixed inset-0 flex flex-col bg-[#020617]" style={{ direction: "ltr" }}>
+    <div className="fixed inset-0 flex flex-col bg-slate-950" style={{ direction: "ltr" }}>
       {/* Loading overlay until game:started fires */}
       {!sessionReady && (
-        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-[#020617]">
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-slate-950">
           <div className="h-24 w-24 animate-spin rounded-full border-8 border-primary border-t-transparent" />
           <p className="animate-pulse text-center text-sm font-black uppercase tracking-[0.25em] text-white sm:tracking-[0.6em]">
             {t("minerGames.syncing")}
@@ -584,7 +584,7 @@ export default function GameSessionPage() {
             <div
               className={
                 activeGame === "sky"
-                  ? "relative overflow-hidden rounded-[1.75rem] border border-cyan-300/30 bg-[#010617] shadow-[0_24px_80px_rgba(2,8,23,0.9),0_0_70px_rgba(14,165,233,0.18)]"
+                  ? "relative overflow-hidden rounded-[1.75rem] border border-cyan-300/30 bg-slate-950 shadow-[0_24px_80px_rgba(2,8,23,0.9),0_0_70px_rgba(14,165,233,0.18)]"
                   : "relative overflow-hidden rounded-2xl border-2 border-slate-700 bg-black shadow-[0_0_50px_rgba(0,0,0,0.5)]"
               }
               style={getCanvasViewportStyle(activeGame)}

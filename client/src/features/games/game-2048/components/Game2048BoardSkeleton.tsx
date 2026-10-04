@@ -29,7 +29,7 @@ export function Game2048BoardSkeleton({ t, labelKey }: Game2048BoardSkeletonProp
         {Array.from({ length: n * n }, (_, i) => (
           <div
             key={`sk-${i}`}
-            className="rounded-md border border-sky-800/35 bg-[#0c1929]/95 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]"
+            className="rounded-md border border-sky-800/35 bg-slate-900/95 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]"
           />
         ))}
       </div>

@@ -73,9 +73,9 @@ describe('CookieConsentBanner', () => {
   it('renders as a floating card with a solid (non-transparent) background — regression for the "blends into the page" complaint', () => {
     renderBanner();
     const card = screen.getByRole('region').firstElementChild as HTMLElement;
-    // Tailwind's bg-[#0a0f1c] arbitrary-value class must be present verbatim, not a
+    // Tailwind's solid bg-slate-900 token must be present verbatim, not a
     // translucent/blur variant — this is what makes the popup legible over any page bg.
-    expect(card.className).toMatch(/bg-\[#0a0f1c\]/);
+    expect(card.className).toMatch(/bg-slate-900/);
     expect(card.className).not.toMatch(/backdrop-blur|bg-\S+\/[1-5]0\b/);
   });
 });

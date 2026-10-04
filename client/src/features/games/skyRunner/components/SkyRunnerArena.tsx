@@ -248,7 +248,7 @@ export const SkyRunnerArena = memo(function SkyRunnerArena({
         e.preventDefault();
         flap();
       }}
-      className="relative h-full w-full select-none overflow-hidden bg-[#020617]"
+      className="relative h-full w-full select-none overflow-hidden bg-slate-950"
       style={{ touchAction: "manipulation" }}
     >
       <canvas ref={canvasRef} className="block h-full w-full" />
