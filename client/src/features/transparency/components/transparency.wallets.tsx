@@ -45,9 +45,9 @@ export function WalletCard({ wallet, loading }: { wallet: TrackedWalletEntry; lo
   };
 
   return (
-    <div className={`rounded-2xl border ${isDeprecated ? 'border-red-500/40' : cfg.border} ${isDeprecated ? 'bg-red-950/10' : cfg.bg} overflow-hidden`}>
-      <div className={`flex items-center gap-3 px-5 py-3.5 border-b ${isDeprecated ? 'border-red-500/20 bg-red-500/5' : `${cfg.headerBorder} ${cfg.headerBg}`}`}>
-        <div className={`w-8 h-8 rounded-xl ${isDeprecated ? 'bg-red-500/15' : cfg.iconBg} flex items-center justify-center shrink-0`}>
+    <div className={`rounded-3xl border-2 ${isDeprecated ? 'border-red-500/50 bg-red-950/20' : `${cfg.border} ${cfg.bg}`} overflow-hidden shadow-[4px_4px_0px_#000000]`}>
+      <div className={`flex items-center gap-3 px-5 py-3.5 border-b ${isDeprecated ? 'border-red-500/25 bg-red-500/10' : `${cfg.headerBorder} ${cfg.headerBg}`}`}>
+        <div className={`w-8 h-8 rounded-xl ${isDeprecated ? 'bg-red-500/15' : cfg.iconBg} flex items-center justify-center shrink-0 shadow-[1px_1px_0px_#000000]`}>
           <Wallet className={`w-4 h-4 ${isDeprecated ? 'text-red-400' : cfg.iconColor}`} aria-hidden="true" />
         </div>
         <div className="min-w-0 flex-1">
@@ -55,47 +55,47 @@ export function WalletCard({ wallet, loading }: { wallet: TrackedWalletEntry; lo
           <p className={`text-[10px] font-bold uppercase tracking-widest ${isDeprecated ? 'text-red-400' : cfg.iconColor}`}>{modeLabel}</p>
         </div>
         {isDeprecated && (
-          <span className="shrink-0 text-[9px] font-black px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 uppercase tracking-wider flex items-center gap-1">
+          <span className="shrink-0 text-[9px] font-black px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 uppercase tracking-wider flex items-center gap-1 border border-red-500/30">
             <AlertTriangle className="w-2.5 h-2.5" aria-hidden="true" />
             {t('transparency.wallets.deprecated_badge')}
           </span>
         )}
         {!isDeprecated && wallet.isActive === false && (
-          <span className="shrink-0 text-[9px] font-black px-2 py-0.5 rounded-full bg-gray-500/15 text-gray-400 uppercase tracking-wider">{t('transparency.wallets.inactive_badge')}</span>
+          <span className="shrink-0 text-[9px] font-black px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 uppercase tracking-wider border border-slate-700">{t('transparency.wallets.inactive_badge')}</span>
         )}
       </div>
 
       {isDeprecated && (
-        <div className="mx-4 mt-4 rounded-xl border border-red-500/30 bg-red-950/40 px-4 py-3 flex items-start gap-3">
+        <div className="mx-4 mt-4 rounded-2xl border-2 border-red-500/30 bg-red-950/40 px-4 py-3 flex items-start gap-3 shadow-[2px_2px_0px_#000000]">
           <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" aria-hidden="true" />
           <div>
             <p className="text-xs font-black text-red-300 uppercase tracking-wider mb-0.5">{t('transparency.wallets.deprecated_badge')}</p>
-            <p className="text-[11px] text-red-300/70 leading-relaxed">{t('transparency.wallets.deprecated_description')}</p>
+            <p className="text-[11px] text-red-300/80 leading-relaxed">{t('transparency.wallets.deprecated_description')}</p>
           </div>
         </div>
       )}
 
       <div className="p-5 space-y-4">
-        <div className="flex items-center gap-2 bg-black/20 rounded-xl px-3 py-2">
-          <code className="text-[11px] text-gray-400 font-mono break-all flex-1 select-all">{wallet.address}</code>
+        <div className="flex items-center gap-2 bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2 shadow-[2px_2px_0px_#000000]">
+          <code className="text-[11px] text-slate-300 font-mono break-all flex-1 select-all">{wallet.address}</code>
           <button
             onClick={handleCopy}
-            className="shrink-0 p-1.5 rounded-lg hover:bg-white/10 text-gray-500 hover:text-gray-300 transition-colors"
+            className="shrink-0 p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
             aria-label={copied ? t('transparency.wallets.copied') : t('transparency.wallets.copy_address')}
           >
-            {copied ? <CheckIcon className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+            {copied ? <CheckIcon className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
           </button>
           <a
             href={explorerUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="shrink-0 p-1.5 rounded-lg hover:bg-white/10 text-gray-500 hover:text-gray-300 transition-colors"
+            className="shrink-0 p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
           >
-            <ExternalLink className="w-3 h-3" />
+            <ExternalLink className="w-3.5 h-3.5" />
           </a>
         </div>
 
-        <div className={`rounded-xl border ${isDeprecated ? 'border-red-500/15' : isManualValue ? 'border-amber-500/25' : 'border-white/8'} bg-black/20 p-4`}>
+        <div className={`rounded-2xl border-2 ${isDeprecated ? 'border-red-500/20' : isManualValue ? 'border-amber-500/30' : 'border-slate-800'} bg-slate-950/80 p-4 shadow-[3px_3px_0px_#000000]`}>
           <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-2 flex-wrap">
             <span>
               {isManualValue ? t('transparency.wallets.manual_value_label', 'Valor declarado') : modeLabel}
@@ -134,22 +134,22 @@ export function WalletCard({ wallet, loading }: { wallet: TrackedWalletEntry; lo
                         )}
                         {isInvestment && investmentBreakdown && (
                           <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                            <div className="rounded-lg bg-white/5 px-3 py-2">
-                              <p className="text-[10px] uppercase tracking-widest text-gray-500">Saldo Liquido</p>
-                              <p className="text-sm font-black text-white">
+                            <div className="rounded-xl bg-slate-900/70 border border-slate-800 px-3 py-2 shadow-[2px_2px_0px_#000000]">
+                              <p className="text-[10px] uppercase tracking-wider font-extrabold text-slate-400">Saldo Líquido</p>
+                              <p className="text-sm font-black text-white font-mono">
                                 ${investmentBreakdown.liquidUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               </p>
                             </div>
-                            <div className="rounded-lg bg-white/5 px-3 py-2">
-                              <p className="text-[10px] uppercase tracking-widest text-gray-500">LPs Ativas</p>
-                              <p className="text-sm font-black text-white">
+                            <div className="rounded-xl bg-slate-900/70 border border-slate-800 px-3 py-2 shadow-[2px_2px_0px_#000000]">
+                              <p className="text-[10px] uppercase tracking-wider font-extrabold text-slate-400">LPs Ativas</p>
+                              <p className="text-sm font-black text-white font-mono">
                                 ${investmentBreakdown.lpUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               </p>
                             </div>
                             {investmentBreakdown.liquidStableUsd > 0 && (
-                              <div className="rounded-lg bg-white/5 px-3 py-2 sm:col-span-2">
-                                <p className="text-[10px] uppercase tracking-widest text-gray-500">Stablecoins Liquidas</p>
-                                <p className="text-sm font-black text-white">
+                              <div className="rounded-xl bg-slate-900/70 border border-slate-800 px-3 py-2 sm:col-span-2 shadow-[2px_2px_0px_#000000]">
+                                <p className="text-[10px] uppercase tracking-wider font-extrabold text-slate-400">Stablecoins</p>
+                                <p className="text-sm font-black text-emerald-400 font-mono">
                                   ${investmentBreakdown.liquidStableUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </p>
                               </div>
@@ -250,11 +250,11 @@ export function LiquidityPoolsPanel({ wallets }: { wallets: TrackedWalletEntry[]
       <div className="space-y-4">
         <div className="flex items-center gap-2">
           <ImageIcon className="w-4 h-4 text-violet-400" aria-hidden="true" />
-          <p className="text-xs font-black text-gray-400 uppercase tracking-widest">
+          <p className="text-xs font-black text-slate-300 uppercase tracking-widest">
             {t('transparency.wallets.tab_liquidity_pools')}
           </p>
         </div>
-        <div className="rounded-2xl border border-white/8 bg-white/2 px-4 py-8 text-center text-sm text-gray-500">
+        <div className="rounded-3xl border-2 border-slate-800 bg-slate-900/60 p-6 text-center text-sm text-slate-400 shadow-[4px_4px_0px_#000000]">
           {t('transparency.wallets.no_liquidity_pools')}
         </div>
       </div>
@@ -265,7 +265,7 @@ export function LiquidityPoolsPanel({ wallets }: { wallets: TrackedWalletEntry[]
     <div className="space-y-4">
       <div className="flex items-center gap-2">
         <ImageIcon className="w-4 h-4 text-violet-400" aria-hidden="true" />
-        <p className="text-xs font-black text-gray-400 uppercase tracking-widest">
+        <p className="text-xs font-black text-slate-300 uppercase tracking-widest">
           {t('transparency.wallets.tab_liquidity_pools')}
         </p>
       </div>
@@ -273,10 +273,10 @@ export function LiquidityPoolsPanel({ wallets }: { wallets: TrackedWalletEntry[]
         {Object.entries(grouped).map(([chainName, chainPools]) => (
           <div key={chainName} className="space-y-3">
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-black uppercase tracking-widest rounded-full px-2.5 py-1 bg-emerald-500/10 text-emerald-300">
+              <span className="text-[10px] font-black uppercase tracking-wider rounded-full px-3 py-1 bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 shadow-[1px_1px_0px_#000000]">
                 {chainName}
               </span>
-              <span className="text-[10px] text-gray-500">
+              <span className="text-xs text-slate-400 font-medium">
                 {chainPools.length} pool{chainPools.length !== 1 ? 's' : ''}
               </span>
             </div>
@@ -287,11 +287,11 @@ export function LiquidityPoolsPanel({ wallets }: { wallets: TrackedWalletEntry[]
                   href={nft.explorerUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="overflow-hidden rounded-3xl border border-emerald-500/15 bg-gradient-to-b from-emerald-950/20 to-slate-950/40 hover:border-emerald-500/30 shadow-lg shadow-emerald-950/10 transition-colors group"
+                  className="overflow-hidden rounded-3xl border-2 border-emerald-500/25 bg-gradient-to-b from-slate-900 via-emerald-950/20 to-slate-950/70 hover:border-emerald-500/40 shadow-[4px_4px_0px_#000000] transition-all group"
                 >
                   <div className="p-3 pb-0">
                     {nft.imageUrl ? (
-                      <div className="w-full overflow-hidden rounded-2xl border border-white/8 bg-black/20 flex items-center justify-center" style={{ minHeight: 320 }}>
+                      <div className="w-full overflow-hidden rounded-2xl border-2 border-slate-800 bg-black/40 flex items-center justify-center shadow-[2px_2px_0px_#000000]" style={{ minHeight: 320 }}>
                         <div className="h-full w-full max-w-[220px] flex items-center justify-center" style={{ aspectRatio: '10 / 16' }}>
                           <img
                             src={nft.imageUrl}
@@ -305,9 +305,9 @@ export function LiquidityPoolsPanel({ wallets }: { wallets: TrackedWalletEntry[]
                         </div>
                       </div>
                     ) : (
-                      <div className="flex items-center justify-center rounded-2xl border border-white/8 bg-violet-950/20" style={{ minHeight: 320 }}>
+                      <div className="flex items-center justify-center rounded-2xl border-2 border-slate-800 bg-violet-950/30 shadow-[2px_2px_0px_#000000]" style={{ minHeight: 320 }}>
                         <div className="h-full w-full max-w-[220px] flex items-center justify-center" style={{ aspectRatio: '10 / 16' }}>
-                          <ImageIcon className="w-10 h-10 text-violet-900" aria-hidden="true" />
+                          <ImageIcon className="w-10 h-10 text-violet-400" aria-hidden="true" />
                         </div>
                       </div>
                     )}
@@ -367,13 +367,13 @@ function formatUsd(value: number | string): string {
 function ExternalInvestmentCard({ investment }: { investment: ExternalInvestment }) {
   const { t } = useTranslation();
   return (
-    <div className="rounded-2xl border border-white/8 bg-white/2 p-5 space-y-4">
+    <div className="rounded-2xl border-2 border-slate-800 bg-slate-900/60 p-5 space-y-4 shadow-[3px_3px_0px_#000000]">
       <div className="flex items-center gap-3">
         {investment.imageUrl ? (
-          <img src={investment.imageUrl} alt="" className="h-10 w-10 rounded-lg object-cover border border-white/10" />
+          <img src={investment.imageUrl} alt="" className="h-10 w-10 rounded-xl object-cover border border-slate-700 shadow-[1px_1px_0px_#000000]" />
         ) : (
-          <div className="h-10 w-10 rounded-lg bg-white/5 border border-white/10 grid place-items-center">
-            <TrendingUp className="w-5 h-5 text-gray-500" aria-hidden="true" />
+          <div className="h-10 w-10 rounded-xl bg-violet-500/10 border border-violet-500/30 grid place-items-center text-violet-400 shadow-[1px_1px_0px_#000000]">
+            <TrendingUp className="w-5 h-5 text-violet-400" aria-hidden="true" />
           </div>
         )}
         <div className="min-w-0 flex-1">
@@ -393,27 +393,27 @@ function ExternalInvestmentCard({ investment }: { investment: ExternalInvestment
       </div>
 
       {investment.description && (
-        <p className="text-xs leading-relaxed text-gray-400">{investment.description}</p>
+        <p className="text-xs leading-relaxed text-slate-300 font-medium">{investment.description}</p>
       )}
 
-      <div className="grid grid-cols-2 gap-3 border-t border-white/8 pt-3">
+      <div className="grid grid-cols-2 gap-3 border-t border-slate-800 pt-3">
         <div>
-          <p className="text-[10px] uppercase tracking-widest text-gray-600">
+          <p className="text-[10px] uppercase tracking-wider font-extrabold text-slate-400">
             {t('transparency.external_investments.invested', 'Investido')}
           </p>
-          <p className="text-sm font-black text-white">{formatUsd(investment.amountInvestedUsd)}</p>
+          <p className="text-sm font-black text-white font-mono">{formatUsd(investment.amountInvestedUsd)}</p>
         </div>
         <div>
-          <p className="text-[10px] uppercase tracking-widest text-gray-600">
+          <p className="text-[10px] uppercase tracking-wider font-extrabold text-slate-400">
             {t('transparency.external_investments.withdrawn', 'Sacado')}
           </p>
-          <p className="text-sm font-black text-white">{formatUsd(investment.amountWithdrawnUsd)}</p>
+          <p className="text-sm font-black text-white font-mono">{formatUsd(investment.amountWithdrawnUsd)}</p>
         </div>
       </div>
 
       {investment.roiForecast && (
-        <div className="rounded-xl border border-violet-500/20 bg-violet-500/5 px-3 py-2">
-          <p className="text-[10px] uppercase tracking-widest text-violet-400">
+        <div className="rounded-xl border border-violet-500/20 bg-violet-500/10 px-3 py-2">
+          <p className="text-[10px] uppercase tracking-wider font-extrabold text-violet-300">
             {t('transparency.external_investments.roi_forecast', 'Previsão de ROI')}
           </p>
           <p className="text-xs font-bold text-violet-200">{investment.roiForecast}</p>
@@ -439,16 +439,16 @@ function ExternalInvestmentsPanel() {
   }, []);
 
   if (investments === null) {
-    return <div className="rounded-2xl border border-white/8 bg-white/2 h-48 animate-pulse" />;
+    return <div className="rounded-3xl border-2 border-slate-800 bg-slate-900/40 h-48 animate-pulse shadow-[4px_4px_0px_#000000]" />;
   }
 
   if (investments.length === 0) {
     return (
-      <div className="rounded-2xl border border-white/8 bg-white/2 px-4 py-10 text-center">
+      <div className="rounded-3xl border-2 border-slate-800 bg-slate-900/60 px-4 py-10 text-center shadow-[4px_4px_0px_#000000]">
         <p className="text-sm font-black text-white uppercase tracking-widest">
           {t('transparency.wallets.tab_external_investments', 'Outros Investimentos')}
         </p>
-        <p className="mt-2 text-sm text-gray-500">
+        <p className="mt-2 text-sm text-slate-400">
           {t('transparency.external_investments.empty', 'Nenhum investimento externo cadastrado no momento.')}
         </p>
       </div>
@@ -535,10 +535,10 @@ export function WalletsLiveSection() {
               key={tabKey}
               type="button"
               onClick={() => setActiveTab(tabKey)}
-              className={`rounded-xl px-4 py-2 text-xs font-black uppercase tracking-widest transition-colors ${
+              className={`rounded-xl px-4 py-2 text-xs font-black uppercase tracking-widest transition-all ${
                 active
-                  ? 'bg-violet-500/15 text-violet-300 border border-violet-500/30'
-                  : 'bg-black/20 text-gray-500 border border-white/8 hover:text-gray-300 hover:bg-white/5'
+                  ? 'bg-violet-500/20 text-white border-2 border-violet-500/40 shadow-[2px_2px_0px_#000000]'
+                  : 'bg-slate-950/60 text-slate-400 border-2 border-slate-800 hover:text-white hover:border-slate-700'
               }`}
             >
               {label}
@@ -550,16 +550,16 @@ export function WalletsLiveSection() {
       {activeTab === 'overview' && (
         <>
       <div className="flex items-center gap-2">
-        <Wallet className="w-4 h-4 text-gray-500" aria-hidden="true" />
-        <p className="text-xs font-black text-gray-400 uppercase tracking-widest">{t('transparency.wallets.section_title')}</p>
+        <Wallet className="w-4 h-4 text-violet-400" aria-hidden="true" />
+        <p className="text-xs font-black text-slate-300 uppercase tracking-widest">{t('transparency.wallets.section_title')}</p>
         {warming && (
-          <span className="ml-2 flex items-center gap-1.5 text-[10px] text-amber-500">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+          <span className="ml-2 flex items-center gap-1.5 text-[10px] text-amber-400 font-medium">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
             {t('transparency.wallets.warming')}
           </span>
         )}
         {data?.polUsdPrice != null && (
-          <span className="ml-auto text-[10px] text-gray-600">
+          <span className="ml-auto text-xs font-mono font-medium text-slate-400">
             1 POL ≈ ${data.polUsdPrice.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 })} USD
           </span>
         )}
@@ -567,7 +567,7 @@ export function WalletsLiveSection() {
       {(loading || warming) && !wallets.length ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {[1, 2, 3, 4].map(i => (
-            <div key={i} className="rounded-2xl border border-white/8 bg-white/2 h-48 animate-pulse" />
+            <div key={i} className="rounded-3xl border-2 border-slate-800 bg-slate-900/40 h-48 animate-pulse shadow-[4px_4px_0px_#000000]" />
           ))}
         </div>
       ) : (
@@ -584,7 +584,7 @@ export function WalletsLiveSection() {
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 text-amber-400" aria-hidden="true" />
-                <p className="text-xs font-black text-gray-400 uppercase tracking-widest">
+                <p className="text-xs font-black text-slate-400 uppercase tracking-widest">
                   {t('transparency.wallets.legacy_section_title')}
                 </p>
               </div>
@@ -605,15 +605,15 @@ export function WalletsLiveSection() {
       )}
 
       {activeTab === 'liquidity_pools' && (loading || warming) && !wallets.length && (
-        <div className="rounded-2xl border border-white/8 bg-white/2 h-48 animate-pulse" />
+        <div className="rounded-3xl border-2 border-slate-800 bg-slate-900/40 h-48 animate-pulse shadow-[4px_4px_0px_#000000]" />
       )}
 
       {activeTab === 'bot_sport' && (
-        <div className="rounded-2xl border border-white/8 bg-white/2 px-4 py-10 text-center">
+        <div className="rounded-3xl border-2 border-slate-800 bg-slate-900/60 px-4 py-10 text-center shadow-[4px_4px_0px_#000000]">
           <p className="text-sm font-black text-white uppercase tracking-widest">
             {t('transparency.wallets.tab_bot_sport')}
           </p>
-          <p className="mt-2 text-sm text-gray-500">
+          <p className="mt-2 text-sm text-slate-400">
             {t('transparency.wallets.coming_soon')}
           </p>
         </div>

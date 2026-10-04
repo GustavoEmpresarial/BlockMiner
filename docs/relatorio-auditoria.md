@@ -2171,16 +2171,18 @@ Executado através de `tests/security/run-kali-energy-tax-audit.sh` utilizando o
 
 ## 2. Antes e Depois das Correções
 
-### 2.1 P1 — Hierarquia Visual Rica e Temática
-- **Antes**: Todas as seções tinham o mesmo aspecto visual indistinto e monótono: cartões escuros com bordas tênues cinzas.
-- **Depois**: Cada grupo temático ganhou personalidade visual distinta alinhada à estética cyberpunk do BlockMiner:
-  - **Hero**: Gradiente profundo com micro-glow em azul e badge animado de sincronização on-chain.
+### 2.1 P1 — Hierarquia Visual Rica e Temática em Todas as Seções
+- **Antes**: Todas as seções tinham o mesmo aspecto visual indistinto e monótono: cartões escuros com bordas tênues cinzas (`border-white/8` e `bg-white/[0.02]` repetidos 20 vezes na árvore de transparência). A metade inferior da página (`transparency.wallets.tsx`, `transparency.hardware.tsx`, `transparency.withdrawals.tsx`, `transparency.ai-models.tsx`) continuava empilhando caixas cinzas sem distinção visual.
+- **Depois**: 100% das cascas antigas (`border-white/8`, `bg-white/[0.02]`, `bg-white/2`) foram eliminadas em todos os componentes de transparência. Cada grupo temático ganhou personalidade visual tátil e hierárquica no padrão cyberpunk do BlockMiner:
+  - **Hero**: Gradiente profundo com micro-glow em azul e badge animado de sincronização on-chain (`border-2 border-slate-800 bg-gradient-to-br from-[#0c1220] via-slate-900 to-[#101b33] shadow-[0_0_35px_rgba(59,130,246,0.1),6px_6px_0px_#000000]`).
   - **KPIs**: Cartões táteis `border-2 border-slate-800/80 bg-slate-900/60 shadow-[4px_4px_0px_#000000]` com cores semânticas (azul para despesas, verde para receitas, verde/vermelho para saldo líquido positivo/deficitário, âmbar para anual e violeta para tesouraria).
   - **Gráficos Recharts**: Donut e Barras em cartões de alto contraste com tooltips escurecidos e lista textual adjacente acessível a leitores de tela.
   - **Tabela de Custos**: Livro-razão contábil elegante com cabeçalhos semânticos e tags de status (`Pago` / `Pendente`).
-  - **Receitas**: Contêiner temático esmeralda com cartões de patrocinadores e provedores.
-  - **Tesouraria & Carteiras**: Visual on-chain com chips de rede Polygon, verificação de endereço e botão de cópia.
-  - **Infraestrutura 3D**: Visor industrial de mineração ASIC com visualizador 3D `@google/model-viewer` e modelos 3D de IA.
+  - **Receitas**: Contêiner temático esmeralda com cartões de patrocinadores e provedores (`border-2 border-emerald-500/30 bg-emerald-950/15 shadow-[4px_4px_0px_#000000]`).
+  - **Tesouraria & Carteiras (`transparency.wallets.tsx`)**: Eliminadas todas as 12 cascas antigas; adotados cartões táteis `border-2 border-slate-800 bg-slate-950/80 shadow-[3px_3px_0px_#000000]`, chips de endereço com botão de cópia e links externos.
+  - **Hardware ASIC (`transparency.hardware.tsx`)**: Eliminadas todas as 5 cascas antigas; contêiner temático âmbar `border-2 border-amber-500/30 bg-gradient-to-br from-[#0c1220] via-slate-900 to-amber-950/15 shadow-[4px_4px_0px_#000000]`, especificações em caixas de alto contraste e histórico de lucros Lightning estilizado.
+  - **Infraestrutura IA 3D (`transparency.ai-models.tsx`)**: Contêiner violeta `border-2 border-violet-500/30 bg-gradient-to-br from-[#0c1220] via-slate-900 to-violet-950/15 shadow-[4px_4px_0px_#000000]`, botões de seleção táteis com micro-sombras e visualizador 3D com controles integrados.
+  - **Saques (`transparency.withdrawals.tsx`)**: Eliminadas todas as 3 cascas antigas; contêiner sky `border-2 border-sky-500/30 bg-gradient-to-br from-slate-900 via-sky-950/15 to-slate-900 shadow-[4px_4px_0px_#000000]` com caixas de dados financeiro em `font-mono`.
 
 ### 2.2 P2 — Barra de Navegação Rápida com Abas e Âncoras
 - **Antes**: Scroll vertical contínuo de mais de 3.000 pixels para percorrer 11 seções sem atalhos.
@@ -2208,6 +2210,30 @@ Executado através de `tests/security/run-kali-energy-tax-audit.sh` utilizando o
 ### 2.5 A11Y-02 — MethodologyModal com Portal e Focus Trap
 - **Antes**: Renderizado na árvore DOM com `z-50`, sem portal, sem captura de ESC e sem controle de foco.
 - **Depois**: Refatorado para `createPortal(..., document.body)` com `z-[9999]`, lock de scroll no `document.body` com compensação de largura de barra de rolagem, captura da tecla `Escape`, e focus trap cíclico garantido com `Tab` e `Shift+Tab`.
+
+### 2.6 Auditoria Comparativa de i18n em Espanhol (`es.json`)
+- **Antes**: 127 das 235 chaves estavam idênticas ao inglês, com prosa pura não traduzida (inclusive título, subtítulo, descrição da página, badges e erros).
+- **Depois**:
+  - **217 chaves** traduzidas para espanhol autêntico e natural.
+  - Apenas **18 chaves** permanecem legitimamente idênticas ao inglês por se tratarem estritamente de nomes próprios, marcas registradas, pares de moedas e termos técnicos universais da indústria:
+    1. `admin.no`: `'No'` (vocábulo idêntico em espanhol e inglês)
+    2. `admin.wallet_col_amount`: `'POL'` (símbolo de token Polygon)
+    3. `admin.wallet_col_tx`: `'Tx'` (abreviação técnica de Transaction)
+    4. `category.legal`: `'Legal'` (vocábulo idêntico em espanhol e inglês)
+    5. `category.marketing`: `'Marketing'` (termo universal de indústria)
+    6. `hardware.manufacturer`: `'Bitmain'` (marca do fabricante de ASIC)
+    7. `hardware.model`: `'Antminer S19J Pro'` (modelo de hardware de mineração)
+    8. `hardware.profit_btc_price`: `'BTC/USD'` (par cambial)
+    9. `hardware.profit_sats`: `'Satoshis'` (unidade do protocolo Bitcoin)
+    10. `hardware.profit_usd`: `'USD'` (símbolo monetário)
+    11. `hardware.spec_hashrate`: `'Hashrate'` (termo técnico de mineração)
+    12. `methodology.manual_title`: `'Manual (admin)'` (classificação de lançamento)
+    13. `wallet.debank`: `'DeBank'` (marca de explorador DeFi)
+    14. `wallet.polygonscan`: `'Polygonscan'` (marca de explorador blockchain)
+    15. `wallets.multi_chain`: `'Multi-Chain'` (termo técnico blockchain)
+    16. `wallets.off_chain_badge`: `'Off-chain'` (termo técnico contábil)
+    17. `wallets.tab_bot_sport`: `'Bot Sport'` (nome próprio de produto)
+    18. `withdrawals.hot_wallets`: `'hot wallets'` (termo técnico de custódia)
 
 ---
 

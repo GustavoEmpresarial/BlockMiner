@@ -404,6 +404,45 @@ describe('TransparencyPage (Public Portal)', () => {
     expect(screen.getByText('Antminer S19J Pro')).toBeInTheDocument();
   });
 
+  it('P1 — applies rich visual hierarchy to all heavy sections (withdrawals, hardware, AI, income)', async () => {
+    renderWithI18n(<Transparency />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('withdrawals-section')).toBeInTheDocument();
+      expect(screen.getByTestId('hardware-asset-card')).toBeInTheDocument();
+      expect(screen.getByTestId('ai-infrastructure-3d-section')).toBeInTheDocument();
+      expect(screen.getByTestId('income-section')).toBeInTheDocument();
+      expect(screen.getByTestId('expenses-table-section')).toBeInTheDocument();
+    });
+
+    // Verify tactile borders and shadows across all heavy sections (no border-white/8 or bg-white/2)
+    const withdrawalsSection = screen.getByTestId('withdrawals-section');
+    expect(withdrawalsSection).toHaveClass('border-2', 'border-sky-500/30');
+
+    const hardwareSection = screen.getByTestId('hardware-asset-card');
+    expect(hardwareSection).toHaveClass('border-2', 'border-amber-500/30');
+
+    const aiSection = screen.getByTestId('ai-infrastructure-3d-section');
+    expect(aiSection).toHaveClass('border-2', 'border-violet-500/30');
+
+    const incomeSection = screen.getByTestId('income-section');
+    expect(incomeSection).toHaveClass('border-2', 'border-emerald-500/30');
+
+    const expensesSection = screen.getByTestId('expenses-table-section');
+    expect(expensesSection).toHaveClass('border-2', 'border-slate-800');
+  });
+
+  it('Spanish translation — renders genuine Spanish prose for page titles, badges, and errors', async () => {
+    i18n.changeLanguage('es');
+    renderWithI18n(<Transparency />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { level: 1, name: 'Portal de Transparencia' })).toBeInTheDocument();
+      expect(screen.getByText('BlockMiner — Costes operativos e inversiones')).toBeInTheDocument();
+      expect(screen.getByText('100% Transparente')).toBeInTheDocument();
+    });
+  });
+
   it('barrel index re-exports TransparencyPage correctly', async () => {
     const barrel = await import('../index');
     expect(barrel.TransparencyPage).toBeDefined();
