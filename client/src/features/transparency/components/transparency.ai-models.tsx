@@ -183,7 +183,6 @@ export function Generic3DViewer({ src, fallbackImg, alt }: { src: string; fallba
 }
 
 export function AiInfrastructure3DSection() {
-  const { t } = useTranslation();
   const [selectedId, setSelectedId] = useState<string>('claude');
   const [scriptReady, setScriptReady] = useState(false);
 
@@ -204,18 +203,18 @@ export function AiInfrastructure3DSection() {
   return (
     <section
       data-testid="ai-infrastructure-3d-section"
-      className="rounded-2xl border border-white/10 bg-slate-900/90 overflow-hidden shadow-xl"
+      className="rounded-3xl border-2 border-violet-500/30 bg-gradient-to-br from-[#0c1220] via-slate-900 to-violet-950/15 overflow-hidden shadow-[4px_4px_0px_#000000]"
     >
       {/* ── Compact Header ─────────────────────────────────────────────── */}
-      <header className="px-5 py-3 border-b border-white/10 flex flex-wrap items-center justify-between gap-3 bg-slate-950/60">
+      <header className="px-5 sm:px-6 py-4 border-b border-violet-500/20 flex flex-wrap items-center justify-between gap-3 bg-violet-950/20">
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-primary/10 border border-primary/25 flex items-center justify-center shadow-sm">
-            <Sparkles className="w-3.5 h-3.5 text-primary" />
+          <div className="w-8 h-8 rounded-xl bg-violet-500/15 border border-violet-500/30 flex items-center justify-center text-violet-400 shadow-[2px_2px_0px_#000000]">
+            <Sparkles className="w-4 h-4 text-violet-400" />
           </div>
           <div>
-            <h2 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
+            <h2 className="text-xs font-black text-violet-300 uppercase tracking-wider flex items-center gap-2">
               Modelos 3D de IA & Infraestrutura
-              <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[9px] font-black text-primary uppercase border border-primary/25">
+              <span className="rounded-full bg-violet-500/20 px-2 py-0.5 text-[9px] font-black text-violet-300 uppercase border border-violet-500/30 shadow-[1px_1px_0px_#000000]">
                 .GLB Interativo
               </span>
             </h2>
@@ -223,7 +222,7 @@ export function AiInfrastructure3DSection() {
         </div>
 
         {/* Model Selector Pills */}
-        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-950/80 border border-white/10">
+        <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-slate-950/90 border border-slate-800 shadow-[2px_2px_0px_#000000]">
           {SUBSCRIPTION_MODELS.map((item) => {
             const isSelected = item.id === selectedId;
             return (
@@ -231,15 +230,15 @@ export function AiInfrastructure3DSection() {
                 key={item.id}
                 type="button"
                 onClick={() => setSelectedId(item.id)}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold transition-all ${
                   isSelected
-                    ? 'bg-primary text-slate-950 shadow-sm shadow-primary/20'
-                    : 'text-slate-400 hover:text-white hover:bg-white/5'
+                    ? 'bg-violet-500 text-white shadow-[2px_2px_0px_#000000]'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
                 }`}
               >
                 <img src={item.imageUrl} alt="" className="w-3.5 h-3.5 rounded-full object-contain shrink-0" />
                 <span>{item.name}</span>
-                <span className={`text-[10px] ${isSelected ? 'text-slate-950 font-black' : 'text-slate-500'}`}>
+                <span className={`text-[10px] ${isSelected ? 'text-violet-100 font-black' : 'text-slate-500'}`}>
                   ${item.monthlyCostUsd.toFixed(2)}
                 </span>
               </button>
@@ -251,10 +250,10 @@ export function AiInfrastructure3DSection() {
       {/* ── Main Content: Info on LEFT, .GLB 3D on RIGHT ───────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-12 min-h-[250px] md:h-[270px]">
         {/* Left Side: Clean, Concise Information */}
-        <div className="md:col-span-6 p-5 flex flex-col justify-between border-b md:border-b-0 md:border-r border-white/10 space-y-3">
+        <div className="md:col-span-6 p-5 flex flex-col justify-between border-b md:border-b-0 md:border-r border-slate-800 space-y-3">
           <div>
             <div className="flex items-center justify-between gap-2">
-              <span className="text-[10px] font-black uppercase tracking-wider text-primary">
+              <span className="text-[10px] font-black uppercase tracking-wider text-violet-400">
                 {activeItem.category}
               </span>
               <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-emerald-400">
@@ -297,12 +296,12 @@ export function AiInfrastructure3DSection() {
           </div>
 
           {/* Quick Tags & Audit Verification */}
-          <div className="pt-2 border-t border-white/5 flex flex-wrap items-center justify-between gap-2">
+          <div className="pt-2 border-t border-slate-800 flex flex-wrap items-center justify-between gap-2">
             <div className="flex flex-wrap gap-1.5">
               {activeItem.tags.map((tag, idx) => (
                 <span
                   key={idx}
-                  className="text-[10px] font-semibold bg-white/5 text-slate-300 px-2 py-0.5 rounded-md border border-white/5"
+                  className="text-[10px] font-semibold bg-slate-950/80 text-slate-300 px-2.5 py-1 rounded-lg border border-slate-800 shadow-[1px_1px_0px_#000000]"
                 >
                   {tag}
                 </span>
@@ -317,7 +316,7 @@ export function AiInfrastructure3DSection() {
         </div>
 
         {/* Right Side: .GLB 3D Viewer */}
-        <div className="md:col-span-6 relative h-[240px] md:h-full bg-slate-950/60 overflow-hidden flex items-center justify-center">
+        <div className="md:col-span-6 relative h-[240px] md:h-full bg-slate-950/80 overflow-hidden flex items-center justify-center">
           {scriptReady ? (
             <Generic3DViewer
               src={activeItem.model3dUrl}
@@ -332,7 +331,7 @@ export function AiInfrastructure3DSection() {
           )}
 
           {/* Bottom Controls Bar */}
-          <div className="absolute bottom-2 inset-x-3 flex items-center justify-between pointer-events-none text-[9px] font-bold text-slate-400 bg-slate-950/80 backdrop-blur-md px-2.5 py-1 rounded-lg border border-white/10">
+          <div className="absolute bottom-2 inset-x-3 flex items-center justify-between pointer-events-none text-[9px] font-bold text-slate-400 bg-slate-950/85 backdrop-blur-md px-2.5 py-1 rounded-lg border border-slate-800 shadow-[2px_2px_0px_#000000]">
             <span className="flex items-center gap-1">
               <RotateCcw className="w-3 h-3 text-primary" />
               Arraste para girar em 3D · scroll para zoom

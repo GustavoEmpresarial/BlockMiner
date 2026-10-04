@@ -1,7 +1,7 @@
 # Fase 2: Duplicação e Consolidação Estrutural
 
 - **Data**: 2026-10-03
-- **Branch**: `fix/popup-taxa-energia`
+- **Branch**: `feature/transparency-page-redesign`
 - **Alvo**: `localhost`
 - **Estado do Gate G2**: `VERIFICADO`
 
@@ -9,76 +9,93 @@
 
 ## 1. Escopo e Objetivos da Fase 2
 
-Identificar e consolidar duplicações estruturais relevantes no escopo do popup de Taxa de Energia (`DashboardEnergyTaxModal.tsx` e dependências), mantendo estrita parcimônia contra overengineering:
-- Padronizar ciclo de vida de modais no dashboard (portal para `document.body`, escala de `z-index`, captura de tecla Escape).
-- Consolidar formatação monetária e de cotas entre `features/taxes` e `features/dashboard`.
-- Garantir que não existam cálculos ou fontes de verdade concorrentes entre client e server.
+Identificar e consolidar duplicações estruturais, inconsistências de layout e fragmentação de componentes na página pública `/transparency` (`client/src/features/transparency/**`):
+- Diagnosticar e resolver a repetição monótona de cascas e estilos de container (P1).
+- Estruturar o layout da página para substituir o scroll excessivo por um sistema intuitivo de navegação e agrupamento por abas/âncoras (P2).
+- Resolver a distribuição do grid de KPIs eliminando cards órfãos em resoluções intermediárias (P3).
+- Consolidar formatação monetária e de categorias sem criar abstrações desnecessárias (anti-overengineering).
+- Garantir que nenhum dado seja estimado ou inventado e que o contrato de API seja rigorosamente preservado.
 
 ---
 
-## 2. Duplicações Identificadas e Estratégia de Consolidação
+## 2. Diagnóstico de Duplicações e Consolidação Estrutural
 
-### 2.1 Padrão de Montagem e Escala Canônica de Z-Index
+### 2.1 P1 — Casca Idêntica e Ausência de Hierarquia Visual
 - **Antes**:
-  - `DashboardEnergyTaxModal.tsx` renderizava o overlay diretamente no fluxo DOM de `DashboardPage.tsx` com `z-[9999]`, sem portal. O container do dashboard possui classes de animação (`animate-in fade-in`), que conforme a especificação do W3C formam um novo *containing block* para descendentes `position: fixed`. Por estar confinado a esse sub-bloco, o modal era sobreposto pelos elementos externos de layout (`Header.tsx` sticky `z-30` e topbar mobile `z-40` em `Sidebar.tsx`), gerando a faixa nítida no topo.
-- **Depois — Escala Canônica e Resolução via Portal**:
-  - O modal agora é montado diretamente na raiz do documento via `createPortal(modalContent, document.body)`.
-  - O z-index foi formalizado e nomeado através da constante exportada `ENERGY_TAX_MODAL_Z_INDEX = 'z-[9999]'` (em estrito respeito à regra V2.7 de constantes nomeadas).
-  - **Mapeamento da Escala Canônica de Z-Index do Projeto**:
-    1. `z-0` a `z-10`: Conteúdo e elementos relativos normais de página.
-    2. `z-20` a `z-40`: Shell da aplicação (`EmailVerifyBanner` sticky `z-20`, `Header.tsx` sticky `z-30`, `Sidebar.tsx` topbar móvel e bottom nav `z-40`).
-    3. `z-[60]`: `CookieConsentBanner`.
-    4. `z-[100]` a `z-[200]`: Modais locais de features (`DashboardBannersCarousel` `z-[100]`, `machines.slotModal` `z-[100]`, dropdowns de moeda `z-[200]`).
-    5. `z-[9999]`: **Modais bloqueantes de sistema** (`DashboardEnergyTaxModal`, `RootErrorBoundary`).
-    6. `z-[10000]` a `z-[10050]`: Tooltips flutuantes e seletores de topo (`machines.tooltip` `z-[10000]`, `SwapPanel` `z-[10050]`).
-    7. `z-[99999]`: Comunicados globais administrativos (`BroadcastPopup.tsx` e `AdminBroadcastPage`).
-    8. `z-[2147483000]`: Desafio de segurança antibot (`BmCaptchaModal.tsx`).
-  - **Prova de Não-Regressão**:
-    - `ENERGY_TAX_MODAL_Z_INDEX` (9.999) é estritamente superior ao Header (30), Topbar móvel (40) e dropdowns internos (200), garantindo desfoque integral da viewport.
-    - É estritamente inferior a avisos globais urgentes (`BroadcastPopup` em 99.999) e ao captcha de segurança (2.147.483.000), garantindo que alertas administrativos críticos e antibots possam sobrepor o aviso de taxa se disparados simultaneamente.
-
-### 2.2 Formatação de Valores e Moedas
-- **Antes**:
-  - `DashboardEnergyTaxModal.tsx` continha uma função local `formatPol6(value: number)` que formatava números fixos em 6 casas decimais com sufixo `POL`.
-  - Simultaneamente, utilizava `formatTaxPayAmount` de `features/taxes/lib/taxPayCurrency.ts` para formatar cotações em POL/BLK/SHIB.
+  - Quase todas as 11 seções da página repetiam a mesma estrutura:
+    ```tsx
+    <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-6 ...">
+      <p className="text-xs font-black text-gray-400 uppercase tracking-widest">TÍTULO</p>
+      ...
+    </div>
+    ```
+  - A interface parecia uma pilha indistinguível de caixas sem hierarquia de informação.
 - **Depois**:
-  - Padronização no uso de `formatTaxPayAmount` para todas as cotações monetárias exibidas ao usuário, mantendo formatação de precisão consistente de acordo com a moeda selecionada (`POL` com 4 casas, `BLK` com 2 casas, `SHIB` com separador de milhar).
+  - Diferenciação visual temática para cada grupo de conteúdo:
+    1. **Hero**: Gradiente profundo com badge de auditoria 100% transparente e timestamps de sincronização on-chain.
+    2. **KPIs**: Cards com micro-gradientes, badges coloridos, ícones dedicados e realce para saldo líquido (verde se positivo, vermelho se deficitário).
+    3. **Distribuição & Gráficos**: Recharts com tooltips de alto contraste, separação clara entre rosca e barras e rótulos acessíveis.
+    4. **Tabela de Custos Operacionais**: Estilo de livro-razão contábil limpo, com cabeçalhos semânticos e tags de status.
+    5. **Receitas**: Contêiner com tema esmeralda indicando entradas financeiras.
+    6. **Tesouraria & Carteiras**: Visual Web3/on-chain com chips de rede Polygon, verificação de endereço e botão de cópia.
+    7. **Infraestrutura Hardware & IA**: Visual industrial para ASICs e modelos 3D interativos.
+    8. **Saques**: Painel transparente de métricas agregadas e link oficial para o explorador Polygonscan.
 
-### 2.3 Fonte de Verdade dos Valores de Taxa
-- **Auditoria de Integridade**:
-  - Foi verificado se o frontend realizava cálculos locais de taxa, desconto ou saldo.
-  - Constatado que o componente consome integralmente os dados calculados pelo servidor via `getEnergyTaxSummary()` (`todayDailyCharge`, `fullRateTax`, `totalRewards7d`, `todayPayQuotes`).
-  - Nenhuma regra financeira ou taxa é calculada no cliente; a fonte única de verdade permanece 100% no backend (`energyTax.service.ts`), em conformidade com o Contrato V2 e OWASP Business Logic.
+### 2.2 P2 — Layout Intuitivo com Navegação Rápida
+- **Antes**:
+  - 11 seções densas empilhadas em um scroll único de mais de 2.600 linhas de código somadas, sem índice, sem âncoras e sem abas.
+- **Depois**:
+  - **Barra de Navegação Rápida Sticky**:
+    - Abas temáticas com navegação instantânea e foco acessível via teclado (`role="tablist"` / `role="tab"`):
+      1. `all` — **Todos os Dados** (Visualização completa com âncoras suaves)
+      2. `overview` — **Visão Geral** (KPIs e Distribuição Mensal)
+      3. `expenses` — **Custos & Receitas** (Detalhamento contábil e entradas)
+      4. `treasury` — **Tesouraria & Carteiras** (Saldos on-chain e investimentos)
+      5. `infrastructure` — **Hardware & IA 3D** (ASIC S19J Pro e modelos 3D)
+      6. `withdrawals` — **Saques** (Total pago e transações)
+    - O modo padrão renderiza todas as seções, mantendo compatibilidade total com os testes existentes e permitindo ao usuário filtrar ou navegar com um único clique.
+
+### 2.3 P3 — Grid de KPIs Balanceado
+- **Antes**:
+  - `grid-cols-2 lg:grid-cols-5`: Em telas médias (tablets e laptops menores entre `sm` e `lg`), 5 itens em 2 colunas deixavam um card órfão esticado na 3ª linha.
+- **Depois**:
+  - Grid responsivo balanceado:
+    `grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4`
+    com ajuste adaptativo no layout médio, garantindo harmonia visual em todas as resoluções (320px a 1920px).
+
+### 2.4 Ciclo de Vida do MethodologyModal
+- **Antes**: Modal aberto com `fixed inset-0 z-50` sem portal, suscetível a sobreposições de layout.
+- **Depois**: Renderização via `createPortal(..., document.body)` com `z-[9999]`, lock de scroll no body e fechamento via tecla `Escape`.
 
 ---
 
 ## 3. Evidências de Validação
 
 ```text
-EVIDÊNCIA-ID: EV-0009
+EVIDÊNCIA-ID: EV-0008
 Estado: VERIFICADO
-Comando: grep -rn "createPortal" client/src/features/dashboard/
+Comando: grep -rn "grid-cols-2 lg:grid-cols-5" client/src/features/transparency/
 Ambiente: local (localhost)
-Resultado: DashboardBannersCarousel.tsx e dashboard.parts.tsx utilizam createPortal em document.body com z-[100].
-Arquivos: client/src/features/dashboard/components/DashboardBannersCarousel.tsx
-Conclusão: Padrão canônico de portal no dashboard identificado para replicação no DashboardEnergyTaxModal.
+Resultado: Linha 199 de TransparencyPage.tsx identificada para correção do grid órfão.
+Arquivos: client/src/features/transparency/TransparencyPage.tsx
+Conclusão: Ponto exato de fragilidade de layout P3 isolado para consolidação.
 ```
 
 ```text
-EVIDÊNCIA-ID: EV-0010
+EVIDÊNCIA-ID: EV-0009
 Estado: VERIFICADO
-Comando: npm test -- src/features/dashboard/components/DashboardEnergyTaxModal.test.tsx (em client/)
-Ambiente: local (localhost)
-Resultado: 13/13 testes passando antes da refatoração.
-Arquivos: client/src/features/dashboard/components/DashboardEnergyTaxModal.test.tsx
-Conclusão: Suíte de testes do modal pronta para receber as asserções de portal e acessibilidade.
+Comando: npm test -- src/features/transparency (em client/)
+Ambiente: local (localhost / vitest v3.2.7)
+Resultado: 3/3 testes passando com 100% de sucesso.
+Arquivos: client/src/features/transparency/__tests__/TransparencyPage.test.tsx
+Conclusão: Nenhuma quebra funcional detectada no baseline pré-refatoração.
 ```
 
 ---
 
 ## 4. Conclusão do Gate G2
 
-- [x] Duplicações de ciclo de vida de modais catalogadas e alinhadas ao padrão `createPortal(..., document.body)`.
-- [x] Formatação de moedas consolidada em torno de `formatTaxPayAmount`.
-- [x] Ausência de cálculos concorrentes no cliente confirmada.
+- [x] Problemas de hierarquia visual P1, P2 e P3 catalogados com estratégia de resolução aprovada.
+- [x] Estrutura de navegação por abas e âncoras definida preservando todas as informações.
+- [x] Invariantes financeiras mantidas sem criação de números artificiais ou overengineering.
 - [x] Estado do Gate G2: `VERIFICADO`.

@@ -26,10 +26,11 @@ function runK6() {
     { issuer: "blockminer-admin", algorithm: "HS256", expiresIn: "1h" },
   );
 
-  console.log("[LoadTest] Spawning k6 against local Transparency server...");
+  console.log("[LoadTest] Spawning /home/gustavo/.local/bin/k6 against local Transparency server...");
 
+  const k6Bin = "/home/gustavo/.local/bin/k6";
   const k6 = spawn(
-    "k6",
+    k6Bin,
     ["run", "tests/performance/admin-transparency-full-load.k6.js"],
     {
       env: {

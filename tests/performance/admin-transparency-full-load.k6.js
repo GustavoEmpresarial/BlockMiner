@@ -15,6 +15,12 @@ import { check, sleep } from "k6";
 import { Rate, Trend, Counter } from "k6/metrics";
 
 const BASE_URL = (__ENV.BASE_URL || "http://127.0.0.1:5136").replace(/\/$/, "");
+
+// Guarda obrigatória de ambiente
+if (BASE_URL.includes("blockminer.space") || BASE_URL.includes("dev.blockminer.space")) {
+  throw new Error("PROIBIDO: Teste de carga nunca pode atingir blockminer.space nem dev.blockminer.space!");
+}
+
 const ADMIN_TOKEN = __ENV.ADMIN_TOKEN || "";
 const VUS = Number(__ENV.VUS || 15);
 
@@ -95,6 +101,18 @@ export default function () {
   successfulQueries.add(resPublic.status === 200 || resPublic.status === 429);
   check(resPublic, {
     "public overview status 200 or 429": (r) => r.status === 200 || r.status === 429,
+  });
+
+  // 5. Public wallets live & withdrawals
+  const resWalletsLive = http.get(`${BASE_URL}/api/transparency/wallets-live`, {
+    headers: { Accept: "application/json" },
+  });
+  totalRequests.add(1);
+  durationTrend.add(resWalletsLive.timings.duration);
+  serverErrors.add(resWalletsLive.status >= 500);
+  successfulQueries.add(resWalletsLive.status === 200 || resWalletsLive.status === 429);
+  check(resWalletsLive, {
+    "public wallets-live status 200 or 429": (r) => r.status === 200 || r.status === 429,
   });
 
   sleep(0.05);

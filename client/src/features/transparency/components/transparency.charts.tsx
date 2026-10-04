@@ -40,7 +40,6 @@ export function CustomPieTooltip(props: unknown) {
 }
 
 export function CustomBarTooltip(props: unknown) {
-  const { t } = useTranslation();
   const { active, payload, label } = props as {
     active?: boolean;
     payload?: readonly RechartsTooltipPayloadEntry[];
@@ -58,7 +57,6 @@ export function CustomBarTooltip(props: unknown) {
 }
 
 export function PieLabel(props: PieLabelRenderProps) {
-  const { t } = useTranslation();
   const { cx = 0, cy = 0, midAngle = 0, innerRadius = 0, outerRadius = 0, percent = 0 } = props;
   if (percent < 0.06) return null;
   const RADIAN = Math.PI / 180;
@@ -102,14 +100,26 @@ export function StatCard({
   return (
     <div
       data-testid="stat-card"
-      className={`relative rounded-2xl border border-white/8 bg-white/3 p-5 flex flex-col gap-1 overflow-hidden ${glow ? 'shadow-lg shadow-primary/5' : ''}`}
+      className={`relative rounded-2xl border-2 border-slate-800/80 bg-slate-900/60 p-4 sm:p-5 flex flex-col justify-between gap-2 overflow-hidden shadow-[4px_4px_0px_#000000] hover:border-slate-700 transition-all ${
+        glow ? 'border-primary/40 shadow-[0_0_20px_rgba(59,130,246,0.15),4px_4px_0px_#000000]' : ''
+      }`}
     >
-      <div className={`w-8 h-8 rounded-xl flex items-center justify-center mb-1 ${glow ? 'bg-primary/10' : 'bg-white/5'}`}>
-        <Icon className={`w-4 h-4 ${accent}`} />
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[11px] text-slate-400 uppercase tracking-wider font-extrabold truncate">
+          {label}
+        </span>
+        <div
+          className={`w-9 h-9 shrink-0 rounded-xl flex items-center justify-center border border-white/10 shadow-[2px_2px_0px_#000000] ${
+            glow ? 'bg-primary/15 border-primary/30' : 'bg-slate-950/80'
+          }`}
+        >
+          <Icon className={`w-4 h-4 ${accent}`} aria-hidden="true" />
+        </div>
       </div>
-      <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">{label}</p>
-      <p className="text-2xl font-black text-white leading-none">{value}</p>
-      {sub && <p className="text-[11px] text-gray-600 mt-0.5">{sub}</p>}
+      <div>
+        <p className="text-2xl font-black text-white leading-none font-mono tracking-tight">{value}</p>
+        {sub && <p className="text-[11px] text-slate-400 mt-1 font-medium">{sub}</p>}
+      </div>
     </div>
   );
 }
@@ -140,9 +150,9 @@ export function CategoryBar({
             <Icon className="w-3 h-3" style={{ color: style.color }} />
           </span>
           <span className="font-bold text-gray-300">{t(`transparency.category.${catKey}`, catKey)}</span>
-          <span className="text-gray-600 text-[10px]">{count}x</span>
+          <span className="text-slate-400 text-xs font-medium">{count}x</span>
         </div>
-        <span className="font-black text-white">{fmt(monthly)}<span className="text-gray-600 text-[10px] ml-0.5">{t('transparency.charts.per_month')}</span></span>
+        <span className="font-black text-white">{fmt(monthly)}<span className="text-slate-400 text-xs font-normal ml-0.5">{t('transparency.charts.per_month')}</span></span>
       </div>
       <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
         <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: style.color }} />
@@ -286,14 +296,14 @@ export function EntryRow({ entry }: { entry: TransparencyEntry }) {
                 {entry.provider} <ExternalLink className="w-3 h-3" />
               </a>
             : <span className={`text-xs font-semibold ${style.tw}`}>{entry.provider}</span>
-        ) : <span className="text-xs text-gray-700">&#8212;</span>}
+        ) : <span className="text-xs text-slate-400 font-bold">&#8212;</span>}
       </td>
       <td className="py-3 px-4 text-right whitespace-nowrap">
         <div>
           <span className="text-sm font-black text-white">{fmt(entry.amountUsd)}</span>
-          <span className="text-[11px] text-gray-600 ml-1">/{t(`transparency.period.${periodKey}`)}</span>
+          <span className="text-xs text-slate-400 ml-1 font-medium">/{t(`transparency.period.${periodKey}`)}</span>
           {entry.amountOriginal != null ? (
-            <div className="text-[10px] text-gray-600 mt-0.5">
+            <div className="text-[11px] text-slate-400 mt-0.5 font-mono">
               {Number(entry.amountOriginal).toLocaleString('en-US', { maximumFractionDigits: 8 })} {entry.currencyCode || 'USD'}
             </div>
           ) : null}
