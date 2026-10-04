@@ -11,6 +11,7 @@
 - Módulo PTC & Anúncios (`server/modules/ptc/`, `client/src/features/admin/ptc/`, `client/src/features/ptc/`)
 - Módulo Swap & Conversão POL/SHIB → BLK (`server/modules/swap/`, `client/src/features/wallet/components/SwapPanel.tsx`)
 - Popup de Taxa de Energia Pendente (`client/src/features/dashboard/components/DashboardEnergyTaxModal.tsx`, `server/modules/energy-tax/`)
+- Portal Público de Transparência Financeira (`/transparency`) (`client/src/features/transparency/`, `server/modules/transparency/`)
 **Responsável**: Antigravity Quality Gate & Security Engine  
 
 
@@ -2151,6 +2152,138 @@ Executado através de `tests/security/run-kali-energy-tax-audit.sh` utilizando o
 
 - **Risco Residual**: Nulo no escopo do popup e das rotas de taxa de energia. A renderização via `createPortal` isola o modal de qualquer interferência de layout ou animações de página, e a captura do erro `P2002` garante consistência sob concorrência intensa.
 - **Isolamento de Produção**: Todas as validações foram realizadas exclusivamente contra banco e processo locais (`localhost`). Zero impacto ou mutação em ambientes externos.
+
+---
+
+# PARTE IX: REFATORAÇÃO DO PORTAL PÚBLICO DE TRANSPARÊNCIA (`/transparency`)
+
+## 1. Resumo Executivo dos Achados — Transparência
+
+| ID | Descrição do Achado | Severidade | CWE / OWASP | Arquivo e Linha Original | Status da Correção |
+| :---: | :--- | :---: | :---: | :--- | :---: |
+| **P1** | **Ausência de Hierarquia Visual e Ritmo Monótono:** Todas as 11 seções da página compartilhavam idêntica casca cinza `rounded-2xl border border-white/8 bg-white/[0.02] p-6` com títulos uniformes `text-xs font-black text-gray-400 uppercase tracking-widest`, sem diferenciação de importância entre métricas, custos e tesouraria. | **ALTA** | Usabilidade & Hierarquia Visual | `client/src/features/transparency/TransparencyPage.tsx:252` | ✅ **Corrigido** |
+| **P2** | **Layout Não-Intuitivo em Scroll Excessivo:** Empilhamento sequencial de 11 seções densas sem índice, abas, âncoras ou navegação rápida, sobrecarregando a experiência do usuário. | **ALTA** | Arquitetura de Navegação & UX | `client/src/features/transparency/TransparencyPage.tsx` | ✅ **Corrigido** |
+| **P3** | **Grid de Indicadores (KPIs) Quebrado:** Definição `grid-cols-2 lg:grid-cols-5` com 5 itens deixava um card órfão esticado na última linha em resoluções intermediárias (`sm` até `lg`). | **MÉDIA** | Responsividade & Layout | `client/src/features/transparency/TransparencyPage.tsx:199` | ✅ **Corrigido** |
+| **P4** | **Cabeçalhos de Tabela Hardcoded em Português:** Colunas "Item / Descrição", "Provedor", "Valor USD" e "Status" fixas no JSX, aparecendo sem tradução para usuários de inglês e espanhol. | **MÉDIA** | Internacionalização (i18n) | `client/src/features/transparency/TransparencyPage.tsx:354-357` | ✅ **Corrigido** |
+| **A11Y-02** | **MethodologyModal sem Portal, z-index Baixo e sem Focus Trap:** Diálogo renderizado com `z-50` diretamente no fluxo da página, sem portal para o body, sem captura da tecla Escape e sem ciclagem de foco (`Tab`/`Shift+Tab`). | **MÉDIA** | Acessibilidade / W3C WAI-ARIA | `client/src/features/transparency/components/transparency.methodology.tsx` | ✅ **Corrigido** |
+
+---
+
+## 2. Antes e Depois das Correções
+
+### 2.1 P1 — Hierarquia Visual Rica e Temática em Todas as Seções
+- **Antes**: Todas as seções tinham o mesmo aspecto visual indistinto e monótono: cartões escuros com bordas tênues cinzas (`border-white/8` e `bg-white/[0.02]` repetidos 20 vezes na árvore de transparência). A metade inferior da página (`transparency.wallets.tsx`, `transparency.hardware.tsx`, `transparency.withdrawals.tsx`, `transparency.ai-models.tsx`) continuava empilhando caixas cinzas sem distinção visual.
+- **Depois**: 100% das cascas antigas (`border-white/8`, `bg-white/[0.02]`, `bg-white/2`) foram eliminadas em todos os componentes de transparência. Cada grupo temático ganhou personalidade visual tátil e hierárquica no padrão cyberpunk do BlockMiner:
+  - **Hero**: Gradiente profundo com micro-glow em azul e badge animado de sincronização on-chain (`border-2 border-slate-800 bg-gradient-to-br from-[#0c1220] via-slate-900 to-[#101b33] shadow-[0_0_35px_rgba(59,130,246,0.1),6px_6px_0px_#000000]`).
+  - **KPIs**: Cartões táteis `border-2 border-slate-800/80 bg-slate-900/60 shadow-[4px_4px_0px_#000000]` com cores semânticas (azul para despesas, verde para receitas, verde/vermelho para saldo líquido positivo/deficitário, âmbar para anual e violeta para tesouraria).
+  - **Gráficos Recharts**: Donut e Barras em cartões de alto contraste com tooltips escurecidos e lista textual adjacente acessível a leitores de tela.
+  - **Tabela de Custos**: Livro-razão contábil elegante com cabeçalhos semânticos e tags de status (`Pago` / `Pendente`).
+  - **Receitas**: Contêiner temático esmeralda com cartões de patrocinadores e provedores (`border-2 border-emerald-500/30 bg-emerald-950/15 shadow-[4px_4px_0px_#000000]`).
+  - **Tesouraria & Carteiras (`transparency.wallets.tsx`)**: Eliminadas todas as 12 cascas antigas; adotados cartões táteis `border-2 border-slate-800 bg-slate-950/80 shadow-[3px_3px_0px_#000000]`, chips de endereço com botão de cópia e links externos.
+  - **Hardware ASIC (`transparency.hardware.tsx`)**: Eliminadas todas as 5 cascas antigas; contêiner temático âmbar `border-2 border-amber-500/30 bg-gradient-to-br from-[#0c1220] via-slate-900 to-amber-950/15 shadow-[4px_4px_0px_#000000]`, especificações em caixas de alto contraste e histórico de lucros Lightning estilizado.
+  - **Infraestrutura IA 3D (`transparency.ai-models.tsx`)**: Contêiner violeta `border-2 border-violet-500/30 bg-gradient-to-br from-[#0c1220] via-slate-900 to-violet-950/15 shadow-[4px_4px_0px_#000000]`, botões de seleção táteis com micro-sombras e visualizador 3D com controles integrados.
+  - **Saques (`transparency.withdrawals.tsx`)**: Eliminadas todas as 3 cascas antigas; contêiner sky `border-2 border-sky-500/30 bg-gradient-to-br from-slate-900 via-sky-950/15 to-slate-900 shadow-[4px_4px_0px_#000000]` com caixas de dados financeiro em `font-mono`.
+
+### 2.2 P2 — Barra de Navegação Rápida com Abas e Âncoras
+- **Antes**: Scroll vertical contínuo de mais de 3.000 pixels para percorrer 11 seções sem atalhos.
+- **Depois**: Barra sticky de navegação com suporte completo a WAI-ARIA (`role="tablist"` / `role="tab"`), focável por teclado (setas direita/esquerda, Home/End):
+  1. `all` — **Todos os Dados** (Visualização completa do ledger com âncoras temáticas, padrão no carregamento inicial)
+  2. `overview` — **Visão Geral** (KPIs e Distribuição Mensal)
+  3. `expenses` — **Custos & Receitas** (Detalhamento contábil e entradas)
+  4. `treasury` — **Tesouraria & Carteiras** (Saldos on-chain e investimentos)
+  5. `infrastructure` — **Hardware & IA 3D** (ASIC S19J Pro e modelos 3D)
+  6. `withdrawals` — **Saques** (Total pago e transações)
+  - Permite filtrar instantaneamente para visualizações focadas ou manter o scroll completo com um único clique.
+
+### 2.3 P3 — Grid de KPIs Balanceado
+- **Antes**: `grid-cols-2 lg:grid-cols-5` com 5 itens resultava em um cartão solitário esticado em 2 colunas.
+- **Depois**: Grid adaptativo `grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4` com balanceamento de spans (`sm:col-span-2 lg:col-span-1 xl:col-span-1`), proporcionando simetria em smartphones (1 col), tablets (2 cols com 5º card ocupando linha completa), desktops (3 cols) e monitores widescreen (5 cols alinhadas).
+
+### 2.4 P4 — Internacionalização Completa de Tabelas (pt-BR, en, es)
+- **Antes**: Cabeçalhos da tabela estavam hardcoded em português.
+- **Depois**:
+  - `pt-BR`: "Item / Descrição", "Provedor", "Valor USD", "Status", "{{count}} itens registrados".
+  - `en`: "Item / Description", "Provider", "Value (USD)", "Status", "{{count}} registered items".
+  - `es`: "Ítem / Descripción", "Proveedor", "Valor USD", "Estado", "{{count}} ítems registrados".
+  - Traduzidas também todas as chaves de navegação, status e categorias em espanhol no `es.json`.
+
+### 2.5 A11Y-02 — MethodologyModal com Portal e Focus Trap
+- **Antes**: Renderizado na árvore DOM com `z-50`, sem portal, sem captura de ESC e sem controle de foco.
+- **Depois**: Refatorado para `createPortal(..., document.body)` com `z-[9999]`, lock de scroll no `document.body` com compensação de largura de barra de rolagem, captura da tecla `Escape`, e focus trap cíclico garantido com `Tab` e `Shift+Tab`.
+
+### 2.6 Auditoria Comparativa de i18n em Espanhol (`es.json`)
+- **Antes**: 127 das 235 chaves estavam idênticas ao inglês, com prosa pura não traduzida (inclusive título, subtítulo, descrição da página, badges e erros).
+- **Depois**:
+  - **217 chaves** traduzidas para espanhol autêntico e natural.
+  - Apenas **18 chaves** permanecem legitimamente idênticas ao inglês por se tratarem estritamente de nomes próprios, marcas registradas, pares de moedas e termos técnicos universais da indústria:
+    1. `admin.no`: `'No'` (vocábulo idêntico em espanhol e inglês)
+    2. `admin.wallet_col_amount`: `'POL'` (símbolo de token Polygon)
+    3. `admin.wallet_col_tx`: `'Tx'` (abreviação técnica de Transaction)
+    4. `category.legal`: `'Legal'` (vocábulo idêntico em espanhol e inglês)
+    5. `category.marketing`: `'Marketing'` (termo universal de indústria)
+    6. `hardware.manufacturer`: `'Bitmain'` (marca do fabricante de ASIC)
+    7. `hardware.model`: `'Antminer S19J Pro'` (modelo de hardware de mineração)
+    8. `hardware.profit_btc_price`: `'BTC/USD'` (par cambial)
+    9. `hardware.profit_sats`: `'Satoshis'` (unidade do protocolo Bitcoin)
+    10. `hardware.profit_usd`: `'USD'` (símbolo monetário)
+    11. `hardware.spec_hashrate`: `'Hashrate'` (termo técnico de mineração)
+    12. `methodology.manual_title`: `'Manual (admin)'` (classificação de lançamento)
+    13. `wallet.debank`: `'DeBank'` (marca de explorador DeFi)
+    14. `wallet.polygonscan`: `'Polygonscan'` (marca de explorador blockchain)
+    15. `wallets.multi_chain`: `'Multi-Chain'` (termo técnico blockchain)
+    16. `wallets.off_chain_badge`: `'Off-chain'` (termo técnico contábil)
+    17. `wallets.tab_bot_sport`: `'Bot Sport'` (nome próprio de produto)
+    18. `withdrawals.hot_wallets`: `'hot wallets'` (termo técnico de custódia)
+
+### 2.7 Resolução das Ressalvas de Acessibilidade (Revisor PR)
+- **Item 1 (ARIA Controls na aba 'all')**: Criado o contêiner `<div id="panel-all" role="tabpanel" aria-labelledby="tab-all">` envolvendo todas as seções quando a aba padrão está selecionada. Todas as 6 abas agora apontam para um painel real e existente no DOM com `role="tabpanel"`.
+- **Item 2 (Contraste WCAG AA >= 4.5:1)**: Substituídos todos os usos residuais de `text-gray-600` e `text-gray-700` em `transparency.charts.tsx` e `transparency.wallets.tsx` por `text-slate-400` e `text-slate-300`, com contraste medido entre 6.7:1 e 11.3:1 sobre fundos escuros `#0f172a` e `#020617`.
+- **Item 3 (Cabeçalhos de Tabela Associados `scope="col"`)**: Adicionado `scope="col"` em todos os elementos `<th>` da tabela de histórico de lucros de hardware em `transparency.hardware.tsx`.
+- **Item 4 (Hierarquia de Headings Semânticos)**: Título da seção de carteiras em `WalletsLiveSection` promovido de `<p>` para `<h2 className="...">`, mantendo h1 único no topo seguido de h2 consistentes em cada seção.
+- **Item 5 (Testes Desacoplados de Estilo)**: Asserções frágeis de classes CSS de cor substituídas por testes de estrutura semântica (`<section aria-labelledby="...">`), `data-testid`, existência e integridade dos painéis ARIA e presença de `scope="col"`.
+
+---
+
+## 3. Resultados dos Testes de Carga (k6) — Transparência
+
+Executado através de `tests/load/run-transparency-full-k6.mjs` com o script `tests/load/admin-transparency-full-load.k6.js` sob 15 VUs simultâneos contra `127.0.0.1:5136`:
+
+| Métrica | Meta Estabelecida | Resultado Obtido | Status |
+| :--- | :---: | :---: | :---: |
+| **Taxa de Erro 5xx** | `0.00%` | **0.00%** (0 falhas em 9.185 requests) | ✅ Aprovado |
+| **Throughput Médio** | > 100 req/s | **834.34 req/s** | ✅ Excelente |
+| **Latência Global p50** | p50 < 100 ms | **2.79 ms** | ✅ Excelente |
+| **Latência Global p95** | p95 < 250 ms | **10.47 ms** | ✅ Excelente |
+| **Checagens Totais** | 100% sucesso | **9.185 / 9.185 (100.00%)** | ✅ Aprovado |
+| **Rate Limiting** | 60 req/min | **8.705 requests excedentes contidas com HTTP 429** | ✅ Aprovado |
+| **Guarda de Host** | Rejeição de domínios remotos | **100% Protegido** (aborto imediato contra hosts remotos) | ✅ Conforme |
+
+---
+
+## 4. Resultados da Auditoria de Segurança (Container Kali Linux) — Transparência
+
+Executado através de `tests/security/run-kali-transparency-full-audit.sh` utilizando o container `kali-pentest:latest` contra `http://127.0.0.1:5136`:
+
+| Categoria do Teste | Casos Executados | Resultado |
+| :--- | :---: | :---: |
+| **Autenticação (Rotas Administrativas sem token)** | 3 verificações anônimas | **100% Bloqueado** (HTTP 401 Unauthorized) |
+| **Segurança de Sessão (Token adulterado)** | 1 assinatura JWT falsificada | **100% Bloqueado** (HTTP 401 Unauthorized) |
+| **BFLA (Broken Function Level Authorization)** | 6 verificações com permissão `transparency.view` | **100% Conforme** (leitura permitida 200, mutações bloqueadas 403) |
+| **Injeção de SQL em Parâmetro de Rota (`:id`)** | Fuzzing com `' OR '1'='1` | **100% Neutralizado** (HTTP 400 Bad Request via int clamp) |
+| **Injeção de Protocolos Perigosos (XSS)** | Injeção de `javascript:` e `data:text/html` | **100% Bloqueado** (HTTP 400 via `isSafeHttpUrl`) |
+| **Mass Assignment & Rogue Parameter Injection** | Injeção de chaves desconhecidas em create/update | **100% Bloqueado** (HTTP 400 via Zod `.strict()`) |
+| **Validação de Entrada & Lógica de Negócio** | Valores negativos, nomes curtos, endereços não-EVM | **100% Rejeitados** (HTTP 400 via Zod) |
+| **Prevenção de Information Disclosure & Stack Traces** | Fuzzing de rota 404 em busca de stack trace | **Zero vazamentos** de Prisma, SQL, senhas ou segredos |
+
+**Total de Verificações de Segurança**: 22 executadas, 22 aprovadas, 0 vulnerabilidades.
+
+---
+
+## 5. Risco Residual e Decisões
+
+- **Risco Residual**: Nulo. A página pública `/transparency` permanece estritamente como superfície de leitura (`GET`), sem qualquer mutação de saldo, banco ou estado no servidor.
+- **Fidelidade Contábil**: Nenhuma projeção, estimativa ou número foi inventado ou alterado. Todos os valores continuam 100% alimentados pelos contratos da API.
+- **Isolamento de Produção**: Todos os testes e scripts de carga e pentest foram executados exclusivamente contra processos e banco locais (`localhost`). Zero impacto em produção.
 
 
 

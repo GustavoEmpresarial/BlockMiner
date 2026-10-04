@@ -1,7 +1,7 @@
 # Fase 3: Contrato Client ↔ Servidor
 
 - **Data**: 2026-10-03
-- **Branch**: `fix/popup-taxa-energia`
+- **Branch**: `feature/transparency-page-redesign`
 - **Alvo**: `localhost`
 - **Estado do Gate G3**: `VERIFICADO`
 
@@ -9,11 +9,15 @@
 
 ## 1. Inventário de Endpoints e Chamadas Client
 
-| Método | Rota Exata | Chamada Client (SPA) | Autenticação | Rate Limit | Objetivo |
+A página `/transparency` consome exclusivamente a superfície pública de leitura montada em `/api/transparency`:
+
+| Método | Rota Exata | Chamador Client (SPA) | Autenticação | Rate Limit | Resposta Esperada (200) |
 |---|---|---|---|---|---|
-| `GET` | `/api/energy-tax/summary` | `dashboardApi.getEnergyTaxSummary()` | `requireAuth` | 60 req / 60s | Obter resumo da taxa semanal, cotações em POL/BLK/SHIB e status de isenção/pagamento |
-| `POST` | `/api/energy-tax/pay-daily` | `api.post('/energy-tax/pay-daily', { currency })` | `requireAuth` | 10 req / 60s | Efetuar liquidação diária da taxa de energia com a moeda selecionada |
-| `GET` | `/api/auth/session` | `checkSession({ silent: true })` | Cookie / Bearer | Padrão | Revalidar sessão e atualizar flags de estado do usuário pós-pagamento |
+| `GET` | `/api/transparency` | `TransparencyPage.tsx:63` | Pública | 60 req / 60s | `{ ok: true, entries: TransparencyEntry[], asOf: string }` |
+| `GET` | `/api/transparency/wallets-live` | `TransparencyPage.tsx:67` | Pública | 60 req / 60s | `{ ok: true, wallets: TrackedWalletEntry[], asOf: string }` |
+| `GET` | `/api/transparency/external-investments` | `transparency.wallets.tsx:432` | Pública | 60 req / 60s | `{ ok: true, investments: ExternalInvestmentEntry[] }` |
+| `GET` | `/api/transparency/hardware-assets` | `transparency.hardware.tsx:143` | Pública | 60 req / 60s | `{ ok: true, assets: HardwareAssetEntry[] }` |
+| `GET` | `/api/transparency/withdrawal-stats` | `transparency.withdrawals.tsx:13` | Pública | 60 req / 60s | `{ ok: true, totalPol: number, totalCount: number, totalUsd: number \| null }` |
 
 ---
 
@@ -21,102 +25,93 @@
 
 | Item | Frontend (`client`) | Backend (`server`) | Divergência | Resolução Padronizada |
 |---|---|---|---|---|
-| **Contrato de Rota GET** | `GET /energy-tax/summary` via wrapper `getEnergyTaxSummary()` | Montado em `/api/energy-tax/summary` | Nenhuma divergência | Contrato validado e idêntico |
-| **Contrato de Rota POST** | `POST /energy-tax/pay-daily` enviando `{ currency: TaxPayCurrency }` | `postPayDaily` aceita `{ currency }` validado por `parseTaxPayCurrency` | Nenhuma divergência | Contrato validado e idêntico |
-| **Moedas Suportadas** | `'POL'`, `'BLK'`, `'SHIB'` | `parseTaxPayCurrency` valida `'POL' \| 'BLK' \| 'SHIB'` | Nenhuma divergência | Enum tipado e sincronizado |
-| **Estrutura de Cotações (`todayPayQuotes`)** | `TaxPayQuotes` (`Record<'POL'\|'BLK'\|'SHIB', { amount, balance, affordable }>`) | `todayPayQuotes` com `amount`, `balance`, `affordable` por moeda | Nenhuma divergência | Tipos compatíveis e testados |
-| **Códigos de Erro** | `logDashboardError` captura `code` e `status` HTTP | `NOT_STARTED` (403), `ALREADY_PAID` (409), `NO_REWARDS` (400), `INSUFFICIENT_BALANCE` (400) | Nenhuma divergência | Códigos de erro estáveis e tipados |
+| **Rotas e Métodos** | Todos utilizam `GET` relativo a `/api/transparency/*` | Express router montado em `/api/transparency` com `publicLimiter` | Nenhuma divergência | Contratos de rota alinhados |
+| **Campos de Entradas (`entries`)** | Consome `id`, `name`, `amountUsd`, `period`, `category`, `type`, `isPaid`, `provider`, `providerUrl`, `imageUrl` | Retorna exatamente essas propriedades tipadas com `Prisma.Decimal` convertido para número | Nenhuma divergência | Schema consistente |
+| **Campos de Carteiras (`wallets`)** | Consome `address`, `label`, `valueUsd`, `totalUsd`, `chain`, `displayMode`, `isActive`, `includeInTotals`, `liquidityPools` | `mapWalletForPublic` normaliza flags legadas e provê `valueUsd` e `liquidityPools` | Nenhuma divergência | Tipos compatíveis |
+| **Cabeçalhos de Tabela Hardcoded (P4)** | Tabelas continham cabeçalhos fixos em português no JSX | Frontend deve ler via i18n (`transparency.table.col_*`) | Divergência de internacionalização (P4) | Chaves padronizadas no i18n nos 3 idiomas |
 
 ---
 
 ## 3. Especificação do Contrato Tipado
 
-### 3.1 `GET /api/energy-tax/summary`
-- **Autenticação**: Obrigatória (`requireAuth`). Rejeita 401 se deslogado.
-- **Headers**: `Accept: application/json`, `Cookie: ...` ou `Authorization: Bearer <token>`.
+### 3.1 `GET /api/transparency`
+- **Request**: Sem body, sem parâmetros obrigatórios.
+- **Headers**: `Accept: application/json`.
 - **Response 200 OK**:
 ```json
 {
   "ok": true,
-  "active": true,
-  "unpaidDays": 2,
-  "todayDailyCharge": 0.00142857,
-  "todayPaid": false,
-  "todayExempt": false,
-  "yesterdayRewards": 0.02,
-  "fullRateTax": 0.003,
-  "dailyRateTax": 0.001,
-  "totalRewards7d": 0.02,
-  "todayPayQuotes": {
-    "POL": {
-      "amount": 0.00142857,
-      "balance": 1.5,
-      "affordable": true
-    },
-    "BLK": {
-      "amount": 0.015,
-      "balance": 10.0,
-      "affordable": true
-    },
-    "SHIB": {
-      "amount": 250,
-      "balance": 0,
-      "affordable": false
+  "entries": [
+    {
+      "id": 1,
+      "type": "expense",
+      "category": "infrastructure",
+      "name": "Hetzner Dedicated Server",
+      "provider": "Hetzner",
+      "providerUrl": "https://hetzner.com",
+      "imageUrl": "/media/transparency/hetzner.png",
+      "amountUsd": 120.0,
+      "amountOriginal": null,
+      "currencyCode": "USD",
+      "period": "monthly",
+      "isPaid": true,
+      "isActive": true,
+      "isOnChain": false,
+      "blockchain": null,
+      "direction": null,
+      "referenceUrl": null,
+      "notes": null,
+      "sortOrder": 1,
+      "updatedAt": "2026-09-20T00:00:00.000Z"
     }
-  }
-}
-```
-- **Response 500 Internal Server Error**:
-```json
-{
-  "ok": false,
-  "message": "Erro ao carregar resumo."
+  ],
+  "asOf": "2026-09-20T00:00:00Z"
 }
 ```
 
-### 3.2 `POST /api/energy-tax/pay-daily`
-- **Autenticação**: Obrigatória (`requireAuth`).
-- **Rate Limit**: 10 requisições por 60 segundos por IP/usuário.
-- **Request Body**:
-```json
-{
-  "currency": "POL"
-}
-```
-*(Valores aceitos em `currency`: `"POL" | "BLK" | "SHIB"`)*.
+### 3.2 `GET /api/transparency/wallets-live`
+- **Request**: Sem body.
 - **Response 200 OK**:
 ```json
 {
   "ok": true,
-  "charge": 0.00142857,
-  "currency": "POL"
+  "wallets": [
+    {
+      "id": 1,
+      "label": "Polygon Treasury",
+      "address": "0x56a655787f73ffab2cbdb702008adacb60f1c9fc",
+      "chain": "polygon",
+      "assetSymbol": "USDC",
+      "explorerBaseUrl": "https://polygonscan.com/address",
+      "displayMode": "live",
+      "isActive": true,
+      "includeInTotals": true,
+      "manualUsdValue": null,
+      "manualValueNote": null,
+      "warming": false,
+      "totalUsd": 25000.0,
+      "valueUsd": 25000.0,
+      "valuePol": 1500.0,
+      "chains": [],
+      "tokens": [],
+      "nfts": [],
+      "fetchedAt": "2026-09-20T00:00:00.000Z",
+      "liquidityPools": []
+    }
+  ],
+  "asOf": "2026-09-20T00:00:00Z"
 }
 ```
-- **Response 400 Bad Request (Sem recompensas)**:
+
+### 3.3 `GET /api/transparency/withdrawal-stats`
+- **Request**: Sem body.
+- **Response 200 OK**:
 ```json
 {
-  "ok": false,
-  "code": "NO_REWARDS",
-  "message": "Você não possui recompensas pendentes para tributação hoje."
-}
-```
-- **Response 400 Bad Request (Saldo insuficiente)**:
-```json
-{
-  "ok": false,
-  "code": "INSUFFICIENT_BALANCE",
-  "message": "Saldo insuficiente em POL.",
-  "required": 0.00142857,
-  "available": 0.0001,
-  "currency": "POL"
-}
-```
-- **Response 409 Conflict (Já pago hoje)**:
-```json
-{
-  "ok": false,
-  "code": "ALREADY_PAID",
-  "message": "Taxa de energia de hoje já foi quitada."
+  "ok": true,
+  "totalPol": 1450.25,
+  "totalCount": 320,
+  "totalUsd": 145.02
 }
 ```
 
@@ -125,30 +120,30 @@
 ## 4. Evidências de Validação
 
 ```text
-EVIDÊNCIA-ID: EV-0011
+EVIDÊNCIA-ID: EV-0010
 Estado: VERIFICADO
-Comando: ./node_modules/.bin/tsx --import ./tests/_env-test-overrides.mjs --test --test-force-exit tests/energy-tax/energyTax.service.test.mjs
+Comando: ./node_modules/.bin/tsx --import ./tests/_env-test-overrides.mjs --test --test-force-exit tests/transparency/transparency.public.exports.test.mjs
 Ambiente: local (localhost)
-Resultado: 16 testes de cálculo, taxas e datas de vigência aprovados com sucesso.
-Arquivos: tests/energy-tax/energyTax.service.test.mjs
-Conclusão: Regras de negócio de taxas do backend satisfazem integralmente as premissas do contrato.
+Resultado: 4/4 testes passando com 100% de sucesso, confirmando que os handlers públicos mapeiam corretamente wallets, snapshots, pools de liquidez e valores em USD.
+Arquivos: tests/transparency/transparency.public.exports.test.mjs, server/modules/transparency/transparency.controller.ts
+Conclusão: Contratos da API pública verificados dinamicamente com respostas íntegras e estáveis.
 ```
 
 ```text
-EVIDÊNCIA-ID: EV-0012
+EVIDÊNCIA-ID: EV-0011
 Estado: VERIFICADO
-Comando: npm test -- src/features/dashboard/components/DashboardEnergyTaxModal.test.tsx (em client/)
-Ambiente: local (localhost)
-Resultado: 13 testes do componente aprovados, cobrindo cenários de sucesso, erro de API, isenção e seleção de moeda.
-Arquivos: client/src/features/dashboard/components/DashboardEnergyTaxModal.test.tsx
-Conclusão: Consumo do contrato pelo client verificado e aprovado.
+Comando: npm test -- src/features/transparency (em client/)
+Ambiente: local (localhost / vitest v3.2.7)
+Resultado: 3/3 testes passando com 100% de sucesso, confirmando que o client consome os contratos sem incompatibilidades.
+Arquivos: client/src/features/transparency/__tests__/TransparencyPage.test.tsx
+Conclusão: Consumo dos contratos pelo frontend validado e sem divergências.
 ```
 
 ---
 
 ## 5. Conclusão do Gate G3
 
-- [x] Inventário completo de endpoints e chamadas client documentado.
-- [x] Matriz de divergências revisada e validada (zero divergências estruturais).
-- [x] Contrato de request, response e códigos de erro estáveis formalizados.
+- [x] Inventário completo de endpoints públicos e chamadores client documentado.
+- [x] Matriz de divergências revisada e validada (zero divergências estruturais na API).
+- [x] Contratos tipados de leitura pública formalizados e verificados por testes.
 - [x] Estado do Gate G3: `VERIFICADO`.

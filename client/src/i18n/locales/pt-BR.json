@@ -3518,6 +3518,14 @@
     "connection_error": "Erro de conexão.",
     "no_entries": "Nenhuma entrada publicada ainda.",
     "footer_note": "Valores em USD. Conversões de período são estimativas. Atualizado manualmente pela equipe BlockMiner.",
+    "nav": {
+      "all": "Todos os Dados",
+      "overview": "Visão Geral",
+      "financials": "Custos & Receitas",
+      "treasury": "Tesouraria & Carteiras",
+      "infrastructure": "Hardware & IA 3D",
+      "withdrawals": "Saques Comprovados"
+    },
     "external_investments": {
       "invested": "Investido",
       "withdrawn": "Sacado",
@@ -3597,11 +3605,12 @@
       "per_month": "/mês"
     },
     "table": {
-      "title": "Detalhamento Completo",
-      "col_name": "Nome / Categoria",
-      "col_provider": "Fornecedor",
-      "col_amount": "Valor / Período",
-      "col_status": "Status"
+      "title": "Detalhamento de Custos Operacionais & Assinaturas",
+      "col_name": "Item / Descrição",
+      "col_provider": "Provedor",
+      "col_amount": "Valor USD",
+      "col_status": "Status",
+      "items_count": "{{count}} itens registrados"
     },
     "status": {
       "paid": "Pago",

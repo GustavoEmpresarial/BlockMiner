@@ -1,7 +1,7 @@
 # Fase 4: Documentação e Sincronização de Regras
 
 - **Data**: 2026-10-03
-- **Branch**: `fix/popup-taxa-energia`
+- **Branch**: `feature/transparency-page-redesign`
 - **Alvo**: `localhost`
 - **Estado do Gate G4**: `VERIFICADO`
 
@@ -9,13 +9,14 @@
 
 ## 1. Escopo e Objetivos da Fase 4
 
-Garantir que toda a documentação técnica, manuais de produto para o usuário final, runbooks de atendimento para equipes de suporte, contratos de rotas e especificações de interface descrevam com estrita fidelidade o comportamento real do código executável no escopo do Popup de Taxa de Energia (`DashboardEnergyTaxModal.tsx`), do Dashboard (`DashboardPage.tsx`) e do módulo backend (`server/modules/energy-tax/`):
-1. **Regras de Negócio e Cálculos Financeiros**: Sincronizar as alíquotas oficiais de taxa de energia (regime diário opcional de 5% semana vs sweep semanal automático de 15% plena e regime de isenção total por 10 atividades diárias).
-2. **Arquitetura de Apresentação e Eliminação do Bug Visual**: Documentar a montagem via `createPortal(..., document.body)`, a escala canônica de z-index (`ENERGY_TAX_MODAL_Z_INDEX = 'z-[9999]'`), o backdrop escuro com desfoque cobrindo a viewport inteira (`bg-black/80 backdrop-blur-md`) e o travamento de scroll (`overflow: hidden`) sem deslocamento de layout (*zero layout shift*).
-3. **Acessibilidade e Usabilidade (WCAG / WAI-ARIA)**: Formalizar os atributos semânticos (`role="dialog"`, `aria-modal="true"`, `aria-labelledby`, `aria-describedby`), navegação por teclado (tecla `Escape`), retenção de foco e retorno automático ao elemento ativo anterior.
-4. **Resiliência a Concorrência e Tratamento de Erros**: Documentar a proteção contra pagamentos duplicados e cliques rápidos concorrentes suportada pela constraint composta `@@unique([userId, periodDayStartsAt])` da entidade `EnergyTaxCharge` do Prisma, que converte colisão `P2002` em resposta HTTP limpa `409 Conflict` (`ALREADY_PAID`) em vez de gerar exceções não tratadas HTTP 500 no servidor.
-5. **Manual de Produto e Guia Operacional de Suporte**: Disponibilizar no repositório (`docs/paginas/usuario/dashboard/README.md`) uma seção autossuficiente contendo matriz de erros, códigos estruturados de observabilidade, fluxo de troubleshooting e FAQ para agentes de suporte.
-6. **Integridade de Informações**: Garantir que nenhum número, percentual ou prazo tenha sido inventado, validando todos os dados diretamente contra as constantes do código executável.
+Garantir que toda a documentação técnica, manuais de usuário e guias operacionais de suporte descrevam com precisão absoluta o comportamento real do código executável no escopo da página pública `/transparency`:
+1. **Manual Completo da Página de Transparência**: Atualizar e expandir `docs/paginas/publico/transparency/README.md` com documentação detalhada de produto para o usuário final e guia de atendimento para equipes de suporte.
+2. **Navegação em Abas e Acessibilidade por Teclado**: Documentar em profundidade o comportamento das 6 abas (`all`, `overview`, `expenses`, `treasury`, `infrastructure`, `withdrawals`), os atributos WAI-ARIA (`role="tablist"`, `role="tab"`, `role="tabpanel"`, `aria-selected`, `aria-controls`) e a navegação completa por teclas de direção (`ArrowRight`, `ArrowLeft`, `Home`, `End`, `Tab`).
+3. **Hierarquia Visual e Eliminação da Casca Cinza**: Registrar a erradicação de 100% das classes cinzas monótonas (`border-white/8` e `bg-white/[0.02]`), medindo 0 ocorrências em todos os arquivos de componentes, com identidade visual neo-brutalista temática por área.
+4. **Grid de Indicadores Balanceado**: Documentar a distribuição responsiva dos 5 cards de KPI (`grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5`), com expansão do 5º card (`Tesouraria`) em 2 colunas em telas médias para eliminar cards órfãos.
+5. **Modal de Metodologia com Portal e Focus Trap**: Formalizar a montagem via `createPortal(modal, document.body)` em `z-[9999]`, com travamento de scroll do body compensando a largura da barra de rolagem (*zero layout shift*), tecla `Escape` e retenção de foco acessível.
+6. **Internacionalização e Tradução em Espanhol**: Documentar os cabeçalhos da tabela via `t('transparency.table.col_*')` e auditar a tradução do `es.json` (217 chaves traduzidas para espanhol autêntico e 18 termos técnicos e marcas preservados).
+7. **Integridade de Fórmulas e Zero Números Fabricados**: Corrigir divergências históricas de documentação nas funções `toMonthly` e `toAnnual` contra o código executável real de `transparency.base.ts`.
 
 ---
 
@@ -23,57 +24,61 @@ Garantir que toda a documentação técnica, manuais de produto para o usuário 
 
 | Arquivo | Finalidade | Status |
 |---|---|---|
-| `docs/paginas/usuario/dashboard/README.md` | Manual principal da Dashboard. Seção 3.4c atualizada com a arquitetura do portal `z-[9999]` e adicionada a **Seção 5 completa** contendo o Manual de Produto para o usuário final e o Guia Operacional de Atendimento/Troubleshooting para o Suporte. | ✅ Atualizado e Alinhado |
-| `docs/auditoria/fase-03-contrato-client-server.md` | Especificação completa do contrato HTTP entre `DashboardEnergyTaxModal` e o backend de `energy-tax` (`GET /api/energy-tax/summary`, `POST /api/energy-tax/pay-daily`). | ✅ Formalizado na Fase 3 |
-| `docs/auditoria/fase-02-duplicacao.md` | Mapeamento e justificativa da escala canônica de z-index do projeto (de `z-0` a `z-[2147483000]`), com ancoragem de `z-[9999]` para modais de sistema. | ✅ Formalizado na Fase 2 |
-| `docs/auditoria/fase-04-documentacao.md` | Relatório formal de auditoria, conformidade e evidências de validação da documentação da Fase 4. | ✅ Emitido |
+| `docs/paginas/publico/transparency/README.md` | Manual completo de Produto e Suporte da página `/transparency`: arquitetura de abas, uso por teclado, hierarquia visual, modal de auditoria, regras de cálculo e FAQ. | ✅ Atualizado e Alinhado |
+| `docs/admin/transparency-system.md` | Documentação técnica do sistema completo de transparência (módulos admin e portal público). | ✅ Auditado e Conforme |
+| `docs/auditoria/fase-03-contrato-client-server.md` | Especificação completa dos contratos HTTP entre a página `/transparency` e os endpoints públicos de `/api/transparency/*`. | ✅ Formalizado na Fase 3 |
+| `docs/auditoria/fase-04-documentacao.md` | Relatório formal de sincronização, conferência de regras e evidências dinâmicas da Fase 4. | ✅ Emitido |
 
 ---
 
 ## 3. Conformidade das Regras de Negócio e Invariantes Documentadas
 
-Todas as assertivas documentadas foram auditadas diretamente contra os arquivos de código-fonte de produção:
+Todas as assertivas foram conferidas e validadas diretamente contra o código-fonte executável:
 
-### 3.1 Regimes Tributários e Constantes Matemáticas
-Auditado em `server/modules/energy-tax/energy-tax.service.ts`:
-- `DAILY_WEEK_RATE = 0.05` (5% de alíquota equivalente para usuários que liquidam diariamente).
-- `FULL_WEEK_RATE = 0.15` (15% de alíquota aplicada no fechamento semanal automático).
-- `DAILY_PER_DAY_RATE = DAILY_WEEK_RATE / 7 = 0.05 / 7 ≈ 0.007142857` (**0,7143%/dia** sobre `yesterdayRewards`).
-- `AUTO_PER_DAY_RATE = FULL_WEEK_RATE / 7 = 0.15 / 7 ≈ 0.02142857` (**2,1429%/dia** sobre dias não quitados).
-- Economia comunicada no badge da UI: `-66%` (exatamente `1 - (5% / 15%) = 66,67%`).
-- Fechamento Semanal Automático (*Sweep*): Ocorre toda **segunda-feira às 00:00 UTC** (`isEnergyTaxAutoSweepDay(now)` -> `now.getUTCDay() === 1`).
-- Marco Inicial (*Feature Flag*): `ENERGY_TAX_STARTS_AT` (padrão `2026-06-30T00:00:00.000Z`).
+### 3.1 Normalização de Custos e Receitas Recorrentes
+Auditado em `client/src/features/transparency/components/transparency.base.ts`:
+- **`toMonthly(amountUsd, period)`**:
+  - `period === 'daily'`: `amountUsd * 30` (multiplicação por 30 dias exatos).
+  - `period === 'monthly'`: `amountUsd`.
+  - `period === 'annual'`: `amountUsd / 12`.
+  - Despesas únicas (`one_time`): retorna `0` (não impactam a média mensal recorrente).
+- **`toAnnual(amountUsd, period)`**:
+  - `period === 'daily'`: `amountUsd * 365` (multiplicação por 365 dias).
+  - `period === 'monthly'`: `amountUsd * 12`.
+  - Despesas únicas (`one_time`): retorna o valor integral `amountUsd`.
 
-### 3.2 Isenção de Atividades (10 Atividades Diárias)
-Auditado em `server/modules/energy-tax/energy-tax.activity.ts` e `energy-tax.service.ts`:
-- `ACTIVITY_DISCOUNT_THRESHOLD = 10`.
-- Atividades somadas: `faucet`, `zeradsClicks` (PTC), `shortlink`, `youtube`, `games`, `offerwallExt` (`offerwallMe` + `moneyRain`) e `offerwallInt`.
-- Quando `total >= 10`: `todayExempt = true`. O botão no frontend passa a ser "Registrar isenção de hoje", submetendo `POST /api/energy-tax/pay-daily` que gera encargo com `mode: "exempt"`, `amount: 0`, `ratePercent: 0` e sem qualquer débito de saldo.
+### 3.2 Saldo Líquido Operacional
+Auditado em `TransparencyPage.tsx`:
+- $\text{netBalance} = \text{totalIncMonthly} - \text{totalMonthly}$.
+- Se $\text{netBalance} \ge 0$: Exibe subtítulo `transparency.kpi.net_positive` com destaque em verde (`text-emerald-400`).
+- Se $\text{netBalance} < 0$: Exibe subtítulo `transparency.kpi.net_deficit` com destaque em vermelho (`text-red-400`).
 
-### 3.3 Moedas Suportadas e Validação de Saldo
-Auditado em `server/shared/taxPaymentCurrency.ts` e `client/src/features/dashboard/components/DashboardEnergyTaxModal.tsx`:
-- Três moedas aceitas para quitação: `POL`, `BLK` e `SHIB`.
-- O servidor calcula cotações em `buildTaxPayQuotes(todayDailyCharge, balances)`.
-- Se o saldo for menor que a cotação exigida (`affordable === false`), a UI exibe alerta de saldo insuficiente e impede a submissão.
-- Pagamentos em BLK ou SHIB registram histórico com metadados de conversão (`notes: "paidCurrency=...;debit=...;polEquivalent=..."`) e geram transação financeira com `type: "energy_tax"`.
+### 3.3 Tesouraria On-Chain e Filtro de Carteiras Legadas
+Auditado em `transparency.base.ts` e `transparency.wallets.tsx`:
+- `isLegacyWallet(wallet)`: Identifica carteiras legadas por endereço (`0x1CA03755C5132e238aE4E0f50d4929EA0D58b897` ou `0x404CBeC8eC6F59e28C5F3D9e5b6080DA344792E7`) ou quando `isActive === false`.
+- `walletCountsInTreasury(wallet)`: Exclui carteiras legadas e carteiras com `includeInTotals === false`.
+- `walletTreasuryUsd(wallet)`: Retorna `0` para carteiras excluídas, preservando a integridade contábil do KPI de Tesouraria.
 
-### 3.4 Resolução do Bug Visual e Escala Canônica de Z-Index
-Auditado em `client/src/features/dashboard/components/DashboardEnergyTaxModal.tsx`:
-- **Bug Anterior**: O modal era renderizado como filho direto de `DashboardPage.tsx`. O container do dashboard possui a classe `animate-in fade-in`, que segundo a especificação W3C CSS Transforms/Animations forma um novo *containing block* para elementos `position: fixed`. Isso fazia com que o backdrop ficasse confinado ao corpo da página e fosse sobreposto pelo Header desktop (`z-30`) e pela Topbar móvel (`z-40`), gerando uma faixa nítida no topo da tela.
-- **Correção Executada**:
-  - Modal desacoplado via `createPortal(modalContent, document.body)`.
-  - Z-Index ancorado na constante nomeada canônica `ENERGY_TAX_MODAL_Z_INDEX = 'z-[9999]'`.
-  - Backdrop em tela cheia `fixed inset-0 bg-black/80 backdrop-blur-md`.
-  - Hierarquia de empilhamento provada matematicamente:
-    `Shell (30-40) < Modais de Feature (100-200) < Sistema Bloqueante (9999) < Broadcast Global (99999) < Captcha Antibot (2147483000)`.
+### 3.4 Navegação em Abas (Sticky Tab Bar) e Teclado WAI-ARIA
+Auditado em `TransparencyPage.tsx`:
+- Barra de navegação com `role="tablist"` e `aria-label="Seções do Portal de Transparência"`.
+- 6 abas temáticas: `all`, `overview`, `expenses`, `treasury`, `infrastructure` e `withdrawals`.
+- Suporte a `ArrowRight` e `ArrowLeft` com transição cíclica entre abas, além de `Home` e `End` para saltar aos extremos.
+- Roving `tabIndex`: aba selecionada com `tabIndex={0}` e abas inativas com `tabIndex={-1}`.
 
-### 3.5 Tratamento de Concorrência (Race Condition P2002 -> 409 Conflict)
-Auditado em `server/modules/energy-tax/energy-tax.service.ts` e `energy-tax.controller.ts`:
-- A entidade `EnergyTaxCharge` no banco de dados possui a restrição composta `@@unique([userId, periodDayStartsAt])`.
-- Em caso de cliques duplos rápidos ou requisições concorrentes em múltiplas abas, a segunda tentativa de inserção gera colisão de chave única (`PrismaClientKnownRequestError` com código `P2002`).
-- O serviço intercepta especificamente o erro `P2002` e lança a exceção de domínio `EnergyTaxAlreadyPaid`.
-- O controlador captura `EnergyTaxAlreadyPaid` e responde com HTTP `409 Conflict` (`{ ok: false, code: "ALREADY_PAID", message: "Você já quitou a taxa de energia de ontem." }`).
-- Elimina completamente falhas 500 no servidor decorrentes de requisições de pagamento concorrentes.
+### 3.5 Modal de Metodologia via Portal e Acessibilidade
+Auditado em `components/transparency.methodology.tsx`:
+- Renderizado via `createPortal(modal, document.body)` com `z-[9999]`.
+- Atributos semânticos `role="dialog"`, `aria-modal="true"` e `aria-labelledby="methodology-title"`.
+- Focus trap ativo para teclas `Tab` e `Shift + Tab`.
+- Fechamento pela tecla `Escape`, botão `X` ou clique no backdrop.
+- Bloqueio de rolagem do body (`overflow: hidden`) com compensação de `scrollbarWidth` (*zero layout shift*).
+
+### 3.6 Auditoria do Arquivo de Idioma Espanhol (`es.json`)
+Auditado em `client/src/i18n/locales/es.json`:
+- Total de 235 chaves sob o namespace `transparency`.
+- 217 chaves traduzidas para espanhol autêntico.
+- 18 termos mantidos idênticos ao inglês por serem marcas registradas ou termos técnicos universais (`Bitmain`, `Antminer S19J Pro`, `Hashrate`, `Satoshis`, `BTC/USD`, `USD`, `Manual (admin)`, `Marketing`, `Legal`, `DeBank`, `Polygonscan`, `hot wallets`, `No`, `POL`, `Tx`, `Bot Sport`, `Multi-Chain`, `Off-chain`).
 
 ---
 
@@ -82,58 +87,69 @@ Auditado em `server/modules/energy-tax/energy-tax.service.ts` e `energy-tax.cont
 ```text
 EVIDÊNCIA-ID: EV-DOC-0001
 Estado: VERIFICADO
-Comando: ./node_modules/.bin/tsx --import ./tests/_env-test-overrides.mjs --test --test-force-exit tests/energy-tax/energyTax.service.test.mjs
+Comando: ./node_modules/.bin/tsx --import ./tests/_env-test-overrides.mjs --test --test-force-exit tests/transparency/transparency.base.test.mjs tests/transparency/transparency-calculations.test.mjs
 Ambiente: local (localhost)
-Resultado: 16/16 testes unitários de regras de negócio executados e 100% aprovados.
-Saída relevante: pass 16, fail 0, duration 324ms
-Arquivos: tests/energy-tax/energyTax.service.test.mjs, server/modules/energy-tax/energy-tax.service.ts
-Teste: FULL_WEEK_RATE, DAILY_WEEK_RATE, DAILY_PER_DAY_RATE, AUTO_PER_DAY_RATE, isEnergyTaxAutoSweepDay, isTaxableDay
-Conclusão: Todas as alíquotas (5% e 15%), taxas diárias (5%/7) e regras de sweep de segunda-feira documentadas coincidem 100% com o código executável.
+Resultado: 13/13 testes de cálculos financeiros executados e aprovados.
+Saída relevante: pass 13, fail 0, duration 448ms
+Arquivos: tests/transparency/transparency.base.test.mjs, tests/transparency/transparency-calculations.test.mjs, client/src/features/transparency/components/transparency.base.ts
+Teste: toMonthly, toAnnual, fmt, getInvestmentBreakdown, CATEGORY_ORDER, exclusão de carteiras legadas do KPI
+Conclusão: As fórmulas de normalização e filtros contábeis documentados no README coincidem 100% com o código executável.
 ```
 
 ```text
 EVIDÊNCIA-ID: EV-DOC-0002
 Estado: VERIFICADO
-Comando: ./node_modules/.bin/tsx --import ./tests/_env-test-overrides.mjs --test --test-force-exit tests/energy-tax/energyTax.payDaily.integration.test.mjs
+Comando: npx vitest run src/features/transparency/__tests__/TransparencyPage.test.tsx (em client/)
 Ambiente: local (localhost)
-Resultado: 14/14 testes de integração de API executados e 100% aprovados, incluindo a proteção contra concorrência 409 ALREADY_PAID.
-Saída relevante: ok 13 - postPayDaily — happy path debits balance and creates charge record, then rejects duplicate payment with ALREADY_PAID (409)
-Arquivos: tests/energy-tax/energyTax.payDaily.integration.test.mjs, server/modules/energy-tax/energy-tax.service.ts, server/modules/energy-tax/energy-tax.controller.ts
-Teste: postPayDaily — duplicate payment rejection with ALREADY_PAID (409)
-Conclusão: O tratamento de colisão de pagamento duplicado via constraint única retornando 409 foi dinamicamente validado contra o banco de dados.
+Resultado: 13/13 testes de componente executados e 100% aprovados.
+Saída relevante: Test Files 1 passed (1), Tests 13 passed (13), Duration 3.78s
+Arquivos: client/src/features/transparency/__tests__/TransparencyPage.test.tsx, client/src/features/transparency/TransparencyPage.tsx
+Teste: abas de navegação, navegação por setas/Home/End, acessibilidade role="tablist", modal de metodologia via portal, cabeçalhos de tabela i18n
+Conclusão: Todo o comportamento dinâmico de interface, acessibilidade por teclado e ciclo de vida do modal foi validado e corresponde à especificação.
 ```
 
 ```text
 EVIDÊNCIA-ID: EV-DOC-0003
 Estado: VERIFICADO
-Comando: npx vitest run src/features/dashboard/components/DashboardEnergyTaxModal.test.tsx src/features/dashboard/DashboardPage.smoke.test.tsx (em client/)
+Comando: grep -rnE "border-white/8|bg-white/\[0\.02\]" client/src/features/transparency
 Ambiente: local (localhost)
-Resultado: 45/45 testes no frontend executados e 100% aprovados.
-Saída relevante: Test Files 2 passed (2), Tests 45 passed (45), Duration 3.27s
-Arquivos: client/src/features/dashboard/components/DashboardEnergyTaxModal.test.tsx, client/src/features/dashboard/DashboardPage.smoke.test.tsx
-Teste: regressão da faixa e escala de z-index z-[9999], createPortal em document.body, a11y role="dialog", scroll lock, escape key, seletor POL/BLK/SHIB
-Conclusão: A implementação do portal, acessibilidade, z-index canônico e bloqueio de scroll sem layout shift refletem exatamente os comportamentos descritos no manual.
+Resultado: 0 ocorrências de classes cinzas em arquivos de componentes de produção (apenas 1 comentário explicativo no teste).
+Arquivos: client/src/features/transparency/
+Conclusão: A casca cinza monótona foi completamente eliminada da página e de todos os seus subcomponentes.
 ```
 
 ```text
 EVIDÊNCIA-ID: EV-DOC-0004
 Estado: VERIFICADO
-Comando: git status --porcelain docs/paginas/usuario/dashboard/README.md docs/auditoria/fase-04-documentacao.md
+Comando: node -e '...verificação de chaves es.json...'
 Ambiente: local (localhost)
-Resultado: Arquivos de documentação modificados e auditados, sem segredos ou credenciais expostas.
-Arquivos: docs/paginas/usuario/dashboard/README.md, docs/auditoria/fase-04-documentacao.md
-Conclusão: Toda a documentação de produto e suporte foi integrada ao repositório de forma rastreável e auditável.
+Resultado: 235 chaves auditadas; 217 traduzidas para espanhol; 18 termos técnicos e marcas preservados.
+Arquivos: client/src/i18n/locales/es.json
+Conclusão: A internacionalização da página para o idioma espanhol cumpre rigorosamente as especificações do redesign.
+```
+
+```text
+EVIDÊNCIA-ID: EV-DOC-0005
+Estado: VERIFICADO
+Comando: git status --porcelain docs/paginas/publico/transparency/README.md docs/auditoria/fase-04-documentacao.md
+Ambiente: local (localhost)
+Resultado: Arquivos atualizados e auditados, sem segredos ou credenciais expostas.
+Arquivos: docs/paginas/publico/transparency/README.md, docs/auditoria/fase-04-documentacao.md
+Conclusão: Documentação técnica e de produto integrada ao repositório de forma rastreável.
 ```
 
 ---
 
 ## 5. Conclusão do Gate G4
 
-- [x] Manual de Produto completo adicionado à documentação da Dashboard para orientação do usuário final.
-- [x] Guia Operacional de Atendimento e Troubleshooting elaborado com matriz de erros HTTP, códigos estruturados de cliente e FAQ para equipes de suporte.
-- [x] Arquitetura de montagem via `createPortal` em `document.body` e escala canônica `ENERGY_TAX_MODAL_Z_INDEX = 'z-[9999]'` rigorosamente documentada.
-- [x] Tratamento de concorrência com captura de `P2002` gerando HTTP 409 `ALREADY_PAID` detalhado técnica e operacionalmente.
-- [x] Fórmulas matemáticas, percentuais, prazos e regras financeiras 100% verificados contra os testes dinâmicos e o código-fonte (zero números inventados).
+- [x] Manual de Produto completo disponibilizado em `docs/paginas/publico/transparency/README.md`.
+- [x] Guia Operacional de Atendimento para suporte com matriz de endpoints REST e FAQ de dúvidas frequentes.
+- [x] Navegação por abas (`role="tablist"` / `role="tab"`) e guia de acessibilidade por teclado documentados.
+- [x] Eliminação da casca cinza uniforme verificada (0 ocorrências de `border-white/8` e `bg-white/[0.02]`).
+- [x] Modal de Metodologia em `createPortal` com focus trap e scroll lock sem layout shift documentado.
+- [x] Tradução espanhola auditada (217 traduzidas, 18 termos técnicos preservados).
+- [x] Fórmulas de cálculo corrigidas e verificadas dinamicamente contra os testes e o código.
+- [x] Zero números fabricados ou promessas fictícias.
 - [x] Estado do Gate G4: `VERIFICADO`.
 
 ---
@@ -144,15 +160,15 @@ Conclusão: Toda a documentação de produto e suporte foi integrada ao reposit�
 Fase: Fase 4 — Documentação Executável e Produto
 Estado: VERIFICADO
 Mudanças:
-- Atualizada a seção 3.4c em docs/paginas/usuario/dashboard/README.md para ancorar z-[9999], portal em document.body, a11y, scroll lock sem layout shift e resolução da concorrência 409 ALREADY_PAID.
-- Adicionada a Seção 5 completa em docs/paginas/usuario/dashboard/README.md com o Manual de Produto do popup para o usuário final e o Guia Operacional/Troubleshooting para o Suporte (matriz de erros da API, observabilidade, FAQ e conduta de atendimento).
-- Emitido relatório formal docs/auditoria/fase-04-documentacao.md com conformidade estrita de regras financeiras, alíquotas oficiais (5% diário vs 15% semanal, isenção por 10 atividades), evidências dinâmicas EV-DOC-0001 a EV-DOC-0004 e ausência de segredos ou números inventados.
+- Atualizado e expandido docs/paginas/publico/transparency/README.md para incluir o Manual de Produto completo e o Guia Operacional de Atendimento/Suporte (arquitetura das 6 abas, guia completo de teclado WAI-ARIA com setas e Home/End, eliminação da casca cinza, grid de KPIs balanceado, MethodologyModal em createPortal z-[9999], fórmulas reais de toMonthly/toAnnual, tradução de 217 chaves no es.json e FAQ de atendimento).
+- Emitido relatório formal docs/auditoria/fase-04-documentacao.md com conformidade estrita de regras financeiras, correção de fórmulas de normalização e evidências dinâmicas EV-DOC-0001 a EV-DOC-0005.
 Evidências:
-- EV-DOC-0001: 16/16 testes de regras de negócio aprovados em tests/energy-tax/energyTax.service.test.mjs.
-- EV-DOC-0002: 14/14 testes de integração de API aprovados em tests/energy-tax/energyTax.payDaily.integration.test.mjs (validando 409 ALREADY_PAID sob corrida concorrente P2002).
-- EV-DOC-0003: 45/45 testes no client aprovados em DashboardEnergyTaxModal.test.tsx e DashboardPage.smoke.test.tsx.
-- EV-DOC-0004: Auditoria de diff e ausência de segredos em docs/paginas/usuario/dashboard/README.md e docs/auditoria/fase-04-documentacao.md.
+- EV-DOC-0001: 13/13 testes unitários de regras financeiras aprovados em tests/transparency/transparency.base.test.mjs e transparency-calculations.test.mjs.
+- EV-DOC-0002: 13/13 testes de componente aprovados em client/src/features/transparency/__tests__/TransparencyPage.test.tsx.
+- EV-DOC-0003: 0 ocorrências de classes cinzas border-white/8 e bg-white/[0.02] em client/src/features/transparency/.
+- EV-DOC-0004: Auditoria em es.json comprovando 217 chaves traduzidas e 18 termos técnicos/marcas mantidos.
+- EV-DOC-0005: Auditoria de diff e ausência de segredos nos arquivos de documentação.
 Pendências:
 - Nenhuma pendência na Fase 4. Documentação de produto, técnica e de suporte 100% sincronizada com o código executável.
-Commit: f9ee799 docs(energy-tax): completar documentacao de produto e suporte do popup e fechar fase 4
+Commit: b49f431 docs(transparency): completar documentacao de produto e suporte da pagina /transparency e atualizar fase 4
 ```

@@ -160,19 +160,20 @@ function HardwareAssetCard({ asset }: { asset: TransparencyHardwareAsset }) {
 
   return (
     <section
-      className="rounded-3xl border border-white/8 bg-gradient-to-br from-slate-900 via-slate-900 to-amber-500/[0.04] overflow-hidden"
+      aria-labelledby="hardware-section-title"
+      className="rounded-3xl border-2 border-amber-500/30 bg-gradient-to-br from-[#0c1220] via-slate-900 to-amber-950/15 overflow-hidden shadow-[4px_4px_0px_#000000]"
       data-testid="hardware-asset-card"
     >
-      <header className="px-6 py-5 border-b border-white/5 flex items-center gap-3 flex-wrap">
-        <div className="w-10 h-10 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
-          <Cpu className="w-4 h-4 text-amber-400" aria-hidden="true" />
+      <header className="px-5 sm:px-6 py-4 sm:py-5 border-b border-amber-500/20 bg-amber-950/25 flex items-center gap-3 flex-wrap">
+        <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center shadow-[2px_2px_0px_#000000]">
+          <Cpu className="w-5 h-5 text-amber-400" aria-hidden="true" />
         </div>
         <div className="flex-1 min-w-0">
-          <h2 className="text-sm font-black text-white uppercase tracking-widest">{t('transparency.hardware.section_title')}</h2>
-          <p className="text-[11px] text-gray-500 mt-0.5">{t('transparency.hardware.section_subtitle')}</p>
+          <h2 id="hardware-section-title" className="text-xs font-black text-amber-300 uppercase tracking-widest">{t('transparency.hardware.section_title')}</h2>
+          <p className="text-[11px] text-slate-400 mt-0.5">{t('transparency.hardware.section_subtitle')}</p>
         </div>
         {asset.status === 'running' && (
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-emerald-400">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/15 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-emerald-400 shadow-[1px_1px_0px_#000000]">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
             {statusLabel}
           </span>
@@ -192,23 +193,23 @@ function HardwareAssetCard({ asset }: { asset: TransparencyHardwareAsset }) {
           </div>
 
           {(asset.purchaseNote || Number.isFinite(cost)) && (
-            <div className="rounded-xl border border-amber-500/15 bg-amber-500/[0.04] p-4 space-y-3">
-              <p className="text-[10px] uppercase tracking-widest text-amber-400 font-mono">
+            <div className="rounded-2xl border-2 border-amber-500/25 bg-amber-950/20 p-4 space-y-3 shadow-[3px_3px_0px_#000000]">
+              <p className="text-[10px] uppercase tracking-wider text-amber-300 font-mono font-bold">
                 {t('transparency.hardware.purchase_title')}
               </p>
               {asset.purchaseNote && (
-                <p className="text-xs text-gray-300 leading-relaxed">{asset.purchaseNote}</p>
+                <p className="text-xs text-slate-300 leading-relaxed font-medium">{asset.purchaseNote}</p>
               )}
               <div className="grid grid-cols-2 gap-3 pt-1">
                 {Number.isFinite(cost) && (
-                  <div className="rounded-lg bg-slate-900/60 border border-white/5 px-3 py-2">
-                    <p className="text-[9px] uppercase tracking-widest text-gray-500 font-mono">{t('transparency.hardware.cost_label')}</p>
+                  <div className="rounded-xl bg-slate-950/70 border border-amber-500/20 px-3 py-2">
+                    <p className="text-[9px] uppercase tracking-widest text-slate-400 font-mono">{t('transparency.hardware.cost_label')}</p>
                     <p className="mt-0.5 text-lg font-black text-amber-300 font-mono">${cost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                   </div>
                 )}
                 {asset.transitWeeks != null && asset.transitWeeks > 0 && (
-                  <div className="rounded-lg bg-slate-900/60 border border-white/5 px-3 py-2">
-                    <p className="text-[9px] uppercase tracking-widest text-gray-500 font-mono">{t('transparency.hardware.transit_label')}</p>
+                  <div className="rounded-xl bg-slate-950/70 border border-amber-500/20 px-3 py-2">
+                    <p className="text-[9px] uppercase tracking-widest text-slate-400 font-mono">{t('transparency.hardware.transit_label')}</p>
                     <p className="mt-0.5 text-lg font-black text-white font-mono">{t('transparency.hardware.weeks', { count: asset.transitWeeks })}</p>
                   </div>
                 )}
@@ -219,8 +220,8 @@ function HardwareAssetCard({ asset }: { asset: TransparencyHardwareAsset }) {
           {specs.length > 0 && (
             <dl className="grid grid-cols-2 gap-3 text-xs">
               {specs.map((row) => (
-                <div key={`${row.label}-${row.value}`} className="rounded-xl border border-white/8 bg-slate-900/50 px-3 py-2">
-                  <dt className="text-[10px] uppercase tracking-widest text-gray-500 font-mono">{row.label}</dt>
+                <div key={`${row.label}-${row.value}`} className="rounded-xl border-2 border-slate-800 bg-slate-950/60 px-3.5 py-2.5 shadow-[2px_2px_0px_#000000]">
+                  <dt className="text-[10px] uppercase tracking-wider text-slate-400 font-mono font-semibold">{row.label}</dt>
                   <dd className="mt-0.5 text-sm font-black text-white">{row.value}</dd>
                 </div>
               ))}
@@ -274,29 +275,29 @@ function HardwareAssetCard({ asset }: { asset: TransparencyHardwareAsset }) {
               </div>
 
               <div className="space-y-2">
-                <p className="text-[10px] uppercase tracking-widest text-gray-500 font-mono">
+                <p className="text-[10px] uppercase tracking-wider text-slate-400 font-mono font-bold">
                   {t('transparency.hardware.profit_history_title')}
                 </p>
-                <div className="overflow-x-auto rounded-xl border border-white/8">
+                <div className="overflow-x-auto rounded-xl border border-slate-800 shadow-[2px_2px_0px_#000000]">
                   <table className="w-full text-left text-[11px]" data-testid="hardware-profit-history">
                     <thead>
-                      <tr className="border-b border-white/8 bg-black/20 text-[9px] uppercase tracking-widest text-gray-500">
-                        <th className="px-3 py-2 font-mono">{t('transparency.hardware.profit_date')}</th>
-                        <th className="px-3 py-2 font-mono">{t('transparency.hardware.profit_sats')}</th>
-                        <th className="px-3 py-2 font-mono">{t('transparency.hardware.profit_usd')}</th>
+                      <tr className="border-b border-slate-800 bg-slate-950/80 text-[10px] uppercase tracking-wider text-slate-400 font-bold">
+                        <th scope="col" className="px-3 py-2.5 font-mono">{t('transparency.hardware.profit_date')}</th>
+                        <th scope="col" className="px-3 py-2.5 font-mono">{t('transparency.hardware.profit_sats')}</th>
+                        <th scope="col" className="px-3 py-2.5 font-mono">{t('transparency.hardware.profit_usd')}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {profitLogs.length === 0 ? (
                         <tr>
-                          <td colSpan={3} className="px-3 py-4 text-center text-gray-600">
+                          <td colSpan={3} className="px-3 py-4 text-center text-slate-500">
                             {t('transparency.hardware.profit_history_empty')}
                           </td>
                         </tr>
                       ) : (
                         profitLogs.map((log) => (
-                          <tr key={log.id} className="border-b border-white/5 last:border-0">
-                            <td className="px-3 py-2 text-gray-300 whitespace-nowrap">{fmtDate(log.earnedAt)}</td>
+                          <tr key={log.id} className="border-b border-slate-800/60 last:border-0 hover:bg-slate-900/40 transition-colors">
+                            <td className="px-3 py-2 text-slate-300 whitespace-nowrap">{fmtDate(log.earnedAt)}</td>
                             <td className="px-3 py-2 text-amber-300 font-mono font-bold">
                               {formatSatoshi(log.satoshiAmount)} sats
                             </td>
@@ -308,7 +309,7 @@ function HardwareAssetCard({ asset }: { asset: TransparencyHardwareAsset }) {
                   </table>
                 </div>
                 {summary.logCount === 0 && (
-                  <p className="text-[11px] text-gray-600">{t('transparency.hardware.profit_empty')}</p>
+                  <p className="text-[11px] text-slate-500">{t('transparency.hardware.profit_empty')}</p>
                 )}
               </div>
             </div>
@@ -317,7 +318,7 @@ function HardwareAssetCard({ asset }: { asset: TransparencyHardwareAsset }) {
 
         {showViewer && asset.model3dUrl && (
           <div className="md:w-[280px] space-y-3">
-            <div className="relative aspect-square rounded-2xl border border-white/10 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 overflow-hidden">
+            <div className="relative aspect-square rounded-2xl border-2 border-slate-800 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 overflow-hidden shadow-[4px_4px_0px_#000000]">
               {loadingScript && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 z-10 bg-slate-950/80">
                   <div className="w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
@@ -334,7 +335,7 @@ function HardwareAssetCard({ asset }: { asset: TransparencyHardwareAsset }) {
               )}
             </div>
             {scriptReady && !error && (
-              <p className="text-[10px] text-gray-600 text-center font-mono">
+              <p className="text-[10px] text-slate-500 text-center font-mono">
                 {t('transparency.hardware.viewer_hint')}
               </p>
             )}
@@ -362,7 +363,12 @@ export function HardwareSection() {
   }, []);
 
   if (assets === null) {
-    return <div className="rounded-3xl border border-white/8 bg-white/2 h-64 animate-pulse" data-testid="hardware-loading" />;
+    return (
+      <div
+        className="rounded-3xl border-2 border-slate-800 bg-slate-900/40 h-64 animate-pulse shadow-[4px_4px_0px_#000000]"
+        data-testid="hardware-loading"
+      />
+    );
   }
 
   if (assets.length === 0) return null;
