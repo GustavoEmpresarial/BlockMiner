@@ -1,4 +1,5 @@
-import type { ReactElement } from 'react';
+import { useEffect, type ReactElement } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { Clock3, Lock, Sliders, X } from 'lucide-react';
 import { DASHBOARD_COIN_LOGO } from '../lib/dashboardCoinLogos';
@@ -72,6 +73,15 @@ export function MiningAllocationPanel({
   const draftShibN = Number(draftShib);
   const draftPolSafe = Number.isFinite(draftPolN) ? draftPolN : 0;
   const draftShibSafe = Number.isFinite(draftShibN) ? draftShibN : 0;
+
+  useEffect(() => {
+    if (!allocModalOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !savingAlloc) onCloseModal();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [allocModalOpen, savingAlloc, onCloseModal]);
 
   return (
     <>
@@ -163,13 +173,17 @@ export function MiningAllocationPanel({
         </div>
       </div>
 
-      {allocModalOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-200"
-          onClick={() => {
-            if (!savingAlloc) onCloseModal();
-          }}
-        >
+      {allocModalOpen && typeof document !== 'undefined'
+        ? createPortal(
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="mining-allocation-modal-title"
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+              onClick={() => {
+                if (!savingAlloc) onCloseModal();
+              }}
+            >
           <div
             className="bg-surface border border-gray-800/80 rounded-2xl shadow-2xl w-full max-w-lg p-6 relative overflow-hidden"
             onClick={(e) => e.stopPropagation()}
@@ -187,7 +201,10 @@ export function MiningAllocationPanel({
             </button>
 
             <div className="relative mb-6 pr-8">
-              <h3 className="text-base font-black text-white uppercase tracking-widest flex items-center gap-2">
+              <h3
+                id="mining-allocation-modal-title"
+                className="text-base font-black text-white uppercase tracking-widest flex items-center gap-2"
+              >
                 <Sliders className="w-4 h-4 text-indigo-400" />
                 {t('dashboard.mining_allocation_modal_title')}
               </h3>
@@ -375,8 +392,10 @@ export function MiningAllocationPanel({
               </button>
             </div>
           </div>
-        </div>
-      )}
+        </div>,
+        document.body,
+      )
+    : null}
     </>
   );
 }

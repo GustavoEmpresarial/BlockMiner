@@ -93,4 +93,26 @@ describe('MiningAllocationPanel', () => {
     // Should not throw during render; NaN would otherwise propagate into style width.
     expect(screen.getAllByText((t) => t.includes('%')).length).toBeGreaterThan(0);
   });
+
+  it('HOTFIX: renderiza o overlay via createPortal ancorado em document.body, fora de container com space-y-10 para nao receber margin-top', () => {
+    const props = baseProps();
+    const { container } = render(
+      <I18nextProvider i18n={i18n}>
+        <div className="space-y-10" data-testid="dashboard-root-container">
+          <div data-testid="preceding-sibling">Header</div>
+          <MiningAllocationPanel {...props} allocModalOpen={true} />
+        </div>
+      </I18nextProvider>,
+    );
+
+    const overlay = document.querySelector<HTMLElement>('.fixed.inset-0');
+    expect(overlay).not.toBeNull();
+    // Acceptance criterion: must be anchored in document.body
+    expect(document.body).toContainElement(overlay);
+    // Acceptance criterion: must NOT be inside the dashboard-root-container (.space-y-10)
+    const rootContainer = screen.getByTestId('dashboard-root-container');
+    expect(rootContainer).not.toContainElement(overlay);
+    // Acceptance criterion: parent must be document.body, not the space-y-10 container
+    expect(overlay?.parentElement).toBe(document.body);
+  });
 });
