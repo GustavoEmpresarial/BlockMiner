@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Lock, PackageMinus, Plus, Zap, X } from 'lucide-react';
@@ -77,14 +78,14 @@ function RoomDismantleModal({
   loading: boolean;
 }) {
   const { t } = useTranslation();
-  if (!open) return null;
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" role="dialog" aria-modal="true">
-      <div className="w-full max-w-md rounded-3xl border border-white/10 bg-slate-950 p-6 shadow-2xl">
-        <h2 className="text-lg font-black text-white">{t('inventory.dismantle_room')}</h2>
-        <p className="mt-1 text-sm text-slate-400">{t('inventory.room_heading', { room: displayRoomNumber })}</p>
-        <p className="mt-4 text-sm text-amber-200/90">{t('inventory.dismantle_room_warning')}</p>
-        <p className="mt-2 text-sm text-slate-300">
+  if (!open || typeof document === 'undefined') return null;
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm animate-in fade-in duration-200" role="dialog" aria-modal="true">
+      <div className="w-full max-w-md rounded-3xl border-2 border-slate-800 bg-slate-900/95 p-6 shadow-[4px_4px_0px_#000000] space-y-4">
+        <h2 className="text-lg font-black uppercase tracking-wider text-white">{t('inventory.dismantle_room')}</h2>
+        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t('inventory.room_heading', { room: displayRoomNumber })}</p>
+        <p className="text-sm text-amber-300/90 font-medium">{t('inventory.dismantle_room_warning')}</p>
+        <p className="text-sm text-slate-300">
           {t('inventory.dismantle_room_confirm', { room: displayRoomNumber, count: machineCount })}
         </p>
         <div className="mt-6 flex justify-end gap-2">
@@ -92,7 +93,7 @@ function RoomDismantleModal({
             type="button"
             onClick={onClose}
             disabled={loading}
-            className="rounded-xl border border-white/10 px-4 py-2 text-xs font-bold uppercase tracking-wider text-slate-300"
+            className="rounded-xl border-2 border-slate-700 bg-slate-900 px-4 py-2 text-xs font-bold uppercase tracking-wider text-slate-300 shadow-[2px_2px_0px_#000000] hover:bg-slate-800 transition-all"
           >
             {t('common.cancel', { defaultValue: 'Cancel' })}
           </button>
@@ -100,13 +101,14 @@ function RoomDismantleModal({
             type="button"
             onClick={() => void onConfirm()}
             disabled={loading}
-            className="rounded-xl bg-red-500/90 px-4 py-2 text-xs font-black uppercase tracking-wider text-white disabled:opacity-50"
+            className="rounded-xl bg-red-500 hover:bg-red-400 active:translate-x-0.5 active:translate-y-0.5 px-5 py-2 text-xs font-black uppercase tracking-wider text-slate-950 shadow-[2px_2px_0px_#000000] transition-all disabled:opacity-50"
           >
             {loading ? t('inventory.dismantle_room_loading') : t('inventory.dismantle_room_confirm_button')}
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -126,19 +128,19 @@ function StoredRackPickerModal({
   onPick: (visualIndex: number) => void;
 }) {
   const { t } = useTranslation();
-  if (!open || floorSlot == null) return null;
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 sm:items-center" role="dialog" aria-modal="true">
-      <div className="w-full max-w-md rounded-3xl border border-white/10 bg-slate-950 p-5 shadow-2xl">
+  if (!open || floorSlot == null || typeof document === 'undefined') return null;
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 p-4 sm:items-center backdrop-blur-sm animate-in fade-in duration-200" role="dialog" aria-modal="true">
+      <div className="w-full max-w-md rounded-3xl border-2 border-slate-800 bg-slate-900/95 p-5 sm:p-6 shadow-[4px_4px_0px_#000000]">
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
-            <h2 className="text-base font-black text-white">{t('inventory2.rack_picker_title')}</h2>
-            <p className="mt-1 text-xs text-slate-500">{t('inventory2.rack_picker_hint')}</p>
+            <h2 className="text-base font-black uppercase tracking-wider text-white">{t('inventory2.rack_picker_title')}</h2>
+            <p className="mt-1 text-xs text-slate-400">{t('inventory2.rack_picker_hint')}</p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl border border-white/10 p-2 text-slate-400 hover:bg-white/5 hover:text-white"
+            className="rounded-xl border border-slate-700/80 bg-slate-800/80 p-2 text-slate-400 hover:bg-slate-700 hover:text-white shadow-[2px_2px_0px_#000000] transition-colors"
             aria-label={t('common.close', { defaultValue: 'Close' })}
           >
             <X className="h-4 w-4" />
@@ -153,7 +155,7 @@ function StoredRackPickerModal({
                 <button
                   type="button"
                   onClick={() => onPick(rack.visualIndex)}
-                  className="grid w-full grid-cols-[3.5rem_minmax(0,1fr)] items-center gap-3 rounded-2xl border border-white/10 bg-slate-900/60 p-3 text-left transition-colors hover:border-primary/40 hover:bg-primary/10"
+                  className="grid w-full grid-cols-[3.5rem_minmax(0,1fr)] items-center gap-3 rounded-2xl border-2 border-slate-800 bg-slate-950/60 p-3 text-left shadow-[2px_2px_0px_#000000] transition-colors hover:border-primary/40 hover:bg-primary/10"
                 >
                   <img src={shelfImageUrl} alt="" className="h-14 w-14 object-contain" />
                   <span className="text-sm font-bold text-white">
@@ -165,7 +167,8 @@ function StoredRackPickerModal({
           </ul>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -249,16 +252,16 @@ export function Inventory2RoomContent({
 
   if (!currentRoom.unlocked) {
     return (
-      <div role="tabpanel" className="flex min-h-64 flex-col items-center justify-center gap-6 rounded-3xl border border-gray-800/30 bg-surface p-6 text-center sm:p-10">
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-gray-800/50 bg-gray-800/40">
-          <Lock className="h-7 w-7 text-gray-600" />
+      <div role="tabpanel" className="flex min-h-64 flex-col items-center justify-center gap-6 rounded-3xl border-2 border-slate-800 bg-slate-900/60 p-6 text-center sm:p-10 shadow-[4px_4px_0px_#000000]">
+        <div className="flex h-16 w-16 items-center justify-center rounded-2xl border-2 border-slate-800 bg-slate-950/80 shadow-[2px_2px_0px_#000000]">
+          <Lock className="h-7 w-7 text-slate-500" />
         </div>
         <div>
-          <p className="text-base font-bold text-gray-400">{t('inventory.room_locked', { room: currentRoom.roomNumber })}</p>
-          <p className="mt-1 text-xs text-gray-600">{t('inventory.room_locked_desc')}</p>
+          <p className="text-base font-bold text-slate-300">{t('inventory.room_locked', { room: currentRoom.roomNumber })}</p>
+          <p className="mt-1 text-xs text-slate-400 font-medium">{t('inventory.room_locked_desc')}</p>
           {currentRoom.onOffer && currentRoom.listPrice != null && currentRoom.listPrice > (currentRoom.price ?? 0) && (
-            <p className="mt-2 text-xs text-gray-500">
-              <span className="line-through text-gray-600">{currentRoom.listPrice} BLK</span>
+            <p className="mt-2 text-xs text-slate-400">
+              <span className="line-through text-slate-500">{currentRoom.listPrice} BLK</span>
               {' → '}
               <span className="font-bold text-primary">{currentRoom.price} BLK</span>
             </p>
@@ -268,10 +271,10 @@ export function Inventory2RoomContent({
           type="button"
           onClick={() => onBuyRoom(currentRoom.roomNumber)}
           disabled={buyingRoom}
-          className="flex items-center gap-2 rounded-2xl bg-primary px-8 py-3 text-xs font-black uppercase tracking-wider text-white transition-all hover:bg-primary/80 disabled:opacity-50"
+          className="flex items-center gap-2 rounded-xl bg-primary hover:bg-primary-hover active:translate-x-0.5 active:translate-y-0.5 px-8 py-3.5 text-xs font-black uppercase tracking-wider text-slate-950 shadow-[2px_2px_0px_#000000] transition-all disabled:opacity-50"
         >
           {buyingRoom ? (
-            <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-950/30 border-t-slate-950" />
           ) : (
             <>
               <Zap className="h-3.5 w-3.5" />

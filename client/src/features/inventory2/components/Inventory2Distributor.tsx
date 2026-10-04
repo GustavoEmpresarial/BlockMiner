@@ -56,18 +56,18 @@ export function Inventory2Distributor({ farmHashRate }: Props) {
   const lit = farmHashRate > 0;
 
   return (
-    <div className="space-y-6 rounded-3xl border border-amber-500/20 bg-slate-950/60 p-5 sm:p-8">
+    <div className="space-y-6 rounded-3xl border-2 border-slate-800 bg-slate-900/60 p-5 sm:p-8 shadow-[4px_4px_0px_#000000]">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <p className="text-[10px] font-black uppercase tracking-[0.28em] text-amber-400/80">
+          <p className="text-[10px] font-black uppercase tracking-[0.28em] text-amber-400">
             {t('inventory2.distributor_kicker')}
           </p>
-          <h2 className="mt-2 text-2xl font-black tracking-tight text-white">
+          <h2 className="mt-2 text-2xl font-black tracking-tight text-white uppercase">
             {t('inventory2.distributor_title')}
           </h2>
-          <p className="mt-2 max-w-xl text-sm text-slate-400">{t('inventory2.distributor_desc')}</p>
+          <p className="mt-2 max-w-xl text-sm text-slate-400 font-medium">{t('inventory2.distributor_desc')}</p>
         </div>
-        <div className="inline-flex min-h-11 items-center gap-2 rounded-2xl border border-primary/25 bg-primary/10 px-4 py-2.5">
+        <div className="inline-flex min-h-11 items-center gap-2 rounded-2xl border-2 border-primary/30 bg-primary/10 px-4 py-2.5 shadow-[2px_2px_0px_#000000]">
           <Zap className="h-4 w-4 text-primary" aria-hidden />
           <span className="text-xs font-black tabular-nums text-primary">{formatHashrate(farmHashRate)}</span>
         </div>
@@ -75,10 +75,10 @@ export function Inventory2Distributor({ farmHashRate }: Props) {
 
       <div className="flex justify-center">
         <div
-          className={`relative overflow-hidden rounded-3xl border p-3 sm:p-4 ${
+          className={`relative overflow-hidden rounded-3xl border-2 p-3 sm:p-4 shadow-[3px_3px_0px_#000000] ${
             lit
-              ? 'border-amber-400/40 bg-amber-500/10 shadow-[0_0_40px_rgba(251,191,36,0.18)]'
-              : 'border-slate-800 bg-slate-900/70'
+              ? 'border-amber-500/40 bg-amber-500/10 shadow-[0_0_30px_rgba(245,158,11,0.15),3px_3px_0px_#000000]'
+              : 'border-slate-800 bg-slate-950/80'
           }`}
         >
           {imgFailed ? (
@@ -101,14 +101,14 @@ export function Inventory2Distributor({ farmHashRate }: Props) {
         </div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-3">
-          <div className="rounded-2xl border border-white/8 bg-slate-900/70 p-4">
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+          <div className="rounded-2xl border-2 border-slate-800 bg-slate-950/60 p-4 shadow-[2px_2px_0px_#000000]">
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
               {t('inventory2.distributor_bill')}
             </p>
-            <p className="mt-2 text-lg font-black tabular-nums text-white">{fmtPol(bill)} POL</p>
+            <p className="mt-2 text-lg font-black tabular-nums text-white font-mono">{fmtPol(bill)} POL</p>
           </div>
-          <div className="rounded-2xl border border-white/8 bg-slate-900/70 p-4">
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+          <div className="rounded-2xl border-2 border-slate-800 bg-slate-950/60 p-4 shadow-[2px_2px_0px_#000000]">
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
               {t('inventory2.distributor_status')}
             </p>
             <p className="mt-2 inline-flex items-center gap-1.5 text-sm font-bold text-white">
@@ -122,11 +122,11 @@ export function Inventory2Distributor({ farmHashRate }: Props) {
                   : t('inventory2.distributor_open', { days: unpaidDays })}
             </p>
           </div>
-          <div className="rounded-2xl border border-white/8 bg-slate-900/70 p-4">
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+          <div className="rounded-2xl border-2 border-slate-800 bg-slate-950/60 p-4 shadow-[2px_2px_0px_#000000]">
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
               {t('inventory2.distributor_activity')}
             </p>
-            <p className="mt-2 text-lg font-black tabular-nums text-white">{activities}/10</p>
+            <p className="mt-2 text-lg font-black tabular-nums text-white font-mono">{activities}/10</p>
           </div>
         </div>
       )}
@@ -134,7 +134,7 @@ export function Inventory2Distributor({ farmHashRate }: Props) {
       <button
         type="button"
         onClick={() => navigate('/taxes')}
-        className="inline-flex min-h-11 w-full items-center justify-center rounded-2xl border border-amber-400/30 bg-amber-400/10 px-6 py-2.5 text-xs font-black uppercase tracking-wider text-amber-200 transition-colors hover:bg-amber-400/20 sm:w-auto"
+        className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border-2 border-amber-500/40 bg-amber-500/10 px-6 py-2.5 text-xs font-black uppercase tracking-wider text-amber-300 shadow-[2px_2px_0px_#000000] transition-all hover:bg-amber-500/20 active:translate-x-0.5 active:translate-y-0.5 sm:w-auto"
       >
         {t('inventory2.distributor_open_taxes')}
       </button>

@@ -11,6 +11,8 @@ import { getMachineDisplayImageUrl } from './lib/machineDisplayImage';
 import { MachineImage } from './components/MachineImage';
 import { MachineQuantityModal } from './components/machines.quantityModal';
 import type { BackpackItem, InventoryStackGroup } from './lib/machines.types';
+import Card from '../../shared/components/Card';
+import IconBadge from '../../shared/components/IconBadge';
 
 function isVaultRow(row: unknown): row is BackpackItem {
   if (row == null || typeof row !== 'object' || !('id' in row)) return false;
@@ -201,36 +203,36 @@ export default function VaultPage() {
         onConfirm={(q: number) => void handleConfirmRetrieveQty(q)}
       />
 
-      <header className="flex flex-col gap-4 border-b border-gray-800/40 pb-6 lg:flex-row lg:items-start lg:justify-between">
+      <header className="flex flex-col gap-4 border-b border-slate-800/80 pb-6 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0 flex-1 space-y-2">
           <div className="flex flex-wrap items-center gap-3">
-            <Shield className="h-8 w-8 shrink-0 text-primary" aria-hidden />
-            <h1 className="text-2xl font-black tracking-tight text-white sm:text-3xl">{t('vault.title')}</h1>
+            <IconBadge icon={Shield} size="lg" variant="primary" />
+            <h1 className="text-2xl font-black tracking-tight text-white sm:text-3xl uppercase">{t('vault.title')}</h1>
           </div>
-          <p className="max-w-2xl text-sm font-medium text-gray-500 sm:text-base">{t('vault.subtitle')}</p>
+          <p className="max-w-2xl text-sm font-medium text-slate-400 sm:text-base">{t('vault.subtitle')}</p>
         </div>
         {headerNav}
       </header>
 
       {vaultRows.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-6 rounded-3xl border border-dashed border-gray-800/60 bg-surface px-6 py-16 text-center">
-          <Shield className="mx-auto h-16 w-16 text-gray-600" aria-hidden />
+        <Card className="flex flex-col items-center justify-center gap-6 p-8 sm:p-16 text-center border-dashed">
+          <Shield className="mx-auto h-16 w-16 text-slate-600" aria-hidden />
           <div className="space-y-2">
-            <h2 className="text-lg font-bold text-gray-300">{t('vault.empty')}</h2>
-            <p className="mx-auto max-w-md text-sm text-gray-500">{t('vault.empty_hint')}</p>
+            <h2 className="text-lg font-bold text-slate-300">{t('vault.empty')}</h2>
+            <p className="mx-auto max-w-md text-sm text-slate-400">{t('vault.empty_hint')}</p>
           </div>
           <button
             type="button"
             onClick={navToMiningRoom}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-primary px-6 py-3 text-xs font-black uppercase tracking-wider text-black shadow-glow transition-opacity hover:opacity-90"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3 text-xs font-black uppercase tracking-wider text-slate-950 shadow-[2px_2px_0px_#000000] transition-all hover:bg-primary-hover active:translate-x-0.5 active:translate-y-0.5"
           >
             <Pickaxe className="h-4 w-4 shrink-0" aria-hidden />
             {t('vault.empty_cta')}
           </button>
-        </div>
+        </Card>
       ) : (
         <>
-          <h2 className="text-base font-bold text-gray-300 sm:text-lg">
+          <h2 className="text-base font-bold text-slate-300 sm:text-lg">
             {t('vault.stored_machines')} ({totalVaultUnits})
           </h2>
 
@@ -241,20 +243,20 @@ export default function VaultPage() {
               return (
                 <div
                   key={`${name}|${group.level}|${group.hashRate}|${group.slotSize}`}
-                  className="flex flex-col gap-3 rounded-2xl border border-gray-800/50 bg-gray-800/30 p-4 transition-colors hover:border-gray-700"
+                  className="flex flex-col gap-3 rounded-2xl border-2 border-slate-800 bg-slate-900/60 p-4 shadow-[4px_4px_0px_#000000] transition-all hover:border-slate-700"
                 >
                   <div className="grid min-w-0 grid-cols-[3.5rem_minmax(0,1fr)] items-start gap-3">
-                    <div className="relative h-14 w-14 shrink-0 rounded-xl border border-gray-800/50 bg-gray-900/50 p-2">
+                    <div className="relative h-14 w-14 shrink-0 rounded-xl border border-slate-800 bg-slate-950/80 p-2 shadow-[2px_2px_0px_#000000]">
                       <MachineImage imageUrl={imageUrl} name={name} className="h-full w-full object-contain" />
                       {group.quantity > 1 && (
-                        <div className="absolute -right-2 -top-2 z-[1] rounded-full border border-primary/20 bg-primary px-2 py-0.5 text-[10px] font-bold text-white shadow-lg">
+                        <div className="absolute -right-2 -top-2 z-[1] rounded-full border border-primary/30 bg-primary px-2 py-0.5 text-[10px] font-black text-slate-950 shadow-sm">
                           x{group.quantity}
                         </div>
                       )}
                     </div>
                     <div className="min-w-0">
                       <h4 className="break-words text-sm font-bold leading-snug text-white">{name}</h4>
-                      <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-bold uppercase tracking-wider text-gray-500">
+                      <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
                         <span className="shrink-0 whitespace-nowrap">Lv. {group.level}</span>
                         <span aria-hidden>·</span>
                         <span className="font-black text-primary">{formatHashrate(group.hashRate)}</span>
@@ -268,7 +270,7 @@ export default function VaultPage() {
                       if (retrieveLock.current || retrieving) return;
                       setVaultQtyModalGroup(group);
                     }}
-                    className="mt-auto inline-flex min-h-10 w-full items-center justify-center rounded-xl bg-primary/15 px-3 py-2 text-[11px] font-black uppercase tracking-wider text-primary transition-colors hover:bg-primary/25 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="mt-auto inline-flex min-h-10 w-full items-center justify-center rounded-xl bg-primary/20 border border-primary/30 px-3 py-2 text-[11px] font-black uppercase tracking-wider text-primary shadow-[2px_2px_0px_#000000] transition-all hover:bg-primary/30 active:translate-x-0.5 active:translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {t('vault.retrieve_from_vault')}
                   </button>

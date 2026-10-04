@@ -474,7 +474,9 @@ export default function Sidebar({ mobileOpen: mobileOpenProp, onNavigate }: Side
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-amber-400 rounded-full" />
             ) : null}
           </button>
-          <CommunityShortcuts gapClass="gap-0" />
+          <div className="hidden min-[380px]:flex">
+            <CommunityShortcuts gapClass="gap-0" />
+          </div>
           <div className="relative" ref={notificationRef}>
             <button
               type="button"

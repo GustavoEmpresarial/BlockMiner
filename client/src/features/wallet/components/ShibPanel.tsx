@@ -78,7 +78,7 @@ export function ShibPanel({ balance, onRefresh }: Props) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4 p-5 bg-orange-500/10 border border-orange-500/20 rounded-2xl">
+      <div className="flex items-center gap-4 p-5 bg-orange-950/20 border-2 border-orange-500/30 rounded-2xl shadow-[2px_2px_0px_#000000]">
         <img
           src="/media/brand/shib.webp"
           alt="SHIB"
@@ -99,7 +99,7 @@ export function ShibPanel({ balance, onRefresh }: Props) {
       </div>
 
       <form onSubmit={handleWithdraw} className="space-y-5">
-        <div className="p-4 bg-amber-500/5 border border-amber-500/20 rounded-2xl flex gap-3">
+        <div className="p-4 bg-amber-950/20 border-2 border-amber-500/30 rounded-2xl flex gap-3 shadow-[2px_2px_0px_#000000]">
           <Info className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
           <div className="text-[10px] text-slate-400 font-medium space-y-1">
             <p>
@@ -141,11 +141,11 @@ export function ShibPanel({ balance, onRefresh }: Props) {
                 ? t("wallet.shib.min_placeholder", { amount: Math.ceil(minShib).toLocaleString("en-US") })
                 : t("wallet.shib.amount_placeholder")
             }
-            className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white font-mono text-sm focus:outline-none focus:border-orange-500 transition-colors"
+            className="w-full bg-slate-950 border-2 border-slate-700 rounded-xl px-4 py-3 text-white font-mono text-sm focus:outline-none focus:border-orange-500 transition-colors shadow-[2px_2px_0px_#000000]"
             required
           />
           {Number(amount) > 0 && (
-            <p className="text-[9px] text-slate-500 mt-1.5 font-medium">
+            <p className="text-[10px] text-slate-400 mt-1.5 font-medium">
               {t("wallet.shib.you_receive")}{" "}
               <span className="text-orange-300 font-black">
                 {Math.max(0, net).toLocaleString("en-US", { maximumFractionDigits: 2 })} SHIB
@@ -164,18 +164,22 @@ export function ShibPanel({ balance, onRefresh }: Props) {
             value={address}
             onChange={(e) => setAddress(e.target.value)}
             placeholder="0x..."
-            className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white font-mono text-xs focus:outline-none focus:border-orange-500 transition-colors"
+            className="w-full bg-slate-950 border-2 border-slate-700 rounded-xl px-4 py-3 text-white font-mono text-xs focus:outline-none focus:border-orange-500 transition-colors shadow-[2px_2px_0px_#000000]"
             required
           />
         </div>
 
         <button
           type="submit"
-          disabled={loading || (effectiveMin > 0 && Number(amount) < effectiveMin)}
-          className="w-full py-4 bg-orange-500 text-white font-black uppercase tracking-widest rounded-2xl hover:bg-orange-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+          disabled={loading || !amount || !address}
+          className="w-full py-4 bg-orange-600 hover:bg-orange-500 active:translate-x-0.5 active:translate-y-0.5 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all shadow-[2px_2px_0px_#000000] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
-          {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowDownToLine className="w-5 h-5" />}
-          {t("wallet.shib.request_withdraw")}
+          {loading ? (
+            <Loader2 className="w-5 h-5 animate-spin" />
+          ) : (
+            <ArrowDownToLine className="w-5 h-5" />
+          )}
+          {t("wallet.shib.withdraw_btn")}
         </button>
       </form>
     </div>
