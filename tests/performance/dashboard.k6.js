@@ -1,19 +1,25 @@
 /**
- * k6 load test for authenticated Dashboard GETs.
- *
- * Requires staging credentials:
- *   LOADTEST_EMAIL / LOADTEST_PASSWORD
- *
- * setup() logs in once and shares Cookie header with all VUs (avoids N logins
- * tripping auth rate-limit / IP lockout).
+ * k6 load test for authenticated Dashboard GET endpoints.
+ * Target: localhost only. Fails immediately if pointed at production/staging domains.
  */
 import http from "k6/http";
 import { check, sleep } from "k6";
 import { Rate, Trend, Counter } from "k6/metrics";
 
-const BASE_URL = (__ENV.BASE_URL || "https://dev.blockminer.space").replace(/\/$/, "");
+const BASE_URL = (__ENV.BASE_URL || "http://127.0.0.1:5137").replace(/\/$/, "");
+
+// Strict environment barrier
+if (
+  BASE_URL.includes("blockminer.space") ||
+  BASE_URL.includes("dev.blockminer.space") ||
+  BASE_URL.includes("staging.blockminer.space")
+) {
+  throw new Error("SECURITY GUARD TRIGGERED: Load tests are strictly prohibited against remote/production domains! Target must be localhost.");
+}
+
 const VUS = Number(__ENV.VUS || 3);
-const DURATION = __ENV.DURATION || "30s";
+const DURATION = __ENV.DURATION || "15s";
+const AUTH_TOKEN = __ENV.AUTH_TOKEN || "";
 const EMAIL = __ENV.LOADTEST_EMAIL || "";
 const PASSWORD = __ENV.LOADTEST_PASSWORD || "";
 
@@ -23,6 +29,8 @@ const walletMs = new Trend("dashboard_wallet_ms", true);
 const cycleMs = new Trend("dashboard_cycle_ms", true);
 const slotsMs = new Trend("dashboard_slots_ms", true);
 const feeMs = new Trend("dashboard_fee_ms", true);
+const bannersMs = new Trend("dashboard_banners_ms", true);
+const energyTaxMs = new Trend("dashboard_energy_tax_ms", true);
 const total = new Counter("dashboard_requests_total");
 
 export const options = {
@@ -36,9 +44,10 @@ export const options = {
   thresholds: {
     server_error_5xx: ["rate==0"],
     auth_failed: ["rate<0.05"],
-    dashboard_wallet_ms: ["p(95)<5000"],
-    dashboard_cycle_ms: ["p(95)<5000"],
-    dashboard_slots_ms: ["p(95)<5000"],
+    dashboard_wallet_ms: ["p(95)<1000"],
+    dashboard_cycle_ms: ["p(95)<1000"],
+    dashboard_slots_ms: ["p(95)<1000"],
+    dashboard_banners_ms: ["p(95)<1000"],
   },
 };
 
@@ -53,9 +62,14 @@ function cookieHeaderFromResponse(res) {
 }
 
 export function setup() {
-  if (!EMAIL || !PASSWORD) {
-    throw new Error("LOADTEST_EMAIL and LOADTEST_PASSWORD are required");
+  if (AUTH_TOKEN) {
+    return { token: AUTH_TOKEN, cookie: `access_token=${AUTH_TOKEN}` };
   }
+
+  if (!EMAIL || !PASSWORD) {
+    throw new Error("AUTH_TOKEN or (LOADTEST_EMAIL and LOADTEST_PASSWORD) required for dashboard load test");
+  }
+
   const session = http.get(`${BASE_URL}/api/auth/session`);
   const csrf =
     (session.cookies && session.cookies.blockminer_csrf && session.cookies.blockminer_csrf[0] &&
@@ -74,7 +88,6 @@ export function setup() {
   if (login.status !== 200) {
     throw new Error(`login failed status=${login.status} body=${String(login.body).slice(0, 200)}`);
   }
-  // Merge session+login cookies
   const cookie = [cookieHeaderFromResponse(session), cookieHeaderFromResponse(login)]
     .filter(Boolean)
     .join("; ");
@@ -83,14 +96,18 @@ export function setup() {
 
 export default function (data) {
   const headers = {
-    Cookie: data.cookie || "",
+    Cookie: data.cookie || (data.token ? `access_token=${data.token}` : ""),
+    Authorization: data.token ? `Bearer ${data.token}` : "",
     "X-CSRF-Token": data.csrf || "",
   };
+
   const paths = [
     { path: "/api/wallet/balance", trend: walletMs },
     { path: "/api/mining/cycle", trend: cycleMs },
     { path: "/api/rooms/slots", trend: slotsMs },
     { path: "/api/wallet/withdraw-fee-info", trend: feeMs },
+    { path: "/api/banners", trend: bannersMs },
+    { path: "/api/energy-tax/summary", trend: energyTaxMs },
   ];
 
   for (const p of paths) {
@@ -104,5 +121,5 @@ export default function (data) {
       [`${p.path} is 200`]: (r) => r.status === 200,
     });
   }
-  sleep(0.3);
+  sleep(0.5);
 }

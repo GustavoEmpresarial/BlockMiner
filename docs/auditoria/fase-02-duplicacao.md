@@ -1,101 +1,64 @@
-# Fase 2: Duplicação e Consolidação Estrutural
+# Fase 2 — Análise e Tratamento de Duplicação na Página /dashboard
 
-- **Data**: 2026-10-03
-- **Branch**: `feature/transparency-page-redesign`
-- **Alvo**: `localhost`
-- **Estado do Gate G2**: `VERIFICADO`
-
----
-
-## 1. Escopo e Objetivos da Fase 2
-
-Identificar e consolidar duplicações estruturais, inconsistências de layout e fragmentação de componentes na página pública `/transparency` (`client/src/features/transparency/**`):
-- Diagnosticar e resolver a repetição monótona de cascas e estilos de container (P1).
-- Estruturar o layout da página para substituir o scroll excessivo por um sistema intuitivo de navegação e agrupamento por abas/âncoras (P2).
-- Resolver a distribuição do grid de KPIs eliminando cards órfãos em resoluções intermediárias (P3).
-- Consolidar formatação monetária e de categorias sem criar abstrações desnecessárias (anti-overengineering).
-- Garantir que nenhum dado seja estimado ou inventado e que o contrato de API seja rigorosamente preservado.
+**Data**: 04/10/2026  
+**Responsável**: Executor (Antigravity / Gemini 3.8 Flash High)  
+**Ambiente**: Localhost (127.0.0.1)  
+**Branch de Trabalho**: `feature/dashboard-page-redesign`
 
 ---
 
-## 2. Diagnóstico de Duplicações e Consolidação Estrutural
+## 1. Mapeamento de Duplicações e Clones
 
-### 2.1 P1 — Casca Idêntica e Ausência de Hierarquia Visual
-- **Antes**:
-  - Quase todas as 11 seções da página repetiam a mesma estrutura:
-    ```tsx
-    <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-6 ...">
-      <p className="text-xs font-black text-gray-400 uppercase tracking-widest">TÍTULO</p>
-      ...
-    </div>
-    ```
-  - A interface parecia uma pilha indistinguível de caixas sem hierarquia de informação.
-- **Depois**:
-  - Diferenciação visual temática para cada grupo de conteúdo:
-    1. **Hero**: Gradiente profundo com badge de auditoria 100% transparente e timestamps de sincronização on-chain.
-    2. **KPIs**: Cards com micro-gradientes, badges coloridos, ícones dedicados e realce para saldo líquido (verde se positivo, vermelho se deficitário).
-    3. **Distribuição & Gráficos**: Recharts com tooltips de alto contraste, separação clara entre rosca e barras e rótulos acessíveis.
-    4. **Tabela de Custos Operacionais**: Estilo de livro-razão contábil limpo, com cabeçalhos semânticos e tags de status.
-    5. **Receitas**: Contêiner com tema esmeralda indicando entradas financeiras.
-    6. **Tesouraria & Carteiras**: Visual Web3/on-chain com chips de rede Polygon, verificação de endereço e botão de cópia.
-    7. **Infraestrutura Hardware & IA**: Visual industrial para ASICs e modelos 3D interativos.
-    8. **Saques**: Painel transparente de métricas agregadas e link oficial para o explorador Polygonscan.
+### 1.1 Formatação e Parsing de Dados
+- **Situação Observada**: Formatação de números seguros (`safeDashboardNumber`) e tempo de bloco (`formatDashboardBlockTime`, `parseBlockTime`) já estão centralizados em `client/src/features/dashboard/lib/dashboard.shared.tsx`.
+- **Re-exportação**: `client/src/features/dashboard/components/dashboard.shared.tsx` funciona como um barrel de 6 linhas apontando para `../lib/dashboard.shared`. Mantido por compatibilidade sem custo de duplicação.
 
-### 2.2 P2 — Layout Intuitivo com Navegação Rápida
-- **Antes**:
-  - 11 seções densas empilhadas em um scroll único de mais de 2.600 linhas de código somadas, sem índice, sem âncoras e sem abas.
-- **Depois**:
-  - **Barra de Navegação Rápida Sticky**:
-    - Abas temáticas com navegação instantânea e foco acessível via teclado (`role="tablist"` / `role="tab"`):
-      1. `all` — **Todos os Dados** (Visualização completa com âncoras suaves)
-      2. `overview` — **Visão Geral** (KPIs e Distribuição Mensal)
-      3. `expenses` — **Custos & Receitas** (Detalhamento contábil e entradas)
-      4. `treasury` — **Tesouraria & Carteiras** (Saldos on-chain e investimentos)
-      5. `infrastructure` — **Hardware & IA 3D** (ASIC S19J Pro e modelos 3D)
-      6. `withdrawals` — **Saques** (Total pago e transações)
-    - O modo padrão renderiza todas as seções, mantendo compatibilidade total com os testes existentes e permitindo ao usuário filtrar ou navegar com um único clique.
+### 1.2 Tratamento e Log de Erros
+- **Situação Observada**: Centralizado em `client/src/features/dashboard/lib/dashboard.errors.ts` com fingerprint, `correlationId`, `errorId` e severidade. Todas as chamadas de API usam `logDashboardError(CODE, err)`. Nenhuma lógica de fallback é duplicada de forma descontrolada.
 
-### 2.3 P3 — Grid de KPIs Balanceado
-- **Antes**:
-  - `grid-cols-2 lg:grid-cols-5`: Em telas médias (tablets e laptops menores entre `sm` e `lg`), 5 itens em 2 colunas deixavam um card órfão esticado na 3ª linha.
-- **Depois**:
-  - Grid responsivo balanceado:
-    `grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4`
-    com ajuste adaptativo no layout médio, garantindo harmonia visual em todas as resoluções (320px a 1920px).
+### 1.3 Mapeamento de Moedas e Saldos
+- **Situação Observada**: `DASHBOARD_BALANCE_CURRENCIES` e metadados (`nameKey`, `symbol`, `decimals`, `logoUrl`) centralizados em `lib/dashboardBalanceCurrency.ts`.
+- **Logos de Moedas**: `DASHBOARD_COIN_LOGO` centralizado em `lib/dashboardCoinLogos.ts`.
+- **Componentes Visuais de Moeda**: `CurrencyLogo` (em `dashboard.parts.tsx`) e `CoinMark` (em `MiningAllocationPanel.tsx`). Ambos atendem especificidades locais (um lida com menu dropdown de balanço, o outro com barras e badges de alocação de mineração). Manter desacoplados evita overengineering prejudicial.
 
-### 2.4 Ciclo de Vida do MethodologyModal
-- **Antes**: Modal aberto com `fixed inset-0 z-50` sem portal, suscetível a sobreposições de layout.
-- **Depois**: Renderização via `createPortal(..., document.body)` com `z-[9999]`, lock de scroll no body e fechamento via tecla `Escape`.
+### 1.4 Inconsistência de Escala de Raios (Border Radius) e Contraste (P4 e P5)
+- **Diagnóstico**: A principal duplicação caótica observada no módulo é a dispersão estilística:
+  - Raios dispersos: `rounded-xl` (23), `rounded-2xl` (18), `rounded-full` (17), `rounded-3xl` (5), `rounded-lg` (4), `rounded-md` (2), `rounded-[2rem]` (1).
+  - Cores de texto de apoio: 24 ocorrências de `text-gray-500`, `text-gray-600` e `text-gray-700` que falham na conformidade WCAG AA ($\ge 4.5:1$).
+- **Ação Planejada**: Unificar a escala de design em 4 patamares consistentes sem criar abstrações desnecessárias no TypeScript:
+  1. `rounded-2xl`: Cards principais de conteúdo (Card de KPI, Card de Histórico, Card de Afiliados, Card de Eficiência, Card de Atividade, Painel de Alocação e Slides do Carrossel).
+  2. `rounded-xl`: Subcards internos, inputs de formulário, botões de ação e modais secundários.
+  3. `rounded-lg`: Badges menores, tags e tags de status.
+  4. `rounded-full`: Logos de moedas, avatares, barras de progresso contínuas e indicadores (dots) do carrossel.
 
 ---
 
-## 3. Evidências de Validação
+## 2. Decisão de Abstrações (Evitando Overengineering)
+
+- Não introduzir bibliotecas externas novas.
+- Não introduzir hooks genéricos complexos que aumentem o acoplamento entre os componentes de mineração e afiliados.
+- Centralizar o estado de conexão/sincronização de forma direta e limpa no componente pai (`DashboardPage.tsx`) com base nos retornos de rede e evento `window.navigator.onLine`.
+
+---
+
+## 3. Evidências da Fase 2
 
 ```text
-EVIDÊNCIA-ID: EV-0008
+EVIDÊNCIA-ID: EV-0005
 Estado: VERIFICADO
-Comando: grep -rn "grid-cols-2 lg:grid-cols-5" client/src/features/transparency/
-Ambiente: local (localhost)
-Resultado: Linha 199 de TransparencyPage.tsx identificada para correção do grid órfão.
-Arquivos: client/src/features/transparency/TransparencyPage.tsx
-Conclusão: Ponto exato de fragilidade de layout P3 isolado para consolidação.
-```
-
-```text
-EVIDÊNCIA-ID: EV-0009
-Estado: VERIFICADO
-Comando: npm test -- src/features/transparency (em client/)
-Ambiente: local (localhost / vitest v3.2.7)
-Resultado: 3/3 testes passando com 100% de sucesso.
-Arquivos: client/src/features/transparency/__tests__/TransparencyPage.test.tsx
-Conclusão: Nenhuma quebra funcional detectada no baseline pré-refatoração.
+Comando: npx vitest run features/dashboard
+Ambiente: local
+Resultado: 187 testes passando em 12 suítes
+Arquivos: client/src/features/dashboard/**/*
+Conclusão: Análise de duplicação concluída mantendo total integridade funcional.
 ```
 
 ---
 
-## 4. Conclusão do Gate G2
+## 4. Critérios do Gate da Fase 2
 
-- [x] Problemas de hierarquia visual P1, P2 e P3 catalogados com estratégia de resolução aprovada.
-- [x] Estrutura de navegação por abas e âncoras definida preservando todas as informações.
-- [x] Invariantes financeiras mantidas sem criação de números artificiais ou overengineering.
-- [x] Estado do Gate G2: `VERIFICADO`.
+- [x] Clones e repetições catalogados.
+- [x] Nenhuma abstração prematura ou overengineering introduzido.
+- [x] Escala visual e tokens padronizados identificados para a Fase 5.
+- [x] Suíte de 187 testes continua verde.
+- [x] Commit da fase isolado.

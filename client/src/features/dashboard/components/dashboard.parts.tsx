@@ -301,13 +301,13 @@ export function DashboardHistory({ blockHistory, tokenSymbol }: DashboardHistory
   const rows = blockHistory.slice(0, 5);
 
   return (
-    <div className="bg-surface border border-gray-800/50 rounded-3xl overflow-hidden shadow-xl">
+    <div className="bg-surface border border-gray-800/50 rounded-2xl overflow-hidden shadow-xl">
       <div className="px-4 sm:px-6 md:px-8 py-4 sm:py-6 border-b border-gray-800/50 flex flex-col gap-1 sm:flex-row sm:justify-between sm:items-center bg-gray-800/20">
         <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2 sm:gap-3 min-w-0">
           <Activity className="w-5 h-5 text-primary shrink-0" />
           <span className="truncate">{t('dashboard.history_title')}</span>
         </h2>
-        <span className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-widest pl-7 sm:pl-0">
+        <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest pl-7 sm:pl-0">
           {t('dashboard.last_blocks')}
         </span>
       </div>
@@ -320,11 +320,11 @@ export function DashboardHistory({ blockHistory, tokenSymbol }: DashboardHistory
               <span className="bg-gray-800/50 px-2.5 py-1 rounded-lg text-xs font-bold text-white">
                 #{Number(block.blockNumber)}
               </span>
-              <span className="text-gray-500 font-mono text-[11px] tabular-nums">{formatDashboardBlockTime(block)}</span>
+              <span className="text-slate-400 font-mono text-[11px] tabular-nums">{formatDashboardBlockTime(block)}</span>
             </div>
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div className="min-w-0 space-y-1">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">{t('dashboard.my_gain')}</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{t('dashboard.my_gain')}</p>
                 <div className="flex items-start gap-1.5">
                   <TrendingUp className="w-3.5 h-3.5 text-emerald-400 mt-0.5 shrink-0" />
                   <div className="flex flex-col leading-tight min-w-0">
@@ -341,7 +341,7 @@ export function DashboardHistory({ blockHistory, tokenSymbol }: DashboardHistory
                 </div>
               </div>
               <div className="min-w-0 space-y-1">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">{t('dashboard.block_total')}</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{t('dashboard.block_total')}</p>
                 <div className="flex flex-col leading-tight text-gray-300 font-bold">
                   <span className="text-xs break-all inline-flex items-center gap-1.5 flex-wrap">
                     {safeDashboardNumber(block.totalReward, 8)} {tokenSymbol}
@@ -365,18 +365,18 @@ export function DashboardHistory({ blockHistory, tokenSymbol }: DashboardHistory
           </div>
         ))}
         {rows.length === 0 && (
-          <p className="px-4 py-10 text-center text-gray-500 font-medium italic text-sm">{t('dashboard.no_blocks')}</p>
+          <p className="px-4 py-10 text-center text-slate-400 font-medium italic text-sm">{t('dashboard.no_blocks')}</p>
         )}
       </div>
 
       <div className="hidden md:block overflow-x-auto">
-        <table className="w-full text-left text-sm text-gray-400">
-          <thead className="bg-gray-800/30 text-[10px] uppercase font-bold tracking-widest text-gray-500">
+        <table className="w-full text-left text-sm text-slate-300">
+          <thead className="bg-gray-800/30 text-[10px] uppercase font-bold tracking-widest text-slate-400">
             <tr>
-              <th className="px-6 md:px-8 py-4">{t('dashboard.block_id')}</th>
-              <th className="px-6 md:px-8 py-4">{t('dashboard.my_gain')}</th>
-              <th className="px-6 md:px-8 py-4">{t('dashboard.block_total')}</th>
-              <th className="px-6 md:px-8 py-4 text-right">{t('dashboard.time')}</th>
+              <th scope="col" className="px-6 md:px-8 py-4">{t('dashboard.block_id')}</th>
+              <th scope="col" className="px-6 md:px-8 py-4">{t('dashboard.my_gain')}</th>
+              <th scope="col" className="px-6 md:px-8 py-4">{t('dashboard.block_total')}</th>
+              <th scope="col" className="px-6 md:px-8 py-4 text-right">{t('dashboard.time')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-800/50 font-medium">
@@ -424,12 +424,12 @@ export function DashboardHistory({ blockHistory, tokenSymbol }: DashboardHistory
                     )}
                   </div>
                 </td>
-                <td className="px-6 md:px-8 py-5 text-right text-gray-500 font-mono text-xs">{formatDashboardBlockTime(block)}</td>
+                <td className="px-6 md:px-8 py-5 text-right text-slate-400 font-mono text-xs">{formatDashboardBlockTime(block)}</td>
               </tr>
             ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-6 md:px-8 py-12 text-center text-gray-500 font-medium italic">
+                <td colSpan={4} className="px-6 md:px-8 py-12 text-center text-slate-400 font-medium italic">
                   {t('dashboard.no_blocks')}
                 </td>
               </tr>
@@ -469,7 +469,7 @@ export function DashboardEfficiencyCard({ freeRacks, inventoryCount, loading }: 
   }
 
   return (
-    <div className="bg-surface border border-gray-800/50 rounded-3xl p-6 shadow-xl">
+    <div className="bg-surface border border-gray-800/50 rounded-2xl p-6 shadow-xl">
       <div className="flex items-center gap-3 mb-4">
         <div className="p-2.5 bg-sky-500/10 rounded-xl">
           <Gauge className="w-5 h-5 text-sky-400" />
@@ -482,7 +482,7 @@ export function DashboardEfficiencyCard({ freeRacks, inventoryCount, loading }: 
         </div>
       ) : (
         <>
-          <p className="text-sm text-gray-400 leading-relaxed mb-4">{message}</p>
+          <p className="text-sm text-slate-400 leading-relaxed mb-4">{message}</p>
           <Link
             to={ctaTo}
             className="inline-flex items-center justify-center gap-2 w-full rounded-xl bg-sky-500/10 border border-sky-500/25 px-4 py-2.5 text-xs font-black uppercase tracking-widest text-sky-300 transition-colors hover:bg-sky-500/20"
@@ -521,7 +521,7 @@ export function DashboardActivityCard({
   const pct = Math.min(100, Math.round((done / required) * 100));
 
   return (
-    <div className="bg-surface border border-gray-800/50 rounded-3xl p-6 shadow-xl">
+    <div className="bg-surface border border-gray-800/50 rounded-2xl p-6 shadow-xl">
       <div className="flex items-center gap-3 mb-4">
         <div className="p-2.5 bg-emerald-500/10 rounded-xl">
           <Sparkles className="w-5 h-5 text-emerald-400" />
@@ -536,7 +536,7 @@ export function DashboardActivityCard({
         <p className="text-sm text-emerald-400 font-bold leading-relaxed">{t('dashboard.activity_waived')}</p>
       ) : (
         <>
-          <p className="text-sm text-gray-400 leading-relaxed mb-3">
+          <p className="text-sm text-slate-400 leading-relaxed mb-3">
             {t('dashboard.activity_progress', { done, required })}
           </p>
           <div className="h-2 w-full rounded-full bg-gray-800 overflow-hidden mb-4">

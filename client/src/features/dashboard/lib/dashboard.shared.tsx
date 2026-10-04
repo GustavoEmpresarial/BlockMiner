@@ -74,7 +74,7 @@ export function Card({
 
   if (children != null && label === undefined) {
     return (
-      <div className={`rounded-3xl border border-gray-800/50 bg-surface p-6 ${className}`}>{children}</div>
+      <div className={`rounded-2xl border border-gray-800/50 bg-surface p-6 ${className}`}>{children}</div>
     );
   }
 
@@ -82,9 +82,9 @@ export function Card({
   const showLogo = Boolean(logoUrl && !logoFailed);
 
   return (
-    <div className="bg-surface border border-gray-800/50 hover:border-gray-700/50 rounded-3xl p-5 md:p-6 shadow-lg transition-all group overflow-hidden relative h-full flex flex-col">
+    <div className="bg-surface border border-gray-800/50 hover:border-gray-700/50 rounded-2xl p-5 md:p-6 shadow-lg transition-all group overflow-hidden relative h-full flex flex-col">
       <div
-        className={`p-3 rounded-2xl ${tone} group-hover:scale-110 transition-transform duration-300 w-fit mb-4 relative z-10 overflow-hidden`}
+        className={`p-3 rounded-xl ${tone} group-hover:scale-110 transition-transform duration-300 w-fit mb-4 relative z-10 overflow-hidden`}
       >
         {showLogo ? (
           <img
@@ -102,16 +102,16 @@ export function Card({
         )}
       </div>
       <div className="flex items-center justify-between gap-3 mb-2 relative z-10">
-        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest leading-snug">{label}</p>
+        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-snug">{label}</p>
         {headerExtra}
       </div>
       <div className="mt-auto relative z-10">
         <h3 className="text-xl sm:text-2xl md:text-[1.65rem] font-black text-white tracking-tight leading-none whitespace-nowrap">
           {value}{' '}
-          <span className="text-xs font-bold text-gray-500 tracking-normal uppercase align-middle">{unit}</span>
+          <span className="text-xs font-bold text-slate-400 tracking-normal uppercase align-middle">{unit}</span>
         </h3>
       </div>
-      <div className="absolute right-0 bottom-0 w-16 h-16 bg-gradient-to-br from-transparent to-gray-800/10 rounded-tl-3xl" />
+      <div className="absolute right-0 bottom-0 w-16 h-16 bg-gradient-to-br from-transparent to-gray-800/10 rounded-tl-2xl" />
     </div>
   );
 }
