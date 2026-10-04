@@ -35,7 +35,7 @@ export default function SiteFooter() {
   };
 
   return (
-    <footer className="relative z-10 overflow-hidden border-t border-white/[0.07] bg-[#02070f] px-5 py-16 text-white sm:px-8">
+    <footer className="relative z-10 overflow-hidden border-t border-white/[0.07] bg-slate-950 px-5 py-16 text-white sm:px-8">
       {/* Faint brand glow, same family as the hero/auth pages — keeps the footer from
           reading as a flat, disconnected slab at the bottom of the page. */}
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-sky-500/40 to-transparent" />

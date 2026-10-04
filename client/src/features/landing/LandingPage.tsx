@@ -153,7 +153,7 @@ export default function Landing() {
   ];
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden bg-[#020511] text-slate-100">
+    <div className="relative min-h-screen overflow-x-hidden bg-background text-slate-100">
       <a
         href="#main-content"
         className="absolute left-4 top-0 z-[100] -translate-y-full rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition-transform focus:translate-y-4 focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-white"

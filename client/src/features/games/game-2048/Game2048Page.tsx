@@ -479,7 +479,7 @@ export default function Game2048Page() {
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex min-h-[100dvh] touch-manipulation flex-col overflow-hidden bg-[#020617] pt-[env(safe-area-inset-top)]"
+      className="fixed inset-0 z-[100] flex min-h-[100dvh] touch-manipulation flex-col overflow-hidden bg-slate-950 pt-[env(safe-area-inset-top)]"
       style={{ direction: "ltr", overscrollBehavior: "none" }}
     >
       <>
@@ -489,7 +489,7 @@ export default function Game2048Page() {
             {t("game2048.loading")}
           </span>
         )}
-        <header className="flex shrink-0 items-center justify-between gap-1.5 border-b border-slate-800 bg-[#050a14] px-2 py-2 sm:gap-2 sm:px-4">
+        <header className="flex shrink-0 items-center justify-between gap-1.5 border-b border-slate-800 bg-slate-950 px-2 py-2 sm:gap-2 sm:px-4">
             <div className="flex min-w-0 items-center gap-2 sm:gap-3">
               <Link
                 to="/games"
@@ -557,7 +557,7 @@ export default function Game2048Page() {
                       ref={boardGridRef}
                       role="grid"
                       aria-label={t("game2048.grid_aria")}
-                      className="relative aspect-square w-full max-w-full touch-none select-none overflow-hidden rounded-xl border border-sky-600/30 bg-[#060d18] p-1.5 shadow-[inset_0_0_24px_rgba(0,0,0,0.45)] sm:p-2"
+                      className="relative aspect-square w-full max-w-full touch-none select-none overflow-hidden rounded-xl border border-sky-600/30 bg-slate-950 p-1.5 shadow-[inset_0_0_24px_rgba(0,0,0,0.45)] sm:p-2"
                       style={{ touchAction: "none" }}
                       onPointerDown={onBoardPointerDown}
                       onPointerUp={onBoardPointerUp}

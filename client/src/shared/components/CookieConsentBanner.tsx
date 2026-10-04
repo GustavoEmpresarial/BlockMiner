@@ -11,7 +11,7 @@ import { getCookieConsent, setCookieConsent } from '../utils/cookieConsent';
  * or registers, wherever they land first.
  *
  * A floating card in the bottom-right corner (not a full-width bar) — deliberately a SOLID
- * background (bg-[#0a0f1c], not translucent/blurred) with a visible border, ring and heavy
+ * background (bg-slate-900, not translucent/blurred) with a visible border, ring and heavy
  * shadow so it reads as a distinct panel floating over the page, never blending into a dark
  * background like an earlier full-width version did.
  */
@@ -36,7 +36,7 @@ export default function CookieConsentBanner() {
       aria-label={t('cookieConsent.policyLink', { defaultValue: 'Cookie Policy' })}
       className="fixed inset-x-4 bottom-4 z-[60] sm:inset-x-auto sm:right-5 sm:bottom-5 sm:w-[380px]"
     >
-      <div className="rounded-2xl border border-white/15 bg-[#0a0f1c] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.6)] ring-1 ring-black/40">
+      <div className="rounded-2xl border border-white/15 bg-slate-900 p-5 shadow-[0_20px_60px_rgba(0,0,0,0.6)] ring-1 ring-black/40">
         <div className="flex items-start gap-3">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sky-500/15">
             <Cookie className="h-4.5 w-4.5 text-sky-400" aria-hidden />

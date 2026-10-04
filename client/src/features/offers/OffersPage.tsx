@@ -561,7 +561,7 @@ export default function OffersPage() {
                                         )}
 
                                         <div className={m.modelUrl
-                                            ? 'relative aspect-[3/2] min-h-[18rem] bg-[#070b12] rounded-3xl border border-cyan-400/20 shadow-[0_0_48px_rgba(34,211,238,0.16)] flex items-center justify-center overflow-hidden'
+                                            ? 'relative aspect-[3/2] min-h-[18rem] bg-slate-950 rounded-3xl border border-cyan-400/20 shadow-[0_0_48px_rgba(34,211,238,0.16)] flex items-center justify-center overflow-hidden'
                                             : 'aspect-square bg-gray-900/50 rounded-3xl p-2 border border-gray-800 group-hover:scale-105 transition-transform duration-500 flex items-center justify-center overflow-hidden'
                                         }>
                                             {m.modelUrl && (

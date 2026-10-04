@@ -28,13 +28,13 @@ body,
   0%,
   100% {
     box-shadow:
-      0 0 0 1px rgba(59, 130, 246, 0.45),
-      inset 0 0 0 1px rgba(59, 130, 246, 0.12);
+      0 0 0 1px rgba(61, 129, 246, 0.45),
+      inset 0 0 0 1px rgba(61, 129, 246, 0.12);
   }
   50% {
     box-shadow:
       0 0 0 2px rgba(96, 165, 250, 0.65),
-      0 0 20px rgba(59, 130, 246, 0.22),
+      0 0 20px rgba(61, 129, 246, 0.22),
       inset 0 0 0 1px rgba(125, 211, 252, 0.2);
   }
 }
@@ -42,7 +42,7 @@ body,
 .sidebar-rewards-glow {
   border-radius: 1rem;
   animation: sidebar-rewards-pulse 2.6s ease-in-out infinite;
-  background: linear-gradient(125deg, rgba(37, 99, 235, 0.22), rgba(14, 165, 233, 0.12), rgba(37, 99, 235, 0.22));
+  background: linear-gradient(125deg, rgba(61, 129, 246, 0.22), rgba(14, 165, 233, 0.12), rgba(61, 129, 246, 0.22));
 }
 
 /* Offers nav alert — brand primary pulse (never emergency red). */
@@ -50,21 +50,21 @@ body,
   0%,
   100% {
     box-shadow:
-      0 0 0 1px rgba(59, 130, 246, 0.45),
-      inset 0 0 0 1px rgba(59, 130, 246, 0.12);
+      0 0 0 1px rgba(61, 129, 246, 0.45),
+      inset 0 0 0 1px rgba(61, 129, 246, 0.12);
   }
   50% {
     box-shadow:
       0 0 0 2px rgba(96, 165, 250, 0.65),
-      0 0 20px rgba(59, 130, 246, 0.22),
+      0 0 20px rgba(61, 129, 246, 0.22),
       inset 0 0 0 1px rgba(125, 211, 252, 0.2);
   }
 }
 
 .sidebar-offers-alert {
   color: #fff;
-  border-color: rgb(59 130 246 / 0.45);
-  background: linear-gradient(125deg, rgba(37, 99, 235, 0.22), rgba(14, 165, 233, 0.12), rgba(37, 99, 235, 0.22));
+  border-color: rgb(61 129 246 / 0.45);
+  background: linear-gradient(125deg, rgba(61, 129, 246, 0.22), rgba(14, 165, 233, 0.12), rgba(61, 129, 246, 0.22));
   animation: sidebar-offers-alert 2.6s ease-in-out infinite;
 }
 
@@ -72,13 +72,13 @@ body,
   0%,
   100% {
     box-shadow:
-      0 0 0 1px rgba(59, 130, 246, 0.18),
+      0 0 0 1px rgba(61, 129, 246, 0.18),
       0 12px 28px rgba(0, 0, 0, 0.35);
   }
   50% {
     box-shadow:
       0 0 0 1px rgba(96, 165, 250, 0.4),
-      0 0 22px rgba(59, 130, 246, 0.16),
+      0 0 22px rgba(61, 129, 246, 0.16),
       0 12px 28px rgba(0, 0, 0, 0.35);
   }
 }
@@ -125,7 +125,7 @@ body,
   right: 0;
   top: 0;
   height: 28%;
-  background: linear-gradient(180deg, transparent, rgba(59, 130, 246, 0.16), transparent);
+  background: linear-gradient(180deg, transparent, rgba(61, 129, 246, 0.16), transparent);
   animation: rack-scan 4.8s ease-in-out infinite;
 }
 
