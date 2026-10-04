@@ -252,7 +252,39 @@ Rodar: `cd client && npx vitest run src/features/dashboard --coverage --coverage
 - **Mutation testing / property-based testing**: não aplicado — o ganho marginal não
   justificou o tempo nesta passada para um módulo majoritariamente de apresentação.
 
-## 4. Referência de arquivos
+### 3.7 Passada de Redesign, Conectividade e Acessibilidade (2026-10-04)
+
+Auditoria e refatoração completa do layout, conectividade reativa, acessibilidade e internacionalização de `DashboardPage.tsx` e componentes auxiliares (`DashboardRedesignQuality.test.tsx` com 6 novos testes dedicados de regressão):
+
+#### 3.7.1 Badge de Conexão Reativo (4 Estados Reais)
+- **Antes**: Badge estático fixo em verde com ícone `Wifi` exibindo `"Sincronizado"`, mesmo quando o navegador estava offline ou as chamadas de polling falhavam.
+- **Depois**: Componente totalmente reativo (`data-testid="sync-status-badge"` com `role="status"` e `aria-live="polite"`) que consome `navigator.onLine`, listeners de janela (`online`/`offline`) e o resultado de `useDashboardPoll` para `/mining/cycle` e `/wallet/balance`:
+  1. `synced` (`bg-emerald-500/10 border-emerald-500/25 text-emerald-400`, ícone `Wifi`): Conexão ativa e dados sincronizados.
+  2. `syncing` (`bg-sky-500/10 border-sky-500/25 text-sky-400`, ícone `RefreshCw animate-spin`): Sincronização ou revalidação em andamento.
+  3. `reconnecting` (`bg-amber-500/10 border-amber-500/25 text-amber-400`, ícone `WifiOff`): Dispositivo online, mas chamada à API falhou (retry automático a cada 15s).
+  4. `offline` (`bg-rose-500/10 border-rose-500/25 text-rose-400`, ícone `WifiOff`): Dispositivo sem conexão à internet (`navigator.onLine === false`).
+
+#### 3.7.2 Eliminação da Armadilha de Containing Block na Raiz
+- **Antes**: Container raiz de `DashboardPage.tsx` utilizava `animate-in fade-in duration-700`. Conforme a especificação W3C CSS Transforms/Animations, elementos com animação atuam como *containing block* para descendentes `position: fixed`.
+- **Depois**: Removida a classe de animação do container raiz (documentado nas linhas 340-341 de `DashboardPage.tsx`).
+- **Efeito Colateral Positivo**: `MiningAllocationPanel` (`fixed inset-0 z-50`) e `DashboardBannersCarousel` (`fixed inset-0 z-[100]`), que são filhos diretos de `DashboardPage`, agora expandem sobre a viewport inteira sem serem aprisionados ou gerarem a faixa nítida sob o header (`z-30`) e topbar móvel (`z-40`).
+
+#### 3.7.3 Contraste e Tokens de Cores WCAG AA
+- **Antes**: Utilização generalizada de classes cinzas escuras (`text-gray-500`, `text-gray-600`, `text-gray-700`), reprovadas no teste de contraste sobre fundo escuro (`#0b0e14`).
+- **Depois**: Erradicação total (0 ocorrências de `text-gray-500/600/700` em toda a feature `client/src/features/dashboard`), adotando tokens `text-slate-400`, `text-slate-300` e `text-slate-500` com contraste comprovado $\ge 4.5:1$.
+
+#### 3.7.4 Padronização de Raios e Semântica de Tabelas
+- **Antes**: Raio customizado avulso `rounded-[2rem]` no card de afiliados e cabeçalhos `<th>` na tabela de histórico de blocos sem atributo de escopo.
+- **Depois**:
+  - Escala unificada de raios: `rounded-2xl` para cards principais, `rounded-xl` para cartões internos, `rounded-lg` para botões e inputs, `rounded-full` para chips e badges.
+  - Tabela `DashboardHistory`: adicionado `scope="col"` em todos os 4 elementos `<th>` (`block_id`, `my_gain`, `block_total`, `time`).
+
+#### 3.7.5 Tradução Autêntica em Espanhol (`es.json`)
+- **Antes**: Várias chaves do dashboard em `es.json` continham prosa duplicada em inglês ("Welcome", "Your Balance", "Network Power", etc.).
+- **Depois**: 106 chaves de dashboard sincronizadas em pt-BR, en e es. Prosa 100% traduzida para espanhol natural; apenas 6 termos mantidos idênticos ao inglês por serem tickers e nomes próprios imutáveis (`POL`, `SHIB`, `BLK`, `10%`, `Polygon (POL)`, `Shiba Inu (SHIB)`).
+
+#### 3.7.6 Preservação do `DashboardEnergyTaxModal`
+- O componente `DashboardEnergyTaxModal.tsx` **não foi alterado** nesta passada, permanecendo com `createPortal(..., document.body)` e `ENERGY_TAX_MODAL_Z_INDEX = 'z-[9999]'` exatamente como aprovado e em produção.
 
 ```
 client/src/features/dashboard/
@@ -373,4 +405,134 @@ Este guia orienta operadores de atendimento e analistas de suporte no diagnósti
 
 **P: Fechar o modal no botão "Lembrar depois" cancela a taxa?**  
 *R*: Não cancela. Apenas oculta o aviso no navegador para que o usuário possa interagir com outras abas. Se o dia não for quitado até segunda-feira às 00:00 UTC, o sistema executará o sweep automático com alíquota semanal de 15%.
+
+---
+
+## 6. Manual de Produto e Guia Operacional do Dashboard (Home Logada)
+
+Este capítulo consolida as especificações de **Produto** para o usuário final e o manual de atendimento para as equipes de **Suporte e Operações** referente à página principal da área autenticada (`/dashboard`).
+
+### 6.1 Visão Geral de Produto para o Usuário Final
+
+#### 6.1.1 O Papel do Dashboard na Jornada do Minerador
+O Dashboard é o centro de controle e visualização em tempo real de toda a operação de mineração do jogador no BlockMiner. Ao acessar sua conta, o minerador acompanha seu saldo atual, a velocidade de processamento de suas máquinas (hashrate), a contagem regressiva para a resolução do próximo bloco, a distribuição percentual de mineração entre POL e SHIB, o desempenho da sua rede de afiliados e a eficiência das suas instalações.
+
+Todos os dados exibidos são provenientes do servidor em tempo real (via Socket.IO com fallback e reconciliação contínua a cada 15 segundos via polling REST). O cliente atua puramente como interface de exibição e nunca calcula ou decide saldos sozinho.
+
+#### 6.1.2 Os 4 Estados do Badge de Sincronização e Conectividade
+No canto superior direito da página, ao lado do título de boas-vindas, o minerador visualiza o badge dinâmico de status de conexão (`data-testid="sync-status-badge"`). O badge informa com precisão se os dados na tela estão atualizados ou se há alguma oscilação de rede:
+
+| Estado | Indicador Visual | Mensagem (pt-BR / es / en) | O que Significa para o Usuário | O que Acontece Durante uma Queda |
+|---|---|---|---|---|
+| **`synced`** | Fundo verde esmeralda (`border-emerald-500/25`), ícone `Wifi` | *"Sincronizado"* / *"Sincronizado"* / *"Synced"* | Conexão íntegra e ativa. Todas as chamadas de ciclo de mineração e saldo responderam com sucesso (`200 OK`) e o socket de tempo real está operando normalmente. | Dados em tempo real 100% atualizados. |
+| **`syncing`** | Fundo azul céu (`border-sky-500/25`), ícone `RefreshCw animate-spin` | *"Sincronizando..."* / *"Sincronizando..."* / *"Syncing..."* | O navegador está estabelecendo a primeira carga de dados ou revalidando ciclo e saldo após o retorno da conexão à internet. | Dura apenas de 1 a 3 segundos enquanto a requisição viaja ao servidor. |
+| **`reconnecting`** | Fundo âmbar (`border-amber-500/25`), ícone `WifiOff` | *"Reconectando..."* / *"Reconectando..."* / *"Reconnecting..."* | O dispositivo possui internet ativa (`navigator.onLine === true`), porém o servidor demorou para responder ou retornou uma falha momentânea de rede. | **A mineração não é afetada.** Os blocos continuam sendo processados no backend. A página entra em retry silencioso a cada 15 segundos ou imediatamente se o usuário alternar de aba e voltar. Os valores na tela permanecem fixados no último snapshot seguro recebido. |
+| **`offline`** | Fundo rosa/vermelho (`border-rose-500/25`), ícone `WifiOff` | *"Sem conexão (Offline)"* / *"Sin conexión (Offline)"* / *"No connection (Offline)"* | O navegador do usuário perdeu o acesso à internet (Wi-Fi caiu, dados móveis desligados ou modo avião ativado). | O usuário é avisado imediatamente para não estranhar a ausência de novas transações. As requisições em segundo plano são pausadas para economizar recursos. Assim que a internet retornar, o badge transiciona para `syncing` e revalida tudo automaticamente. |
+
+#### 6.1.3 Cartões de Indicadores Principais
+O topo do Dashboard é composto por 4 cartões de estatísticas fundamentais:
+1. **Seu Saldo (`Card`)**:
+   - Exibe o saldo da carteira do usuário.
+   - Possui menu seletor rápido no cabeçalho do cartão, permitindo alternar a exibição entre **POL**, **SHIB** e **BLK**.
+   - A preferência de moeda selecionada é persistida localmente por `userId` no navegador via `lib/dashboardBalanceCurrency.ts`, preservando a escolha do minerador entre sessões.
+2. **Sua Velocidade (`Speed`)**:
+   - Exibe o hashrate estimado gerado pelas máquinas ativas do jogador (soma das placas nos racks das salas).
+   - Formatação dinâmica com unidades automáticas (H/s, KH/s, MH/s, GH/s, TH/s).
+3. **Poder da Rede (`Network Power`)**:
+   - Hashrate global acumulado de todos os mineradores ativos no ecossistema BlockMiner.
+   - Serve de base para a proporção de distribuição das recompensas de cada bloco.
+4. **Próximo Bloco (`Next Block`)**:
+   - Contagem regressiva em minutos e segundos até o fechamento do bloco atual.
+   - Utiliza interpolação suave via `nextBlockCountdownAnchor` e `smoothedBlockCountdownSeconds`, corrigida a cada 15 segundos pelo ciclo da API para evitar saltos ou descompassos com o relógio do servidor.
+   - Informa o tempo padrão do ciclo (ex: a cada 10 minutos).
+
+#### 6.1.4 Painel de Alocação de Mineração (`MiningAllocationPanel`)
+O usuário tem total autonomia para direcionar o poder computacional de suas máquinas entre as duas moedas principais mineráveis da plataforma: **POL** (Polygon nativo) e **SHIB** (Shiba Inu).
+- **Regras do Split**:
+  - A divisão é configurada em passos discretos de **5%** (ex: 50% / 50%, 75% / 25%, 100% / 0%).
+  - A soma entre POL e SHIB deve totalizar rigorosamente **100%**.
+  - O modal oferece botões de preset rápido: `100/0`, `75/25`, `50/50`, `25/75` e `0/100`.
+- **Estimativa de Ganhos**:
+  - O painel exibe em tempo real a estimativa de ganho por bloco em POL e em SHIB proporcionalmente à alocação escolhida e ao hashrate do minerador.
+- **Vigência das Alterações**:
+  - Salvar o split envia uma requisição `PATCH /api/mining/allocation` com `polBps` (em pontos-base, onde 10.000 = 100%).
+  - Conforme destacado na interface (`dashboard.mining_allocation_applies_next_block`), a nova proporção entra em vigor **a partir do próximo bloco** a ser minerado, não alterando a contabilidade de blocos já em curso.
+
+#### 6.1.5 Programa de Indicação e Afiliados
+Na seção lateral da Dashboard, o minerador tem acesso ao seu painel do programa de afiliados:
+- **Bônus de Indicação**: 10% de recompensa adicional sobre os ganhos de blocos de usuários cadastrados através do seu link.
+- **Contador de Indicados Ativos**: Quantidade de mineradores ativos vinculados à sua conta.
+- **Link e Código Pessoal**:
+  - O link oficial de convite (`https://.../register?ref=SEU_CODIGO`) pode ser copiado com 1 clique, apresentando confirmação visual com ícone de checkmark por 2 segundos.
+- **Vincular Código de Amigo**:
+  - Se o minerador se cadastrou sem indicação, ele pode inserir o código de convite de um parceiro no campo "Tem um código de indicação?".
+  - O campo sanitiza a entrada (remove espaços, quebras de linha e caracteres de controle via `sanitizeReferralInput`).
+  - Regras de integridade validadas no servidor: não é permitido autoindicação (vincular o próprio código), não é permitido vincular múltiplos códigos e não é possível alterar o padrinho após a confirmação.
+
+#### 6.1.6 Histórico dos Últimos Blocos Minerados (`DashboardHistory`)
+- Tabela com os últimos 5 blocos liquidados na rede.
+- Em cada linha, o usuário confere:
+  - Número identificador do bloco (`#12345`).
+  - Seu ganho pessoal (discriminando os valores auferidos em POL e em SHIB com badges coloridos e ícone de crescimento).
+  - O total global de recompensas distribuído a todos os mineradores no bloco.
+  - O horário relativo no qual o bloco foi minerado (ex: "há 3 min", "há 12 min").
+- Em telas de dispositivos móveis, a tabela se reorganiza em formato de lista de cartões táticos individuais para leitura facilitada.
+
+#### 6.1.7 Eficiência Operacional e Atividades Diárias
+- **Eficiência de Instalação (`DashboardEfficiencyCard`)**:
+  - Compara a quantidade de racks vazios disponíveis nas salas (`freeRacks`) com o número de máquinas paradas no inventário (`inventoryCount`).
+  - Se houver máquinas ociosas sem rack, alerta o usuário e sugere a compra ou upgrade de salas (`/rooms`).
+  - Se houver racks sobrando e sem máquinas, sugere a aquisição de novas mineradoras na loja (`/shop`).
+- **Atividades Diárias para Isenção da Taxa de Saque (`DashboardActivityCard`)**:
+  - A plataforma oferece isenção de 100% da taxa de retirada de saldo para usuários ativos.
+  - Para obter a isenção no dia, o usuário deve completar 10 atividades (faucets, cliques PTC, minigames, shortlinks, vídeos).
+  - O card exibe uma barra de progresso em tempo real (`completionsToday / requiredForWaiver`). Ao atingir a meta, um badge verde confirma que a taxa de saque do dia foi completamente isenta (`dashboard.activity_waived`).
+
+#### 6.1.8 Banners Promocionais (`DashboardBannersCarousel`)
+Carrossel dinâmico posicionado na lateral da página para comunicação de ofertas de salas, descontos de refrigeração, bônus de criadores e novidades da plataforma, com navegação fluida e isolamento de falhas (se a API de banners falhar, o espaço colapsa sem quebrar o restante da Dashboard).
+
+---
+
+### 6.2 Guia Operacional e Troubleshooting para Suporte
+
+Este guia serve como referência técnica e operacional para analistas de suporte e atendimento ao cliente do BlockMiner.
+
+#### 6.2.1 Matriz de Diagnóstico do Badge de Sincronização
+
+| O que o Usuário Vê | Causa Provável | O que o Suporte Deve Esclarecer ao Usuário | Ação Técnica / Diagnóstico |
+|---|---|---|---|
+| Badge piscando **"Sincronizando..."** continuamente | Latência severa de rede no cliente ou proxy local retendo chamadas REST. | Orientar o usuário a recarregar a página (F5) ou verificar extensões de bloqueio de requisições (adblockers muito agressivos). | Verificar latência de `/api/mining/cycle`. |
+| Badge vermelho **"Sem conexão (Offline)"** | Queda física da conexão de internet no computador/celular do usuário. | Esclarecer que a mineração das máquinas no jogo continua ocorrendo normalmente no servidor. O aviso indica apenas que o navegador não consegue baixar a atualização da tela no momento. Assim que a internet voltar, a tela se atualiza sozinha. | Nenhuma ação no servidor. Problema de conectividade local do cliente. |
+| Badge amarelo **"Reconectando..."** | O usuário tem internet, mas a rota `/api/mining/cycle` ou `/api/wallet/balance` retornou erro HTTP 5xx, 429 (rate limit) ou sofreu timeout. | Informar que o sistema está tentando restabelecer contato automaticamente a cada 15 segundos. Não é necessário clicar várias vezes. Os dados exibidos correspondem ao último estado validado antes da oscilação. | Verificar logs em `/admin/client-errors` procurando por `DASHBOARD_CYCLE_FETCH_FAILED` ou `DASHBOARD_BALANCE_FETCH_FAILED` com o `errorId` informado pelo usuário. |
+| Badge verde **"Sincronizado"** | Operação normal e saudável. | Informar que todos os saldos e cronômetros estão sincronizados com a blockchain e o servidor. | Nenhuma ação requerida. |
+
+#### 6.2.2 Matriz de Códigos de Erro Estruturados no Cliente (`lib/dashboard.errors.ts`)
+
+Todas as falhas em chamadas de API na Dashboard geram logs estruturados no console com identificador único (`errorId` no formato `err_<uuid>`) e correlação (`correlationId`). Se o usuário abrir um ticket de suporte, oriente-o a informar o `errorId`.
+
+| Código de Erro | Severidade | Impacto | Rota Envolvida | O que Acontece na UI | Ação do Suporte |
+|---|---|---|---|---|---|
+| `DASHBOARD_CYCLE_FETCH_FAILED` | `LOW` | `LOW` | `GET /api/mining/cycle` | Badge muda para `reconnecting`. Contagem regressiva usa última âncora conhecida. | Se persistir, verificar se o worker de mineração está gerando blocos normalmente. |
+| `DASHBOARD_BALANCE_FETCH_FAILED` | `LOW` | `LOW` | `GET /api/wallet/balance` | Badge muda para `reconnecting`. Saldo permanece no último valor recebido. | Verificar status do serviço de carteiras no backend. |
+| `DASHBOARD_SLOTS_FETCH_FAILED` | `LOW` | `LOW` | `GET /api/rooms/slots` | Card de eficiência exibe estado vazio/carregando sem quebrar a página. | Baixo risco; não bloqueia gameplay. |
+| `DASHBOARD_FEE_INFO_FETCH_FAILED` | `LOW` | `LOW` | `GET /api/wallet/withdraw-fee-info` | Card de atividade exibe estado neutro. | Baixo risco. |
+| `DASHBOARD_ALLOCATION_SAVE_FAILED` | `CRITICAL` | `HIGH` | `PATCH /api/mining/allocation` | Modal exibe toast de erro. O split do usuário reverte para o valor confirmado anteriormente pelo servidor. | Investigar se o usuário tentou enviar payload malformado ou se atingiu o rate limit da rota (`writeLimiter` de 30 req/min). |
+| `DASHBOARD_REFERRAL_LINK_FAILED` | `ERROR` | `MEDIUM` | `POST /api/user/link-referral` | Input mantém o código digitado e exibe toast com a mensagem exata retornada pela API (ex: "Código não encontrado", "Você não pode indicar a si mesmo"). | Esclarecer a mensagem de validação retornada pela API. |
+| `DASHBOARD_REFERRAL_COPY_FAILED` | `WARN` | `LOW` | `navigator.clipboard` | Exibe toast informando falha ao copiar link de indicação. | Problema de permissão da área de transferência no navegador do usuário. Orientar cópia manual do texto. |
+| `DASHBOARD_BANNERS_FETCH_FAILED` | `LOW` | `LOW` | `GET /api/banners` | Carrossel é ocultado silenciosamente. | Risco puramente cosmético. |
+
+#### 6.2.3 Perguntas Frequentes (FAQ de Atendimento ao Minerador)
+
+**P: Mudei minha divisão de mineração para 100% SHIB, mas no bloco que acabou de fechar ainda recebi POL. O que houve?**  
+*R*: O split de mineração é programado para valer sempre a partir do bloco seguinte. Quando você salva a nova alocação, o bloco atual já estava em processamento sob a regra anterior. A partir do próximo bloco resolvido pela rede, 100% das suas recompensas serão creditadas em SHIB.
+
+**P: A contagem regressiva do bloco terminou, zerou e ficou em "00:00" por alguns segundos. A mineração travou?**  
+*R*: Não travou. O fechamento e resolução de um bloco envolve sorteio criptográfico, cálculo proporcional de shares de todos os mineradores e inserção de transações no banco de dados. Esse processamento no backend leva alguns segundos. Assim que o bloco é gravado, o socket emite o evento com o novo bloco e a contagem reinicia automaticamente.
+
+**P: O usuário alega que sua velocidade de mineração (hashrate) está oscilando ou diferente da soma das placas.**  
+*R*: O Dashboard funde as estatísticas de tempo real enviadas via Socket.IO com os dados consolidados do banco a cada 15 segundos. Se alguma sala estiver sem refrigeração adequada ou com energia pendente em outros módulos, ou se o usuário acabou de instalar uma nova placa no rack, pode haver uma janela de poucos segundos até que o motor de mineração recomputa o novo hashrate total.
+
+**P: Por que meu bônus de indicação continua em 0 se meu amigo já se cadastrou?**  
+*R*: O bônus de afiliados de 10% incide sobre as **recompensas de bloco mineradas** pelo seu indicado. Se ele apenas criou a conta mas ainda não instalou mineradoras ativas em um rack para gerar hashrate, não há recompensa de bloco gerada para calcular o bônus. Assim que ele começar a minerar blocos, o bônus será creditado a você a cada bloco resolvido.
+
 
