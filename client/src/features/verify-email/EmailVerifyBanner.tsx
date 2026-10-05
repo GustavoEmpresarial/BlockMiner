@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Loader2, Mail } from 'lucide-react';
 import { toast } from 'sonner';
+import Card from '../../shared/components/Card';
+import IconBadge from '../../shared/components/IconBadge';
 import { api, useAuthStore } from '../../shared/auth/auth.store';
 import { resolveApiErrorMessage } from '../../shared/utils/apiErrorI18n';
 
@@ -31,11 +33,12 @@ export default function EmailVerifyBanner() {
   };
 
   return (
-    <div
+    <Card
       role="status"
-      className="mb-4 flex flex-col gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 sm:flex-row sm:items-center"
+      variant="compact"
+      className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center"
     >
-      <Mail className="hidden h-5 w-5 shrink-0 text-amber-300 sm:block" aria-hidden />
+      <IconBadge icon={Mail} variant="amber" size="md" />
       <p className="flex-1 text-sm font-medium leading-relaxed text-amber-100">
         {t('auth.verifyEmail.banner_body')}
       </p>
@@ -43,11 +46,11 @@ export default function EmailVerifyBanner() {
         type="button"
         onClick={() => void resend()}
         disabled={sending}
-        className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-[11px] font-black uppercase tracking-widest text-slate-950 transition-colors hover:bg-amber-400 disabled:opacity-50"
+        className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-[11px] font-black uppercase tracking-widest text-slate-950 shadow-[2px_2px_0px_#000000] hover:bg-amber-400 active:translate-x-0.5 active:translate-y-0.5 disabled:bg-slate-800 disabled:text-slate-300 disabled:shadow-none"
       >
         {sending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
         {t('auth.verifyEmail.banner_resend')}
       </button>
-    </div>
+    </Card>
   );
 }

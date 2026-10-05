@@ -10,6 +10,8 @@ import { useTranslation } from 'react-i18next';
 import { isAxiosError } from 'axios';
 import { toast } from 'sonner';
 import { Shield, Youtube } from 'lucide-react';
+import IconBadge from '../../shared/components/IconBadge';
+import StatusPill from '../../shared/components/StatusPill';
 import { api } from '../../shared/auth/auth.store';
 import PowerBoostBanner from '../../shared/components/PowerBoostBanner';
 import PausedTimerBanner from '../../shared/components/PausedTimerBanner';
@@ -512,22 +514,17 @@ export default function YouTubeWatchPage() {
     videoId != null && (isActivelyWatching || playerState === 'paused') && claimCycleRunning;
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       <PowerBoostBanner />
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div className="space-y-2">
-          <div className="inline-flex p-3 bg-red-500/10 rounded-2xl">
-            <Youtube className="w-6 h-6 text-red-500" />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b-2 border-slate-800">
+        <div className="flex items-center gap-4">
+          <IconBadge icon={Youtube} variant="red" size="lg" />
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">{t('youtube.title')}</h1>
+            <p className="text-slate-400 text-xs sm:text-sm font-medium">{t('youtube.subtitle')}</p>
           </div>
-          <h1 className="text-3xl font-black text-white tracking-tight">{t('youtube.title')}</h1>
-          <p className="text-gray-500 font-medium">{t('youtube.subtitle')}</p>
         </div>
-        <div className="bg-slate-900/50 px-4 py-2 rounded-xl border border-slate-800 flex items-center gap-2 shadow-glow-sm">
-          <Shield className="w-4 h-4 text-primary" />
-          <span className="text-primary font-black text-[10px] uppercase tracking-widest">
-            {t('youtube.protocol_active')}
-          </span>
-        </div>
+        <StatusPill variant="primary" icon={Shield} label={t('youtube.protocol_active')} />
       </div>
 
       {dailyReset?.localDate ? (

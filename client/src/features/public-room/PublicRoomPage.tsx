@@ -2,6 +2,11 @@ import { useEffect, useState, useMemo } from 'react';
 import type { SyntheticEvent } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Cpu, Zap, ArrowLeft, Shield, Trophy, Gamepad2, Lock } from 'lucide-react';
+import Card from '../../shared/components/Card';
+import IconBadge from '../../shared/components/IconBadge';
+import StatCard from '../../shared/components/StatCard';
+import StatusPill from '../../shared/components/StatusPill';
+import TabPills from '../../shared/components/TabPills';
 import { api } from '../../shared/auth/auth.store';
 import {
   getMachineBySlot,
@@ -71,8 +76,8 @@ function RackCard({ rackName, rackBaseSlot, machines }: RackCardProps) {
 
   return (
     <div
-      className={`bg-surface border rounded-2xl overflow-hidden transition-colors ${
-        isEmpty ? 'border-gray-800/20 opacity-40' : 'border-gray-800/60'
+      className={`rounded-3xl border-2 bg-slate-900/60 shadow-[4px_4px_0px_#000000] overflow-hidden ${
+        isEmpty ? 'border-slate-800' : 'border-slate-700'
       }`}
     >
       <div className="px-3 py-2.5 bg-gray-900/60 border-b border-gray-800/40 flex items-center justify-between relative">
@@ -102,7 +107,7 @@ function RackCard({ rackName, rackBaseSlot, machines }: RackCardProps) {
                 style={{ width: `${fillPct}%` }}
               />
             </div>
-            <span className="text-[9px] font-black text-gray-600 tabular-nums">
+            <span className="text-[9px] font-black text-slate-300 tabular-nums font-mono">
               {occupied.length}/{SLOTS_PER_RACK}
             </span>
           </div>
@@ -197,29 +202,45 @@ export default function PublicRoomPage() {
 
   if (isLoading) {
     return (
-      <div className="h-[60vh] flex flex-col items-center justify-center gap-3">
-        <div className="relative w-12 h-12">
-          <div className="absolute inset-0 border-4 border-primary/20 rounded-full" />
-          <div className="absolute inset-0 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+        <div className="flex items-center gap-4 pb-3 border-b-2 border-slate-800">
+          <IconBadge icon={Shield} size="lg" />
+          <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">Sala</h1>
         </div>
-        <p className="text-gray-600 font-black uppercase tracking-[0.25em] text-[10px]">
-          Sincronizando…
-        </p>
+        <Card>
+          <div className="flex flex-col items-center justify-center gap-3 py-16">
+            <div className="relative w-12 h-12">
+              <div className="absolute inset-0 border-4 border-sky-500/20 rounded-full" />
+              <div className="absolute inset-0 border-4 border-sky-400 border-t-transparent rounded-full animate-spin" />
+            </div>
+            <p className="text-slate-300 font-black uppercase tracking-[0.25em] text-[10px]">
+              Sincronizando…
+            </p>
+          </div>
+        </Card>
       </div>
     );
   }
 
   if (!targetUser) {
     return (
-      <div className="h-[60vh] flex flex-col items-center justify-center gap-4 px-4">
-        <p className="text-red-500 font-bold text-center">Erro ao carregar dados da sala.</p>
-        <button
-          type="button"
-          onClick={() => navigate('/ranking')}
-          className="px-6 py-2 bg-primary text-white rounded-xl text-sm font-bold"
-        >
-          Voltar
-        </button>
+      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+        <div className="flex items-center gap-4 pb-3 border-b-2 border-slate-800">
+          <IconBadge icon={Shield} variant="red" size="lg" />
+          <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">Sala</h1>
+        </div>
+        <Card>
+          <div className="flex flex-col items-center justify-center gap-4 px-4 py-16">
+            <p className="text-red-300 font-bold text-center">Erro ao carregar dados da sala.</p>
+            <button
+              type="button"
+              onClick={() => navigate('/ranking')}
+              className="px-6 py-2 bg-sky-500 hover:bg-sky-400 text-slate-950 rounded-xl text-sm font-black uppercase shadow-[2px_2px_0px_#000000]"
+            >
+              Voltar
+            </button>
+          </div>
+        </Card>
       </div>
     );
   }
@@ -228,103 +249,66 @@ export default function PublicRoomPage() {
   const isLocked = currentRoomInfo && !currentRoomInfo.unlocked;
 
   return (
-    <div className="space-y-4 pb-24 animate-in fade-in duration-500">
-      <div className="relative rounded-2xl overflow-hidden border border-slate-800/80 bg-slate-900/50">
-        <div className="absolute -top-16 left-1/3 w-72 h-72 bg-primary/5 rounded-full blur-[100px] pointer-events-none" />
-
-        <div className="relative z-10 p-4 sm:p-6">
-          <div className="flex items-center justify-between gap-3 mb-4">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="relative shrink-0">
-                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-primary/25 via-slate-800 to-slate-900 flex items-center justify-center text-2xl font-black text-white border border-primary/20">
-                  {targetUser.username.charAt(0).toUpperCase()}
-                </div>
-                <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-slate-900" />
-              </div>
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <h1 className="text-lg sm:text-2xl font-black text-white italic uppercase tracking-tight leading-none truncate">
-                    {targetUser.username}
-                  </h1>
-                  <span className="px-2 py-0.5 bg-primary/10 rounded-md border border-primary/20 flex items-center gap-1 shrink-0">
-                    <Shield className="w-2.5 h-2.5 text-primary" />
-                    <span className="text-[8px] font-black text-primary uppercase">visita</span>
-                  </span>
-                </div>
-                <p className="text-gray-600 text-[9px] font-bold uppercase tracking-widest flex items-center gap-1 mt-0.5">
-                  <Trophy className="w-2.5 h-2.5" /> Rede global
-                </p>
-              </div>
+    <div className="space-y-8 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b-2 border-slate-800">
+        <div className="flex items-center gap-4 min-w-0">
+          <IconBadge icon={Shield} size="lg" />
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white truncate">
+                {targetUser.username}
+              </h1>
+              <StatusPill variant="primary" icon={Shield} label="visita" />
             </div>
-            <button
-              type="button"
-              onClick={() => navigate('/ranking')}
-              className="shrink-0 flex items-center gap-1.5 px-3 py-2 bg-gray-800/70 hover:bg-gray-700/80 text-gray-400 hover:text-white rounded-xl border border-gray-700/50 font-bold text-[10px] uppercase tracking-wider transition-all"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Voltar</span>
-            </button>
+            <p className="text-slate-400 text-xs sm:text-sm font-medium flex items-center gap-1">
+              <Trophy className="w-3.5 h-3.5" /> Rede global
+            </p>
           </div>
-
-          <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
-            {[
-              { label: 'Hashrate', value: formatHashrate(totalHashRate), icon: Zap, color: 'text-white' },
-              { label: 'Jogos', value: formatHashrate(gamePower), icon: Gamepad2, color: 'text-primary' },
-              { label: 'Miners', value: machines.length, icon: Cpu, color: 'text-white' },
-            ].map(({ label, value, icon: Icon, color }) => (
-              <div
-                key={label}
-                className="flex-1 min-w-[80px] px-3 py-2.5 bg-black/30 rounded-xl border border-gray-800/60 flex flex-col items-center shrink-0"
-              >
-                <span className="text-[8px] text-gray-600 font-black uppercase tracking-widest mb-1">
-                  {label}
-                </span>
-                <div className={`flex items-center gap-1 font-black text-sm italic ${color}`}>
-                  <Icon className="w-3 h-3 text-primary" />
-                  {value}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {roomList.length > 0 && (
-            <div className="flex gap-2 mt-3 overflow-x-auto pb-0.5 -mx-1 px-1">
-              {roomList.map((room: RoomInfoRow) => (
-                <button
-                  key={room.roomNumber}
-                  type="button"
-                  onClick={() => room.unlocked && setActiveRoom(room.roomNumber)}
-                  className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all shrink-0 ${
-                    room.unlocked
-                      ? activeRoom === room.roomNumber
-                        ? 'bg-primary text-white border-primary shadow shadow-primary/20'
-                        : 'bg-gray-800/50 text-gray-400 border-gray-700/40 hover:text-white'
-                      : 'bg-transparent text-gray-700 border-gray-800/30 cursor-default'
-                  }`}
-                >
-                  {!room.unlocked && <Lock className="w-2.5 h-2.5" />}
-                  Sala {room.roomNumber}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
+        <button
+          type="button"
+          onClick={() => navigate('/ranking')}
+          className="shrink-0 flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-100 rounded-xl border-2 border-slate-600 font-black text-[10px] uppercase tracking-wider shadow-[2px_2px_0px_#000000]"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">Voltar</span>
+        </button>
       </div>
 
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <StatCard icon={Zap} accent="text-sky-400" label="Hashrate" value={formatHashrate(totalHashRate)} />
+        <StatCard icon={Gamepad2} accent="text-violet-400" label="Jogos" value={formatHashrate(gamePower)} />
+        <StatCard icon={Cpu} accent="text-emerald-400" label="Miners" value={String(machines.length)} />
+      </div>
+
+      {roomList.length > 0 && (
+        <TabPills
+          ariaLabel="Salas"
+          activeTab={String(activeRoom)}
+          onChange={(key) => setActiveRoom(Number(key))}
+          tabs={roomList.map((room) => ({
+            key: String(room.roomNumber),
+            label: `Sala ${room.roomNumber}`,
+            disabled: !room.unlocked,
+            icon: room.unlocked ? undefined : Lock,
+          }))}
+        />
+      )}
+
       {isLocked ? (
-        <div className="flex flex-col items-center justify-center gap-4 py-20 border border-dashed border-gray-800/40 rounded-2xl">
-          <div className="w-16 h-16 rounded-2xl bg-gray-900/60 border border-gray-800/50 flex items-center justify-center">
-            <Lock className="w-7 h-7 text-gray-700" />
+        <Card>
+          <div className="flex flex-col items-center justify-center gap-4 py-16">
+            <IconBadge icon={Lock} variant="neutral" size="lg" />
+            <div className="text-center px-4">
+              <p className="text-base font-black text-slate-200 uppercase">
+                Sala {activeRoom} bloqueada
+              </p>
+              <p className="text-sm text-slate-400 mt-1">
+                Este minerador ainda não adquiriu esta sala.
+              </p>
+            </div>
           </div>
-          <div className="text-center px-4">
-            <p className="text-base font-black text-gray-600 italic uppercase">
-              Sala {activeRoom} bloqueada
-            </p>
-            <p className="text-sm text-gray-700 mt-1">
-              Este minerador ainda não adquiriu esta sala.
-            </p>
-          </div>
-        </div>
+        </Card>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
           {Array.from({ length: RACKS_COUNT }).map((_, i) => {
@@ -346,11 +330,8 @@ export default function PublicRoomPage() {
         </div>
       )}
 
-      <div className="flex items-center justify-center gap-2 py-2.5 px-4 bg-slate-900/30 border border-slate-800/30 rounded-xl max-w-sm mx-auto">
-        <Shield className="w-3 h-3 text-slate-700 shrink-0" />
-        <p className="text-[9px] text-slate-700 font-bold uppercase tracking-widest">
-          Modo visitação — somente leitura
-        </p>
+      <div className="flex justify-center">
+        <StatusPill variant="neutral" icon={Shield} label="Modo visitação — somente leitura" />
       </div>
     </div>
   );
