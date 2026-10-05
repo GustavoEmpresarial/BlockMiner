@@ -254,13 +254,13 @@ export default function Header() {
         : '?';
 
   return (
-    <header className="hidden md:flex h-20 bg-background/80 backdrop-blur-md border-b border-gray-800/50 items-center px-8 sticky top-0 z-30">
-      <div className="flex flex-col">
-        <h1 className="text-xl font-bold text-white tracking-tight">{title}</h1>
-        <p className="text-[11px] text-gray-500 font-medium">{t('header.protocol_active')}</p>
+    <header className="hidden md:flex h-20 min-w-0 bg-slate-950/80 backdrop-blur-md border-b-2 border-slate-800 items-center px-8 sticky top-0 z-30">
+      <div className="flex min-w-0 flex-col">
+        <p className="truncate text-xl font-bold text-white tracking-tight">{title}</p>
+        <p className="text-[11px] text-slate-400 font-medium">{t('header.protocol_active')}</p>
       </div>
 
-      <div className="ml-auto flex items-center gap-6">
+      <div className="ml-auto flex min-w-0 items-center gap-6">
         <OfferwallGlobalTimer />
         <PtcGlobalTimer />
 
@@ -269,15 +269,15 @@ export default function Header() {
           <input
             type="text"
             placeholder={t('header.search_placeholder')}
-            className="bg-gray-800/30 border border-gray-800/50 rounded-xl py-2 pl-10 pr-4 text-sm text-gray-300 focus:outline-none focus:border-primary/50 transition-colors w-64"
+            className="bg-slate-900/60 border-2 border-slate-800 rounded-xl py-2 pl-10 pr-4 text-sm text-slate-300 focus:outline-none focus:border-primary/50 transition-colors w-64"
           />
         </div>
 
-        <div className="flex items-center gap-3 border-l border-gray-800/50 pl-6">
+        <div className="flex min-w-0 items-center gap-3 overflow-x-auto border-l border-slate-800 pl-6">
           <button
             type="button"
             onClick={toggleChat}
-            className="p-2.5 text-gray-400 hover:text-white hover:bg-gray-800/50 rounded-xl transition-all relative group"
+            className="p-2.5 text-slate-400 hover:text-white hover:bg-slate-800/50 rounded-xl transition-all relative group"
             title={t('header.community')}
           >
             <MessageSquare className="w-5 h-5" />
@@ -289,7 +289,7 @@ export default function Header() {
             <button
               type="button"
               onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
-              className={`p-2.5 rounded-xl transition-all relative group ${isNotificationsOpen ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800/50'}`}
+              className={`p-2.5 rounded-xl transition-all relative group ${isNotificationsOpen ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800/50'}`}
             >
               <Bell className="w-5 h-5" />
               {unreadCount > 0 && (
@@ -298,8 +298,8 @@ export default function Header() {
             </button>
 
             {isNotificationsOpen && (
-              <div className="absolute right-0 mt-3 w-80 bg-surface border border-gray-800 rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 z-50">
-                <div className="px-6 py-4 border-b border-gray-800 flex items-center justify-between bg-gray-900/50">
+              <div className="absolute right-0 mt-3 w-80 bg-slate-900/60 border-2 border-slate-800 rounded-3xl shadow-[4px_4px_0px_#000000] overflow-hidden z-50">
+                <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/40">
                   <h3 className="text-xs font-black text-white uppercase tracking-widest">{t('header.notifications')}</h3>
                   {unreadCount > 0 && (
                     <button
@@ -314,7 +314,7 @@ export default function Header() {
 
                 <div className="max-h-[400px] overflow-y-auto scrollbar-hide">
                   {(notifications || []).length === 0 ? (
-                    <div className="py-12 flex flex-col items-center justify-center text-gray-600 space-y-3">
+                    <div className="py-12 flex flex-col items-center justify-center text-slate-400 space-y-3">
                       <Inbox className="w-10 h-10 opacity-20" />
                       <p className="text-[10px] font-bold uppercase tracking-widest italic">
                         {t('header.no_alerts')}
@@ -324,12 +324,12 @@ export default function Header() {
                     (notifications || []).map((n: HeaderNotification) => (
                       <div
                         key={String(n.id)}
-                        className={`px-6 py-4 border-b border-gray-800/30 hover:bg-gray-800/30 transition-colors relative group ${!n.isRead ? 'bg-primary/5' : ''}`}
+                        className={`px-6 py-4 border-b border-slate-800/30 hover:bg-slate-800/30 transition-colors relative group ${!n.isRead ? 'bg-primary/5' : ''}`}
                         onClick={() => markNotificationRead(n.id)}
                       >
                         <div className="flex gap-4">
                           <div
-                            className={`w-8 h-8 rounded-lg shrink-0 flex items-center justify-center bg-gray-900 border border-gray-800`}
+                            className="w-8 h-8 rounded-xl shrink-0 flex items-center justify-center bg-primary/10 border border-primary/25 text-primary shadow-[2px_2px_0px_#000000]"
                           >
                             {getNotificationIcon(n.type)}
                           </div>
@@ -340,7 +340,7 @@ export default function Header() {
                               {n.title}
                             </p>
                             <p className="text-[11px] text-gray-500 leading-normal line-clamp-2">{n.message}</p>
-                            <p className="text-[9px] text-gray-600 font-medium">
+                            <p className="text-[9px] text-slate-400 font-medium">
                               {new Date(n.createdAt ?? 0).toLocaleTimeString([], {
                                 hour: '2-digit',
                                 minute: '2-digit',
@@ -356,8 +356,8 @@ export default function Header() {
                   )}
                 </div>
 
-                <div className="px-6 py-3 bg-gray-900/30 text-center">
-                  <span className="text-[9px] font-black text-gray-600 uppercase tracking-[0.2em]">
+                <div className="px-6 py-3 bg-slate-950/40 text-center">
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">
                     {t('header.intelligence')}
                   </span>
                 </div>
@@ -369,13 +369,13 @@ export default function Header() {
 
           <Link
             to="/settings"
-            className="p-2.5 text-gray-400 hover:text-white hover:bg-gray-800/50 rounded-xl transition-all"
+            className="p-2.5 text-slate-400 hover:text-white hover:bg-slate-800/50 rounded-xl transition-all"
             title={t('header.settings')}
           >
             <Settings className="w-5 h-5" />
           </Link>
 
-          <div className="flex items-center gap-3 pl-3 ml-2 border-l border-gray-800/50">
+          <div className="flex items-center gap-3 pl-3 ml-2 border-l border-slate-800">
             <div className="flex flex-col items-end hidden sm:flex">
               <span className="text-sm font-black text-white leading-none tracking-tighter uppercase italic">
                 {displayUser}
@@ -384,7 +384,7 @@ export default function Header() {
                 {t('header.level', { n: 1 })}
               </span>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center text-white font-black border border-gray-700 shadow-xl overflow-hidden ring-2 ring-primary/20">
+            <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white font-black border-2 border-slate-800 shadow-[2px_2px_0px_#000000] overflow-hidden">
               {initial}
             </div>
           </div>
