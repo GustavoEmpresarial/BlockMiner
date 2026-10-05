@@ -171,7 +171,7 @@ export function ShibPanel({ balance, onRefresh }: Props) {
 
         <button
           type="submit"
-          disabled={loading || !amount || !address}
+          disabled={loading || !amount || !address || (effectiveMin > 0 && Number(amount) < effectiveMin)}
           className="w-full py-4 bg-orange-600 hover:bg-orange-500 active:translate-x-0.5 active:translate-y-0.5 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all shadow-[2px_2px_0px_#000000] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           {loading ? (
@@ -179,7 +179,7 @@ export function ShibPanel({ balance, onRefresh }: Props) {
           ) : (
             <ArrowDownToLine className="w-5 h-5" />
           )}
-          {t("wallet.shib.withdraw_btn")}
+          {t("wallet.shib.request_withdraw")}
         </button>
       </form>
     </div>

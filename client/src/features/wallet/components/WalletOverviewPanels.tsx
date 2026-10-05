@@ -233,7 +233,12 @@ export function WalletLedgerPanel({
 }) {
   return (
     <Card className="flex flex-col max-h-[700px]">
-      <SectionHeader icon={Clock} iconVariant="primary" title={t("wallet.ledger_title")} />
+      <SectionHeader
+        icon={Clock}
+        iconVariant="primary"
+        title={t("wallet.ledger_title")}
+        action={<ChevronRight className="w-4 h-4 text-slate-500" aria-hidden="true" />}
+      />
 
       <div className="flex-1 overflow-y-auto space-y-6 pr-2 scrollbar-hide">
         {transactions.length === 0 ? (

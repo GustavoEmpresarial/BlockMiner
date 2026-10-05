@@ -211,7 +211,12 @@ function WalletActiveContent() {
                             ]}
                         />
 
-                        <div className="pt-2">
+                        <div
+                            id={`panel-${activeTab}`}
+                            role="tabpanel"
+                            aria-labelledby={`tab-${activeTab}`}
+                            className="pt-2 outline-none"
+                        >
                             {activeTab === 'withdraw' && (
                                 <WalletWithdrawTab
                                     t={t}

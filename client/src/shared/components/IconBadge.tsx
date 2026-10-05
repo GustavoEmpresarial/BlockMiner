@@ -1,7 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 import type { HTMLAttributes } from 'react';
 
-export type IconBadgeVariant = 'primary' | 'emerald' | 'amber' | 'violet' | 'sky' | 'red' | 'neutral';
+export type IconBadgeVariant = 'primary' | 'emerald' | 'amber' | 'violet' | 'sky' | 'cyan' | 'orange' | 'red' | 'neutral';
 export type IconBadgeSize = 'sm' | 'md' | 'lg';
 
 export interface IconBadgeProps extends HTMLAttributes<HTMLDivElement> {
@@ -16,6 +16,8 @@ const VARIANT_STYLES: Record<IconBadgeVariant, string> = {
   amber: 'bg-amber-500/10 border-amber-500/25 text-amber-400',
   violet: 'bg-violet-500/10 border-violet-500/25 text-violet-400',
   sky: 'bg-sky-500/10 border-sky-500/25 text-sky-400',
+  cyan: 'bg-cyan-500/10 border-cyan-500/25 text-cyan-400',
+  orange: 'bg-orange-500/10 border-orange-500/25 text-orange-400',
   red: 'bg-red-500/10 border-red-500/25 text-red-400',
   neutral: 'bg-slate-800/80 border-slate-700/60 text-slate-400',
 };

@@ -1,6 +1,6 @@
 import type { ElementType, HTMLAttributes, ReactNode } from 'react';
 
-export type CardVariant = 'default' | 'table' | 'interactive';
+export type CardVariant = 'default' | 'table' | 'interactive' | 'flat' | 'ghost' | 'compact';
 
 export interface CardProps extends HTMLAttributes<HTMLElement> {
   as?: ElementType;
@@ -25,6 +25,9 @@ export default function Card({
     default: 'p-5 sm:p-6 space-y-4',
     table: '',
     interactive: 'p-5 sm:p-6 space-y-4 hover:border-slate-700 active:translate-x-0.5 active:translate-y-0.5 transition-all cursor-pointer',
+    flat: 'p-5 sm:p-6 space-y-4 !shadow-none',
+    ghost: 'p-5 sm:p-6 space-y-4 !bg-transparent !border-dashed !shadow-none',
+    compact: 'p-3.5 sm:p-4 space-y-2',
   }[variant];
 
   const glowClasses = glow ? glowColor : '';

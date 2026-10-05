@@ -136,7 +136,7 @@ export default function VaultPage() {
       <button
         type="button"
         onClick={navToMiningRoom}
-        className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border border-gray-700/60 bg-gray-800/40 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-gray-200 transition-colors hover:border-primary/40 hover:bg-gray-800/70 sm:w-auto"
+        className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border-2 border-slate-800 bg-slate-900/60 shadow-[2px_2px_0px_#000000] px-4 py-2.5 text-xs font-black uppercase tracking-wider text-slate-200 transition-all hover:border-slate-700 hover:text-white active:translate-x-0.5 active:translate-y-0.5 sm:w-auto outline-none focus-visible:ring-2 focus-visible:ring-primary"
       >
         <Pickaxe className="h-4 w-4 shrink-0 text-primary" aria-hidden />
         <span className="text-center leading-snug">{t('vault.nav_back_mining_room')}</span>
@@ -145,10 +145,10 @@ export default function VaultPage() {
   );
 
   const header = (
-    <header className="flex flex-col gap-4 border-b border-gray-800/40 pb-6 sm:flex-row sm:items-center sm:justify-between">
+    <header className="flex flex-col gap-4 border-b-2 border-slate-800 pb-5 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex min-w-0 items-center gap-3">
-        <Shield className="h-8 w-8 shrink-0 text-primary" aria-hidden />
-        <h1 className="text-2xl font-black tracking-tight text-white">{t('vault.title')}</h1>
+        <IconBadge icon={Shield} variant="primary" size="lg" />
+        <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">{t('vault.title')}</h1>
       </div>
       {headerNav}
     </header>

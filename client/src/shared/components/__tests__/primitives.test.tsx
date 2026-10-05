@@ -40,6 +40,14 @@ describe('Shared UI Primitives — Transparency Standard', () => {
       expect(card.className).toContain('border-primary/40');
       expect(card.className).toContain('shadow-[0_0_20px_rgba(59,130,246,0.15),4px_4px_0px_#000000]');
     });
+
+    it('renders flat and compact variants properly', () => {
+      const { rerender } = render(<Card variant="flat">Flat Card</Card>);
+      expect(screen.getByTestId('card').className).toContain('!shadow-none');
+
+      rerender(<Card variant="compact">Compact Card</Card>);
+      expect(screen.getByTestId('card').className).toContain('p-3.5 sm:p-4');
+    });
   });
 
   describe('IconBadge', () => {
@@ -63,6 +71,12 @@ describe('Shared UI Primitives — Transparency Standard', () => {
 
       rerender(<IconBadge icon={Wallet} variant="violet" />);
       expect(screen.getByTestId('icon-badge').className).toContain('text-violet-400');
+
+      rerender(<IconBadge icon={Activity} variant="cyan" />);
+      expect(screen.getByTestId('icon-badge').className).toContain('text-cyan-400');
+
+      rerender(<IconBadge icon={Activity} variant="orange" />);
+      expect(screen.getByTestId('icon-badge').className).toContain('text-orange-400');
     });
   });
 
@@ -116,15 +130,24 @@ describe('Shared UI Primitives — Transparency Standard', () => {
 
       rerender(<StatusPill variant="danger" label="Failed" />);
       expect(screen.getByTestId('status-pill').className).toContain('text-red-400');
+
+      rerender(<StatusPill variant="primary" label="Primary" />);
+      expect(screen.getByTestId('status-pill').className).toContain('text-primary');
+
+      rerender(<StatusPill variant="cyan" label="Cyan" />);
+      expect(screen.getByTestId('status-pill').className).toContain('text-cyan-400');
+
+      rerender(<StatusPill variant="orange" label="Orange" />);
+      expect(screen.getByTestId('status-pill').className).toContain('text-orange-400');
     });
   });
 
   describe('TabPills', () => {
-    it('renders tab list and switches tabs on click', async () => {
+    it('renders tab list, respects panelId on aria-controls and switches tabs on click', async () => {
       const user = userEvent.setup();
       const onChange = vi.fn();
       const tabs = [
-        { key: 'tab1', label: 'Tab One', icon: Activity },
+        { key: 'tab1', label: 'Tab One', icon: Activity, panelId: 'custom-panel-1' },
         { key: 'tab2', label: 'Tab Two', icon: Cpu },
       ];
 
@@ -137,7 +160,9 @@ describe('Shared UI Primitives — Transparency Standard', () => {
       const tab2 = screen.getByRole('tab', { name: /Tab Two/i });
 
       expect(tab1).toHaveAttribute('aria-selected', 'true');
+      expect(tab1).toHaveAttribute('aria-controls', 'custom-panel-1');
       expect(tab2).toHaveAttribute('aria-selected', 'false');
+      expect(tab2).toHaveAttribute('aria-controls', 'panel-tab2');
 
       await user.click(tab2);
       expect(onChange).toHaveBeenCalledWith('tab2');

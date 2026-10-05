@@ -7,6 +7,7 @@ export interface TabPillItem {
   icon?: LucideIcon;
   badge?: ReactNode;
   disabled?: boolean;
+  panelId?: string;
 }
 
 export type TabPillsVariant = 'primary' | 'emerald' | 'amber';
@@ -87,7 +88,7 @@ export default function TabPills({
             role="tab"
             id={`tab-${tab.key}`}
             aria-selected={isSelected}
-            aria-controls={`panel-${tab.key}`}
+            aria-controls={tab.panelId ?? `panel-${tab.key}`}
             tabIndex={isSelected ? 0 : -1}
             disabled={isDisabled}
             onClick={() => !isDisabled && onChange(tab.key)}
