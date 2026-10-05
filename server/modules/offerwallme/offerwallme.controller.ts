@@ -112,6 +112,11 @@ export async function getOfferwallMeEmbed(req: Request, res: Response): Promise<
     const user = requireSessionUser(req, res);
     if (!user) return;
     if (offerwallmeService.isOfferwallMeMaintenance()) {
+      log.info("offerwallme.link_blocked", {
+        code: "OFFERWALLME_LINK_BLOCKED",
+        userId: user.id,
+        action: "embed",
+      });
       res.status(503).json({
         ok: false,
         code: "OFFERWALL_MAINTENANCE",
@@ -144,6 +149,11 @@ export async function getOfferwallMeLink(req: Request, res: Response): Promise<v
     const user = requireSessionUser(req, res);
     if (!user) return;
     if (offerwallmeService.isOfferwallMeMaintenance()) {
+      log.info("offerwallme.link_blocked", {
+        code: "OFFERWALLME_LINK_BLOCKED",
+        userId: user.id,
+        action: "link",
+      });
       res.status(503).json({
         ok: false,
         code: "OFFERWALL_MAINTENANCE",

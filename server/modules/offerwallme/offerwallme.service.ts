@@ -33,6 +33,14 @@ export function isOfferwallMeMaintenance(): boolean {
   return ["1", "true", "yes", "on"].includes(String(value).trim().toLowerCase());
 }
 
+if (isOfferwallMeMaintenance()) {
+  log.warn("offerwallme.maintenance_active", {
+    code: "OFFERWALLME_MAINTENANCE_ACTIVE",
+    provider: "offerwallme",
+    timestamp: new Date().toISOString(),
+  });
+}
+
 export function offerwallMePublisherId(): string {
   return String(process.env.OFFERWALLME_PUBLISHER_ID || "yyu8i3jt58by9do1fbdr0fyn60yn5u").trim();
 }

@@ -360,16 +360,34 @@ Chaves adicionadas:
 
 ## 10. Kill-Switch de Manutenção (`OFFERWALLME_MAINTENANCE`)
 
-Para proteger os usuários de fluxos instáveis ou indisponibilidades da rede externa sem exigir novo deploy ou alteração de código:
+Para proteger os usuários de fluxos instáveis ou indisponibilidades da rede externa sem exigir novo build de código, a plataforma dispõe de um kill-switch operacional.
 
-### 10.1 Configuração e Localização
+> **ATENÇÃO OPERACIONAL**: A alteração da variável de ambiente **dispensa novo build**, mas **EXIGE o restart (ou recreate) do contêiner Docker/serviço Node**. Isso ocorre porque o arquivo de ambiente (`env_file`) é injetado na inicialização do processo e o `process.env` do Node.js é imutável em tempo de execução sem reinicialização.
+
+### 10.1 Configuração e Procedimento de Ativação / Desativação
 - **Variável de Ambiente**: `OFFERWALLME_MAINTENANCE`
-- **Onde mora**: `.env`, `.env.production` ou variáveis de ambiente do contêiner / sistema operacional.
+- **Onde mora**: `.env`, `.env.production` ou nas variáveis de ambiente do serviço/contêiner.
 - **Valores aceitos**:
-  - Para ATIVAR a manutenção: `true`, `1`, `yes`, `on` (insensível a maiúsculas/minúsculas).
-  - Para DESATIVAR a manutenção: `false`, `0`, `no`, `off` ou string vazia/não definida.
+  - Para ATIVAR: `true`, `1`, `yes`, `on` (insensível a maiúsculas/minúsculas).
+  - Para DESATIVAR: `false`, `0`, `no`, `off` ou string vazia/não definida.
 
-### 10.2 Comportamento do Backend com a Flag Ativa
+#### Procedimento Exato para Ligar a Manutenção:
+1. Abra o arquivo `.env` (ou `.env.production` na VPS de produção).
+2. Defina `OFFERWALLME_MAINTENANCE=true`.
+3. Reinicie o contêiner da aplicação (ex: `docker compose restart app` ou `./deploy.sh`).
+4. Verifique nos logs do servidor o registro estruturado de inicialização com o código estável `OFFERWALLME_MAINTENANCE_ACTIVE`.
+
+#### Procedimento Exato para Desligar a Manutenção:
+1. Abra o arquivo de ambiente e altere para `OFFERWALLME_MAINTENANCE=false` (ou remova a linha).
+2. Reinicie o contêiner da aplicação (`docker compose restart app`).
+3. Confirme que o endpoint `/api/offerwallme/status` retorna `{ "maintenance": false }`.
+
+### 10.2 Trilha de Auditoria e Observabilidade (Logs)
+Para assegurar reconstrução histórica exata em caso de suporte a usuários:
+1. **Boot do Servidor**: Quando o módulo carrega e a flag está ativa, emite `log.warn("offerwallme.maintenance_active")` com código estável `OFFERWALLME_MAINTENANCE_ACTIVE` e timestamp UTC da ativação.
+2. **Tentativas de Acesso Bloqueadas**: Cada requisição de usuário a `/embed` ou `/link` rejeitada com HTTP 503 gera `log.info("offerwallme.link_blocked")` com o código estável `OFFERWALLME_LINK_BLOCKED`, `userId` e o tipo de ação solicitada (`link` ou `embed`), sem registrar segredos.
+
+### 10.3 Comportamento do Backend com a Flag Ativa
 1. **Bloqueio de Entradas de Usuário**:
    - `GET /api/offerwallme/embed`: Retorna imediatamente HTTP 503 com código de erro estável:
      ```json
@@ -386,7 +404,7 @@ Para proteger os usuários de fluxos instáveis ou indisponibilidades da rede ex
 3. **Endpoint de Status**:
    - `GET /api/offerwallme/status`: Retorna `{ "ok": true, "provider": "offerwallme", "maintenance": true }`, permitindo que o frontend detecte o estado atual sem dependência de build estático.
 
-### 10.3 Comportamento do Frontend (`OfferwallPage.tsx`)
+### 10.4 Comportamento do Frontend (`OfferwallPage.tsx`)
 1. O card da Offerwall.me permanece visível na grade de provedores.
 2. É exibido o selo visual de manutenção (`t('offerwall.panel.maintenance_badge')`).
 3. O botão de ação principal é desabilitado (`disabled={true}`, `cursor-not-allowed`, opacidade reduzida).
