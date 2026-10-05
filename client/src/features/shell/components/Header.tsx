@@ -24,10 +24,10 @@ import { useOfferwallTimerStore } from '../../offerwall/lib/offerwallTimer.store
 import LanguageSwitcher from '../../../shared/components/LanguageSwitcher';
 
 function headerActionBadge(active = false): string {
-  return `inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border text-primary shadow-[2px_2px_0px_#000000] transition-colors ${
+  return `inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border shadow-[2px_2px_0px_#000000] transition-colors ${
     active
-      ? 'border-primary/40 bg-primary/20'
-      : 'border-primary/25 bg-primary/10 hover:border-primary/40 hover:bg-primary/20'
+      ? 'border-primary/40 bg-primary/20 text-white'
+      : 'border-primary/25 bg-primary/10 text-primary hover:border-primary/40 hover:bg-primary/20 hover:text-white focus:text-white'
   }`;
 }
 

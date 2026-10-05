@@ -39,7 +39,7 @@ const linkBaseClass =
   'inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl transition-all duration-200 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background';
 
 const badgeLinkClass =
-  'inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-primary/25 bg-primary/10 text-primary shadow-[2px_2px_0px_#000000] transition-colors hover:border-primary/40 hover:bg-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50';
+  'inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-primary/25 bg-primary/10 text-primary shadow-[2px_2px_0px_#000000] transition-colors hover:border-primary/40 hover:bg-primary/20 hover:text-white focus:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50';
 
 export default function CommunityShortcuts({
   gapClass = 'gap-1',
