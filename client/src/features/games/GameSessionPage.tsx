@@ -582,11 +582,7 @@ export default function GameSessionPage() {
           />
           <div className={`flex flex-1 items-center justify-center overflow-hidden ${activeGame === "sky" ? "p-1 sm:p-3" : "p-2 sm:p-4"}`}>
             <div
-              className={
-                activeGame === "sky"
-                  ? "relative overflow-hidden rounded-3xl border-2 border-slate-800 bg-slate-900/60 shadow-[4px_4px_0px_#000000]"
-                  : "relative overflow-hidden rounded-3xl border-2 border-slate-800 bg-slate-900/60 shadow-[4px_4px_0px_#000000]"
-              }
+              className="relative overflow-hidden rounded-3xl border-2 border-slate-800 bg-slate-900/60 shadow-[4px_4px_0px_#000000]"
               style={getCanvasViewportStyle(activeGame)}
             >
               {/* Scanline overlay: skip for cart-rush and sky (full-speed canvas). */}
