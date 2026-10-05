@@ -3,6 +3,8 @@ import type { SyntheticEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { NavigateFunction } from 'react-router-dom';
 import { Trophy, Zap, Cpu, Gamepad2, RefreshCw, ExternalLink, Crown, Medal, Loader2, ChevronRight } from 'lucide-react';
+import Card from '../../shared/components/Card';
+import IconBadge from '../../shared/components/IconBadge';
 import { api } from '../../shared/auth/auth.store';
 import {
   formatHashrate,
@@ -101,7 +103,7 @@ function MiniRacks({ username, navigate }: { username: string; navigate: Navigat
   }
 
   if (!data) {
-    return <div className="py-8 text-center text-sm text-slate-600">NÃ£o foi possÃ­vel carregar a sala.</div>;
+    return <div className="py-8 text-center text-sm text-slate-400">NÃ£o foi possÃ­vel carregar a sala.</div>;
   }
 
   const machines: RoomMiner[] = data.miners || [];
@@ -209,18 +211,19 @@ export default function Ranking() {
   useEffect(() => { fetchRanking(); }, [fetchRanking]);
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700 pb-20">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div className="space-y-2">
-          <div className="inline-flex p-3 bg-amber-500/10 rounded-2xl">
-            <Trophy className="w-6 h-6 text-amber-500" />
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b-2 border-slate-800">
+        <div className="flex items-center gap-3">
+          <IconBadge icon={Trophy} variant="amber" size="lg" />
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">Hall da Fama</h1>
+            <p className="text-slate-400 text-xs sm:text-sm font-medium">Os mineradores mais poderosos da rede global.</p>
           </div>
-          <h1 className="text-3xl font-black text-white tracking-tight">Hall da Fama</h1>
-          <p className="text-gray-500 font-medium">Os mineradores mais poderosos da rede global.</p>
         </div>
         <button
+          type="button"
           onClick={fetchRanking}
-          className="p-3 bg-gray-800/50 hover:bg-gray-800 text-gray-400 hover:text-white rounded-xl transition-all border border-gray-700/50"
+          className="p-3 bg-slate-900 hover:border-slate-500 text-slate-300 hover:text-white rounded-xl transition-all border-2 border-slate-700 shadow-[2px_2px_0px_#000000] active:translate-x-0.5 active:translate-y-0.5 outline-none focus-visible:ring-2 focus-visible:ring-amber-400 w-fit"
         >
           <RefreshCw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
         </button>
@@ -232,7 +235,7 @@ export default function Ranking() {
           {/* Rank 2 */}
           <div
             onClick={() => navigate(`/room/${ranking[1].username}`)}
-            className="order-2 md:order-1 bg-surface border border-gray-800/50 rounded-[2.5rem] overflow-hidden text-center h-auto flex flex-col relative group cursor-pointer hover:border-slate-400/30 transition-all"
+            className="order-2 md:order-1 rounded-3xl border-2 border-slate-800 bg-slate-900/60 shadow-[4px_4px_0px_#000000] overflow-hidden text-center h-auto flex flex-col relative group cursor-pointer hover:border-slate-500 transition-all"
           >
             <div className="p-8 space-y-4 flex flex-col justify-center items-center min-h-[300px]">
               <div className="absolute top-0 inset-x-0 h-1 bg-slate-400 opacity-20" />
@@ -247,9 +250,9 @@ export default function Ranking() {
                 </div>
                 <h3 className="text-xl font-black text-white truncate px-4 group-hover:text-primary transition-colors">{ranking[1].username}</h3>
                 <p className="text-primary font-bold text-lg">{formatHashrate(ranking[1].totalHashRate)}</p>
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">2º LUGAR</span>
+                <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">2º LUGAR</span>
               </div>
-              <div className="flex items-center gap-1 text-[10px] font-black text-slate-600 uppercase tracking-widest transition-colors group-hover:text-slate-400">
+              <div className="flex items-center gap-1 text-[10px] font-black text-slate-300 uppercase tracking-widest transition-colors group-hover:text-white">
                 <ChevronRight className="w-3 h-3" />
                 Ver Sala
               </div>
@@ -259,7 +262,7 @@ export default function Ranking() {
           {/* Rank 1 */}
           <div
             onClick={() => navigate(`/room/${ranking[0].username}`)}
-            className="order-1 md:order-2 bg-gradient-to-b from-amber-500/10 to-surface border border-amber-500/30 rounded-[3rem] overflow-hidden text-center h-auto flex flex-col relative shadow-2xl shadow-amber-500/5 group cursor-pointer hover:border-amber-500/50 transition-all"
+            className="order-1 md:order-2 rounded-3xl border-2 border-amber-500/40 bg-slate-900/60 shadow-[4px_4px_0px_#000000] overflow-hidden text-center h-auto flex flex-col relative group cursor-pointer hover:border-amber-400 transition-all"
           >
             <div className="p-10 space-y-6 flex flex-col justify-center items-center min-h-[360px]">
               <div className="absolute top-0 inset-x-0 h-1.5 bg-amber-500 shadow-glow" />
@@ -274,9 +277,9 @@ export default function Ranking() {
                 </div>
                 <h3 className="text-2xl font-black text-white truncate px-4 group-hover:tracking-wider transition-all">{ranking[0].username}</h3>
                 <p className="text-amber-500 font-black text-2xl">{formatHashrate(ranking[0].totalHashRate)}</p>
-                <span className="text-xs font-black text-amber-500/50 uppercase tracking-[0.3em]">REI DO BLOCO</span>
+                <span className="text-xs font-black text-amber-300 uppercase tracking-[0.3em]">REI DO BLOCO</span>
               </div>
-              <div className="flex items-center gap-1 text-[10px] font-black text-amber-700 uppercase tracking-widest transition-colors group-hover:text-amber-500">
+              <div className="flex items-center gap-1 text-[10px] font-black text-amber-300 uppercase tracking-widest transition-colors group-hover:text-amber-200">
                 <ChevronRight className="w-3 h-3" />
                 Ver Sala
               </div>
@@ -286,24 +289,24 @@ export default function Ranking() {
           {/* Rank 3 */}
           <div
             onClick={() => navigate(`/room/${ranking[2].username}`)}
-            className="order-3 md:order-3 bg-surface border border-gray-800/50 rounded-[2.5rem] overflow-hidden text-center h-auto flex flex-col relative group cursor-pointer hover:border-orange-700/30 transition-all"
+            className="order-3 md:order-3 rounded-3xl border-2 border-slate-800 bg-slate-900/60 shadow-[4px_4px_0px_#000000] overflow-hidden text-center h-auto flex flex-col relative group cursor-pointer hover:border-orange-500/50 transition-all"
           >
             <div className="p-8 space-y-4 flex flex-col justify-center items-center min-h-[300px]">
               <div className="absolute top-0 inset-x-0 h-1 bg-orange-700/20" />
               <div className="absolute top-4 left-4">
                 {ranking[2].isCreator
                   ? <YtBadge youtubeUrl={ranking[2].youtubeUrl} className="w-8 h-8 animate-pulse" />
-                  : <span className="w-8 h-8 bg-orange-700 text-white rounded-lg flex items-center justify-center font-black text-xs shadow-lg">3</span>}
+                  : <span className="w-8 h-8 bg-orange-500 text-slate-950 rounded-lg flex items-center justify-center font-black text-xs shadow-[2px_2px_0px_#000000]">3</span>}
               </div>
               <div className="relative z-10">
                 <div className="w-16 h-16 bg-orange-700/10 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-orange-700/20 group-hover:scale-110 transition-transform">
-                  <Medal className="w-8 h-8 text-orange-700" />
+                  <Medal className="w-8 h-8 text-orange-400" />
                 </div>
                 <h3 className="text-xl font-black text-white truncate px-4 group-hover:text-primary transition-colors">{ranking[2].username}</h3>
                 <p className="text-primary font-bold text-lg">{formatHashrate(ranking[2].totalHashRate)}</p>
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">3º LUGAR</span>
+                <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">3º LUGAR</span>
               </div>
-              <div className="flex items-center gap-1 text-[10px] font-black text-slate-600 uppercase tracking-widest transition-colors group-hover:text-slate-400">
+              <div className="flex items-center gap-1 text-[10px] font-black text-slate-300 uppercase tracking-widest transition-colors group-hover:text-white">
                 <ChevronRight className="w-3 h-3" />
                 Ver Sala
               </div>
@@ -313,10 +316,10 @@ export default function Ranking() {
       )}
 
       {/* List Table */}
-      <div className="bg-surface border border-gray-800/50 rounded-[2.5rem] overflow-hidden shadow-xl">
+      <Card variant="table">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm text-gray-400">
-            <thead className="bg-gray-800/30 text-[10px] uppercase font-bold tracking-widest text-gray-500">
+          <table className="w-full text-left text-sm text-slate-300">
+            <thead className="bg-slate-950/90 text-[10px] uppercase font-black tracking-widest text-slate-400 border-b-2 border-slate-800 font-mono">
               <tr>
                 <th className="px-3 py-4 sm:px-6 sm:py-5 md:px-8 md:py-6 w-12 sm:w-20">Rank</th>
                 <th className="px-3 py-4 sm:px-6 sm:py-5 md:px-8 md:py-6">Minerador</th>
@@ -326,7 +329,7 @@ export default function Ranking() {
                 <th className="px-3 py-4 sm:px-6 sm:py-5 md:px-8 md:py-6 text-right">Ver</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-800/50 font-medium">
+            <tbody className="divide-y-2 divide-slate-800/80 font-medium">
               {isLoading ? (
                 Array.from({ length: 10 }).map((_, i) => (
                   <tr key={i} className="animate-pulse">
@@ -337,7 +340,7 @@ export default function Ranking() {
                 <tr
                   key={entry.id}
                   onClick={() => navigate(`/room/${entry.username}`)}
-                  className={`cursor-pointer hover:bg-primary/5 transition-colors group ${i < 3 ? 'bg-primary/5' : ''}`}
+                  className={`cursor-pointer hover:bg-slate-800/40 transition-colors group ${i < 3 ? 'bg-primary/5' : ''}`}
                 >
                   <td className="px-3 py-3 sm:px-6 sm:py-4 md:px-8 md:py-5">
                     {entry.isCreator
@@ -345,8 +348,8 @@ export default function Ranking() {
                       : <span className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs ${
                           i === 0 ? 'bg-amber-500 text-slate-950' :
                           i === 1 ? 'bg-slate-400 text-slate-950' :
-                          i === 2 ? 'bg-orange-700 text-white' :
-                                    'bg-gray-800 text-gray-500'
+                          i === 2 ? 'bg-orange-500 text-slate-950' :
+                                    'bg-slate-800 text-slate-300 border border-slate-600'
                         }`}>{entry.rank}</span>
                     }
                   </td>
@@ -374,7 +377,7 @@ export default function Ranking() {
                     </div>
                   </td>
                   <td className="px-3 py-3 sm:px-6 sm:py-4 md:px-8 md:py-5 text-right">
-                    <div className="inline-flex items-center gap-1 sm:gap-1.5 px-2 py-1.5 sm:px-3 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all border bg-gray-800/50 border-gray-700/50 text-gray-500 group-hover:border-primary/30 group-hover:text-primary">
+                    <div className="inline-flex items-center gap-1 sm:gap-1.5 px-2 py-1.5 sm:px-3 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all border-2 bg-slate-900 border-slate-700 text-slate-300 group-hover:border-primary group-hover:text-white">
                       <ChevronRight className="w-3 h-3" />
                       <span className="hidden sm:inline">Ver</span>
                     </div>
@@ -384,9 +387,7 @@ export default function Ranking() {
             </tbody>
           </table>
         </div>
-      </div>
-
-      
+      </Card>
     </div>
   );
 }

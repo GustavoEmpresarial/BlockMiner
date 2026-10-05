@@ -27,7 +27,7 @@ function BoostsTab({ power }: StatsDashboardContext) {
             className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider border ${
               filter === f
                 ? 'bg-amber-500 text-slate-950 border-amber-400'
-                : 'bg-slate-900/80 text-slate-500 border-slate-700 hover:text-white'
+                : 'bg-slate-900/80 text-slate-400 border-slate-700 hover:text-white'
             }`}
           >
             {t(`powerStats.dashboard.boost_filter.${f}`)}
@@ -35,7 +35,7 @@ function BoostsTab({ power }: StatsDashboardContext) {
         ))}
       </div>
 
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-slate-400">
         {t('powerStats.dashboard.boosts_active', { n: rows.length })}
       </p>
 

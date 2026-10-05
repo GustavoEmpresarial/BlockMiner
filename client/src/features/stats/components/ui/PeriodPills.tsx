@@ -17,10 +17,10 @@ export default function PeriodPills({ value, onChange }: Props) {
           key={p}
           type="button"
           onClick={() => onChange(p)}
-          className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider border transition-colors ${
+          className={`px-3.5 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider border-2 transition-all outline-none focus-visible:ring-2 focus-visible:ring-sky-400 ${
             value === p
-              ? 'bg-sky-500 text-slate-950 border-sky-400'
-              : 'bg-slate-900/80 text-slate-500 border-slate-700 hover:text-white'
+              ? 'bg-sky-500 text-slate-950 border-sky-400 shadow-[2px_2px_0px_#000000]'
+              : 'bg-slate-900/60 text-slate-300 border-slate-800 hover:text-white hover:border-slate-600'
           }`}
         >
           {t(`powerStats.dashboard.period.${p}`)}

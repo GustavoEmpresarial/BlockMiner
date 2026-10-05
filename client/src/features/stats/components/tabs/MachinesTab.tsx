@@ -46,7 +46,7 @@ function MachinesTab({ power }: StatsDashboardContext) {
         />
       </div>
 
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-5">
+      <div className="rounded-3xl border-2 border-slate-800 bg-slate-900/60 shadow-[4px_4px_0px_#000000] p-5">
         <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-4">
           {t('powerStats.dashboard.machine_chart')}
         </h3>
@@ -55,9 +55,9 @@ function MachinesTab({ power }: StatsDashboardContext) {
         </Suspense>
       </div>
 
-      <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900/40">
+      <div className="overflow-x-auto rounded-3xl border-2 border-slate-800 bg-slate-900/60 shadow-[4px_4px_0px_#000000]">
         <table className="w-full text-sm text-left">
-          <thead className="text-[10px] uppercase text-slate-500 font-black tracking-widest border-b border-slate-800">
+          <thead className="bg-slate-950/40 text-[10px] uppercase text-slate-400 font-black tracking-widest border-b-2 border-slate-800 font-mono">
             <tr>
               <th className="p-3">{t('powerStats.col.machine')}</th>
               <th className="p-3">{t('powerStats.col.hashrate')}</th>
@@ -65,13 +65,13 @@ function MachinesTab({ power }: StatsDashboardContext) {
               <th className="p-3">{t('powerStats.col.room')}</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-800/80">
+          <tbody className="divide-y-2 divide-slate-800/80">
             {(machines?.items || []).map((m) => (
-              <tr key={m.id} className="hover:bg-slate-800/30">
+              <tr key={m.id} className="hover:bg-slate-800/40 transition-colors">
                 <td className="p-3 font-medium text-white">{m.minerName}</td>
                 <td className="p-3 font-mono text-sky-400">{formatHashrate(m.hashRate)}</td>
                 <td className="p-3">
-                  <span className={m.isActive ? 'text-emerald-400' : 'text-slate-600'}>
+                  <span className={m.isActive ? 'text-emerald-400' : 'text-slate-400'}>
                     {m.isActive ? t('powerStats.active') : t('powerStats.inactive')}
                   </span>
                 </td>

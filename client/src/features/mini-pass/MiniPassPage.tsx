@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Loader2, Ticket } from 'lucide-react';
+import Card from '../../shared/components/Card';
+import IconBadge from '../../shared/components/IconBadge';
+import SectionHeader from '../../shared/components/SectionHeader';
+import StatusPill from '../../shared/components/StatusPill';
 import { toast } from 'sonner';
 import { isAxiosError } from 'axios';
 import { api } from '../../shared/auth/auth.store';
@@ -142,41 +146,56 @@ export default function MiniPassPage() {
     }
   };
 
+  const pageHero = (
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b-2 border-slate-800">
+      <div className="flex items-center gap-3">
+        <IconBadge icon={Ticket} variant="amber" size="lg" />
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">{t('miniPass.title')}</h1>
+          <p className="text-slate-400 text-xs sm:text-sm font-medium">{t('miniPass.subtitle')}</p>
+        </div>
+      </div>
+    </div>
+  );
+
   if (loading) {
     return (
-      <div className="flex justify-center py-24">
-        <Loader2 className="w-10 h-10 animate-spin text-amber-500" />
+      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+        {pageHero}
+        <Card className="flex justify-center py-16">
+          <Loader2 className="w-10 h-10 animate-spin text-amber-400" />
+        </Card>
       </div>
     );
   }
 
   if (!parsedId) {
     return (
-      <div className="space-y-8">
-        <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight">{t('miniPass.title')}</h1>
-        <p className="text-slate-400 text-sm">{t('miniPass.subtitle')}</p>
+      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+        {pageHero}
         {seasons.length === 0 ? (
-          <p className="text-slate-500">{t('miniPass.no_seasons')}</p>
+          <Card>
+            <p className="text-slate-300 font-medium">{t('miniPass.no_seasons')}</p>
+          </Card>
         ) : (
-          <ul className="space-y-3">
+          <ul className="space-y-4">
             {seasons.map((s) => (
               <li key={s.id}>
-                <Link
-                  to={`/mini-pass/${s.id}`}
-                  className="block rounded-2xl border border-white/10 bg-slate-900/50 p-5 hover:border-amber-500/40 transition-colors"
-                >
-                  <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <h2 className="font-bold text-white">{s.title}</h2>
-                      {s.subtitle ? <p className="text-xs text-slate-500 mt-1">{s.subtitle}</p> : null}
-                      <p className="text-[11px] text-slate-500 mt-2">
-                        {s.state === 'live'
-                          ? t('miniPass.ends_at', { date: formatSeasonDate(s.endsAt, i18n.language) })
-                          : t('miniPass.starts_at', { date: formatSeasonDate(s.startsAt, i18n.language) })}
-                      </p>
+                <Link to={`/mini-pass/${s.id}`} className="block">
+                  <Card className="hover:border-amber-400 transition-colors">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="min-w-0">
+                        <h2 className="font-black uppercase tracking-tight text-white">{s.title}</h2>
+                        {s.subtitle ? <p className="text-xs text-slate-400 mt-1 font-medium">{s.subtitle}</p> : null}
+                        <p className="text-[11px] text-slate-300 mt-2 font-medium">
+                          {s.state === 'live'
+                            ? t('miniPass.ends_at', { date: formatSeasonDate(s.endsAt, i18n.language) })
+                            : t('miniPass.starts_at', { date: formatSeasonDate(s.startsAt, i18n.language) })}
+                        </p>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-amber-400 shrink-0" />
                     </div>
-                    <ChevronRight className="w-5 h-5 text-amber-400 shrink-0" />
-                  </div>
+                  </Card>
                 </Link>
               </li>
             ))}
@@ -195,47 +214,54 @@ export default function MiniPassPage() {
       : Math.min(100, (progress.xpIntoLevel / Math.max(1, season.xpPerLevel)) * 100);
 
   return (
-    <div className="space-y-8 pb-12">
-      <button
-        type="button"
-        onClick={() => navigate('/mini-pass')}
-        className="flex items-center gap-2 text-slate-400 hover:text-white text-sm"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        {t('miniPass.back')}
-      </button>
-      <header className="rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900 to-slate-950 p-6 md:p-8">
-        <h1 className="text-2xl font-black text-white">{season.title}</h1>
-        <p className="text-sm text-slate-400 mt-2">
-          {t('miniPass.level_label')} {progress.level} / {season.maxLevel}
-          {season.state === 'live' && endsIn ? ` · ${t('miniPass.ends_in')} ${endsIn}` : null}
-        </p>
-        <div className="mt-4 h-2 rounded-full bg-slate-800 overflow-hidden">
-          <div className="h-full bg-amber-500 transition-all" style={{ width: `${progressPct}%` }} />
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b-2 border-slate-800">
+        <div className="flex items-center gap-3 min-w-0">
+          <IconBadge icon={Ticket} variant="amber" size="lg" />
+          <div className="min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white truncate">{season.title}</h1>
+            <p className="text-slate-400 text-xs sm:text-sm font-medium">
+              {t('miniPass.level_label')} {progress.level} / {season.maxLevel}
+              {season.state === 'live' && endsIn ? ` · ${t('miniPass.ends_in')} ${endsIn}` : null}
+            </p>
+          </div>
         </div>
-      </header>
+        <button
+          type="button"
+          onClick={() => navigate('/mini-pass')}
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 border-2 border-slate-700 text-xs font-black uppercase tracking-wider text-slate-300 hover:text-white hover:border-slate-500 active:translate-x-0.5 active:translate-y-0.5 shadow-[2px_2px_0px_#000000] transition-all outline-none focus-visible:ring-2 focus-visible:ring-amber-400 w-fit"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          {t('miniPass.back')}
+        </button>
+      </div>
+      <Card className="space-y-4">
+        <div className="h-2 rounded-full bg-slate-950 border border-slate-800 overflow-hidden">
+          <div className="h-full bg-amber-400 transition-all" style={{ width: `${progressPct}%` }} />
+        </div>
+      </Card>
       <section className="space-y-3">
-        <h2 className="text-sm font-black uppercase tracking-widest text-slate-500">{t('miniPass.rewards_track')}</h2>
+        <SectionHeader icon={Ticket} iconVariant="amber" title={t('miniPass.rewards_track')} />
         {rewards.map((r) => (
-          <div key={r.id} className="flex items-center justify-between rounded-xl border border-white/10 bg-slate-900/40 px-4 py-3">
-            <div>
+          <Card key={r.id} variant="compact" className="flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
               <p className="text-sm font-bold text-white">
                 {t('miniPass.complete_modal.reward_level', { level: r.level })} — {r.title || r.rewardKind}
               </p>
             </div>
             {r.claimed ? (
-              <span className="text-xs font-bold text-slate-500">{t('miniPass.claimed')}</span>
+              <StatusPill variant="success" label={t('miniPass.claimed')} />
             ) : (
               <button
                 type="button"
                 disabled={busyKey != null}
                 onClick={() => void claim(r.id)}
-                className="px-3 py-1.5 rounded-lg bg-amber-500/20 text-amber-300 text-xs font-black uppercase"
+                className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:translate-x-0.5 active:translate-y-0.5 text-slate-950 text-xs font-black uppercase tracking-wider shadow-[2px_2px_0px_#000000] disabled:opacity-50 outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
               >
                 {t('miniPass.claim')}
               </button>
             )}
-          </div>
+          </Card>
         ))}
       </section>
     </div>

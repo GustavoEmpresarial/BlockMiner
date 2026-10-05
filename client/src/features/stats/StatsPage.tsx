@@ -1,6 +1,7 @@
 import { Suspense, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Activity, Loader2, RefreshCw } from 'lucide-react';
+import IconBadge from '../../shared/components/IconBadge';
 import { useUserPowerStats, useUserEarningsStats } from './lib/stats.hooks';
 import { STATS_TABS, type StatsTabId, type EarningsUiFilter } from './lib/stats.config';
 import type { StatsDashboardContext } from './lib/stats.types';
@@ -32,8 +33,8 @@ const ToolsTab = lazyWithRetry(() => import('./components/tabs/ToolsTab'));
 
 function TabFallback() {
   return (
-    <div className="flex items-center justify-center gap-3 py-20 text-slate-500" role="status" aria-busy="true">
-      <Loader2 className="w-6 h-6 animate-spin" />
+    <div className="flex items-center justify-center gap-3 py-20 text-slate-300 rounded-3xl border-2 border-slate-800 bg-slate-900/60 shadow-[4px_4px_0px_#000000]" role="status" aria-busy="true">
+      <Loader2 className="w-6 h-6 animate-spin text-primary" />
     </div>
   );
 }
@@ -87,14 +88,14 @@ export default function StatsPage() {
     : null;
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 pb-20">
-      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
-        <div className="space-y-2">
-          <div className="inline-flex p-3 bg-primary/10 rounded-2xl">
-            <Activity className="w-7 h-7 text-primary" />
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b-2 border-slate-800">
+        <div className="flex items-center gap-3">
+          <IconBadge icon={Activity} variant="primary" size="lg" />
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">{t('powerStats.title')}</h1>
+            <p className="text-slate-400 text-xs sm:text-sm font-medium max-w-2xl">{t('powerStats.subtitle')}</p>
           </div>
-          <h1 className="text-3xl font-black text-white tracking-tight">{t('powerStats.title')}</h1>
-          <p className="text-slate-500 font-medium max-w-2xl">{t('powerStats.subtitle')}</p>
         </div>
         <button
           type="button"
@@ -102,7 +103,7 @@ export default function StatsPage() {
             void refetch();
             void refetchEarnings();
           }}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-300 hover:text-white text-xs font-bold uppercase tracking-wider self-start"
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 border-2 border-slate-700 text-slate-300 hover:text-white hover:border-slate-500 active:translate-x-0.5 active:translate-y-0.5 text-xs font-black uppercase tracking-wider self-start shadow-[2px_2px_0px_#000000] transition-all outline-none focus-visible:ring-2 focus-visible:ring-primary"
         >
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           {t('powerStats.refresh')}
@@ -110,7 +111,7 @@ export default function StatsPage() {
       </div>
 
       {error ? (
-        <div className="rounded-2xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-slate-200">{error}</div>
+        <div className="rounded-2xl border-2 border-amber-500/30 bg-amber-950/20 px-4 py-3 text-sm text-slate-200 font-medium shadow-[2px_2px_0px_#000000]">{error}</div>
       ) : null}
 
       {loading && !data ? (
@@ -118,7 +119,7 @@ export default function StatsPage() {
       ) : ctx ? (
         <>
           <div
-            className="flex gap-1.5 p-1.5 bg-slate-900/90 border border-slate-800 rounded-2xl overflow-x-auto scrollbar-thin"
+            className="flex gap-1.5 overflow-x-auto no-scrollbar scroll-smooth max-w-full"
             role="tablist"
             aria-label={t('powerStats.tabs_label')}
           >
@@ -136,8 +137,10 @@ export default function StatsPage() {
                 tabIndex={tab === id ? 0 : -1}
                 onClick={() => setTab(id)}
                 onKeyDown={(event) => onTabKeyDown(event, index)}
-                className={`shrink-0 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors whitespace-nowrap ${
-                  tab === id ? 'bg-primary text-slate-950 shadow-lg' : 'text-slate-500 hover:text-white hover:bg-slate-800/60'
+                className={`shrink-0 inline-flex items-center px-3.5 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider whitespace-nowrap transition-all border-2 select-none outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                  tab === id
+                    ? 'border-primary bg-primary/20 text-white shadow-[2px_2px_0px_#000000]'
+                    : 'border-slate-800 bg-slate-900/60 text-slate-300 hover:text-white hover:border-slate-600'
                 }`}
               >
                 {t(`powerStats.tab.${id}`)}

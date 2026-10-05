@@ -184,7 +184,7 @@ function OfferwallHubCard({ provider, onSelect }: { provider: HubProvider; onSel
           disabled={isUnderMaintenance}
           className={`mt-auto w-full py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all outline-none focus-visible:ring-2 ${
             isUnderMaintenance
-              ? 'bg-slate-800/80 border-2 border-slate-700/60 text-slate-500 cursor-not-allowed opacity-60'
+              ? 'bg-slate-800 border-2 border-slate-600 text-slate-300 cursor-not-allowed'
               : 'bg-sky-500 hover:bg-sky-400 active:translate-x-0.5 active:translate-y-0.5 text-slate-950 shadow-[2px_2px_0px_#000000] focus-visible:ring-sky-400'
           }`}
         >
@@ -348,11 +348,15 @@ export default function OfferwallPage() {
 
 function MaintenancePanel({ onBack, msgKey }: { onBack: () => void; msgKey: string }) {
   return (
-    <div className="space-y-4">
-      <button type="button" onClick={onBack} className="flex items-center gap-2 text-sm text-gray-400 hover:text-white">
+    <div className="space-y-6 pb-20">
+      <button
+        type="button"
+        onClick={onBack}
+        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 border-2 border-slate-700 text-xs font-black uppercase tracking-wider text-slate-300 hover:text-white hover:border-slate-500 shadow-[2px_2px_0px_#000000] transition-all"
+      >
         {t('offerwall.panel.back')}
       </button>
-      <div className="flex items-center gap-3 justify-center py-10 rounded-xl border border-amber-500/20 bg-amber-500/5 text-amber-300 text-sm px-4 text-center">
+      <div className="flex items-center gap-3 justify-center py-10 rounded-3xl border-2 border-amber-500/40 bg-amber-950/20 text-amber-300 text-sm font-bold px-4 text-center shadow-[4px_4px_0px_#000000]">
         <Wrench className="w-5 h-5 shrink-0" />
         {t(msgKey)}
       </div>
@@ -497,7 +501,7 @@ function ZeradsPanel({ onBack }: { onBack: () => void }) {
               href={url}
               target="_blank"
               rel="noopener"
-              className="w-full flex items-center justify-center gap-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold py-3 transition-colors text-sm"
+              className="w-full flex items-center justify-center gap-2 rounded-xl bg-sky-500 hover:bg-sky-400 active:translate-x-0.5 active:translate-y-0.5 text-slate-950 font-black uppercase tracking-wider text-xs py-3.5 shadow-[2px_2px_0px_#000000] transition-all"
             >
               <ExternalLink className="w-4 h-4" />
               {t('zerads.start_earning')}
@@ -507,7 +511,7 @@ function ZeradsPanel({ onBack }: { onBack: () => void }) {
               type="button"
               disabled={opening}
               onClick={() => void openZerads()}
-              className="w-full flex items-center justify-center gap-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold py-3 disabled:opacity-60 text-sm"
+              className="w-full flex items-center justify-center gap-2 rounded-xl bg-sky-500 hover:bg-sky-400 active:translate-x-0.5 active:translate-y-0.5 text-slate-950 font-black uppercase tracking-wider text-xs py-3.5 shadow-[2px_2px_0px_#000000] transition-all disabled:opacity-60"
             >
               {opening ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
               {t('zerads.start_earning')}
@@ -711,7 +715,7 @@ function OfferwallMePanel({ onBack }: { onBack: () => void }) {
                   href={url}
                   target="_blank"
                   rel="noopener"
-                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-violet-600 hover:bg-violet-500 active:bg-violet-700 text-white font-bold py-3.5 px-6 shadow-md shadow-violet-600/30 transition-all text-sm"
+                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-sky-500 hover:bg-sky-400 active:translate-x-0.5 active:translate-y-0.5 text-slate-950 font-black uppercase tracking-wider text-xs py-3.5 px-6 shadow-[2px_2px_0px_#000000] transition-all"
                 >
                   <ExternalLink className="w-4 h-4" />
                   {t('offerwall.offerwallme.open_direct')}
@@ -726,7 +730,7 @@ function OfferwallMePanel({ onBack }: { onBack: () => void }) {
                 type="button"
                 disabled={opening || loadingUrl}
                 onClick={() => void resolveUrl(true)}
-                className="w-full flex items-center justify-center gap-2 rounded-xl bg-violet-600 hover:bg-violet-500 active:bg-violet-700 text-white font-bold py-3.5 px-6 shadow-md shadow-violet-600/30 transition-all disabled:opacity-60 text-sm"
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-sky-500 hover:bg-sky-400 active:translate-x-0.5 active:translate-y-0.5 text-slate-950 font-black uppercase tracking-wider text-xs py-3.5 px-6 shadow-[2px_2px_0px_#000000] transition-all disabled:opacity-60"
               >
                 {opening || loadingUrl ? <Loader2 className="w-4 h-4 animate-spin" /> : <ExternalLink className="w-4 h-4" />}
                 {loadingUrl ? t('offerwall.offerwallme.generating_link') : t('offerwall.offerwallme.open_direct')}
