@@ -5,6 +5,10 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import type { AxiosError } from "axios";
 import { Cpu, ShieldCheck, Play, Pause, Loader2, AlertTriangle } from "lucide-react";
+import Card from "../../shared/components/Card";
+import IconBadge from "../../shared/components/IconBadge";
+import SectionHeader from "../../shared/components/SectionHeader";
+import StatusPill from "../../shared/components/StatusPill";
 import { api, useAuthStore } from "../../shared/auth/auth.store";
 import { validateTrustedEvent, generateSecurityPayload } from "../../shared/utils/security";
 import PowerBoostBanner from "../../shared/components/PowerBoostBanner";
@@ -534,68 +538,70 @@ export default function AutoMining() {
 
   if (isLoading) {
     return (
-      <div className="h-[60vh] flex flex-col items-center justify-center gap-4">
-        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-        <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">{t("autoMiningGpuPage.loading")}</p>
+      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+        <div className="flex items-center gap-4 pb-3 border-b-2 border-slate-800">
+          <IconBadge icon={Cpu} size="lg" />
+          <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">{t("autoMiningGpuPage.title")}</h1>
+        </div>
+        <Card>
+          <div className="flex flex-col items-center justify-center gap-4 py-16">
+            <Loader2 className="w-10 h-10 animate-spin text-sky-400" />
+            <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">{t("autoMiningGpuPage.loading")}</p>
+          </div>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700 pb-20">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       <PowerBoostBanner />
-      <div className="w-full ">
-
-      </div>
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div className="space-y-2">
-          <div className="inline-flex p-3 bg-primary/10 rounded-2xl">
-            <Cpu className="w-6 h-6 text-primary" />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b-2 border-slate-800">
+        <div className="flex items-center gap-4">
+          <IconBadge icon={Cpu} size="lg" />
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">{t("autoMiningGpuPage.title")}</h1>
+            <p className="text-slate-400 text-xs sm:text-sm font-medium max-w-xl">{t("autoMiningGpuPage.subtitle")}</p>
           </div>
-          <h1 className="text-3xl font-black text-white tracking-tight uppercase italic">{t("autoMiningGpuPage.title")}</h1>
-          <p className="text-gray-500 font-medium max-w-xl">{t("autoMiningGpuPage.subtitle")}</p>
         </div>
-        <div className="bg-slate-900/50 px-4 py-2 rounded-xl border border-slate-800 flex items-center gap-2 shadow-glow-sm">
-          <ShieldCheck className="w-4 h-4 text-emerald-400" />
-          <span className="text-emerald-400 font-black text-[10px] uppercase tracking-widest">{t("autoMiningGpuPage.secure_badge")}</span>
-        </div>
+        <StatusPill variant="success" icon={ShieldCheck} label={t("autoMiningGpuPage.secure_badge")} />
       </div>
 
-      <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">{t("autoMiningGpuPage.legacy_note")}</p>
+      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{t("autoMiningGpuPage.legacy_note")}</p>
 
       {dailyReset ? <AutoMiningDailyResetBanner dailyReset={dailyReset} t={t} onResetElapsed={refreshStatus} /> : null}
 
       {schemaUnavailable && (
-        <div className="rounded-2xl border border-amber-500/35 bg-amber-950/25 px-5 py-4 text-amber-100/90">
-          <p className="text-sm font-black uppercase tracking-wide text-amber-400">
+        <Card spacing="sm">
+          <p className="text-sm font-black uppercase tracking-wide text-amber-300">
             {t("autoMiningGpuPage.schema_unavailable_title")}
           </p>
-          <p className="text-xs mt-2 text-amber-200/85 leading-relaxed">
+          <p className="text-xs text-amber-100 leading-relaxed">
             {t("autoMiningGpuPage.schema_unavailable_body")}
           </p>
-        </div>
+        </Card>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
-          <div className="bg-surface border border-gray-800/50 rounded-[3rem] p-8 md:p-10 shadow-2xl relative overflow-hidden">
-            <div className="relative z-10 space-y-8">
+          <Card spacing="lg">
+            <div className="space-y-8">
               {isPaused ? (
                 <div className="space-y-6 text-center">
                   <div className="w-20 h-20 mx-auto rounded-full bg-amber-500/10 border-4 border-amber-500/20 flex items-center justify-center">
                     <Pause className="w-10 h-10 text-amber-400" />
                   </div>
                   <div>
-                    <h2 className="text-xl font-black text-white uppercase italic tracking-tighter">
+                    <h2 className="text-xl font-black text-white uppercase tracking-tight">
                       {t("autoMiningGpuPage.paused_title")}
                     </h2>
-                    <p className="text-sm text-gray-500 font-medium mt-1">{t("autoMiningGpuPage.paused_hint")}</p>
+                    <p className="text-sm text-slate-400 font-medium mt-1">{t("autoMiningGpuPage.paused_hint")}</p>
                   </div>
                   <button
                     type="button"
                     onClick={handleResume}
                     disabled={actionBusy}
-                    className="w-full py-5 rounded-[2rem] font-black text-sm uppercase tracking-widest bg-primary text-white shadow-xl shadow-primary/20 hover:bg-primary-hover active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-3"
+                    className="w-full py-5 rounded-xl font-black text-sm uppercase tracking-widest bg-sky-500 text-slate-950 shadow-[2px_2px_0px_#000000] hover:bg-sky-400 active:translate-x-0.5 active:translate-y-0.5 disabled:bg-slate-800 disabled:text-slate-300 disabled:shadow-none flex items-center justify-center gap-3"
                   >
                     {actionBusy ? <Loader2 className="w-5 h-5 animate-spin" /> : <Play className="w-5 h-5" />}
                     {t("autoMiningGpuPage.resume_button")}
@@ -604,14 +610,13 @@ export default function AutoMining() {
               ) : !isRunning ? (
                 <div className="space-y-6">
                   <div>
-                    <h2 className="text-xl font-black text-white uppercase italic tracking-tighter">{t("autoMiningGpuPage.mode_title")}</h2>
-                    <p className="text-sm text-gray-500 font-medium mt-1">{t("autoMiningGpuPage.normal_only_hint")}</p>
+                    <SectionHeader icon={Play} title={t("autoMiningGpuPage.mode_title")} subtitle={t("autoMiningGpuPage.normal_only_hint")} />
                   </div>
                   <button
                     type="button"
                     onClick={handleStart}
                     disabled={actionBusy || schemaUnavailable}
-                    className="w-full md:w-auto px-12 py-5 rounded-[2rem] font-black text-xs uppercase tracking-widest bg-primary text-white shadow-xl hover:scale-[1.02] active:scale-95 disabled:opacity-30 flex items-center justify-center gap-2"
+                    className="w-full md:w-auto px-12 py-5 rounded-xl font-black text-xs uppercase tracking-widest bg-sky-500 text-slate-950 shadow-[2px_2px_0px_#000000] hover:bg-sky-400 active:translate-x-0.5 active:translate-y-0.5 disabled:bg-slate-800 disabled:text-slate-300 disabled:shadow-none flex items-center justify-center gap-2"
                   >
                     {actionBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4 fill-current" />}
                     {t("autoMiningGpuPage.start")}
@@ -625,7 +630,7 @@ export default function AutoMining() {
                         <Cpu className="w-5 h-5 text-primary" />
                         <h2 className="text-xl font-black text-white uppercase italic">{mode}</h2>
                       </div>
-                      <p className="text-[11px] text-gray-500 font-bold uppercase tracking-widest">{t("autoMiningGpuPage.pause_hint")}</p>
+                      <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest">{t("autoMiningGpuPage.pause_hint")}</p>
                     </div>
                     <AutoMiningCycleTimer
                       nextClaimAtIso={nextClaimAtIso}
@@ -648,7 +653,7 @@ export default function AutoMining() {
                     type="button"
                     onClick={handleStop}
                     disabled={actionBusy}
-                    className="w-full md:w-auto px-10 py-4 rounded-[2rem] font-black text-xs uppercase tracking-widest bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 flex items-center justify-center gap-2"
+                    className="w-full md:w-auto px-10 py-4 rounded-xl font-black text-xs uppercase tracking-widest bg-slate-950 text-red-300 border-2 border-red-500 shadow-[2px_2px_0px_#000000] hover:bg-red-500 hover:text-slate-950 active:translate-x-0.5 active:translate-y-0.5 flex items-center justify-center gap-2"
                   >
                     <Pause className="w-4 h-4" />
                     {t("autoMiningGpuPage.stop")}
@@ -656,7 +661,7 @@ export default function AutoMining() {
                 </div>
               )}
             </div>
-          </div>
+          </Card>
         </div>
 
         <AutoMiningSidebar

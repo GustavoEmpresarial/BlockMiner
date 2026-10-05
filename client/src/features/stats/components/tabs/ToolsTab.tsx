@@ -12,7 +12,7 @@ function ToolsTab({ power, earnings }: StatsDashboardContext) {
 
   return (
     <div className="space-y-8">
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6 space-y-4">
+      <div className="rounded-3xl border-2 border-slate-800 bg-slate-900/60 shadow-[4px_4px_0px_#000000] p-6 space-y-4">
         <h2 className="text-lg font-black text-white uppercase tracking-widest flex items-center gap-2">
           <Wrench className="w-5 h-5 text-slate-400" />
           {t('powerStats.dashboard.tools_exports')}
@@ -41,7 +41,7 @@ function ToolsTab({ power, earnings }: StatsDashboardContext) {
 
       <Suspense
         fallback={
-          <div className="h-48 rounded-2xl border border-slate-800 bg-slate-900/40 animate-pulse" role="status" />
+          <div className="h-48 rounded-3xl border-2 border-slate-800 bg-slate-900/60 shadow-[4px_4px_0px_#000000] animate-pulse" role="status" />
         }
       >
         <CalculatorPage />

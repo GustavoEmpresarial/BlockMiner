@@ -37,6 +37,11 @@ import {
   Globe,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import Card from '../../shared/components/Card';
+import IconBadge from '../../shared/components/IconBadge';
+import SectionHeader from '../../shared/components/SectionHeader';
+import StatCard from '../../shared/components/StatCard';
+import StatusPill from '../../shared/components/StatusPill';
 
 // ─────────────────────────────────────────────
 // Dados
@@ -145,22 +150,20 @@ const MILESTONES: RoadmapMilestone[] = [
 const CFG = {
   launched: {
     labelKey: 'status_launched' as const,
-    nodeRing: 'border-emerald-500 shadow-emerald-500/40',
-    nodeBg:   'bg-emerald-500',
-    badge:    'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+    nodeRing: 'border-slate-950',
+    nodeBg:   'bg-emerald-500 text-slate-950 shadow-[2px_2px_0px_#000000]',
     line:     'bg-emerald-500/50',
-    cardBg:   'bg-emerald-500/8 border-emerald-500/25',
+    cardBg:   'bg-slate-900/60 border-2 border-emerald-500 shadow-[4px_4px_0px_#000000]',
     phaseText:'text-emerald-400',
     barColor: 'from-emerald-500 to-emerald-400',
   },
   planned: {
     labelKey: 'status_planned',
-    nodeRing: 'border-slate-600 shadow-slate-700/20',
-    nodeBg:   'bg-slate-800',
-    badge:    'bg-violet-500/15 text-violet-400 border-violet-500/30',
+    nodeRing: 'border-slate-600',
+    nodeBg:   'bg-slate-800 text-slate-200 shadow-[2px_2px_0px_#000000]',
     line:     'bg-slate-700/50',
-    cardBg:   'bg-slate-900/60 border-slate-700/40',
-    phaseText:'text-slate-400',
+    cardBg:   'bg-slate-900/60 border-2 border-slate-800 shadow-[4px_4px_0px_#000000]',
+    phaseText:'text-slate-300',
     barColor: 'from-violet-600 to-violet-400',
   },
 };
@@ -175,10 +178,10 @@ function ItemRow({ item }: { item: RoadmapItemRow }) {
   const done = item.status === 'launched';
   return (
     <div className={`flex items-center gap-3 py-2 px-3 rounded-xl ${done ? 'hover:bg-emerald-500/5' : 'hover:bg-slate-800/30'} transition-colors`}>
-      <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${done ? 'bg-emerald-500/15 text-emerald-400' : 'bg-slate-800 text-slate-600'}`}>
+      <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${done ? 'bg-emerald-500/15 text-emerald-400' : 'bg-slate-800 text-slate-300'}`}>
         <Icon className="w-3.5 h-3.5" />
       </div>
-      <span className={`text-[11px] font-bold flex-1 leading-tight ${done ? 'text-slate-300' : 'text-slate-500'}`}>{t(`roadmap.items.${item.labelKey}`)}</span>
+      <span className={`text-[11px] font-bold flex-1 leading-tight ${done ? 'text-slate-200' : 'text-slate-300'}`}>{t(`roadmap.items.${item.labelKey}`)}</span>
       {done
         ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
         : <div className="w-3 h-3 rounded-full border border-slate-600 shrink-0 animate-pulse" />
@@ -210,8 +213,8 @@ function MilestoneNode({ milestone, index, isLast }: { milestone: RoadmapMilesto
           className={`relative w-10 h-10 rounded-full border-2 ${cfg.nodeRing} shadow-lg flex items-center justify-center z-10 transition-all duration-200 hover:scale-110 active:scale-95 ${cfg.nodeBg}`}
         >
           {done
-            ? <CheckCircle2 className="w-4 h-4 text-white" />
-            : <Clock className="w-4 h-4 text-slate-400" />
+            ? <CheckCircle2 className="w-4 h-4 text-slate-950" />
+            : <Clock className="w-4 h-4 text-slate-300" />
           }
           {/* número da fase */}
           <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-slate-950 border border-slate-700 text-[8px] font-black text-slate-400 flex items-center justify-center">
@@ -231,14 +234,14 @@ function MilestoneNode({ milestone, index, isLast }: { milestone: RoadmapMilesto
               <div className="space-y-0.5 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className={`text-[9px] font-black uppercase tracking-[0.25em] ${cfg.phaseText}`}>{phaseMeta.phase}</span>
-                  <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase border ${cfg.badge}`}>{t(`roadmap.${cfg.labelKey}`)}</span>
+                  <StatusPill variant={done ? 'success' : 'primary'} label={t(`roadmap.${cfg.labelKey}`)} />
                 </div>
                 <p className="text-sm font-black text-white tracking-tight">{phaseMeta.title}</p>
-                <p className="text-[10px] text-slate-500 font-medium">{phaseMeta.subtitle}</p>
+                <p className="text-[10px] text-slate-400 font-medium">{phaseMeta.subtitle}</p>
               </div>
               <div className="text-right shrink-0">
-                <p className={`text-lg font-black leading-none ${cfg.phaseText}`}>{completedCount}<span className="text-slate-600 text-xs font-bold">/{total}</span></p>
-                <p className="text-[8px] text-slate-600 font-bold uppercase tracking-wider mt-0.5">{pct}%</p>
+                <p className={`text-lg font-black font-mono leading-none ${cfg.phaseText}`}>{completedCount}<span className="text-slate-400 text-xs font-bold">/{total}</span></p>
+                <p className="text-[8px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">{pct}%</p>
               </div>
             </div>
             {/* progress */}
@@ -246,7 +249,7 @@ function MilestoneNode({ milestone, index, isLast }: { milestone: RoadmapMilesto
               <div className={`h-full rounded-full bg-gradient-to-r ${cfg.barColor} transition-all duration-700`} style={{ width: `${pct}%` }} />
             </div>
             {/* expand hint */}
-            <p className="text-[8px] text-slate-600 mt-2 font-bold tracking-widest uppercase text-right">
+            <p className="text-[8px] text-slate-400 mt-2 font-bold tracking-widest uppercase text-right">
               {open ? t('roadmap.hide') : t('roadmap.show')}
             </p>
           </div>
@@ -277,48 +280,35 @@ export default function Roadmap() {
     <div className="max-w-xl mx-auto space-y-8 pb-24 animate-in fade-in slide-in-from-bottom-4 duration-700">
 
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="p-2 bg-primary/20 rounded-2xl">
-          <Flame className="w-7 h-7 text-primary" />
-        </div>
+      <div className="flex items-center gap-4 pb-3 border-b-2 border-slate-800">
+        <IconBadge icon={Flame} variant="orange" size="lg" />
         <div>
-          <h1 className="text-4xl font-black text-white tracking-tighter italic">
-            {t('roadmap.title_road')}<span className="text-primary">{t('roadmap.title_map')}</span>
+          <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">
+            {t('roadmap.title_road')}<span className="text-sky-400">{t('roadmap.title_map')}</span>
           </h1>
-          <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em]">
+          <p className="text-slate-400 text-xs sm:text-sm font-medium">
             {t('roadmap.subtitle')}
           </p>
         </div>
       </div>
 
-      {/* Progresso geral */}
-      <div className="p-5 bg-slate-950/80 border border-slate-800/50 rounded-3xl space-y-3">
-        <div className="flex justify-between items-center">
-          <div>
-            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">{t('roadmap.total_progress')}</p>
-            <p className="text-3xl font-black text-white italic">{pct}<span className="text-primary text-2xl">%</span></p>
-          </div>
-          <div className="text-right space-y-1.5">
-            <div className="flex items-center gap-2 justify-end">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-              <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">{t('roadmap.launched_count', { count: totalLaunched })}</span>
-            </div>
-            <div className="flex items-center gap-2 justify-end">
-              <span className="w-2 h-2 rounded-full bg-violet-500 animate-pulse shrink-0" />
-              <span className="text-[10px] font-black text-violet-400 uppercase tracking-widest">{t('roadmap.planned_count', { count: totalItems - totalLaunched })}</span>
-            </div>
-          </div>
+      <Card spacing="md">
+        <SectionHeader icon={BarChart3} title={t('roadmap.total_progress')} />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <StatCard icon={TrendingUp} accent="text-sky-400" label={t('roadmap.total_progress')} value={`${pct}%`} />
+          <StatCard icon={CheckCircle2} accent="text-emerald-400" label={t('roadmap.status_launched')} value={String(totalLaunched)} sub={t('roadmap.launched_count', { count: totalLaunched })} />
+          <StatCard icon={Clock} accent="text-violet-400" label={t('roadmap.status_planned')} value={String(totalItems - totalLaunched)} sub={t('roadmap.planned_count', { count: totalItems - totalLaunched })} />
         </div>
-        <div className="h-2.5 bg-slate-900 rounded-full overflow-hidden">
+        <div className="h-2.5 bg-slate-950 rounded-full overflow-hidden border-2 border-slate-800">
           <div
-            className="h-full bg-gradient-to-r from-emerald-500 via-primary to-violet-500 rounded-full transition-all duration-1000"
+            className="h-full bg-gradient-to-r from-emerald-500 via-sky-500 to-violet-500 rounded-full transition-all duration-1000"
             style={{ width: `${pct}%` }}
           />
         </div>
-        <p className="text-[9px] text-slate-600 font-bold text-center">
+        <p className="text-[9px] text-slate-400 font-bold text-center">
           {t('roadmap.phases_hint', { done: MILESTONES.filter(m => m.status === 'launched').length, total: MILESTONES.length })}
         </p>
-      </div>
+      </Card>
 
       {/* Mapa vertical */}
       <div className="pt-2">
@@ -334,12 +324,12 @@ export default function Roadmap() {
         {/* Fim do mapa */}
         <div className="flex gap-0">
           <div className="w-14 shrink-0 flex justify-center">
-            <div className="w-10 h-10 rounded-full bg-slate-900/80 border-2 border-dashed border-slate-700 flex items-center justify-center">
-              <Rocket className="w-4 h-4 text-slate-600" />
+            <div className="w-10 h-10 rounded-full bg-slate-900/80 border-2 border-dashed border-slate-600 flex items-center justify-center">
+              <Rocket className="w-4 h-4 text-slate-300" />
             </div>
           </div>
           <div className="flex-1 ml-2 mt-2.5">
-            <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest italic">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
               {t('roadmap.more_coming')}
             </p>
           </div>

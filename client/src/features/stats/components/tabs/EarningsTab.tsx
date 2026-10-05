@@ -62,9 +62,9 @@ function EarningsTab({ earnings, earningsLoading, earningsFilter, setEarningsFil
         />
       </div>
 
-      <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900/40">
+      <div className="overflow-x-auto rounded-3xl border-2 border-slate-800 bg-slate-900/60 shadow-[4px_4px_0px_#000000]">
         <table className="w-full text-sm text-left min-w-[640px]">
-          <thead className="text-[10px] uppercase text-slate-500 font-black tracking-widest border-b border-slate-800">
+          <thead className="bg-slate-950/40 text-[10px] uppercase text-slate-400 font-black tracking-widest border-b-2 border-slate-800 font-mono">
             <tr>
               <th className="p-3">{t('powerStats.dashboard.col_system')}</th>
               <th className="p-3">{t('powerStats.dashboard.col_earned')}</th>
@@ -72,18 +72,18 @@ function EarningsTab({ earnings, earningsLoading, earningsFilter, setEarningsFil
               <th className="p-3">{t('powerStats.dashboard.col_last_credit')}</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-800/80">
+          <tbody className="divide-y-2 divide-slate-800/80">
             {EARNINGS_CATEGORY_KEYS.map((key) => {
               const amount = Number(totals[key]) || 0;
               const lastCredit = insights.lastCategoryCredit[key];
               return (
-                <tr key={key} className="hover:bg-slate-800/20">
+                <tr key={key} className="hover:bg-slate-800/40 transition-colors">
                   <td className="p-3 font-medium text-white">{t(`powerStats.earnings.sources.${key}`)}</td>
                   <td className="p-3 font-mono text-amber-300">
                     {formatPolAmount(amount, locale)} POL
                   </td>
                   <td className="p-3 text-sky-400">{percentOfTotal(amount, totals.total)}%</td>
-                  <td className="p-3 text-slate-500 text-xs">{lastCredit ? formatUtcChartDay(lastCredit) : '—'}</td>
+                  <td className="p-3 text-slate-400 text-xs">{lastCredit ? formatUtcChartDay(lastCredit) : '—'}</td>
                 </tr>
               );
             })}

@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Youtube, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import Card from '../../../shared/components/Card';
+import IconBadge from '../../../shared/components/IconBadge';
 import { api } from '../../../shared/auth/auth.store';
 import { VideoCard } from './socialTab.shared';
-import type { FeedEntry, FeedResponse } from './socialTab.shared';
+import type { FeedResponse } from './socialTab.shared';
 
 export default function SocialTab() {
   const { t } = useTranslation();
@@ -33,29 +35,29 @@ export default function SocialTab() {
       : null;
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
-      <div className="flex items-center gap-3">
-        <div className="w-9 h-9 rounded-xl bg-red-500/20 flex items-center justify-center">
-          <Youtube className="w-5 h-5 text-red-400" />
-        </div>
-        <div>
-          <p className="text-sm font-black text-white">{t('ranking.social.feed_title')}</p>
-          <p className="text-[10px] text-gray-500">{t('ranking.social.feed_subtitle')}</p>
+    <div className="space-y-8 animate-in fade-in duration-300">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b-2 border-slate-800">
+        <div className="flex items-center gap-3">
+          <IconBadge icon={Youtube} variant="red" size="lg" />
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">{t('ranking.social.feed_title')}</h1>
+            <p className="text-slate-400 text-xs sm:text-sm font-medium">{t('ranking.social.feed_subtitle')}</p>
+          </div>
         </div>
         {videoCountLabel ? (
-          <span className="ml-auto text-[10px] text-gray-600 font-bold">{videoCountLabel}</span>
+          <span className="text-[10px] text-slate-300 font-black uppercase tracking-wider font-mono">{videoCountLabel}</span>
         ) : null}
       </div>
 
       {loadingFeed ? (
-        <div className="flex justify-center py-12">
-          <Loader2 className="w-6 h-6 animate-spin text-gray-500" />
-        </div>
+        <Card className="flex justify-center py-12">
+          <Loader2 className="w-6 h-6 animate-spin text-red-400" />
+        </Card>
       ) : !feed?.entries?.length ? (
-        <div className="flex flex-col items-center justify-center py-16 gap-3 text-gray-600">
-          <Youtube className="w-10 h-10 opacity-30" />
+        <Card className="flex flex-col items-center justify-center py-16 gap-3 text-slate-300">
+          <Youtube className="w-10 h-10 text-red-400" />
           <p className="text-sm font-bold">{t('ranking.social.no_videos')}</p>
-        </div>
+        </Card>
       ) : (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -91,17 +93,17 @@ export default function SocialTab() {
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page <= 1}
-                className="p-2 rounded-xl bg-white/5 border border-white/8 text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                className="p-2 rounded-xl bg-slate-900 border-2 border-slate-700 text-slate-300 hover:text-white hover:border-slate-500 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-[2px_2px_0px_#000000] outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
-              <span className="text-xs text-gray-500 font-bold">
+              <span className="text-xs text-slate-300 font-black font-mono">
                 {page} / {feed.totalPages}
               </span>
               <button
                 onClick={() => setPage((p) => Math.min(feed.totalPages, p + 1))}
                 disabled={page >= feed.totalPages}
-                className="p-2 rounded-xl bg-white/5 border border-white/8 text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                className="p-2 rounded-xl bg-slate-900 border-2 border-slate-700 text-slate-300 hover:text-white hover:border-slate-500 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-[2px_2px_0px_#000000] outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>

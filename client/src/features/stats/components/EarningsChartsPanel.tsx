@@ -56,9 +56,9 @@ type Props = {
 
 function ChartShell({ title, note, children }: { title: string; note: string; children: ReactNode }) {
   return (
-    <div className="rounded-2xl border border-slate-800 bg-gradient-to-br from-slate-900/90 to-slate-950/80 p-5 min-h-[320px]">
+    <div className="rounded-3xl border-2 border-slate-800 bg-slate-900/60 shadow-[4px_4px_0px_#000000] p-5 min-h-[320px]">
       <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-1">{title}</h3>
-      <p className="text-[11px] text-slate-600 mb-4">{note}</p>
+      <p className="text-[11px] text-slate-400 mb-4">{note}</p>
       {children}
     </div>
   );
@@ -84,7 +84,7 @@ function EarningsChartsPanelInner({ totals, history, mode = 'full' }: Props) {
   const evolutionChart = (
     <ChartShell title={t('powerStats.earnings.evolution_title')} note={t('powerStats.earnings.evolution_note')}>
       {lineData.length === 0 ? (
-        <p className="text-sm text-slate-600 py-16 text-center">{t('powerStats.charts.no_data')}</p>
+        <p className="text-sm text-slate-400 py-16 text-center">{t('powerStats.charts.no_data')}</p>
       ) : (
         <ResponsiveContainer width="100%" height={260}>
           <LineChart data={lineData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
@@ -110,7 +110,7 @@ function EarningsChartsPanelInner({ totals, history, mode = 'full' }: Props) {
   const originChart = (
     <ChartShell title={t('powerStats.earnings.origin_title')} note={t('powerStats.earnings.origin_note')}>
       {pieData.length === 0 ? (
-        <p className="text-sm text-slate-600 py-16 text-center">{t('powerStats.charts.no_data')}</p>
+        <p className="text-sm text-slate-400 py-16 text-center">{t('powerStats.charts.no_data')}</p>
       ) : (
         <ResponsiveContainer width="100%" height={260}>
           <PieChart>

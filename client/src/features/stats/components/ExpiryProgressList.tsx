@@ -68,7 +68,7 @@ function ExpiryProgressListInner({ rows }: Props) {
   );
 
   if (sorted.length === 0) {
-    return <p className="text-sm text-slate-600">{t('powerStats.no_active_temporary')}</p>;
+    return <p className="text-sm text-slate-400">{t('powerStats.no_active_temporary')}</p>;
   }
 
   return (
@@ -87,7 +87,7 @@ function ExpiryProgressListInner({ rows }: Props) {
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
                 <p className="text-sm font-bold text-white">{row.name}</p>
-                <span className="inline-flex mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-500 bg-slate-800/80 px-2 py-0.5 rounded-md">
+                <span className="inline-flex mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 bg-slate-800/80 px-2 py-0.5 rounded-md">
                   {row.source}
                 </span>
               </div>

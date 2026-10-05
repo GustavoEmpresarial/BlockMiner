@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Mail, User, AlertCircle, Loader2, ChevronRight, Eye, EyeOff, Gift } from 'lucide-react';
+import Card from '../../../shared/components/Card';
 import AuthShell from '../../../shared/components/AuthShell';
 import { useRegisterForm } from './lib/useRegisterForm';
 import {
@@ -17,6 +18,9 @@ import TurnstileField from '../../../shared/components/auth/TurnstileField';
 import { resolveTurnstileSiteKeyRegister } from '../../../shared/constants/turnstilePublic';
 import { GoogleSignInButton } from '../GoogleSignInButton';
 import { SatspaySignInButton } from '../SatspaySignInButton';
+
+const regFieldClass =
+  'block w-full pl-12 pr-4 py-3.5 border-2 border-slate-700 rounded-xl bg-slate-950 text-white placeholder-slate-600 focus:outline-none focus:border-primary shadow-[2px_2px_0px_#000000] transition-all font-medium text-sm';
 
 // See useRegisterForm.ts for deviations from legacy/client RegisterPage.tsx
 // (no SocialLoginButtons, no UTM capture). O widget do Turnstile foi portado no item 89
@@ -54,10 +58,10 @@ export default function RegisterPage() {
           </h1>
         </div>
 
-        <div className="bg-slate-900/75 border border-white/10 backdrop-blur-xl rounded-2xl sm:rounded-[1.75rem] p-5 sm:p-8 shadow-2xl shadow-black/40">
+        <Card className="p-5 sm:p-8 space-y-5 shadow-[4px_4px_0px_#000000]">
           {alertMessage && (
             <div
-              className="mb-5 sm:mb-6 p-3.5 sm:p-4 bg-red-500/10 border border-red-500/20 rounded-xl sm:rounded-2xl flex items-start gap-3"
+              className="mb-5 sm:mb-6 p-4 bg-red-950/20 border-2 border-red-500/30 rounded-2xl flex items-start gap-3 shadow-[2px_2px_0px_#000000]"
               role="alert"
             >
               <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
@@ -66,9 +70,9 @@ export default function RegisterPage() {
           )}
 
           {formData.refCode && (
-            <div className="mb-5 sm:mb-6 p-3 bg-primary/10 border border-primary/20 rounded-xl sm:rounded-2xl flex items-center gap-3">
+            <div className="mb-5 sm:mb-6 p-3 bg-primary/10 border-2 border-primary/30 rounded-2xl flex items-center gap-3 shadow-[1px_1px_0px_#000000]">
               <Gift className="w-4 h-4 text-primary shrink-0" />
-              <p className="text-primary text-[11px] font-bold uppercase tracking-wider">
+              <p className="text-primary text-[11px] font-black uppercase tracking-wider">
                 {t('auth.register.referral_msg', {
                   code: safeInlineMessage(formData.refCode, REGISTER_REF_CODE_MAX_LEN),
                 })}
@@ -95,7 +99,7 @@ export default function RegisterPage() {
                   autoComplete="username"
                   value={formData.username}
                   onChange={handleChange}
-                  className="block w-full pl-12 pr-4 py-3.5 border border-gray-800 rounded-2xl bg-background/50 text-gray-200 placeholder-gray-600 focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary/50 transition-all font-medium text-sm"
+                  className={regFieldClass}
                   placeholder={t('auth.register.username_placeholder')}
                 />
               </div>
@@ -118,7 +122,7 @@ export default function RegisterPage() {
                   autoComplete="email"
                   value={formData.email}
                   onChange={handleChange}
-                  className="block w-full pl-12 pr-4 py-3.5 border border-gray-800 rounded-2xl bg-background/50 text-gray-200 placeholder-gray-600 focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary/50 transition-all font-medium text-sm"
+                  className={regFieldClass}
                   placeholder={t('auth.register.email_placeholder')}
                 />
               </div>
@@ -142,7 +146,7 @@ export default function RegisterPage() {
                   autoComplete="new-password"
                   value={formData.password}
                   onChange={handleChange}
-                  className="block w-full px-4 py-3.5 border border-gray-800 rounded-2xl bg-background/50 text-gray-200 placeholder-gray-600 focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary/50 transition-all font-medium text-sm"
+                  className="block w-full px-4 py-3.5 border-2 border-slate-700 rounded-xl bg-slate-950 text-white placeholder-slate-600 focus:outline-none focus:border-primary shadow-[2px_2px_0px_#000000] transition-all font-medium text-sm"
                   placeholder={t('auth.register.password_placeholder')}
                 />
               </div>
@@ -163,7 +167,7 @@ export default function RegisterPage() {
                   autoComplete="new-password"
                   value={formData.confirmPassword}
                   onChange={handleChange}
-                  className="block w-full px-4 py-3.5 border border-gray-800 rounded-2xl bg-background/50 text-gray-200 placeholder-gray-600 focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary/50 transition-all font-medium text-sm"
+                  className="block w-full px-4 py-3.5 border-2 border-slate-700 rounded-xl bg-slate-950 text-white placeholder-slate-600 focus:outline-none focus:border-primary shadow-[2px_2px_0px_#000000] transition-all font-medium text-sm"
                   placeholder={t('auth.register.confirm_password_placeholder')}
                 />
               </div>
@@ -173,7 +177,7 @@ export default function RegisterPage() {
               <button
                 type="button"
                 onClick={() => setShowPassword((prev) => !prev)}
-                className="flex items-center gap-2 text-[10px] font-bold text-gray-500 hover:text-primary transition-colors uppercase tracking-widest"
+                className="flex items-center gap-2 text-[10px] font-bold text-slate-400 hover:text-primary transition-colors uppercase tracking-widest"
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 {showPassword ? t('auth.register.hide_password') : t('auth.register.show_password')}
@@ -196,13 +200,13 @@ export default function RegisterPage() {
                   value={formData.refCode}
                   onChange={handleChange}
                   readOnly={Boolean(searchParams.get('ref'))}
-                  className={`block w-full pl-12 pr-4 py-3.5 border border-gray-800 rounded-2xl bg-background/50 text-gray-200 placeholder-gray-600 focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary/50 transition-all font-medium text-sm ${searchParams.get('ref') ? 'opacity-70 cursor-default' : ''}`}
+                  className={`block w-full pl-12 pr-4 py-3.5 border-2 border-slate-700 rounded-xl bg-slate-950 text-white placeholder-slate-600 focus:outline-none focus:border-primary shadow-[2px_2px_0px_#000000] transition-all font-medium text-sm ${searchParams.get('ref') ? 'opacity-70 cursor-default' : ''}`}
                   placeholder={t('auth.register.referral_placeholder')}
                 />
               </div>
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-background/40 p-4">
+            <div className="rounded-2xl border-2 border-slate-800 bg-slate-950/60 p-4 shadow-[1px_1px_0px_#000000]">
               <div className="flex items-start gap-3">
                 <input
                   ref={termsCheckboxRef}
@@ -211,7 +215,7 @@ export default function RegisterPage() {
                   type="checkbox"
                   checked={formData.acceptTerms}
                   onChange={handleChange}
-                  className="mt-1 h-4 w-4 rounded border-gray-700 bg-slate-950 text-primary focus:ring-2 focus:ring-primary/40"
+                  className="mt-1 h-4 w-4 rounded border-2 border-slate-700 bg-slate-950 text-primary focus:ring-2 focus:ring-primary/40"
                   aria-invalid={fieldErrors.acceptTerms ? 'true' : 'false'}
                   aria-describedby={fieldErrors.acceptTerms ? 'acceptTerms-error' : 'acceptTerms-hint'}
                 />
@@ -223,7 +227,7 @@ export default function RegisterPage() {
                     </span>
                     .
                   </label>
-                  <p id="acceptTerms-hint" className="text-xs leading-5 text-slate-400">
+                  <p id="acceptTerms-hint" className="text-xs leading-5 text-slate-400 font-medium">
                     {t('auth.register.termsConsent.helpText')}
                   </p>
                   {fieldErrors.acceptTerms && (
@@ -245,10 +249,10 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full flex justify-center items-center gap-2 py-4 px-6 bg-primary hover:bg-primary-hover text-white rounded-2xl font-black text-sm uppercase tracking-widest transition-all shadow-xl shadow-primary/20 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed group"
+              className="w-full flex justify-center items-center gap-2 py-4 px-6 bg-sky-500 hover:bg-sky-400 active:translate-x-0.5 active:translate-y-0.5 text-slate-950 rounded-xl font-black text-xs uppercase tracking-wider transition-all shadow-[2px_2px_0px_#000000] disabled:opacity-50 disabled:cursor-not-allowed outline-none focus-visible:ring-2 focus-visible:ring-sky-400 group"
             >
               {isLoading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
+                <Loader2 className="w-5 h-5 animate-spin text-slate-950" />
               ) : (
                 <>
                   {t('auth.register.submit')}
@@ -260,18 +264,18 @@ export default function RegisterPage() {
 
           <div className="mt-5 sm:mt-6 space-y-3">
             <div className="relative flex items-center gap-3" aria-hidden>
-              <div className="h-px flex-1 bg-white/10" />
-              <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
+              <div className="h-px flex-1 bg-slate-800" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 font-mono">
                 {t('auth.login.google_or', { defaultValue: 'ou' })}
               </span>
-              <div className="h-px flex-1 bg-white/10" />
+              <div className="h-px flex-1 bg-slate-800" />
             </div>
             <GoogleSignInButton onError={setOauthError} />
             <SatspaySignInButton onError={setOauthError} />
           </div>
 
           <div className="mt-4 text-center">
-            <p className="text-gray-500 text-xs font-medium">
+            <p className="text-slate-400 text-xs font-medium">
               {t('auth.register.already_have_account')}{' '}
               <Link
                 to="/login"
@@ -281,7 +285,7 @@ export default function RegisterPage() {
               </Link>
             </p>
           </div>
-        </div>
+        </Card>
       </div>
     </AuthShell>
   );

@@ -35,12 +35,12 @@ function BoostsDetailSectionsInner({ power }: Props) {
 
   return (
     <div className="grid gap-6 pt-4 border-t border-slate-800">
-      <section className="bg-slate-900/50 border border-slate-800 rounded-2xl p-5 space-y-3">
+      <section className="rounded-3xl border-2 border-slate-800 bg-slate-900/60 shadow-[4px_4px_0px_#000000] p-5 space-y-3">
         <h3 className="text-xs font-black text-red-400 uppercase tracking-widest flex items-center gap-2">
           <Youtube className="w-4 h-4" />
           {t('powerStats.youtube.title')} — {formatHashrate(power.youtube?.activeTotal)}
         </h3>
-        <p className="text-[11px] text-slate-500">{t('powerStats.youtube.note')}</p>
+        <p className="text-[11px] text-slate-400">{t('powerStats.youtube.note')}</p>
         <ul className="space-y-2">
           {(power.youtube?.activeItems || []).map((y) => (
             <li key={y.id} className="flex justify-between items-center text-sm border-b border-slate-800/60 pb-2">
@@ -52,8 +52,8 @@ function BoostsDetailSectionsInner({ power }: Props) {
             </li>
           ))}
         </ul>
-        <p className="text-[10px] text-slate-600 uppercase font-bold">{t('powerStats.youtube.history')}</p>
-        <ul className="max-h-40 overflow-y-auto space-y-1 text-xs text-slate-500">
+        <p className="text-[10px] text-slate-400 uppercase font-bold">{t('powerStats.youtube.history')}</p>
+        <ul className="max-h-40 overflow-y-auto space-y-1 text-xs text-slate-400">
           {(power.youtube?.history || []).slice(0, 8).map((h) => (
             <li key={h.id} className="flex justify-between">
               <span>{h.sourceVideoId || '—'}</span>
@@ -63,13 +63,13 @@ function BoostsDetailSectionsInner({ power }: Props) {
         </ul>
       </section>
 
-      <section className="bg-slate-900/50 border border-slate-800 rounded-2xl p-5 space-y-3">
+      <section className="rounded-3xl border-2 border-slate-800 bg-slate-900/60 shadow-[4px_4px_0px_#000000] p-5 space-y-3">
         <h3 className="text-xs font-black text-orange-400 uppercase tracking-widest flex items-center gap-2">
           <Gamepad2 className="w-4 h-4" />
           {t('powerStats.games.title')}
         </h3>
-        <p className="text-[11px] text-slate-500">{t('powerStats.games.note')}</p>
-        <p className="text-xs text-slate-500">
+        <p className="text-[11px] text-slate-400">{t('powerStats.games.note')}</p>
+        <p className="text-xs text-slate-400">
           {t('powerStats.games.minigames')}: {formatHashrate(power.games?.minigameTotal)} · {t('powerStats.games.checkin')}:{' '}
           {formatHashrate(power.games?.checkinBonusTotal)}
         </p>
@@ -80,7 +80,7 @@ function BoostsDetailSectionsInner({ power }: Props) {
               <span className="text-sky-400 font-mono text-sm">{formatHashrate(g.totalHashRate)}</span>
             </div>
             {g.items.map((it) => (
-              <div key={it.id} className="flex justify-between text-xs text-slate-500">
+              <div key={it.id} className="flex justify-between text-xs text-slate-400">
                 <ExpiryBadge expiresAt={it.expiresAt} t={t} />
                 <span>{formatHashrate(it.hashRate)}</span>
               </div>
@@ -89,9 +89,9 @@ function BoostsDetailSectionsInner({ power }: Props) {
         ))}
       </section>
 
-      <section className="bg-slate-900/50 border border-slate-800 rounded-2xl p-5 space-y-3">
+      <section className="rounded-3xl border-2 border-slate-800 bg-slate-900/60 shadow-[4px_4px_0px_#000000] p-5 space-y-3">
         <h3 className="text-xs font-black text-violet-400 uppercase tracking-widest">{t('powerStats.auto_mining.title')}</h3>
-        <p className="text-[11px] text-slate-500">{t('powerStats.auto_mining.note')}</p>
+        <p className="text-[11px] text-slate-400">{t('powerStats.auto_mining.note')}</p>
         <p className="text-sm text-white">{formatHashrate(power.autoMining?.total)}</p>
         <ul className="space-y-2">
           {(power.autoMining?.items || []).map((p) => (
@@ -103,13 +103,13 @@ function BoostsDetailSectionsInner({ power }: Props) {
         </ul>
       </section>
 
-      <section className="bg-slate-900/50 border border-slate-800 rounded-2xl p-5 space-y-3">
+      <section className="rounded-3xl border-2 border-slate-800 bg-slate-900/60 shadow-[4px_4px_0px_#000000] p-5 space-y-3">
         <h3 className="text-xs font-black text-amber-400 uppercase tracking-widest flex items-center gap-2">
           <CalendarCheck className="w-4 h-4" />
           {t('powerStats.checkin.title')}
         </h3>
         <p className="text-sm text-slate-300">{t('powerStats.checkin.streak', { n: power.checkin?.streak ?? 0 })}</p>
-        <p className="text-xs text-slate-500">{t('powerStats.checkin.bonus_note')}</p>
+        <p className="text-xs text-slate-400">{t('powerStats.checkin.bonus_note')}</p>
         <ul className="text-xs text-slate-400 space-y-1">
           {(power.checkin?.nextHashrateMilestones || []).map((m) => (
             <li key={m.dayThreshold}>
@@ -124,9 +124,9 @@ function BoostsDetailSectionsInner({ power }: Props) {
         </ul>
       </section>
 
-      <section className="bg-slate-900/40 border border-dashed border-slate-700 rounded-2xl p-5">
-        <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest">{t('powerStats.other.title')}</h3>
-        <p className="text-sm text-slate-500 mt-2">{t('powerStats.other.note')}</p>
+      <section className="rounded-3xl border-2 border-dashed border-slate-700 bg-slate-900/40 shadow-[4px_4px_0px_#000000] p-5">
+        <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">{t('powerStats.other.title')}</h3>
+        <p className="text-sm text-slate-400 mt-2">{t('powerStats.other.note')}</p>
       </section>
     </div>
   );

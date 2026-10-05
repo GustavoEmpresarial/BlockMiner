@@ -3,6 +3,7 @@ import { ExternalLink, ThumbsDown, ThumbsUp, Youtube } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { api, useAuthStore } from '../../../shared/auth/auth.store';
+import Card from '../../../shared/components/Card';
 import { ChannelAvatar } from '../../creator/components/ChannelAvatar';
 
 export type FeedEntry = {
@@ -63,7 +64,7 @@ export function VideoCard({
   };
 
   return (
-    <div className="rounded-2xl border border-white/8 bg-white/3 overflow-hidden flex flex-col group">
+    <Card variant="table" className="flex flex-col group">
       <a
         href={entry.videoUrl}
         target="_blank"
@@ -76,8 +77,8 @@ export function VideoCard({
           className="w-full h-full object-cover opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300"
         />
         <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-          <div className="w-12 h-12 rounded-full bg-red-600 flex items-center justify-center shadow-xl">
-            <Youtube className="w-5 h-5 text-white fill-white" />
+          <div className="w-12 h-12 rounded-full bg-red-500 flex items-center justify-center shadow-[2px_2px_0px_#000000]">
+            <Youtube className="w-5 h-5 text-slate-950 fill-slate-950" />
           </div>
         </div>
       </a>
@@ -88,7 +89,7 @@ export function VideoCard({
             <p className="text-xs font-black text-white truncate leading-snug line-clamp-2">
               {entry.title ?? t('ranking.social.video_of', { name: entry.profile.channelName })}
             </p>
-            <p className="text-[10px] text-gray-500 truncate">{entry.profile.channelName}</p>
+            <p className="text-[10px] text-slate-400 truncate">{entry.profile.channelName}</p>
           </div>
         </div>
         <div className="flex items-center gap-2 mt-auto flex-wrap">
@@ -96,11 +97,11 @@ export function VideoCard({
             type="button"
             disabled={!user || busy}
             onClick={() => void vote(1)}
-            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-[10px] font-black uppercase border-2 transition-colors disabled:cursor-not-allowed shadow-[1px_1px_0px_#000000] ${
               entry.myVote === 1
                 ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300'
-                : 'border-white/10 text-gray-400 hover:text-white'
-            }`}
+                : 'border-slate-700 bg-slate-950 text-slate-300 hover:text-white hover:border-slate-500'
+            } ${!user || busy ? 'opacity-70' : ''}`}
           >
             <ThumbsUp className="w-3.5 h-3.5" /> {entry.likeCount}
           </button>
@@ -109,11 +110,11 @@ export function VideoCard({
             disabled={!user || busy}
             onClick={() => void vote(-1)}
             aria-label={t('ranking.social.dislike')}
-            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-[10px] font-black uppercase border-2 transition-colors disabled:cursor-not-allowed shadow-[1px_1px_0px_#000000] ${
               entry.myVote === -1
                 ? 'border-red-500/40 bg-red-500/15 text-red-300'
-                : 'border-white/10 text-gray-400 hover:text-white'
-            }`}
+                : 'border-slate-700 bg-slate-950 text-slate-300 hover:text-white hover:border-slate-500'
+            } ${!user || busy ? 'opacity-70' : ''}`}
           >
             <ThumbsDown className="w-3.5 h-3.5" /> {entry.dislikeCount}
           </button>
@@ -122,7 +123,7 @@ export function VideoCard({
               href={entry.profile.channelUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="ml-auto flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-black bg-red-600 hover:bg-red-500 text-white transition-colors"
+              className="ml-auto flex items-center gap-1 px-3 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-wider bg-red-500 hover:bg-red-400 text-slate-950 shadow-[2px_2px_0px_#000000] active:translate-x-0.5 active:translate-y-0.5 transition-all"
             >
               <ExternalLink className="w-3.5 h-3.5" />
               {t('ranking.social.visit_channel')}
@@ -130,6 +131,6 @@ export function VideoCard({
           ) : null}
         </div>
       </div>
-    </div>
+    </Card>
   );
 }

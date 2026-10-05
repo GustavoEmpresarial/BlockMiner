@@ -121,16 +121,16 @@ function SummaryTab({
             const amount = Number(totals[key]) || 0;
             const share = percentOfTotal(amount, totals.total);
             return (
-              <div key={key} className="rounded-xl border border-slate-800 bg-slate-900/50 p-4">
+              <div key={key} className="rounded-2xl border-2 border-slate-800 bg-slate-950/60 shadow-[2px_2px_0px_#000000] p-4">
                 <div className="flex items-center justify-between gap-2 mb-1">
                   <p className="text-xs font-bold text-white">{t(`powerStats.earnings.sources.${key}`)}</p>
                   <span className="text-[10px] font-black text-sky-400">{share}%</span>
                 </div>
                 <p className="text-lg font-black text-sky-300 tabular-nums">
                   {earningsLoading ? '…' : formatPolAmount(amount, locale)}{' '}
-                  <span className="text-xs text-slate-500">POL</span>
+                  <span className="text-xs text-slate-400">POL</span>
                 </p>
-                <p className="text-[10px] text-slate-600 mt-1">{t(`powerStats.earnings.descriptions.${key}`)}</p>
+                <p className="text-[10px] text-slate-400 mt-1">{t(`powerStats.earnings.descriptions.${key}`)}</p>
                 {key === 'referrals' ? (
                   <p className="text-[10px] text-pink-400/90 mt-2 border-t border-pink-500/20 pt-2">
                     {t('powerStats.earnings.referral_since_note')}
@@ -146,7 +146,7 @@ function SummaryTab({
         <EarningsChartsPanel totals={totals} history={earnings?.history ?? []} mode="summary" />
       </Suspense>
 
-      <section className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6">
+      <section className="rounded-3xl border-2 border-slate-800 bg-slate-900/60 shadow-[4px_4px_0px_#000000] p-6">
         <div className="flex items-center justify-between gap-3 mb-4">
           <h2 className="text-sm font-black text-white uppercase tracking-widest">{t('powerStats.next_expirations')}</h2>
           <button

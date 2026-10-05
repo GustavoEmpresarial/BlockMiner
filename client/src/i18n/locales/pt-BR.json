@@ -4929,10 +4929,11 @@
     "view_room": "Ver Sala",
     "col_rank": "Rank",
     "col_miner": "Minerador",
-    "col_hash": "Total",
+    "col_hash": "Hash",
     "col_room": "Sala",
     "col_games": "Games",
     "col_view": "Ver",
+    "fetch_error": "Erro ao buscar ranking",
     "sort_total": "Poder total",
     "sort_room": "Só sala",
     "social": {

@@ -3,6 +3,9 @@ import { Receipt, Flame, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-rea
 import { api } from '../../shared/auth/auth.store';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import Card from '../../shared/components/Card';
+import IconBadge from '../../shared/components/IconBadge';
+import SectionHeader from '../../shared/components/SectionHeader';
 import PowerBoostBanner from '../../shared/components/PowerBoostBanner';
 import EnergyTaxSection from './components/EnergyTaxSection';
 import { TaxPayCurrencyPicker } from './components/TaxPayCurrencyPicker';
@@ -115,10 +118,10 @@ export default function TaxesPage() {
 
     return (
       <div className="flex flex-col gap-4">
-        <div className="rounded-lg border border-orange-500/20 bg-orange-500/5 px-4 py-3">
-          <p className="text-sm font-medium text-orange-300">{t('taxes.recovery.eligible_title')}</p>
-          <p className="text-sm text-gray-400 mt-0.5">
-            {t('taxes.recovery.eligible_desc', { streak: lastStreak, days: missedDays })}
+        <div className="rounded-2xl border-2 border-amber-500/30 bg-amber-950/20 p-4 shadow-[1px_1px_0px_#000000]">
+          <p className="text-sm font-black text-amber-300 uppercase tracking-tight">{t('taxes.recovery.eligible_title')}</p>
+          <p className="text-xs text-slate-300 mt-1 font-medium leading-relaxed">
+            {t('taxes.recovery.eligible_desc', { streak: lastStreak ?? 0, days: missedDays ?? 0 })}
           </p>
         </div>
 
@@ -130,15 +133,15 @@ export default function TaxesPage() {
           label={t('taxes.pay_currency_label')}
         />
 
-        <div className="flex flex-col gap-1 text-sm">
-          <div className="flex justify-between text-gray-400">
+        <div className="flex flex-col gap-1.5 text-xs font-mono">
+          <div className="flex justify-between text-slate-400">
             <span>{t('taxes.recovery.fee_label')}</span>
-            <span className="text-white font-medium">{feeLabel}</span>
+            <span className="text-white font-black">{feeLabel}</span>
           </div>
           {quote && (
-            <div className="flex justify-between text-gray-400">
+            <div className="flex justify-between text-slate-400">
               <span>{t('taxes.recovery.balance_label')}</span>
-              <span className={hasBalance ? 'text-green-400' : 'text-red-400'}>
+              <span className={`font-black ${hasBalance ? 'text-emerald-400' : 'text-red-400'}`}>
                 {formatTaxPayAmount(quote.balance, payCurrency)}
               </span>
             </div>
@@ -146,20 +149,21 @@ export default function TaxesPage() {
         </div>
 
         {!hasBalance && (
-          <div className="flex items-center gap-2 text-red-400 text-sm">
+          <div className="flex items-center gap-2 text-red-400 text-xs font-bold bg-red-950/20 border border-red-500/30 p-3 rounded-xl">
             <AlertTriangle className="w-4 h-4 shrink-0" />
             {t('taxes.recovery.error_insufficient')}
           </div>
         )}
 
         <button
+          type="button"
           onClick={() => void handlePay()}
           disabled={paying || !hasBalance}
-          className="w-full rounded-lg bg-orange-500 hover:bg-orange-400 disabled:bg-orange-500/30 disabled:cursor-not-allowed text-white font-semibold py-2.5 text-sm transition-colors flex items-center justify-center gap-2"
+          className="w-full rounded-xl bg-amber-500 hover:bg-amber-400 active:translate-x-0.5 active:translate-y-0.5 disabled:opacity-40 disabled:cursor-not-allowed text-slate-950 font-black text-xs uppercase tracking-wider py-3.5 transition-all shadow-[2px_2px_0px_#000000] flex items-center justify-center gap-2 outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
         >
           {paying ? (
             <>
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <Loader2 className="w-4 h-4 animate-spin text-slate-950" />
               {t('taxes.recovery.paying')}
             </>
           ) : (
@@ -171,27 +175,26 @@ export default function TaxesPage() {
   }
 
   return (
-    <div className=" px-4 sm:px-6 py-8 sm:py-12 flex flex-col items-center gap-8">
-      <div className="flex flex-col items-center gap-4 text-center">
-        <div className="w-20 h-20 rounded-full bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center">
-          <Receipt className="w-10 h-10 text-yellow-400" />
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b-2 border-slate-800">
+        <div className="flex items-center gap-3">
+          <IconBadge icon={Receipt} variant="amber" size="lg" />
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">{t('taxes.title')}</h1>
+            <p className="text-slate-400 text-xs sm:text-sm font-medium">{t('taxes.page_subtitle')}</p>
+          </div>
         </div>
-        <h1 className="text-2xl font-bold text-white">{t('taxes.title')}</h1>
-        <p className="text-gray-400 max-w-md">{t('taxes.page_subtitle')}</p>
       </div>
 
-      <div className="w-full rounded-xl border border-orange-500/20 bg-white/5 p-6 flex flex-col gap-4">
-        <div className="flex items-start gap-3">
-          <div className="w-9 h-9 shrink-0 rounded-lg bg-orange-500/10 border border-orange-500/20 flex items-center justify-center">
-            <Flame className="w-5 h-5 text-orange-400" />
-          </div>
-          <div>
-            <p className="text-white font-medium">{t('taxes.recovery.title')}</p>
-            <p className="text-sm text-gray-400">{t('taxes.recovery.subtitle')}</p>
-          </div>
-        </div>
+      <Card className="p-6 sm:p-7 space-y-4">
+        <SectionHeader
+          icon={Flame}
+          iconVariant="amber"
+          title={t('taxes.recovery.title')}
+          subtitle={t('taxes.recovery.subtitle')}
+        />
         {renderRecoveryBody()}
-      </div>
+      </Card>
 
       <PowerBoostBanner />
 

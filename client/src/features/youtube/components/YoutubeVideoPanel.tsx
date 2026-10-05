@@ -1,6 +1,8 @@
 import type { KeyboardEvent, MouseEvent, RefObject } from 'react';
 import type { TFunction } from 'i18next';
 import { Youtube, Clock, AlertCircle, X, PauseCircle, PlayCircle, Loader2 } from 'lucide-react';
+import Card from '../../../shared/components/Card';
+import StatusPill from '../../../shared/components/StatusPill';
 import type { PlayerUiState } from './youtubeWatch.parts';
 
 export type YoutubeVideoPanelProps = {
@@ -56,10 +58,8 @@ export function YoutubeVideoPanel({
 }: YoutubeVideoPanelProps) {
     return (
         <div className="lg:col-span-2 space-y-4 sm:space-y-6">
-            <div className="bg-surface border border-gray-800/50 rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-8 shadow-xl relative overflow-hidden group">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-red-500/5 rounded-bl-[120px] -mr-20 -mt-20 group-hover:bg-red-500/10 transition-colors" />
-
-                <div className="flex flex-col sm:flex-row gap-3 mb-6 sm:mb-8 relative z-10">
+            <Card spacing="lg">
+                <div className="flex flex-col sm:flex-row gap-3">
                     <div className="relative flex-1 min-w-0">
                         <input
                             ref={urlInputRef}
@@ -82,7 +82,7 @@ export function YoutubeVideoPanel({
                                 if (e.key === 'Enter') handleLoadVideo(e);
                             }}
                             placeholder={t('youtube.url_placeholder')}
-                            className="w-full bg-gray-900/50 border border-gray-800 rounded-2xl py-3 sm:py-4 pl-4 sm:pl-6 pr-12 sm:pr-14 text-gray-200 text-sm focus:outline-none focus:border-primary/50 transition-all shadow-inner"
+                            className="w-full bg-slate-950 border-2 border-slate-700 rounded-xl py-3 sm:py-4 pl-4 sm:pl-6 pr-12 sm:pr-14 text-white text-sm focus:outline-none focus:border-sky-400 shadow-[2px_2px_0px_#000000]"
                         />
                         <button
                             type="button"
@@ -102,7 +102,7 @@ export function YoutubeVideoPanel({
                     <button
                         type="button"
                         onClick={handleLoadVideo}
-                        className="shrink-0 px-6 sm:px-8 py-3 sm:py-4 bg-primary hover:bg-primary-hover text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all italic shadow-lg shadow-primary/20"
+                        className="shrink-0 px-6 sm:px-8 py-3 sm:py-4 bg-sky-500 hover:bg-sky-400 text-slate-950 rounded-xl font-black text-xs uppercase tracking-widest shadow-[2px_2px_0px_#000000] active:translate-x-0.5 active:translate-y-0.5"
                     >
                         {t('youtube.load_video')}
                     </button>
@@ -111,7 +111,7 @@ export function YoutubeVideoPanel({
                 <div className="aspect-video bg-gray-900 rounded-[2rem] overflow-hidden border border-gray-800 relative group shadow-inner">
                     <div ref={playerDivRef} className="w-full h-full" />
                     {!videoId && (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-600">
+                        <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400">
                             <Youtube className="w-20 h-20 mb-4 opacity-20" />
                             <p className="font-bold uppercase tracking-widest text-[10px]">{t('youtube.waiting_placeholder')}</p>
                         </div>
@@ -132,7 +132,7 @@ export function YoutubeVideoPanel({
                                 href={`https://www.youtube.com/watch?v=${videoId}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="mt-2 inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-xs font-black uppercase text-white"
+                                className="mt-2 inline-flex items-center gap-2 rounded-xl bg-red-500 px-4 py-2 text-xs font-black uppercase text-slate-950 shadow-[2px_2px_0px_#000000] hover:bg-red-400"
                             >
                                 <Youtube className="h-4 w-4" />
                                 {t('youtube.open_on_youtube')}
@@ -145,7 +145,7 @@ export function YoutubeVideoPanel({
                             target="_blank"
                             rel="noopener noreferrer"
                             onClick={handleExternalYoutubeClick}
-                            className="absolute bottom-3 right-3 flex items-center gap-1.5 px-3 py-1.5 bg-black/70 hover:bg-red-600 text-white text-[10px] font-black uppercase tracking-widest rounded-xl border border-white/10 transition-all backdrop-blur-sm"
+                            className="absolute bottom-3 right-3 flex items-center gap-1.5 px-3 py-1.5 bg-slate-950/90 hover:bg-red-500 hover:text-slate-950 text-slate-100 text-[10px] font-black uppercase tracking-widest rounded-xl border-2 border-slate-700"
                         >
                             <Youtube className="w-3 h-3" /> {t('youtube.open_on_youtube')}
                         </a>
@@ -175,7 +175,7 @@ export function YoutubeVideoPanel({
                         <button
                             type="button"
                             onClick={handleResumeWatching}
-                            className="px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest bg-primary text-white hover:bg-primary-hover active:scale-95 flex items-center justify-center gap-2 shrink-0"
+                            className="px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest bg-sky-500 text-slate-950 hover:bg-sky-400 shadow-[2px_2px_0px_#000000] active:translate-x-0.5 active:translate-y-0.5 flex items-center justify-center gap-2 shrink-0"
                         >
                             <PlayCircle className="w-4 h-4" />
                             {t('youtube.resume_button')}
@@ -185,27 +185,20 @@ export function YoutubeVideoPanel({
 
                 {videoId && (
                     <div className="mt-4 flex flex-wrap items-center gap-2 relative z-10">
-                        <span
-                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border ${
+                        <StatusPill
+                            variant={
                                 isActivelyWatching
-                                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+                                    ? 'success'
                                     : playerState === 'paused'
-                                      ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+                                      ? 'warning'
                                       : playerState === 'ended'
-                                        ? 'bg-gray-800 border-gray-700 text-gray-400'
-                                        : 'bg-gray-800/80 border-gray-700 text-gray-500'
-                            }`}
-                        >
-                            {isActivelyWatching ? (
-                                <Clock className="w-3 h-3" />
-                            ) : playerState === 'paused' ? (
-                                <PauseCircle className="w-3 h-3" />
-                            ) : (
-                                <PlayCircle className="w-3 h-3" />
-                            )}
-                            {playerStateLabel(playerState)}
-                        </span>
-                        <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">
+                                        ? 'neutral'
+                                        : 'neutral'
+                            }
+                            icon={isActivelyWatching ? Clock : playerState === 'paused' ? PauseCircle : PlayCircle}
+                            label={playerStateLabel(playerState)}
+                        />
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
                             {t('youtube.tracker_verified_seconds')}:{' '}
                             <span className={watchBalance >= minClaimSec ? 'text-emerald-400' : 'text-white'}>
                                 {watchBalance}s
@@ -227,7 +220,7 @@ export function YoutubeVideoPanel({
                             </div>
                         )}
                     </div>
-                    <div className="text-[10px] text-gray-500 italic font-medium max-w-[220px] text-right flex items-start gap-1">
+                    <div className="text-[10px] text-slate-400 font-medium max-w-[220px] text-right flex items-start gap-1">
                         <AlertCircle className="w-3 h-3 mt-0.5 shrink-0 text-amber-500/60" />
                         <span>
                             {t('youtube.embed_hint_before')}{' '}
@@ -236,7 +229,7 @@ export function YoutubeVideoPanel({
                         </span>
                     </div>
                 </div>
-            </div>
+            </Card>
         </div>
     );
 }

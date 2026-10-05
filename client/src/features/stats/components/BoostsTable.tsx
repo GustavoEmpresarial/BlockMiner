@@ -28,13 +28,13 @@ function BoostsTableInner({ rows }: Props) {
   );
 
   if (sorted.length === 0) {
-    return <p className="text-sm text-slate-600">{t('powerStats.no_active_temporary')}</p>;
+    return <p className="text-sm text-slate-400">{t('powerStats.no_active_temporary')}</p>;
   }
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900/40">
+    <div className="overflow-x-auto rounded-3xl border-2 border-slate-800 bg-slate-900/60 shadow-[4px_4px_0px_#000000]">
       <table className="w-full text-sm text-left min-w-[720px]">
-        <thead className="text-[10px] uppercase text-slate-500 font-black tracking-widest border-b border-slate-800">
+        <thead className="bg-slate-950/40 text-[10px] uppercase text-slate-400 font-black tracking-widest border-b-2 border-slate-800 font-mono">
           <tr>
             <th className="p-3">{t('powerStats.dashboard.col_source')}</th>
             <th className="p-3">{t('powerStats.dashboard.col_name')}</th>
@@ -43,7 +43,7 @@ function BoostsTableInner({ rows }: Props) {
             <th className="p-3 min-w-[140px]">{t('powerStats.dashboard.col_progress')}</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-800/80">
+        <tbody className="divide-y-2 divide-slate-800/80">
           {sorted.map((row, idx) => {
             const end = row.expiresAt ? new Date(row.expiresAt).getTime() : 0;
             // eslint-disable-next-line react-hooks/purity -- reads the wall clock to compute time remaining; table re-renders on an interval.
@@ -51,9 +51,9 @@ function BoostsTableInner({ rows }: Props) {
             const expired = left <= 0;
             const pct = progressPercent(row.playedAt, row.expiresAt);
             return (
-              <tr key={`${row.source}-${row.slug}-${idx}`} className="hover:bg-slate-800/20">
+              <tr key={`${row.source}-${row.slug}-${idx}`} className="hover:bg-slate-800/40 transition-colors">
                 <td className="p-3">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 bg-slate-800/80 px-2 py-0.5 rounded-md">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 bg-slate-800/80 px-2 py-0.5 rounded-md">
                     {row.source}
                   </span>
                 </td>

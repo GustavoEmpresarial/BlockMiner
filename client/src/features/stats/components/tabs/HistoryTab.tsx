@@ -22,22 +22,22 @@ function HistoryTab({ power, earnings, earningsFilter, setEarningsFilter }: Stat
         <PeriodPills value={earningsFilter} onChange={setEarningsFilter} />
       </div>
 
-      <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6">
+      <div className="rounded-3xl border-2 border-slate-800 bg-slate-900/60 shadow-[4px_4px_0px_#000000] p-6">
         <div className="grid sm:grid-cols-3 gap-4 text-sm mb-4">
           <div>
-            <p className="text-[10px] text-slate-500 uppercase font-bold">{t('powerStats.analytics.peak_share')}</p>
+            <p className="text-[10px] text-slate-400 uppercase font-bold">{t('powerStats.analytics.peak_share')}</p>
             <p className="text-xl font-mono text-emerald-400">{power.analytics?.miningLogPeakShare?.toFixed(4) ?? '—'}</p>
           </div>
           <div>
-            <p className="text-[10px] text-slate-500 uppercase font-bold">{t('powerStats.analytics.avg_share')}</p>
+            <p className="text-[10px] text-slate-400 uppercase font-bold">{t('powerStats.analytics.avg_share')}</p>
             <p className="text-xl font-mono text-sky-400">{power.analytics?.miningLogAvgShare?.toFixed(4) ?? '—'}</p>
           </div>
           <div>
-            <p className="text-[10px] text-slate-500 uppercase font-bold">{t('powerStats.analytics.samples')}</p>
+            <p className="text-[10px] text-slate-400 uppercase font-bold">{t('powerStats.analytics.samples')}</p>
             <p className="text-xl font-mono text-white">{power.analytics?.miningLogSamples ?? 0}</p>
           </div>
         </div>
-        <p className="text-[10px] text-slate-600">{t('powerStats.analytics.disclaimer')}</p>
+        <p className="text-[10px] text-slate-400">{t('powerStats.analytics.disclaimer')}</p>
       </div>
 
       <Suspense fallback={<ChartsFallback />}>
