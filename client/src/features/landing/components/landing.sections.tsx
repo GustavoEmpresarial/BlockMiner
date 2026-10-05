@@ -14,7 +14,6 @@ import {
   Star,
   Users,
   Wallet,
-  Youtube,
   Zap,
 } from 'lucide-react';
 import BrandLogo from '../../../shared/components/BrandLogo';

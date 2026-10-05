@@ -18,6 +18,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import Card from '../../../shared/components/Card';
 import BrandLogo from '../../../shared/components/BrandLogo';
 import { formatHashrate } from '../../../shared/utils/machine';
 import type { LandingFaqItemDef } from '../../../shared/hooks/useLandingSeo';
@@ -32,10 +33,10 @@ import type { PublicFeed } from '../lib/landing.shared';
 export type LandingCtaHandler = (ctaId: string, destination: string) => void;
 
 const gradientBtn =
-  'motion-safe:transition-all motion-safe:duration-200 motion-safe:hover:scale-[1.03] inline-flex min-h-[44px] items-center justify-center gap-2 rounded-full bg-gradient-to-r from-blue-500 via-sky-500 to-cyan-500 px-8 py-3.5 text-sm font-bold text-white shadow-xl shadow-blue-500/40 motion-safe:hover:shadow-[0_0_40px_rgba(59,130,246,0.55)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-400 motion-reduce:hover:scale-100';
+  'motion-safe:transition-all motion-safe:duration-200 inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-sky-500 hover:bg-sky-400 active:translate-x-0.5 active:translate-y-0.5 px-8 py-3.5 text-xs font-black uppercase tracking-wider text-slate-950 shadow-[2px_2px_0px_#000000] outline-none focus-visible:ring-2 focus-visible:ring-sky-400';
 
 const outlineBtn =
-  'inline-flex min-h-[44px] items-center justify-center rounded-full border border-white/20 bg-white/5 px-8 py-3.5 text-sm font-semibold text-slate-100 motion-safe:transition-all motion-safe:duration-200 motion-safe:hover:scale-[1.03] motion-safe:hover:border-white/35 motion-safe:hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-400 motion-reduce:hover:scale-100';
+  'inline-flex min-h-[44px] items-center justify-center rounded-xl border-2 border-slate-700 bg-slate-900 px-8 py-3.5 text-xs font-black uppercase tracking-wider text-slate-200 hover:text-white hover:border-slate-600 active:translate-x-0.5 active:translate-y-0.5 shadow-[2px_2px_0px_#000000] transition-all outline-none focus-visible:ring-2 focus-visible:ring-primary';
 
 const featureCards: { icon: LucideIcon; titleKey: string; bodyKey: string; iconCls: string; bgCls: string }[] = [
   { icon: Zap, titleKey: 'landing.features.f1_title', bodyKey: 'landing.features.f1_body', iconCls: 'text-sky-400', bgCls: 'from-sky-500/25 to-blue-600/10' },
@@ -103,13 +104,13 @@ export function LandingHeader({ t, onCtaClick }: { t: TFunction; onCtaClick: Lan
         <div className="flex items-center gap-2">
           <Link
             to="/login"
-            className="hidden sm:inline-flex text-sm text-slate-300 hover:text-white transition-colors duration-150 px-4 py-2 rounded-full hover:bg-white/5"
+            className="hidden sm:inline-flex text-xs font-black uppercase tracking-wider text-slate-300 hover:text-white transition-colors px-4 py-2 rounded-xl border-2 border-slate-700 bg-slate-900 shadow-[2px_2px_0px_#000000] active:translate-x-0.5 active:translate-y-0.5"
           >
             {t('landing.nav.login')}
           </Link>
           <Link
             to="/register"
-            className="inline-flex items-center gap-1.5 rounded-full bg-sky-500 hover:bg-sky-400 px-4 py-2 text-sm font-bold text-white transition-all duration-150 shadow-lg shadow-sky-500/30 hover:shadow-sky-400/40 hover:scale-[1.02]"
+            className="inline-flex items-center gap-1.5 rounded-xl bg-sky-500 hover:bg-sky-400 active:translate-x-0.5 active:translate-y-0.5 px-4 py-2 text-xs font-black uppercase tracking-wider text-slate-950 transition-all shadow-[2px_2px_0px_#000000] outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
             onClick={() => onCtaClick('header_register', '/register')}
           >
             {t('landing.nav.register')}
@@ -282,17 +283,16 @@ export function LandingFeatures({ t }: { t: TFunction }) {
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {featureCards.map((card) => (
-            <div
+            <Card
               key={card.titleKey}
-              className="group relative rounded-2xl border border-white/[0.07] bg-slate-900/50 p-7 transition-all duration-300 hover:border-sky-500/25 hover:bg-slate-900/70 hover:shadow-lg hover:shadow-sky-500/8"
+              className="p-7 space-y-3"
             >
-              <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 bg-gradient-to-br from-sky-500/4 to-violet-500/4 transition-opacity duration-300" aria-hidden />
-              <div className={`relative flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br ${card.bgCls}`}>
+              <div className={`flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br ${card.bgCls} border-2 border-slate-800 shadow-[2px_2px_0px_#000000]`}>
                 <card.icon className={`h-6 w-6 ${card.iconCls}`} aria-hidden />
               </div>
-              <h3 className="relative mt-5 text-base font-bold text-white">{t(card.titleKey)}</h3>
-              <p className="relative mt-2 text-sm leading-relaxed text-slate-400">{t(card.bodyKey)}</p>
-            </div>
+              <h3 className="text-base font-black uppercase tracking-tight text-white">{t(card.titleKey)}</h3>
+              <p className="text-sm leading-relaxed text-slate-300 font-medium">{t(card.bodyKey)}</p>
+            </Card>
           ))}
         </div>
       </div>
@@ -384,22 +384,21 @@ export function LandingCommunityStats({
         <h2 className="text-3xl font-black text-white sm:text-4xl">{t('landing.community.title')}</h2>
         <p className="mt-3 text-slate-400">{t('landing.community.subtitle')}</p>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {rows.map((row) => (
-          <div
-            key={row.label}
-            className={`group relative overflow-hidden rounded-2xl border border-white/[0.07] bg-slate-900/50 p-6 transition-all duration-300 ${row.hoverBorder} hover:shadow-xl`}
-          >
-            <div className={`absolute top-0 right-0 h-28 w-28 rounded-full ${row.glowCls} blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500`} aria-hidden />
-            <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-slate-800/80">
-              <row.icon className={`h-5 w-5 ${row.valueCls}`} aria-hidden />
-            </div>
-            <p className="mt-4 text-[10px] uppercase tracking-[0.2em] text-slate-600 font-mono">{row.label}</p>
-            <p className={`mt-1.5 text-2xl font-black sm:text-3xl font-mono ${row.valueCls}`}>{row.value}</p>
-            <p className="mt-2 text-xs text-slate-500">{row.sub}</p>
-          </div>
-        ))}
-      </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {rows.map((row) => (
+            <Card
+              key={row.label}
+              className="p-6 space-y-2.5"
+            >
+              <div className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-950 border-2 border-slate-800 shadow-[1px_1px_0px_#000000]">
+                <row.icon className={`h-5 w-5 ${row.valueCls}`} aria-hidden />
+              </div>
+              <p className="text-[10px] uppercase tracking-[0.2em] text-slate-400 font-mono font-bold">{row.label}</p>
+              <p className={`text-2xl font-black sm:text-3xl font-mono ${row.valueCls}`}>{row.value}</p>
+              <p className="text-xs text-slate-400 font-medium">{row.sub}</p>
+            </Card>
+          ))}
+        </div>
     </section>
   );
 }
@@ -420,18 +419,18 @@ export function LandingTestimonials({ t }: { t: TFunction }) {
         <p className="mt-2 text-center text-xs text-slate-600">{t('landing.testimonials.disclaimer')}</p>
         <div className="mt-12 grid gap-5 lg:grid-cols-3">
           {testimonials.map((item) => (
-            <figure key={item.name} className="rounded-2xl border border-white/[0.07] bg-slate-900/50 p-7 hover:border-white/14 transition-colors duration-200">
+            <Card as="figure" key={item.name} className="p-7 space-y-3">
               <div className="flex items-center gap-0.5 text-amber-400" aria-hidden>
                 {Array.from({ length: 5 }).map((_, i) => (
                   <Star key={i} className="h-4 w-4 fill-current" />
                 ))}
               </div>
-              <blockquote className="mt-4 text-sm leading-relaxed text-slate-300">"{item.text}"</blockquote>
-              <figcaption className="mt-6 text-sm font-bold text-white">
+              <blockquote className="mt-2 text-sm leading-relaxed text-slate-300 font-medium">"{item.text}"</blockquote>
+              <figcaption className="pt-2 text-sm font-black text-white">
                 {item.name}
-                <span className="block text-xs font-normal text-slate-500">{item.loc}</span>
+                <span className="block text-xs font-medium text-slate-400 mt-0.5">{item.loc}</span>
               </figcaption>
-            </figure>
+            </Card>
           ))}
         </div>
       </div>
@@ -472,31 +471,32 @@ export function LandingGames({ t }: { t: TFunction }) {
       </div>
       <div className="grid gap-5 md:grid-cols-3">
         {games.map((g) => (
-          <div
+          <Card
             key={g.title}
-            className={`group rounded-2xl border border-white/[0.07] bg-slate-900/50 overflow-hidden transition-all duration-300 ${g.hoverBorder} hover:shadow-lg hover:-translate-y-0.5`}
+            overflowHidden
+            className={`group transition-all duration-300 p-0 border-2 ${g.hoverBorder} hover:shadow-xl hover:-translate-y-1`}
           >
-            <div className={`h-36 bg-gradient-to-br ${g.gradient} flex items-center justify-center relative overflow-hidden`}>
+            <div className={`h-36 bg-gradient-to-br ${g.gradient} flex items-center justify-center relative overflow-hidden border-b-2 border-slate-800`}>
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.12),transparent_65%)]" aria-hidden />
-              <Gamepad2 className="h-12 w-12 text-white/85 relative z-[1] transition-transform duration-300 group-hover:scale-110" aria-hidden />
+              <Gamepad2 className="h-12 w-12 text-white/90 relative z-[1] transition-transform duration-300 group-hover:scale-110 drop-shadow-md" aria-hidden />
             </div>
             <div className="p-6">
-              <h3 className={`text-sm font-bold uppercase tracking-wide ${g.titleCls}`}>{g.title}</h3>
-              <p className="mt-1.5 text-sm text-slate-400">{g.desc}</p>
-              <p className="mt-1.5 text-[10px] text-slate-600 uppercase tracking-wider font-mono">{t('landing.games.login_hint')}</p>
+              <h3 className={`text-sm font-black uppercase tracking-wider ${g.titleCls}`}>{g.title}</h3>
+              <p className="mt-1.5 text-sm text-slate-300 font-medium leading-relaxed">{g.desc}</p>
+              <p className="mt-2 text-[10px] text-slate-400 uppercase tracking-widest font-mono font-bold">{t('landing.games.login_hint')}</p>
               <Link
                 to="/games"
-                className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-sky-400 hover:text-sky-300 transition-colors"
+                className="mt-4 inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-sky-400 hover:text-sky-300 transition-colors"
               >
                 <Play className="h-3.5 w-3.5" aria-hidden />
                 {t('landing.games.cta')}
               </Link>
             </div>
-          </div>
+          </Card>
         ))}
       </div>
       <div className="mt-8 text-center">
-        <Link to="/games" className="inline-flex items-center gap-2 text-sm font-bold text-sky-400 hover:text-sky-300 transition-colors">
+        <Link to="/games" className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-wider text-sky-400 hover:text-sky-300 transition-colors">
           {t('landing.games.view_all')}
           <ArrowRight className="h-4 w-4" />
         </Link>
@@ -569,15 +569,15 @@ export function LandingFaq({ t, faqItems }: { t: TFunction; faqItems: LandingFaq
 export function LandingFinalCta({ t, onCtaClick }: { t: TFunction; onCtaClick: LandingCtaHandler }) {
   return (
     <section className="mx-auto max-w-6xl px-5 sm:px-8 pb-20 sm:pb-28">
-      <div className="relative overflow-hidden rounded-3xl border border-white/10 p-12 sm:p-16 text-center">
+      <Card overflowHidden className="relative p-10 sm:p-16 text-center border-slate-800 shadow-[4px_4px_0px_#000000]">
         <div className="absolute inset-0 bg-gradient-to-br from-sky-600/14 via-violet-900/18 to-blue-900/20" aria-hidden />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(59,130,246,0.18),transparent_70%)]" aria-hidden />
         <div className="absolute top-0 left-1/2 -translate-x-1/2 h-px w-2/3 bg-gradient-to-r from-transparent via-sky-400/50 to-transparent" aria-hidden />
         <div className="absolute bottom-0 left-1/2 -translate-x-1/2 h-px w-1/2 bg-gradient-to-r from-transparent via-violet-500/30 to-transparent" aria-hidden />
         <div className="relative">
-          <h2 className="text-3xl font-black text-white sm:text-4xl">{t('landing.final_cta.title')}</h2>
-          <p className="mt-4 max-w-xl mx-auto text-slate-300">{t('landing.final_cta.subtitle')}</p>
-          <ul className="mt-6 flex flex-col sm:flex-row flex-wrap items-center justify-center gap-4 text-sm text-slate-400">
+          <h2 className="text-3xl font-black uppercase tracking-tight text-white sm:text-4xl">{t('landing.final_cta.title')}</h2>
+          <p className="mt-4 max-w-xl mx-auto text-slate-300 font-medium text-sm sm:text-base leading-relaxed">{t('landing.final_cta.subtitle')}</p>
+          <ul className="mt-6 flex flex-col sm:flex-row flex-wrap items-center justify-center gap-4 text-xs font-black uppercase tracking-wider text-slate-300">
             <li className="flex items-center gap-2">
               <span className="text-emerald-400 font-bold">✓</span>
               {t('landing.final_cta.bullet1')}
@@ -600,7 +600,7 @@ export function LandingFinalCta({ t, onCtaClick }: { t: TFunction; onCtaClick: L
             <ArrowRight className="h-4 w-4" aria-hidden />
           </Link>
         </div>
-      </div>
+      </Card>
     </section>
   );
 }

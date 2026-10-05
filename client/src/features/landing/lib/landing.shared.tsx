@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 import { ArrowUpRight, ChevronDown, Pickaxe, Wallet } from 'lucide-react';
+import Card from '../../../shared/components/Card';
 import type { PublicStatsPayload } from '../../../shared/hooks/usePublicStatsPoll';
 
 const LAUNCH_DATE = new Date('2026-03-05T00:00:00.000Z');
@@ -87,14 +88,14 @@ export function LiveMiningWidget() {
     <div className="relative w-full max-w-xs">
       <div className="absolute -inset-6 rounded-full bg-blue-500/15 blur-3xl" aria-hidden />
       <div className="absolute -inset-1 rounded-3xl bg-gradient-to-br from-sky-500/20 to-violet-600/10 blur-xl" aria-hidden />
-      <div className="relative rounded-2xl border border-white/12 bg-slate-900/95 backdrop-blur-sm shadow-2xl overflow-hidden">
+      <div className="relative rounded-3xl border-2 border-slate-800 bg-slate-900 shadow-[4px_4px_0px_#000000] overflow-hidden">
         {/* Top accent line */}
         <div className="h-px w-full bg-gradient-to-r from-transparent via-sky-400/60 to-transparent" />
         <div className="p-5">
           {/* Header */}
           <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-sky-500/20">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-sky-500/20 border border-sky-500/30">
                 <Pickaxe className="h-3.5 w-3.5 text-sky-400" aria-hidden />
               </div>
               <span className="text-[11px] font-bold text-slate-300 uppercase tracking-widest font-mono">
@@ -115,8 +116,8 @@ export function LiveMiningWidget() {
               { label: 'Ganhos', value: `${earnings.toFixed(3)} POL`, color: 'text-emerald-400' },
               { label: 'Eficiência', value: '98.2%', color: 'text-amber-400' },
             ].map((stat) => (
-              <div key={stat.label} className="rounded-xl bg-slate-800/70 px-3 py-2.5">
-                <p className="text-[9px] uppercase tracking-wider text-slate-600 font-mono">{stat.label}</p>
+              <div key={stat.label} className="rounded-xl bg-slate-950 border border-slate-800 px-3 py-2.5 shadow-[1px_1px_0px_#000000]">
+                <p className="text-[9px] uppercase tracking-wider text-slate-400 font-mono font-bold">{stat.label}</p>
                 <p className={`mt-0.5 text-sm font-black font-mono ${stat.color}`}>{stat.value}</p>
               </div>
             ))}
@@ -124,11 +125,11 @@ export function LiveMiningWidget() {
 
           {/* Block progress */}
           <div>
-            <div className="flex justify-between text-[9px] font-mono text-slate-600 mb-1.5 uppercase tracking-wider">
+            <div className="flex justify-between text-[9px] font-mono text-slate-400 mb-1.5 uppercase tracking-wider font-bold">
               <span>Bloco atual</span>
               <span>{Math.floor(blockProgress)}%</span>
             </div>
-            <div className="h-2 rounded-full bg-slate-800 overflow-hidden">
+            <div className="h-2 rounded-full bg-slate-950 border border-slate-800 overflow-hidden">
               <div
                 className="h-full rounded-full bg-gradient-to-r from-sky-500 to-cyan-400 transition-all duration-200"
                 style={{ width: `${blockProgress}%` }}
@@ -136,7 +137,7 @@ export function LiveMiningWidget() {
             </div>
           </div>
 
-          <p className="mt-3.5 text-[9px] text-slate-700 text-center font-mono">
+          <p className="mt-3.5 text-[9px] text-slate-500 text-center font-mono font-medium">
             Simulado — painel real após o cadastro
           </p>
         </div>
@@ -150,14 +151,14 @@ export function LiveMiningWidget() {
 export function FaqItem({ id, question, answer }: { id: string; question: string; answer: string }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="rounded-2xl border border-white/8 bg-slate-900/50 overflow-hidden hover:border-sky-500/25 transition-colors duration-200">
+    <div className="rounded-2xl border-2 border-slate-800 bg-slate-900/60 overflow-hidden hover:border-slate-700 transition-colors duration-200 shadow-[2px_2px_0px_#000000]">
       <button
         type="button"
         id={`${id}-btn`}
         aria-expanded={open}
         aria-controls={`${id}-panel`}
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between gap-4 px-6 py-5 text-left font-semibold text-white hover:bg-white/4 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-400"
+        className="w-full flex items-center justify-between gap-4 px-6 py-5 text-left font-black uppercase tracking-tight text-white hover:bg-slate-800/40 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-400"
       >
         <span>{question}</span>
         <ChevronDown
@@ -170,7 +171,7 @@ export function FaqItem({ id, question, answer }: { id: string; question: string
           id={`${id}-panel`}
           role="region"
           aria-labelledby={`${id}-btn`}
-          className="px-6 pb-6 text-sm leading-relaxed border-t border-white/8 text-slate-400"
+          className="px-6 pb-6 text-sm leading-relaxed border-t-2 border-slate-800 text-slate-300 font-medium"
         >
           {answer}
         </div>
@@ -195,36 +196,36 @@ export function timeAgo(iso: string): string {
 }
 
 export function FeedPanel({ title, rows, color }: { title: string; rows: FeedRow[]; color: 'emerald' | 'sky' }) {
-  const border = color === 'emerald' ? 'border-emerald-500/20' : 'border-sky-500/20';
+  const border = color === 'emerald' ? 'border-emerald-500/30' : 'border-sky-500/30';
   const dot = color === 'emerald' ? 'bg-emerald-400' : 'bg-sky-400';
   const amtCls = color === 'emerald' ? 'text-emerald-400' : 'text-sky-400';
   const icon = color === 'emerald' ? <ArrowUpRight className="h-3 w-3" aria-hidden /> : <Wallet className="h-3 w-3" aria-hidden />;
 
   return (
-    <div className={`rounded-2xl border ${border} bg-slate-900/60 backdrop-blur-sm overflow-hidden`}>
-      <div className="flex items-center gap-2 px-5 py-3.5 border-b border-white/[0.06]">
+    <Card variant="table" className={`border-2 ${border}`}>
+      <div className="flex items-center gap-2 px-5 py-3.5 border-b-2 border-slate-800 bg-slate-950/80">
         <span className={`h-2 w-2 rounded-full ${dot} animate-pulse`} aria-hidden />
-        <span className="text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400 font-mono">{title}</span>
+        <span className="text-[11px] font-bold uppercase tracking-[0.22em] text-slate-300 font-mono">{title}</span>
       </div>
-      <ul className="divide-y divide-white/[0.04]">
+      <ul className="divide-y-2 divide-slate-800/80">
         {rows.length === 0 ? (
-          <li className="px-5 py-8 text-center text-xs text-slate-600 font-mono">sem dados</li>
+          <li className="px-5 py-8 text-center text-xs text-slate-500 font-mono">sem dados</li>
         ) : (
           rows.map((r) => (
-            <li key={r.id} className="flex items-center justify-between gap-3 px-5 py-3 hover:bg-white/[0.02] transition-colors">
+            <li key={r.id} className="flex items-center justify-between gap-3 px-5 py-3 hover:bg-slate-800/40 transition-colors">
               <div className="flex items-center gap-2.5 min-w-0">
                 <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-800 ${amtCls}`}>{icon}</span>
                 <span className="text-xs text-slate-300 font-mono truncate">{r.user}</span>
               </div>
               <div className="flex items-center gap-3 shrink-0">
                 <span className={`text-xs font-bold font-mono ${amtCls}`}>{r.amount.toFixed(4)} POL</span>
-                <span className="text-[10px] text-slate-600 font-mono whitespace-nowrap">{timeAgo(r.at)}</span>
+                <span className="text-[10px] text-slate-500 font-mono whitespace-nowrap">{timeAgo(r.at)}</span>
               </div>
             </li>
           ))
         )}
       </ul>
-    </div>
+    </Card>
   );
 }
 
