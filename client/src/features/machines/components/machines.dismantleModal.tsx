@@ -37,7 +37,7 @@ export function RackDismantleModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="rack-dismantle-title"
-        className="relative w-full max-w-md overflow-hidden rounded-[2.5rem] border border-gray-800 bg-surface p-8 shadow-2xl animate-in zoom-in-95 duration-300"
+        className="relative w-full max-w-md overflow-hidden rounded-3xl border-2 border-slate-800 bg-slate-900/95 p-6 sm:p-8 shadow-[4px_4px_0px_#000000] animate-in zoom-in-95 duration-200"
         onMouseDown={(e) => e.stopPropagation()}
       >
         <button
@@ -45,26 +45,26 @@ export function RackDismantleModal({
           onClick={onClose}
           disabled={loading}
           aria-label={t('common.cancel')}
-          className="absolute right-4 top-4 rounded-xl p-2 text-gray-400 transition-colors hover:bg-gray-800 hover:text-white disabled:opacity-40"
+          className="absolute right-4 top-4 rounded-xl p-2 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white disabled:opacity-40"
         >
           <X className="h-5 w-5" />
         </button>
 
         <div className="space-y-6 text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl border border-red-500/30 bg-red-500/10">
-            <AlertTriangle className="h-8 w-8 text-red-400" aria-hidden />
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border-2 border-red-500/30 bg-red-500/10 shadow-[2px_2px_0px_#000000]">
+            <AlertTriangle className="h-7 w-7 text-red-400" aria-hidden />
           </div>
           <div className="space-y-2">
-            <h2 id="rack-dismantle-title" className="text-xl font-black uppercase italic tracking-tight text-white">
+            <h2 id="rack-dismantle-title" className="text-lg sm:text-xl font-black uppercase tracking-wider text-white">
               {t('inventory.dismantle_rack_confirm', { rack: displayRackNumber })}
             </h2>
-            <p className="text-sm text-gray-400">{t('inventory.dismantle_rack_warning')}</p>
+            <p className="text-xs sm:text-sm text-slate-400 font-medium">{t('inventory.dismantle_rack_warning')}</p>
           </div>
           <button
             type="button"
             disabled={loading}
             onClick={() => void onConfirm()}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-red-500/90 px-6 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-red-500/20 transition-all hover:bg-red-500 active:scale-[0.98] disabled:opacity-50"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-500 hover:bg-red-400 active:translate-x-0.5 active:translate-y-0.5 px-6 py-3.5 text-xs font-black uppercase tracking-widest text-slate-950 shadow-[2px_2px_0px_#000000] transition-all disabled:opacity-50"
           >
             {loading ? (
               <>

@@ -7,6 +7,9 @@ import {
     ArrowLeft,
     Lock,
     Zap,
+    ArrowDownCircle,
+    ArrowUpCircle,
+    ArrowLeftRight,
 } from 'lucide-react';
 import { SwapPanel } from './components/SwapPanel';
 import { WalletBalanceOverview, WalletLedgerPanel } from './components/WalletOverviewPanels';
@@ -14,6 +17,8 @@ import { WalletHeader } from './components/WalletHeader';
 import { WalletWithdrawTab } from './components/WalletWithdrawTab';
 import { WalletDepositTab } from './components/WalletDepositTab';
 import { useWalletPage } from './lib/useWalletPage';
+import Card from '../../shared/components/Card';
+import TabPills from '../../shared/components/TabPills';
 
 export const WALLET_MAINTENANCE = false;
 
@@ -194,29 +199,24 @@ function WalletActiveContent() {
                 <div className="lg:col-span-8 space-y-8">
                     <WalletBalanceOverview balance={balance} polPrice={polPrice} t={t} isLoading={isLoading} />
 
-                    <div className="bg-slate-950/80 border border-slate-800/50 rounded-[2.5rem] p-1 shadow-2xl backdrop-blur-2xl">
-                        <div className="flex bg-slate-900/50 p-2 rounded-[2.2rem] gap-2">
-                            <button
-                                onClick={() => setActiveTab('deposit')}
-                                className={`flex-1 py-2.5 sm:py-4 text-[8px] sm:text-xs font-black uppercase tracking-tight sm:tracking-widest rounded-[1.8rem] transition-all duration-500 border border-transparent ${activeTab === 'deposit' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20 border-white/10' : 'text-slate-500 hover:text-slate-300'}`}
-                            >
-                                {t('wallet.tab_deposit')}
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('withdraw')}
-                                className={`flex-1 py-2.5 sm:py-4 text-[8px] sm:text-xs font-black uppercase tracking-tight sm:tracking-widest rounded-[1.8rem] transition-all duration-500 border border-transparent ${activeTab === 'withdraw' ? 'bg-primary text-white shadow-lg shadow-primary/20 border-white/10' : 'text-slate-500 hover:text-slate-300'}`}
-                            >
-                                {t('wallet.tab_withdraw')}
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('swap')}
-                                className={`flex-1 py-2.5 sm:py-4 text-[8px] sm:text-xs font-black uppercase tracking-tight sm:tracking-widest rounded-[1.8rem] transition-all duration-500 border border-transparent ${activeTab === 'swap' ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/20 border-white/10' : 'text-slate-500 hover:text-slate-300'}`}
-                            >
-                                {t('wallet.tab_swap')}
-                            </button>
-                        </div>
+                    <Card className="space-y-6">
+                        <TabPills
+                            ariaLabel={t('wallet.tabs_aria', { defaultValue: 'Operações de Carteira' })}
+                            activeTab={activeTab}
+                            onChange={(key) => setActiveTab(key as 'deposit' | 'withdraw' | 'swap')}
+                            tabs={[
+                                { key: 'deposit', label: t('wallet.tab_deposit'), icon: ArrowDownCircle },
+                                { key: 'withdraw', label: t('wallet.tab_withdraw'), icon: ArrowUpCircle },
+                                { key: 'swap', label: t('wallet.tab_swap'), icon: ArrowLeftRight },
+                            ]}
+                        />
 
-                        <div className="p-3 sm:p-8">
+                        <div
+                            id={`panel-${activeTab}`}
+                            role="tabpanel"
+                            aria-labelledby={`tab-${activeTab}`}
+                            className="pt-2 outline-none"
+                        >
                             {activeTab === 'withdraw' && (
                                 <WalletWithdrawTab
                                     t={t}
@@ -282,7 +282,7 @@ function WalletActiveContent() {
                                 />
                             )}
                         </div>
-                    </div>
+                    </Card>
                 </div>
 
                 <div className="lg:col-span-4 space-y-8">

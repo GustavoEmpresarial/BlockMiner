@@ -51,19 +51,19 @@ export function WalletWithdrawTab({
         return (
             <form onSubmit={handleWithdrawalCodeSubmit} className="space-y-6">
                 <div className="text-center space-y-2">
-                    <div className="inline-flex p-3 bg-amber-500/10 rounded-2xl mb-2">
+                    <div className="inline-flex p-3 bg-amber-500/10 border border-amber-500/30 rounded-2xl shadow-[2px_2px_0px_#000000] mb-2">
                         <ShieldCheck className="w-7 h-7 text-amber-400" />
                     </div>
                     <h3 className="text-white font-black text-sm uppercase tracking-widest">{t('wallet.withdraw_flow.verify_title')}</h3>
                     <p className="text-slate-400 text-[11px] font-medium">
                         {t('wallet.withdraw_flow.code_sent_ttl', { minutes: withdrawalChallenge.ttlMinutes })}
                     </p>
-                    <p className="text-slate-500 text-[10px]">
+                    <p className="text-slate-400 text-[10px]">
                         {t('wallet.withdraw_flow.withdraw_of')} <span className="text-white font-black">{withdrawalChallenge.pendingAmount.toFixed(4)} POL</span> {t('wallet.withdraw_flow.to')} <span className="text-slate-300 font-mono text-[9px]">{withdrawalChallenge.pendingAddress.slice(0, 8)}...{withdrawalChallenge.pendingAddress.slice(-6)}</span>
                     </p>
                 </div>
                 <div className="space-y-2">
-                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] ml-2">{t('wallet.withdraw_flow.code_label')}</label>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-2">{t('wallet.withdraw_flow.code_label')}</label>
                     <input
                         type="text"
                         inputMode="numeric"
@@ -72,14 +72,14 @@ export function WalletWithdrawTab({
                         value={withdrawalCode}
                         onChange={(e) => setWithdrawalCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                         placeholder="000000"
-                        className="w-full bg-slate-900 border border-slate-700 focus:border-amber-500 rounded-2xl py-5 px-6 text-slate-200 text-2xl font-black text-center tracking-[0.4em] transition-all outline-none"
+                        className="w-full bg-slate-950 border-2 border-slate-700 focus:border-amber-400 rounded-xl py-4 px-6 text-slate-100 text-2xl font-black text-center tracking-[0.4em] transition-all outline-none shadow-[2px_2px_0px_#000000]"
                         autoFocus
                     />
                 </div>
                 <button
                     type="submit"
                     disabled={isActionLoading || withdrawalCode.length !== 6}
-                    className="w-full py-4 sm:py-5 bg-gradient-to-r from-amber-500 to-orange-600 hover:scale-[1.01] active:scale-[0.99] text-white rounded-3xl font-black text-xs sm:text-sm uppercase tracking-tight sm:tracking-[0.2em] transition-all shadow-2xl shadow-amber-500/20 disabled:opacity-50 flex items-center justify-center gap-3"
+                    className="w-full py-4 bg-amber-500 hover:bg-amber-400 active:translate-x-0.5 active:translate-y-0.5 text-slate-950 rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-[2px_2px_0px_#000000] disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                     {isActionLoading ? <RefreshCw className="w-5 h-5 animate-spin" /> : <ShieldCheck className="w-5 h-5" />}
                     {isActionLoading ? t('wallet.withdraw_flow.verifying') : t('wallet.withdraw_flow.confirm')}
@@ -87,7 +87,7 @@ export function WalletWithdrawTab({
                 <button
                     type="button"
                     onClick={() => { setWithdrawalChallenge(null); setWithdrawalCode(''); }}
-                    className="w-full py-3 text-slate-500 hover:text-slate-300 text-[10px] font-black uppercase tracking-widest transition-colors"
+                    className="w-full py-2.5 text-slate-400 hover:text-slate-200 text-[10px] font-black uppercase tracking-widest transition-colors"
                 >
                     {t('wallet.withdraw_flow.cancel')}
                 </button>
@@ -96,33 +96,33 @@ export function WalletWithdrawTab({
     }
 
     return (
-        <form onSubmit={handleWithdraw} className="space-y-4 sm:space-y-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8">
-                <div className="space-y-3">
-                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] ml-2">{t('wallet.recipient_address')}</label>
+        <form onSubmit={handleWithdraw} className="space-y-4 sm:space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">{t('wallet.recipient_address')}</label>
                     <div className="relative group">
                         <input
                             type="text"
                             value={withdrawForm.address}
                             onChange={(e) => setWithdrawForm(prev => ({ ...prev, address: e.target.value }))}
                             placeholder="0x..."
-                            className="w-full bg-slate-900 border border-slate-800 group-hover:border-slate-700 focus:border-primary rounded-2xl py-5 pl-5 pr-12 text-slate-200 text-xs font-mono transition-all outline-none"
+                            className="w-full bg-slate-950 border-2 border-slate-700 group-hover:border-slate-600 focus:border-primary rounded-xl py-3.5 pl-4 pr-12 text-slate-100 text-xs font-mono transition-all outline-none shadow-[2px_2px_0px_#000000]"
                         />
                         {isConnected && (
                             <button
                                 type="button"
                                 onClick={() => setWithdrawForm(prev => ({ ...prev, address: evmAccount ?? '' }))}
-                                className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-primary hover:text-white transition-colors"
+                                className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-primary hover:text-white transition-colors"
                                 title={t('wallet.use_connected_wallet_hint')}
                             >
-                                <Smartphone className="w-5 h-5" />
+                                <Smartphone className="w-4 h-4" />
                             </button>
                         )}
                     </div>
                 </div>
 
-                <div className="space-y-3">
-                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] ml-2">{t('wallet.amount_pol')}</label>
+                <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">{t('wallet.amount_pol')}</label>
                     <div className="relative group">
                         <input
                             type="number"
@@ -130,25 +130,25 @@ export function WalletWithdrawTab({
                             value={withdrawForm.amount}
                             onChange={(e) => setWithdrawForm(prev => ({ ...prev, amount: e.target.value }))}
                             placeholder="0.00"
-                            className="w-full bg-slate-900 border border-slate-800 group-hover:border-slate-700 focus:border-primary rounded-2xl py-5 px-5 text-slate-200 text-sm font-black transition-all outline-none"
+                            className="w-full bg-slate-950 border-2 border-slate-700 group-hover:border-slate-600 focus:border-primary rounded-xl py-3.5 px-4 text-slate-100 text-sm font-black transition-all outline-none shadow-[2px_2px_0px_#000000]"
                         />
                         <button
                             type="button"
                             onClick={() => setWithdrawForm(prev => ({ ...prev, amount: balanceAmount.toString() }))}
-                            className="absolute right-4 top-1/2 -translate-y-1/2 text-[9px] font-black text-primary hover:text-white uppercase tracking-widest transition-all"
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-primary hover:text-white uppercase tracking-wider transition-all"
                         >
                             Max
                         </button>
                     </div>
-                    <p className="text-[9px] text-slate-600 font-bold ml-2">{t('wallet.min_withdraw_hint', { min: WALLET_MIN_WITHDRAW_POL })}</p>
+                    <p className="text-[10px] text-slate-500 font-bold ml-1">{t('wallet.min_withdraw_hint', { min: WALLET_MIN_WITHDRAW_POL })}</p>
                 </div>
             </div>
 
             {withdrawFeeInfo && (
-                <div className={`rounded-2xl p-4 border ${withdrawFeeInfo.feeWaived ? 'border-emerald-500/30 bg-emerald-950/30' : 'border-amber-500/30 bg-amber-950/20'}`}>
+                <div className={`rounded-2xl p-4 border-2 shadow-[2px_2px_0px_#000000] ${withdrawFeeInfo.feeWaived ? 'border-emerald-500/40 bg-emerald-950/20' : 'border-amber-500/40 bg-amber-950/20'}`}>
                     <div className="flex items-center justify-between gap-3">
                         <div>
-                            <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-0.5">{t('wallet.withdraw_flow.fee_title')}</p>
+                            <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-0.5">{t('wallet.withdraw_flow.fee_title')}</p>
                             {withdrawFeeInfo.feeWaived ? (
                                 <p className="text-emerald-400 text-xs font-black uppercase">{t('wallet.withdraw_flow.fee_waived')}</p>
                             ) : (
@@ -156,23 +156,23 @@ export function WalletWithdrawTab({
                             )}
                         </div>
                         <div className="text-right">
-                            <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-0.5">
+                            <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-0.5">
                                 {t('wallet.withdraw_flow.external_offers_today')}
                             </p>
                             <p className={`text-xs font-black ${withdrawFeeInfo.feeWaived ? 'text-emerald-400' : 'text-slate-300'}`}>
                                 {withdrawFeeInfo.completionsToday}/{withdrawFeeInfo.requiredForWaiver}
                             </p>
                             {!withdrawFeeInfo.feeWaived && (
-                                <p className="text-[9px] text-slate-600 mt-0.5">
+                                <p className="text-[10px] text-slate-400 mt-0.5 font-medium">
                                     {t('wallet.withdraw_flow.offers_for_waiver', { count: withdrawFeeInfo.requiredForWaiver - withdrawFeeInfo.completionsToday })}
                                 </p>
                             )}
                         </div>
                     </div>
                     {!withdrawFeeInfo.feeWaived && (
-                        <div className="mt-2 w-full bg-slate-800 rounded-full h-1">
+                        <div className="mt-2 w-full bg-slate-800 rounded-full h-1.5">
                             <div
-                                className="bg-amber-500 h-1 rounded-full transition-all"
+                                className="bg-amber-400 h-1.5 rounded-full transition-all"
                                 style={{ width: `${Math.min(100, (withdrawFeeInfo.completionsToday / withdrawFeeInfo.requiredForWaiver) * 100)}%` }}
                             />
                         </div>
@@ -180,13 +180,13 @@ export function WalletWithdrawTab({
                 </div>
             )}
 
-            <div className="bg-slate-900/50 rounded-3xl p-3 sm:p-6 border border-slate-800/50 flex items-center justify-between">
+            <div className="bg-slate-900/60 rounded-2xl p-4 sm:p-5 border-2 border-slate-800 shadow-[2px_2px_0px_#000000] flex items-center justify-between">
                 <div className="space-y-1">
-                    <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest italic">{t('wallet.withdraw_flow.network_protocol_fee')}</p>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider italic">{t('wallet.withdraw_flow.network_protocol_fee')}</p>
                     <p className="text-emerald-400 text-xs font-black uppercase">{t('wallet.withdraw_flow.gas_covered')}</p>
                 </div>
                 <div className="text-right">
-                    <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest italic">{t('wallet.withdraw_flow.you_receive')}</p>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider italic">{t('wallet.withdraw_flow.you_receive')}</p>
                     {(() => {
                         const gross = parseFloat(withdrawForm.amount) || 0;
                         const feeRate = withdrawFeeInfo && !withdrawFeeInfo.feeWaived ? withdrawFeeInfo.feePercent / 100 : 0;
@@ -195,7 +195,7 @@ export function WalletWithdrawTab({
                             <p className="text-xl font-black text-white italic">
                                 {net.toFixed(4)} POL
                                 {polPrice > 0 && (
-                                    <span className="block text-[10px] text-slate-500 not-italic font-bold">
+                                    <span className="block text-[10px] text-slate-400 not-italic font-bold">
                                         ≈ ${(net * polPrice).toFixed(2)} USD
                                     </span>
                                 )}
@@ -208,12 +208,12 @@ export function WalletWithdrawTab({
             <button
                 type="submit"
                 disabled={isActionLoading}
-                className="w-full py-4 sm:py-5 bg-gradient-to-r from-primary to-blue-600 hover:scale-[1.01] active:scale-[0.99] text-white rounded-3xl font-black text-xs sm:text-sm uppercase tracking-tight sm:tracking-[0.2em] transition-all shadow-2xl shadow-primary/20 disabled:opacity-50 flex items-center justify-center gap-3"
+                className="w-full py-4 bg-primary hover:bg-primary-hover active:translate-x-0.5 active:translate-y-0.5 text-slate-950 rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-[2px_2px_0px_#000000] disabled:opacity-50 flex items-center justify-center gap-2"
             >
                 {isActionLoading ? <RefreshCw className="w-5 h-5 animate-spin" /> : <ArrowUpCircle className="w-5 h-5" />}
                 {isActionLoading ? t('wallet.processing') : t('wallet.confirm_withdraw')}
             </button>
-            <p className="text-center text-[9px] text-slate-500 font-bold uppercase tracking-widest">
+            <p className="text-center text-[10px] text-slate-400 font-bold uppercase tracking-wider">
                 {t('wallet.processing_time', { hours: 72 })}
             </p>
         </form>

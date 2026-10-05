@@ -33,36 +33,36 @@ export function MachinesHeader({
 }: MachinesHeaderProps) {
   return (
     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-      <div className="min-w-0 flex-1">
-        <h1 className="text-3xl font-black text-white tracking-tight">{t("inventory.title")}</h1>
-        <p className="text-gray-500 font-medium">{t("inventory.subtitle")}</p>
+      <div className="min-w-0 flex-1 space-y-1">
+        <h1 className="text-3xl font-black text-white tracking-tight uppercase">{t("inventory.title")}</h1>
+        <p className="text-slate-400 font-medium text-sm">{t("inventory.subtitle")}</p>
       </div>
       <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-stretch sm:justify-end">
         <button
           type="button"
           onClick={onGoToVault}
-          className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border border-secondary/25 bg-secondary/10 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-secondary transition-colors hover:bg-secondary/20 sm:w-auto"
+          className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border-2 border-slate-800 bg-slate-900/60 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-slate-300 shadow-[2px_2px_0px_#000000] transition-all hover:border-slate-700 active:translate-y-0.5 sm:w-auto"
         >
-          <Warehouse className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
+          <Warehouse className="h-4 w-4 shrink-0 opacity-90 text-primary" aria-hidden />
           {t("inventory.go_to_warehouse")}
         </button>
         <button
           type="button"
           onClick={onGoToPowerStats}
-          className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border border-sky-500/25 bg-sky-500/10 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-sky-400 transition-colors hover:bg-sky-500/20 sm:w-auto"
+          className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border-2 border-slate-800 bg-slate-900/60 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-slate-300 shadow-[2px_2px_0px_#000000] transition-all hover:border-slate-700 active:translate-y-0.5 sm:w-auto"
         >
-          <Calculator className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
+          <Calculator className="h-4 w-4 shrink-0 opacity-90 text-sky-400" aria-hidden />
           Calculadora
         </button>
         <div className="flex flex-wrap gap-2 sm:justify-end">
-          <div className="inline-flex min-h-11 flex-1 min-w-[10rem] items-center justify-center gap-1.5 rounded-xl border border-purple-500/20 bg-purple-500/10 px-4 py-2 text-xs font-bold text-purple-400 shadow-glow-sm sm:flex-initial">
+          <div className="inline-flex min-h-11 flex-1 min-w-[10rem] items-center justify-center gap-1.5 rounded-xl border-2 border-purple-500/30 bg-purple-500/10 px-4 py-2 text-xs font-bold text-purple-300 shadow-[2px_2px_0px_#000000] sm:flex-initial">
             <Zap className="h-3.5 w-3.5 shrink-0" aria-hidden />
             {formatHashrate(activeMachinesHashRate)}
           </div>
-          <div className="inline-flex min-h-11 flex-1 min-w-[8rem] items-center justify-center rounded-xl border border-gray-700/50 bg-gray-800/50 px-4 py-2 text-xs font-bold text-gray-400 sm:flex-initial">
+          <div className="inline-flex min-h-11 flex-1 min-w-[8rem] items-center justify-center rounded-xl border-2 border-slate-800 bg-slate-900/60 px-4 py-2 text-xs font-bold text-slate-300 shadow-[2px_2px_0px_#000000] sm:flex-initial">
             {occupiedRacks} {t("inventory.active_machines")}
           </div>
-          <div className="inline-flex min-h-11 flex-1 min-w-[8rem] items-center justify-center rounded-xl border border-primary/20 bg-primary/10 px-4 py-2 text-xs font-bold text-primary sm:flex-initial">
+          <div className="inline-flex min-h-11 flex-1 min-w-[8rem] items-center justify-center rounded-xl border-2 border-primary/30 bg-primary/10 px-4 py-2 text-xs font-bold text-primary shadow-[2px_2px_0px_#000000] sm:flex-initial">
             {inventoryCount} {t("inventory.in_inventory")}
           </div>
         </div>
@@ -93,7 +93,13 @@ export function MachinesRoomTabs({ t, rooms, activeRoom, onSelectRoom, extraTab 
         const isUnlocked = room.unlocked;
         return (
           <button key={room.roomNumber} role="tab" aria-selected={isActive} onClick={() => onSelectRoom(room.roomNumber)}
-            className={`flex min-h-11 shrink-0 items-center gap-2 rounded-2xl px-5 py-2.5 text-xs font-black uppercase tracking-wider transition-all ${isActive ? "bg-primary text-black shadow-glow" : isUnlocked ? "bg-gray-800/50 text-gray-300 hover:bg-gray-700/50" : "bg-gray-900/30 text-gray-500 hover:text-gray-400"}`}>
+            className={`flex min-h-11 shrink-0 items-center gap-2 rounded-2xl px-5 py-2.5 text-xs font-black uppercase tracking-wider transition-all border-2 select-none outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+              isActive
+                ? "border-primary bg-primary/20 text-white shadow-[2px_2px_0px_#000000] translate-y-[-1px]"
+                : isUnlocked
+                  ? "border-slate-800 bg-slate-900/60 text-slate-400 hover:text-white hover:border-slate-700 active:translate-y-0.5"
+                  : "border-slate-800 bg-slate-950/40 text-slate-600 opacity-60"
+            }`}>
             {!isUnlocked && <Lock className="w-3 h-3" />}
             {room.kind === "showcase_3d" ? t("inventory.showcase_room_label") : `${t("inventory.room_label")} ${room.roomNumber}`}
             {isUnlocked && !isActive && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
@@ -107,10 +113,10 @@ export function MachinesRoomTabs({ t, rooms, activeRoom, onSelectRoom, extraTab 
           role="tab"
           aria-selected={extraTab.active}
           onClick={extraTab.onSelect}
-          className={`flex min-h-11 shrink-0 items-center gap-2 rounded-2xl px-5 py-2.5 text-xs font-black uppercase tracking-wider transition-all ${
+          className={`flex min-h-11 shrink-0 items-center gap-2 rounded-2xl px-5 py-2.5 text-xs font-black uppercase tracking-wider transition-all border-2 select-none outline-none focus-visible:ring-2 focus-visible:ring-primary ${
             extraTab.active
-              ? "bg-amber-400 text-black shadow-glow"
-              : "bg-gray-800/50 text-gray-300 hover:bg-gray-700/50"
+              ? "border-amber-500 bg-amber-500/20 text-white shadow-[2px_2px_0px_#000000] translate-y-[-1px]"
+              : "border-slate-800 bg-slate-900/60 text-slate-400 hover:text-white hover:border-slate-700 active:translate-y-0.5"
           }`}
         >
           <Zap className="w-3.5 h-3.5" aria-hidden />
@@ -196,7 +202,7 @@ export function InventorySidebar({
   }
   return (
     <div className="w-full shrink-0 space-y-4">
-      <div className="bg-surface border border-gray-800/50 rounded-3xl p-4 sm:p-6 shadow-xl lg:sticky top-28">
+      <div className="rounded-3xl border-2 border-slate-800 bg-slate-900/60 p-4 sm:p-6 shadow-[4px_4px_0px_#000000] lg:sticky top-28">
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <button
             type="button"
@@ -206,23 +212,23 @@ export function InventorySidebar({
             className="flex items-center gap-2 rounded-xl border border-transparent px-2 py-1.5 text-left transition-colors hover:border-primary/30 hover:bg-primary/10"
           >
             <Box className="h-5 w-5 shrink-0 text-primary" aria-hidden />
-            <h2 className="text-lg font-bold text-white">{t("sidebar.machines")}</h2>
+            <h2 className="text-lg font-bold text-white uppercase tracking-wider">{t("sidebar.machines")}</h2>
             <ChevronDown className="h-4 w-4 shrink-0 text-primary" strokeWidth={3} aria-hidden />
           </button>
           <button
             type="button"
             onClick={onGoToVault}
-            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border border-secondary/25 bg-secondary/10 px-3 py-2.5 text-[10px] font-black uppercase tracking-wider text-secondary transition-colors hover:bg-secondary/20 sm:w-auto sm:px-4 sm:text-xs"
+            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border-2 border-slate-800 bg-slate-900/60 px-3 py-2.5 text-[10px] font-black uppercase tracking-wider text-slate-300 shadow-[2px_2px_0px_#000000] transition-all hover:border-slate-700 active:translate-y-0.5 sm:w-auto sm:px-4 sm:text-xs"
           >
-            <Warehouse className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
+            <Warehouse className="h-4 w-4 shrink-0 opacity-90 text-primary" aria-hidden />
             {t("inventory.go_to_warehouse")}
           </button>
         </div>
         {inventory.length === 0 ? (
-          <div className="py-12 flex flex-col items-center justify-center text-center px-4 bg-gray-800/20 rounded-2xl border border-dashed border-gray-800">
-            <AlertCircle className="w-10 h-10 text-gray-700 mb-3" />
-            <p className="text-gray-500 text-sm font-medium">{t("inventory.empty_inventory")}</p>
-            <p className="text-gray-600 text-xs mt-1">{t("inventory.buy_miners_msg")}</p>
+          <div className="py-12 flex flex-col items-center justify-center text-center px-4 bg-slate-950/40 rounded-2xl border-2 border-dashed border-slate-800">
+            <AlertCircle className="w-10 h-10 text-slate-600 mb-3" />
+            <p className="text-slate-400 text-sm font-medium">{t("inventory.empty_inventory")}</p>
+            <p className="text-slate-500 text-xs mt-1">{t("inventory.buy_miners_msg")}</p>
           </div>
         ) : (
           <div className="space-y-3 max-h-[60vh] overflow-y-auto scrollbar-hide pr-1">
@@ -243,20 +249,20 @@ export function InventorySidebar({
                     markShowcase3dDrag(e.dataTransfer, group);
                     e.dataTransfer.effectAllowed = "move";
                   }}
-                  className="grid cursor-grab select-none grid-cols-1 grid-rows-[auto_auto] gap-3 rounded-2xl border border-gray-800/50 bg-gray-800/30 p-4 transition-all hover:border-gray-700 active:cursor-grabbing"
+                  className="grid cursor-grab select-none grid-cols-1 grid-rows-[auto_auto] gap-3 rounded-2xl border-2 border-slate-800 bg-slate-900/60 p-4 shadow-[3px_3px_0px_#000000] transition-all hover:border-slate-700 active:cursor-grabbing"
                 >
                   <div className="grid min-w-0 grid-cols-[3.5rem_minmax(0,1fr)] items-start gap-3">
-                    <div className="relative h-14 w-14 shrink-0 rounded-xl border border-gray-800/50 bg-gray-900/50 p-2">
+                    <div className="relative h-14 w-14 shrink-0 rounded-xl border border-slate-800 bg-slate-950/80 p-2 shadow-[2px_2px_0px_#000000]">
                       <MachineImage
                         imageUrl={sideImageUrl}
                         name={sideName}
                         className="h-full w-full object-contain"
                       />
-                      <div className="absolute -right-2 -top-2 z-[1] rounded-full border border-primary/20 bg-primary px-2 py-0.5 text-[10px] font-bold text-white shadow-lg">x{group.quantity}</div>
+                      <div className="absolute -right-2 -top-2 z-[1] rounded-full border border-primary/30 bg-primary px-2 py-0.5 text-[10px] font-black text-slate-950 shadow-sm">x{group.quantity}</div>
                     </div>
                     <div className="min-w-0">
                       <h4 className="break-words text-sm font-bold leading-snug text-white">{sideName}</h4>
-                      <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-bold uppercase tracking-wider text-gray-500">
+                      <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
                         <span className="shrink-0 whitespace-nowrap">
                           {t("inventory.modal.level")} {group.level}
                         </span>
@@ -264,14 +270,14 @@ export function InventorySidebar({
                         <span className="font-black text-primary">{formatHashrate(group.hashRate)}</span>
                       </div>
                       {group.quantity > 1 && (
-                        <p className="mt-1 text-[10px] font-medium normal-case tracking-normal text-gray-600">
+                        <p className="mt-1 text-[10px] font-medium normal-case tracking-normal text-slate-400">
                           {t("inventory.backpack_qty_hint", { count: group.quantity - 1 })}
                         </p>
                       )}
                     </div>
                   </div>
                   <div
-                    className="col-span-full flex w-full min-w-0 flex-col items-stretch gap-2 border-t border-gray-800/40 pt-3"
+                    className="col-span-full flex w-full min-w-0 flex-col items-stretch gap-2 border-t border-slate-800/80 pt-3"
                     onPointerDown={(e) => e.stopPropagation()}
                     onMouseDown={(e) => e.stopPropagation()}
                   >
@@ -279,7 +285,7 @@ export function InventorySidebar({
                       type="button"
                       disabled={backpackVaultBusy || !Number.isFinite(Number(firstId))}
                       onClick={() => onOpenWarehouse(group)}
-                      className="relative z-[2] flex min-h-11 w-full max-w-full flex-col items-center justify-center gap-1.5 rounded-xl border border-violet-500/35 bg-violet-500/15 px-2 py-2.5 text-center text-[10px] font-black uppercase leading-tight tracking-wider text-violet-200 transition-colors hover:bg-violet-500/25 disabled:pointer-events-none disabled:opacity-40 sm:flex-row sm:gap-2 sm:px-3 sm:py-2.5 sm:text-[11px]"
+                      className="relative z-[2] flex min-h-11 w-full max-w-full flex-col items-center justify-center gap-1.5 rounded-xl border border-violet-500/35 bg-violet-500/15 px-2 py-2.5 text-center text-[10px] font-black uppercase leading-tight tracking-wider text-violet-300 shadow-[2px_2px_0px_#000000] transition-all hover:bg-violet-500/25 active:translate-y-0.5 disabled:pointer-events-none disabled:opacity-40 sm:flex-row sm:gap-2 sm:px-3 sm:py-2.5 sm:text-[11px]"
                     >
                       <Warehouse className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
                       <span className="max-w-full break-words leading-snug">
@@ -294,7 +300,7 @@ export function InventorySidebar({
               <button
                 type="button"
                 onClick={onLoadMore}
-                className="min-h-11 w-full rounded-2xl border border-gray-800/70 bg-gray-900/70 px-4 py-3 text-sm font-bold text-gray-300 transition-colors hover:border-gray-700 hover:bg-gray-800"
+                className="min-h-11 w-full rounded-2xl border-2 border-slate-800 bg-slate-900/60 px-4 py-3 text-sm font-bold text-slate-300 shadow-[2px_2px_0px_#000000] transition-all hover:border-slate-700 hover:bg-slate-900 active:translate-y-0.5"
               >
                 {t("common.load_more", { defaultValue: "Carregar mais" })}
               </button>

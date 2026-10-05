@@ -93,7 +93,7 @@ export function RackMachineTooltipPortal({ open, anchorEl, displayName, hashrate
   return createPortal(
     <div
       ref={tooltipRef}
-      className={`pointer-events-none fixed z-[10000] w-[min(calc(100vw-16px),14rem)] rounded-xl border border-gray-700/80 bg-gray-950/95 px-3 py-2 text-left shadow-xl shadow-black/40 backdrop-blur-sm transition-opacity duration-150 ease-out ${
+      className={`pointer-events-none fixed z-[10000] w-[min(calc(100vw-16px),14rem)] rounded-xl border-2 border-slate-700 bg-slate-950/95 px-3 py-2 text-left shadow-[2px_2px_0px_#000000] backdrop-blur-sm transition-opacity duration-150 ease-out ${
         visible ? 'opacity-100' : 'opacity-0'
       }`}
       style={{ top: coords.top, left: coords.left }}

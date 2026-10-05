@@ -169,10 +169,10 @@ export const ImageRackCard = memo(function ImageRackCard({
   const rackPowerLabel = formatHashrate(rackHashRate);
 
   return (
-    <div className={`overflow-hidden rounded-3xl border bg-surface shadow-xl ${hasMachines ? 'rack-live border-primary/30' : 'border-gray-800/50'}`}>
-      <div className="flex items-center justify-between gap-2 border-b border-gray-800/50 bg-gray-800/20 px-3 py-2.5 sm:px-6 sm:py-4">
+    <div className={`overflow-hidden rounded-3xl border-2 border-slate-800 bg-slate-900/60 shadow-[4px_4px_0px_#000000] ${hasMachines ? 'rack-live border-primary/40' : ''}`}>
+      <div className="flex items-center justify-between gap-2 border-b border-slate-800 bg-slate-950/40 px-3 py-2.5 sm:px-6 sm:py-4">
         <div className="flex min-w-0 items-center gap-3">
-          <div className={`h-2 w-2 shrink-0 rounded-full ${hasMachines ? 'animate-pulse bg-emerald-500 shadow-glow' : 'bg-gray-600'}`} />
+          <div className={`h-2.5 w-2.5 shrink-0 rounded-full ${hasMachines ? 'animate-pulse bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]' : 'bg-slate-600'}`} />
           {rackVariant !== 'showcase' && visualIndex != null && (
             <button
               type="button"
@@ -183,12 +183,12 @@ export const ImageRackCard = memo(function ImageRackCard({
               }}
               aria-label={t('inventory2.drag_handle_aria')}
               title={t('inventory2.drag_handle_aria')}
-              className="flex h-9 w-9 shrink-0 cursor-grab items-center justify-center rounded-lg border border-white/10 bg-slate-900/60 text-slate-400 active:cursor-grabbing"
+              className="flex h-9 w-9 shrink-0 cursor-grab items-center justify-center rounded-xl border border-slate-700/80 bg-slate-900/80 text-slate-400 active:cursor-grabbing shadow-[2px_2px_0px_#000000]"
             >
               <GripVertical className="h-4 w-4" aria-hidden />
             </button>
           )}
-          <h3 className="truncate text-sm font-bold text-gray-300">{t('inventory2.rack_name')}</h3>
+          <h3 className="truncate text-xs sm:text-sm font-black uppercase tracking-wider text-slate-200">{t('inventory2.rack_name')}</h3>
         </div>
         <div className="flex shrink-0 items-center gap-2">
         {visualIndex != null && onUnplaceRack && (
@@ -205,7 +205,7 @@ export const ImageRackCard = memo(function ImageRackCard({
             disabled={rackDismantleLoading || rackActionBusy}
             title={hasMachines ? t('inventory.dismantle_rack_tooltip') : t('inventory2.unplace')}
             aria-label={hasMachines ? t('inventory.dismantle_rack_aria') : t('inventory2.unplace_aria')}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-sky-500/20 bg-sky-500/10 text-sky-300 transition-colors hover:bg-sky-500/20 disabled:pointer-events-none disabled:opacity-40"
+            className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl border border-sky-500/30 bg-sky-500/15 text-sky-300 shadow-[2px_2px_0px_#000000] transition-all hover:bg-sky-500/25 active:translate-y-0.5 disabled:pointer-events-none disabled:opacity-40"
           >
             <PackageMinus className="h-4 w-4" strokeWidth={2.5} aria-hidden />
           </button>
@@ -213,9 +213,9 @@ export const ImageRackCard = memo(function ImageRackCard({
         {rackHashRate > 0 && (
           <span
             aria-label={t('inventory.rack_total_power_aria', { power: rackPowerLabel })}
-            className="inline-flex items-center gap-1 rounded-lg border border-primary/25 bg-primary/10 px-2 py-1"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-primary/30 bg-primary/10 px-2.5 py-1 shadow-[2px_2px_0px_#000000]"
           >
-            <Zap className="h-3 w-3 text-primary" aria-hidden />
+            <Zap className="h-3.5 w-3.5 text-primary" aria-hidden />
             <span className="text-[10px] font-black tabular-nums text-primary">{rackPowerLabel}</span>
           </span>
         )}
@@ -226,7 +226,7 @@ export const ImageRackCard = memo(function ImageRackCard({
             disabled={rackDismantleLoading || rackActionBusy}
             title={t('inventory.dismantle_rack_tooltip')}
             aria-label={t('inventory.dismantle_rack_aria')}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-red-500/20 bg-red-500/10 text-red-400 transition-colors hover:bg-red-500/20 disabled:pointer-events-none disabled:opacity-40"
+            className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl border border-red-500/30 bg-red-500/15 text-red-400 shadow-[2px_2px_0px_#000000] transition-all hover:bg-red-500/25 active:translate-y-0.5 disabled:pointer-events-none disabled:opacity-40"
           >
             <X className="h-4 w-4" strokeWidth={2.5} aria-hidden />
           </button>

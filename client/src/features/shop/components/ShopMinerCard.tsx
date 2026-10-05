@@ -18,9 +18,9 @@ export function ShopMinerCard({ miner, shopCurrency, onSelect }: ShopMinerCardPr
   const currency = miner.currency || shopCurrency;
 
   return (
-    <div className="group relative overflow-hidden rounded-[2.5rem] border border-gray-800/50 bg-surface p-8 shadow-xl transition-all duration-500 hover:border-primary/30">
-      <div className="relative z-10 space-y-6">
-        <div className="flex aspect-square items-center justify-center rounded-3xl border border-gray-800 bg-gray-900/50 p-6 transition-transform duration-500 group-hover:scale-105">
+    <div className="group relative overflow-hidden rounded-3xl border-2 border-slate-800 bg-slate-900/60 p-5 sm:p-6 shadow-[4px_4px_0px_#000000] transition-all duration-300 hover:border-slate-700">
+      <div className="relative z-10 space-y-5">
+        <div className="flex aspect-square items-center justify-center rounded-2xl border-2 border-slate-800 bg-slate-950/80 p-4 transition-transform duration-300 group-hover:scale-105 shadow-[2px_2px_0px_#000000]">
           {miner.imageUrl ? (
             <MachineImage
               imageUrl={miner.imageUrl}
@@ -28,31 +28,31 @@ export function ShopMinerCard({ miner, shopCurrency, onSelect }: ShopMinerCardPr
               className="h-full w-full object-contain"
             />
           ) : (
-            <Zap className="h-16 w-16 text-amber-500/30" />
+            <Zap className="h-14 w-14 text-amber-500/30" />
           )}
         </div>
         <div className="space-y-1">
-          <h3 className="truncate text-xl font-black text-white">{miner.name}</h3>
-          <div className="flex items-center gap-2 font-bold text-primary">
+          <h3 className="truncate text-lg sm:text-xl font-black text-white">{miner.name}</h3>
+          <div className="flex items-center gap-1.5 font-bold text-primary">
             <Zap className="h-4 w-4" />
-            <span className="text-sm">{formatHashrate(Number(miner.baseHashRate) || 0)}</span>
+            <span className="text-sm font-black font-mono">{formatHashrate(Number(miner.baseHashRate) || 0)}</span>
           </div>
         </div>
-        <div className="flex items-center justify-between border-t border-gray-800/50 pt-4">
+        <div className="flex items-center justify-between border-t border-slate-800/80 pt-4">
           <div className="flex flex-col">
-            <span className="text-[9px] font-bold uppercase tracking-widest text-gray-600">
+            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
               {t('shop.price')}
             </span>
-            <span className="text-lg font-black italic text-white">
+            <span className="text-lg font-black text-white font-mono">
               {formatPrice(miner.price)}{' '}
-              <span className="text-xs font-bold not-italic uppercase text-gray-500">{currency}</span>
+              <span className="text-xs font-bold uppercase text-slate-400">{currency}</span>
             </span>
           </div>
           <button
             type="button"
             disabled={!isAvailable}
             onClick={() => onSelect(miner)}
-            className="rounded-2xl bg-primary px-6 py-3 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-primary/20 transition-all hover:bg-primary-hover active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-xl bg-primary hover:bg-primary-hover active:translate-x-0.5 active:translate-y-0.5 px-6 py-2.5 text-xs font-black uppercase tracking-wider text-slate-950 shadow-[2px_2px_0px_#000000] transition-all disabled:cursor-not-allowed disabled:opacity-40"
           >
             {t('shop.buy')}
           </button>

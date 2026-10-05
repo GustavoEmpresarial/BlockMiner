@@ -102,10 +102,10 @@ export function WalletDepositTab({
                                                     systemDepositAddress,
                                                 )
                                             }
-                                            className={`py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest border transition-all ${
+                                            className={`py-3.5 px-3 rounded-2xl font-black text-[10px] uppercase tracking-wider border-2 transition-all select-none outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                                                 depositChannel === 'smart_contract'
-                                                    ? 'border-primary bg-primary/15 text-white shadow-lg shadow-primary/10'
-                                                    : 'border-slate-700 text-slate-400 hover:border-slate-600'
+                                                    ? 'border-primary bg-primary/20 text-white shadow-[2px_2px_0px_#000000] translate-y-[-1px]'
+                                                    : 'border-slate-800 bg-slate-900/60 text-slate-400 hover:text-white hover:border-slate-700 active:translate-y-0.5'
                                             } disabled:opacity-40 disabled:cursor-not-allowed`}
                                         >
                                             {t('wallet.deposit_options.smart_contract')}
@@ -116,10 +116,10 @@ export function WalletDepositTab({
                                             onPointerEnter={preloadWalletConnectProvider}
                                             onFocus={preloadWalletConnectProvider}
                                             disabled={!walletConnectConfigured}
-                                            className={`py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest border transition-all flex flex-col items-center justify-center gap-2 px-2 ${
+                                            className={`py-3.5 px-3 rounded-2xl font-black text-[10px] uppercase tracking-wider border-2 transition-all flex flex-col items-center justify-center gap-2 select-none outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                                                 depositChannel === 'walletconnect'
-                                                    ? 'border-primary bg-primary/15 text-white shadow-lg shadow-primary/10'
-                                                    : 'border-slate-700 text-slate-400 hover:border-slate-600'
+                                                    ? 'border-primary bg-primary/20 text-white shadow-[2px_2px_0px_#000000] translate-y-[-1px]'
+                                                    : 'border-slate-800 bg-slate-900/60 text-slate-400 hover:text-white hover:border-slate-700 active:translate-y-0.5'
                                             } disabled:opacity-40 disabled:cursor-not-allowed`}
                                         >
                                             <WalletConnectWordmark
@@ -137,10 +137,10 @@ export function WalletDepositTab({
                                         <button
                                             type="button"
                                             onClick={() => setDepositChannel('polygon_hd')}
-                                            className={`py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest border transition-all ${
+                                            className={`py-3.5 px-3 rounded-2xl font-black text-[10px] uppercase tracking-wider border-2 transition-all select-none outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                                                 depositChannel === 'polygon_hd'
-                                                    ? 'border-primary bg-primary/15 text-white shadow-lg shadow-primary/10'
-                                                    : 'border-slate-700 text-slate-400 hover:border-slate-600'
+                                                    ? 'border-primary bg-primary/20 text-white shadow-[2px_2px_0px_#000000] translate-y-[-1px]'
+                                                    : 'border-slate-800 bg-slate-900/60 text-slate-400 hover:text-white hover:border-slate-700 active:translate-y-0.5'
                                             }`}
                                         >
                                             {t('wallet.polygon_hd.option_label')}
@@ -267,8 +267,8 @@ export function WalletDepositTab({
                                         )
                                     ) : (
                                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 items-stretch">
-                                        <div className="p-5 sm:p-6 rounded-3xl border border-indigo-500/25 bg-indigo-950/20 flex flex-col gap-4 min-h-[280px]">
-                                            <h4 className="text-xs font-black uppercase tracking-widest text-indigo-300">
+                                        <div className="p-5 sm:p-6 rounded-3xl border-2 border-primary/30 bg-slate-900/60 shadow-[4px_4px_0px_#000000] flex flex-col gap-4 min-h-[280px]">
+                                            <h4 className="text-xs font-black uppercase tracking-widest text-primary">
                                                 {t('wallet.web3_deposit.title')}
                                             </h4>
                                             <p className="text-[9px] text-slate-500 font-bold leading-relaxed">
@@ -370,24 +370,24 @@ export function WalletDepositTab({
                                             </p>
                                         </div>
 
-                                        <div className="p-5 sm:p-6 rounded-3xl border border-slate-800/80 bg-slate-950/50 flex flex-col gap-4 min-h-[280px]">
+                                        <div className="p-5 sm:p-6 rounded-3xl border-2 border-slate-800 bg-slate-900/60 shadow-[4px_4px_0px_#000000] flex flex-col gap-4 min-h-[280px]">
                                             <h4 className="text-xs font-black uppercase tracking-widest text-slate-200">
                                                 {t('wallet.express_deposit')}
                                             </h4>
                                             <div className="flex gap-3">
                                                 <AlertCircle className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
-                                                <p className="text-[9px] text-slate-500 leading-relaxed font-bold">
+                                                <p className="text-[10px] text-slate-400 leading-relaxed font-bold">
                                                     {t('wallet.express_mode_note', { n: blockConfirmations })}
                                                 </p>
                                             </div>
                                             <div className="flex gap-3">
                                                 <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
-                                                <p className="text-[9px] text-slate-500 leading-relaxed font-bold">
+                                                <p className="text-[10px] text-slate-400 leading-relaxed font-bold">
                                                     {t('wallet.web3_deposit.express_safety')}
                                                 </p>
                                             </div>
                                             <div className="space-y-2">
-                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">
                                                     {t('wallet.amount_to_add')}
                                                 </label>
                                                 <input
@@ -396,9 +396,9 @@ export function WalletDepositTab({
                                                     value={depositForm.amount}
                                                     onChange={(e) => setDepositForm({ amount: e.target.value })}
                                                     placeholder="0.00"
-                                                    className="w-full bg-slate-900 border border-slate-800 focus:border-indigo-500 rounded-2xl py-4 px-4 text-slate-200 text-sm font-black transition-all outline-none"
+                                                    className="w-full bg-slate-950 border-2 border-slate-700 focus:border-primary rounded-xl py-3.5 px-4 text-slate-100 text-sm font-black transition-all outline-none"
                                                 />
-                                                <p className="text-[9px] text-slate-600 font-bold ml-1">
+                                                <p className="text-[10px] text-slate-500 font-bold ml-1">
                                                     {t('wallet.min_deposit_hint', { min: minDepositPol })}
                                                 </p>
                                             </div>
@@ -409,7 +409,7 @@ export function WalletDepositTab({
                                                     isActionLoading ||
                                                     (!systemDepositAddress && !systemContractAddress)
                                                 }
-                                                className="w-full mt-auto min-h-[44px] py-4 sm:py-5 bg-gradient-to-r from-indigo-600 to-blue-600 hover:scale-[1.01] active:scale-[0.99] text-white rounded-2xl font-black text-[10px] sm:text-xs uppercase tracking-tight sm:tracking-[0.1em] transition-all shadow-xl shadow-indigo-600/20 flex items-center justify-center gap-2 disabled:opacity-50"
+                                                className="w-full mt-auto min-h-[44px] py-3.5 bg-primary hover:bg-primary-hover active:translate-x-0.5 active:translate-y-0.5 text-slate-950 rounded-xl font-black text-[10px] sm:text-xs uppercase tracking-widest transition-all shadow-[2px_2px_0px_#000000] flex items-center justify-center gap-2 disabled:opacity-50"
                                             >
                                                 <Send className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
                                                 {systemContractAddress
