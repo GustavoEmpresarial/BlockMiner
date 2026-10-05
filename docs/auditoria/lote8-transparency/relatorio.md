@@ -58,13 +58,36 @@ Mudancas visuais nos 9 arquivos listados no diff. Nenhuma chave nova em `pt-BR`,
 
 ## Fase 5 — Verificacao
 
-Estado: VERIFICADO para build, suite e typecheck. BLOQUEADO para DOM e geometria de modal.
+Estado: VERIFICADO no localhost. ComingSoon permanece codigo nao alcancavel.
 
-- `cd client && npm run build` — exit 0 (vite v7.3.6, 17.90s).
+Build, suite e typecheck (corrida anterior, commit 400de06):
+
+- `cd client && npm run build` — exit 0.
 - `cd client && npx vitest run` — 128 arquivos, 1087 testes, exit 0.
-- `npx tsc --noEmit -p client/tsconfig.json` — 61 erros, nenhum novo nos arquivos do lote. Os tres erros em `Game2048Page.tsx` (`@game2048/engine` e `FeatureTFunction`) ja estavam na baseline.
-- DOM 320 e 1440, `scrollWidth == clientWidth`, nas 7 rotas: BLOQUEADO. Nao existe conta de teste aprovada. Nao foi usada conta real nem token forjado.
-- Geometria dos modais de alocacao e banners (`parentElement === BODY`, `top` 0, `marginTop` 0): BLOQUEADO pelo mesmo motivo. O codigo continua montando esses overlays com `createPortal(..., document.body)`.
+- typecheck do client — 61 erros, nenhum novo.
+
+Medicao de DOM, so em localhost (`127.0.0.1:5174` + API `127.0.0.1:3000`). Banco `blockminer` em `127.0.0.1:5442`. Nao e `blockminer-db`. Usuario semeado nessa base e login feito pelo formulario `/login` (e-mail e senha). Nenhum cookie ou token foi escrito a mao. O processo de laboratorio subiu com os secrets de Turnstile desligados, entao o widget nao apareceu e o envio foi o POST real de login.
+
+No Chromium, `document.scrollWidth` e `document.clientWidth` nao existem (`null`). A medida e `document.scrollingElement` (`HTML`): `scrollWidth == clientWidth`.
+
+| Rota | 320 | 1440 |
+|---|---|---|
+| /dashboard | 320=320 | 1440=1440 |
+| /youtube | 320=320 | 1440=1440 |
+| /social | 320=320 | 1440=1440 |
+| /creator | 320=320 | 1440=1440 |
+| /games/2048 | 320=320 | 1440=1440 |
+| /games/memory | 320=320 enquanto a sessao estava montada | 1440=1440 enquanto a sessao estava montada |
+
+A sessao `/games/memory` saiu para `/games` em menos de 2s. A casca foi medida antes dessa saida. O handler existente de `game:error` navega para `/games`; isso nao foi alterado neste lote.
+
+Overlays fixed que este lote tocou:
+
+- Modal de alocacao, 320 e 1440: `parentElement === BODY`, `top` 0, `marginTop` 0.
+- Modal de banner (banner local criado so para abrir o overlay, depois apagado), 320 e 1440: `parentElement === BODY`, `top` 0, `marginTop` 0.
+- Menu de moeda do saldo (fixed, portal em `document.body`): `parentElement === BODY`, `marginTop` 0. O `top` medido foi 310px porque o menu abre ancorado no botao, nao e um overlay `inset-0`.
+
+ComingSoon: `ComingSoonPage` so e exportado em `client/src/features/shell/index.ts`. Nenhuma `<Route>` aponta para ele. Codigo nao alcancavel. Nenhuma rota foi inventada para testa-lo.
 
 ## Fase 6 — Carga
 
@@ -82,4 +105,4 @@ Nao ha superficie nova. Kali nao foi executado. Nenhum alvo de producao foi cham
 
 Estado: VERIFICADO quanto ao registro. A publicacao nao foi feita.
 
-Pendencias: medicao de viewport e geometria de modal assim que houver conta de teste aprovada. `ComingSoonPage` nao tem rota em `App.tsx`.
+Pendencias: `ComingSoonPage` continua sem rota. Fases 6 e 7 seguem bloqueadas: nao ha superficie nova de API nem de seguranca.
