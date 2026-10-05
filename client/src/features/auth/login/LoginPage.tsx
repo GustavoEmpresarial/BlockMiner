@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Mail, Lock, AlertCircle, Loader2, ChevronRight, Eye, EyeOff } from 'lucide-react';
+import Card from '../../../shared/components/Card';
 import AuthShell from '../../../shared/components/AuthShell';
 import { useLoginForm } from './lib/useLoginForm';
 import { safeInlineMessage, LOGIN_PASSWORD_MAX_LEN } from '../../../shared/utils/authInputGuards';
@@ -10,7 +11,7 @@ import { SatspaySignInButton } from '../SatspaySignInButton';
 import { GoogleSignInButton } from '../GoogleSignInButton';
 
 const fieldClass =
-  'w-full bg-slate-950/60 border border-white/10 rounded-xl sm:rounded-2xl py-3 sm:py-3.5 pl-11 sm:pl-12 pr-4 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:border-sky-500/30';
+  'w-full bg-slate-950 border-2 border-slate-700 rounded-xl py-3 sm:py-3.5 pl-11 sm:pl-12 pr-4 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-primary shadow-[2px_2px_0px_#000000]';
 
 export default function LoginPage() {
   const { t } = useTranslation();
@@ -45,10 +46,10 @@ export default function LoginPage() {
           </h1>
         </div>
 
-        <div className="bg-slate-900/75 border border-white/10 backdrop-blur-xl rounded-2xl sm:rounded-[1.75rem] p-5 sm:p-8 shadow-2xl shadow-black/40">
+        <Card className="p-6 sm:p-8 space-y-5 shadow-[4px_4px_0px_#000000]">
           {localError && (
             <div
-              className="mb-5 sm:mb-6 p-3.5 sm:p-4 bg-red-500/10 border border-red-500/20 rounded-xl sm:rounded-2xl flex items-start gap-3"
+              className="mb-5 sm:mb-6 p-4 bg-red-950/20 border-2 border-red-500/30 rounded-2xl flex items-start gap-3 shadow-[2px_2px_0px_#000000]"
               role="alert"
             >
               <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
@@ -144,9 +145,9 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-xl sm:rounded-2xl bg-gradient-to-r from-sky-500 to-cyan-400 py-3.5 text-sm font-black text-slate-950 shadow-lg shadow-cyan-500/20 disabled:opacity-60 active:scale-[0.99] transition-transform"
+              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-sky-500 hover:bg-sky-400 active:translate-x-0.5 active:translate-y-0.5 py-3.5 text-xs font-black uppercase tracking-wider text-slate-950 shadow-[2px_2px_0px_#000000] disabled:opacity-50 transition-all outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
             >
-              {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : null}
+              {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin text-slate-950" /> : null}
               {t('auth.login.submit')}
               {!isSubmitting ? <ChevronRight className="h-4 w-4" /> : null}
             </button>
@@ -154,23 +155,23 @@ export default function LoginPage() {
 
           <div className="mt-5 sm:mt-6 space-y-3">
             <div className="relative flex items-center gap-3" aria-hidden>
-              <div className="h-px flex-1 bg-white/10" />
-              <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
+              <div className="h-px flex-1 bg-slate-800" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 font-mono">
                 {t('auth.login.google_or', { defaultValue: 'ou' })}
               </span>
-              <div className="h-px flex-1 bg-white/10" />
+              <div className="h-px flex-1 bg-slate-800" />
             </div>
             <GoogleSignInButton onError={setLocalError} />
             <SatspaySignInButton onError={setLocalError} />
           </div>
 
-          <p className="mt-6 sm:mt-8 text-center text-xs text-gray-500 leading-relaxed">
+          <p className="mt-6 sm:mt-8 text-center text-xs text-slate-400 leading-relaxed font-medium">
             {t('auth.login.no_account')}{' '}
-            <Link to="/register" className="font-bold text-sky-400 hover:text-sky-300">
+            <Link to="/register" className="font-bold text-sky-400 hover:text-sky-300 transition-colors">
               {t('auth.login.register_now')}
             </Link>
           </p>
-        </div>
+        </Card>
       </div>
     </AuthShell>
   );

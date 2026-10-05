@@ -17,6 +17,8 @@ import {
   type LucideProps,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import Card from '../../shared/components/Card';
+import IconBadge from '../../shared/components/IconBadge';
 import { api } from '../../shared/auth/auth.store';
 import { t } from './lib/offerwall.i18n';
 import { openPartnerSafe, fetchOfferwallLinkWithPass } from './lib/offerwallPass';
@@ -152,27 +154,27 @@ function OfferwallHubCard({ provider, onSelect }: { provider: HubProvider; onSel
   const { Icon } = provider;
   const isUnderMaintenance = Boolean(provider.maintenance);
   return (
-    <div className={`rounded-2xl border ${accent.border} bg-white/5 overflow-hidden flex flex-col ${isUnderMaintenance ? 'opacity-80' : ''}`}>
-      <div className={`h-24 ${accent.bg} flex items-center justify-center relative`}>
-        <Icon className={`w-10 h-10 ${accent.icon} opacity-80`} />
+    <Card variant="table" className={`flex flex-col ${isUnderMaintenance ? 'opacity-75' : ''}`}>
+      <div className={`h-24 ${accent.bg} flex items-center justify-center relative border-b-2 border-slate-800`}>
+        <Icon className={`w-10 h-10 ${accent.icon} drop-shadow-md`} />
         {isUnderMaintenance ? (
-          <span className="absolute top-2 right-2 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/25 shadow-sm">
+          <span className="absolute top-2.5 right-2.5 text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/35 shadow-sm">
             {t('offerwall.panel.maintenance_badge')}
           </span>
         ) : null}
       </div>
-      <div className="p-4 flex flex-col gap-3 flex-1">
+      <div className="p-5 flex flex-col gap-3.5 flex-1">
         <div>
-          <p className="text-sm font-bold text-white">{provider.name}</p>
-          <p className="text-xs text-gray-400 mt-1 leading-relaxed">{provider.description}</p>
+          <p className="text-base font-black text-white uppercase tracking-tight">{provider.name}</p>
+          <p className="text-xs text-slate-400 mt-1 leading-relaxed font-medium">{provider.description}</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <span className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full ${accent.badge}`}>
-            <Coins className="w-3 h-3" />
+          <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full ${accent.badge}`}>
+            <Coins className="w-3.5 h-3.5" />
             {provider.rewardLabel}
           </span>
-          <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-white/5 text-gray-400 border border-white/10">
-            <Clock className="w-3 h-3" />
+          <span className="inline-flex items-center gap-1.5 text-xs font-mono font-medium px-2.5 py-1 rounded-full bg-slate-950 text-slate-400 border border-slate-800">
+            <Clock className="w-3.5 h-3.5" />
             {provider.creditTime}
           </span>
         </div>
@@ -180,16 +182,16 @@ function OfferwallHubCard({ provider, onSelect }: { provider: HubProvider; onSel
           type="button"
           onClick={isUnderMaintenance ? undefined : onSelect}
           disabled={isUnderMaintenance}
-          className={`mt-auto w-full py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
+          className={`mt-auto w-full py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all outline-none focus-visible:ring-2 ${
             isUnderMaintenance
-              ? 'bg-slate-800/80 border border-slate-700/60 text-slate-400 cursor-not-allowed opacity-60'
-              : `${accent.bg} border ${accent.border} text-white hover:brightness-125 active:translate-y-0.5`
+              ? 'bg-slate-800/80 border-2 border-slate-700/60 text-slate-500 cursor-not-allowed opacity-60'
+              : 'bg-sky-500 hover:bg-sky-400 active:translate-x-0.5 active:translate-y-0.5 text-slate-950 shadow-[2px_2px_0px_#000000] focus-visible:ring-sky-400'
           }`}
         >
           {isUnderMaintenance ? t('offerwall.panel.maintenance_badge') : t('offerwall.access')}
         </button>
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -325,17 +327,17 @@ export default function OfferwallPage() {
   ];
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
-          <LayoutGrid className="w-5 h-5 text-blue-400" />
-        </div>
-        <div>
-          <h1 className="text-xl font-bold text-white">{t('sidebar.offerwall')}</h1>
-          <p className="text-sm text-gray-400">{t('offerwall.subtitle')}</p>
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b-2 border-slate-800">
+        <div className="flex items-center gap-3">
+          <IconBadge icon={LayoutGrid} variant="primary" size="lg" />
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">{t('sidebar.offerwall')}</h1>
+            <p className="text-slate-400 text-xs sm:text-sm font-medium">{t('offerwall.subtitle')}</p>
+          </div>
         </div>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
         {providers.map((p) => (
           <OfferwallHubCard key={p.id} provider={p} onSelect={() => setPanel(p.id)} />
         ))}
