@@ -42,10 +42,10 @@ export default function ShopPage() {
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 space-y-14 pb-20 duration-700">
       <div className="space-y-2">
-        <h1 className="text-3xl font-black uppercase italic tracking-tight text-white">
+        <h1 className="text-3xl font-black uppercase tracking-tight text-white">
           {t('shop.title')}
         </h1>
-        <p className="max-w-3xl text-sm text-gray-500">{t('shop.subtitle')}</p>
+        <p className="max-w-3xl text-sm text-slate-400 font-medium">{t('shop.subtitle')}</p>
       </div>
 
       {racks.length > 0 && (

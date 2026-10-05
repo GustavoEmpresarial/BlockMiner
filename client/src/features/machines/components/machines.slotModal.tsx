@@ -55,12 +55,12 @@ export const SlotModal = memo(function SlotModal({ slot, groupedInventory, onIns
   const displayNameSafe = machine ? safeDisplayLabel(machine.minerName || descriptor?.name || '') : '';
 
   return createPortal(
-    <div role="dialog" aria-modal="true" className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/80 backdrop-blur-md animate-in fade-in duration-300">
-      <div className="bg-surface border border-gray-800 rounded-[2rem] w-full max-w-[min(100vw-2rem,30rem)] max-h-[calc(100vh-2rem)] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
-        <div className="px-4 pt-6 pb-4 sm:px-8 sm:pt-8 sm:pb-6 flex items-center justify-between border-b border-gray-800/50">
+    <div role="dialog" aria-modal="true" className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/80 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="bg-slate-900 border-2 border-slate-800 rounded-3xl w-full max-w-[min(100vw-2rem,30rem)] max-h-[calc(100vh-2rem)] overflow-hidden shadow-[4px_4px_0px_#000000] animate-in zoom-in-95 duration-200">
+        <div className="px-5 py-4 sm:px-6 sm:py-5 flex items-center justify-between border-b border-slate-800 bg-slate-950/40">
           <div>
-            <h3 className="text-xl font-bold text-white">{machine ? t('inventory.modal.details_title') : t('inventory.modal.install_title')}</h3>
-            <p className="text-xs font-bold text-gray-500 mt-1 uppercase tracking-widest">
+            <h3 className="text-lg sm:text-xl font-black uppercase tracking-wider text-white">{machine ? t('inventory.modal.details_title') : t('inventory.modal.install_title')}</h3>
+            <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-widest">
               {t('inventory.modal.rack_slot', { rack: slot.visualRackNumber, slot: slot.slotInRack + 1 })}
             </p>
           </div>
@@ -71,15 +71,15 @@ export const SlotModal = memo(function SlotModal({ slot, groupedInventory, onIns
             }}
             disabled={busy || actionBusy}
             aria-label={t('common.close')}
-            className="w-10 h-10 rounded-xl bg-gray-800/50 text-gray-400 flex items-center justify-center hover:text-white transition-colors disabled:pointer-events-none disabled:opacity-50"
+            className="w-10 h-10 rounded-xl bg-slate-900/60 border border-slate-700/60 text-slate-400 flex items-center justify-center hover:text-white transition-colors disabled:pointer-events-none disabled:opacity-50 shadow-[2px_2px_0px_#000000]"
           >
-            <Plus className="w-6 h-6 rotate-45" />
+            <Plus className="w-5 h-5 rotate-45" />
           </button>
         </div>
-        <div className="p-4 sm:p-8 max-h-[calc(100vh-18rem)] overflow-y-auto">
+        <div className="p-4 sm:p-6 max-h-[calc(100vh-18rem)] overflow-y-auto">
           {machine ? (
             <div className="space-y-6">
-              <div className="flex flex-col gap-4 rounded-2xl border border-gray-800/50 bg-gray-800/20 p-4 sm:flex-row sm:items-center sm:gap-6">
+              <div className="flex flex-col gap-4 rounded-2xl border-2 border-slate-800 bg-slate-950/60 p-4 shadow-[2px_2px_0px_#000000] sm:flex-row sm:items-center sm:gap-6">
                 <div className={`mx-auto flex shrink-0 items-center justify-center rounded-2xl border border-gray-800/50 bg-gray-900/50 p-3 sm:mx-0 ${modalModelUrl ? 'h-40 w-full sm:h-36 sm:w-36' : 'h-20 w-20'}`}>
                   {modalModelUrl ? (
                     <OfferMinerModel src={modalModelUrl} alt={displayNameSafe} variant="rack" fallback={<MachineImage imageUrl={modalImageUrl} name={displayNameSafe} className="max-h-full max-w-full object-contain" />} />

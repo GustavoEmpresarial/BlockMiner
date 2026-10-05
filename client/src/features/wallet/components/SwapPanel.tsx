@@ -344,10 +344,10 @@ export function SwapPanel({ shibBalance, polBalance, blkBalance, onRefresh }: Sw
       </div>
 
       <div className="space-y-2">
-        <p className="text-[10px] uppercase tracking-widest text-slate-500 font-black">
+        <p className="text-[10px] uppercase tracking-widest text-slate-400 font-black">
           {t('wallet.shib.swap_to_label')}
         </p>
-        <div className="flex w-full items-center gap-3 rounded-2xl border border-cyan-500/30 bg-cyan-500/5 px-4 py-3.5">
+        <div className="flex w-full items-center gap-3 rounded-2xl border-2 border-cyan-500/30 bg-cyan-950/20 px-4 py-3.5 shadow-[2px_2px_0px_#000000]">
           <span className="w-9 h-9 inline-flex items-center justify-center rounded-full bg-cyan-500/20 text-sm font-black text-cyan-300 shrink-0">
             B
           </span>
@@ -363,7 +363,7 @@ export function SwapPanel({ shibBalance, polBalance, blkBalance, onRefresh }: Sw
         </div>
       </div>
 
-      <div className="p-4 bg-slate-900/60 border border-slate-700/50 rounded-2xl">
+      <div className="p-4 bg-slate-900/60 border-2 border-slate-800 rounded-2xl shadow-[2px_2px_0px_#000000]">
         <div className="flex items-center justify-between mb-3">
           <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
             {t('wallet.shib.conversion_rate')}
@@ -426,10 +426,10 @@ export function SwapPanel({ shibBalance, polBalance, blkBalance, onRefresh }: Sw
           value={amount}
           onChange={(ev) => setAmount(ev.target.value)}
           placeholder="0"
-          className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white font-mono text-sm focus:outline-none focus:border-violet-500 transition-colors"
+          className="w-full bg-slate-950 border-2 border-slate-700 rounded-xl px-4 py-3.5 text-white font-mono text-sm focus:outline-none focus:border-violet-500 transition-colors shadow-[2px_2px_0px_#000000]"
           required
         />
-        <p className="text-xs text-slate-500 mt-1.5 font-medium">
+        <p className="text-xs text-slate-400 mt-1.5 font-medium">
           {t('wallet.shib.available_balance')}{' '}
           {fromAsset === 'SHIB' ? (
             <span className="text-orange-300 font-black">{formatShibAmount(shibBalance)} SHIB</span>
@@ -440,7 +440,7 @@ export function SwapPanel({ shibBalance, polBalance, blkBalance, onRefresh }: Sw
       </div>
 
       {estimatedBlk !== null && (
-        <div className="p-4 bg-violet-500/10 border border-violet-500/30 rounded-2xl">
+        <div className="p-4 bg-violet-950/20 border-2 border-violet-500/30 rounded-2xl shadow-[2px_2px_0px_#000000]">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
             {t('wallet.shib.you_receive_estimate')}
           </p>
@@ -454,7 +454,7 @@ export function SwapPanel({ shibBalance, polBalance, blkBalance, onRefresh }: Sw
       <button
         type="submit"
         disabled={submitting || !amount || Number(amount) <= 0}
-        className="w-full py-4 bg-violet-600 text-white font-black uppercase tracking-widest rounded-2xl hover:bg-violet-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+        className="w-full py-4 bg-violet-600 hover:bg-violet-500 active:translate-x-0.5 active:translate-y-0.5 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all shadow-[2px_2px_0px_#000000] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
       >
         {submitting ? (
           <Loader2 className="w-5 h-5 animate-spin" />

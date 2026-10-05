@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 import type { WalletTFunction } from "../lib/wallet.i18n";
 import type { WalletTransactionRow } from "../lib/wallet.types";
+import Card from "../../../shared/components/Card";
+import SectionHeader from "../../../shared/components/SectionHeader";
 
 export function WalletStatusBadge({ status, t }: { status: string; t: WalletTFunction }) {
   const config: Record<string, { color: string; label: string }> = {
@@ -114,11 +116,11 @@ export function WalletBalanceOverview({
     : blkAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   return (
-    <div className="relative group overflow-hidden">
+    <Card glow className="relative group overflow-hidden border-2 border-primary/30 !p-0">
       <div className="absolute inset-0 bg-gradient-to-br from-primary via-blue-600 to-indigo-900 opacity-90" />
       <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10 mix-blend-overlay" />
 
-      <div className="relative p-5 sm:p-10 text-white space-y-5 sm:space-y-8">
+      <div className="relative p-5 sm:p-8 text-white space-y-5 sm:space-y-6">
         <div className="flex justify-between items-start gap-4">
           <div className="min-w-0">
             <p className="text-blue-100/60 font-black uppercase tracking-[0.3em] text-[9px] mb-3">
@@ -211,10 +213,12 @@ export function WalletBalanceOverview({
         </div>
       </div>
 
-      <div className="absolute right-[-20px] bottom-[-20px] opacity-10 rotate-12 group-hover:scale-110 transition-transform duration-1000 pointer-events-none">
-        <WalletIcon className="w-64 h-64" />
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute right-[-20px] bottom-[-20px] opacity-10 rotate-12 group-hover:scale-110 transition-transform duration-1000">
+          <WalletIcon className="w-64 h-64" />
+        </div>
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -228,14 +232,13 @@ export function WalletLedgerPanel({
   t: WalletTFunction;
 }) {
   return (
-    <div className="bg-slate-950/80 border border-slate-800/50 rounded-[2.5rem] p-4 sm:p-8 shadow-2xl flex flex-col max-h-[700px]">
-      <div className="flex items-center justify-between mb-4 sm:mb-8">
-        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] flex items-center gap-2">
-          <Clock className="w-4 h-4 text-primary" />
-          {t("wallet.ledger_title")}
-        </h3>
-        <ChevronRight className="w-4 h-4 text-slate-700" />
-      </div>
+    <Card className="flex flex-col max-h-[700px]">
+      <SectionHeader
+        icon={Clock}
+        iconVariant="primary"
+        title={t("wallet.ledger_title")}
+        action={<ChevronRight className="w-4 h-4 text-slate-500" aria-hidden="true" />}
+      />
 
       <div className="flex-1 overflow-y-auto space-y-6 pr-2 scrollbar-hide">
         {transactions.length === 0 ? (
@@ -329,14 +332,14 @@ export function WalletLedgerPanel({
         )}
       </div>
 
-      <div className="mt-4 pt-4 sm:mt-8 sm:pt-8 border-t border-slate-900">
+      <div className="mt-4 pt-4 sm:mt-8 sm:pt-8 border-t border-slate-800/80">
         <div className="bg-primary/5 rounded-2xl p-4 border border-primary/10 flex items-center gap-3">
-          <ShieldCheck className="w-5 h-5 text-primary" />
-          <p className="text-[9px] text-slate-500 font-bold uppercase tracking-tight leading-relaxed">
+          <ShieldCheck className="w-5 h-5 text-primary shrink-0" />
+          <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight leading-relaxed">
             All transactions are secured by Polygon Smart Contracts and verified on-chain.
           </p>
         </div>
       </div>
-    </div>
+    </Card>
   );
 }
