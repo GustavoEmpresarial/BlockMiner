@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
+import Card from '../../shared/components/Card';
+import IconBadge from '../../shared/components/IconBadge';
 import {
   ArrowDownUp,
   Calendar,
@@ -270,7 +273,7 @@ function EventCard({ event, onOpen }: { event: BurnEvent; onOpen: () => void }) 
     event.stockTotal == null
       ? t('burnEvents.stock_unlimited')
       : t('burnEvents.stock_left', {
-          count: Math.max(event.stockTotal - event.stockClaimed, 0),
+          count: Math.max((event.stockTotal ?? 0) - (event.stockClaimed ?? 0), 0),
         });
   const img = resolveAssetUrl(event.rewardMiner.imageUrl || event.imageUrl);
   const range = formatDateRange(event.startsAt, event.endsAt, i18n.language || 'pt-BR');
@@ -281,11 +284,17 @@ function EventCard({ event, onOpen }: { event: BurnEvent; onOpen: () => void }) 
       : null;
 
   return (
-    <button
+    <Card
+      as="button"
       type="button"
       onClick={onOpen}
       disabled={!canOpen}
-      className={`group relative w-full overflow-hidden rounded-[2rem] border p-5 text-left shadow-xl transition-all duration-300 sm:p-6 ${ canOpen ? 'border-orange-500/25 bg-slate-950/80 hover:bg-slate-900' : 'cursor-not-allowed border-white/10 bg-slate-950/50 opacity-80' }`}
+      overflowHidden
+      className={`group relative w-full text-left transition-all p-5 sm:p-6 active:translate-x-0.5 active:translate-y-0.5 outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${
+        canOpen
+          ? 'hover:border-slate-700 cursor-pointer'
+          : 'cursor-not-allowed opacity-60'
+      }`}
     >
       <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-orange-500/15 blur-3xl transition-opacity duration-500" />
       <div className="pointer-events-none absolute -bottom-20 -left-10 h-40 w-40 rounded-full bg-amber-500/10 blur-3xl" />
@@ -351,7 +360,7 @@ function EventCard({ event, onOpen }: { event: BurnEvent; onOpen: () => void }) 
             {burnMinutes != null ? (
               <span className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-slate-900/70 px-2.5 py-1.5 text-[10px] font-bold text-slate-300">
                 <Timer className="h-3 w-3 text-slate-400" />
-                {t('burnEvents.burn_duration', { minutes: burnMinutes })}
+                {t('burnEvents.burn_duration', { minutes: burnMinutes ?? '—' })}
               </span>
             ) : null}
           </div>
@@ -365,7 +374,7 @@ function EventCard({ event, onOpen }: { event: BurnEvent; onOpen: () => void }) 
           ) : status === 'limit' ? (
             <p className="flex items-center gap-1.5 text-[11px] font-bold text-amber-300/90">
               <Lock className="h-3.5 w-3.5" />
-              {t('burnEvents.limit_reached', { limit: event.claimLimitPerUser })}
+              {t('burnEvents.limit_reached', { limit: event.claimLimitPerUser ?? '—' })}
             </p>
           ) : status === 'upcoming' && event.startsAt ? (
             <p className="text-[11px] font-bold text-sky-300">
@@ -385,7 +394,7 @@ function EventCard({ event, onOpen }: { event: BurnEvent; onOpen: () => void }) 
           )}
         </div>
       </div>
-    </button>
+    </Card>
   );
 }
 
@@ -557,7 +566,7 @@ function EventDetail({
     event.stockTotal == null
       ? t('burnEvents.stock_unlimited')
       : t('burnEvents.stock_left', {
-          count: Math.max(event.stockTotal - event.stockClaimed, 0),
+          count: Math.max((event.stockTotal ?? 0) - (event.stockClaimed ?? 0), 0),
         });
 
   const burnRemainingMs = burning ? Math.max(0, burning.completesAtMs - burnNowMs) : 0;
@@ -654,12 +663,12 @@ function EventDetail({
       <button
         type="button"
         onClick={onClose}
-        className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-slate-900/60 px-3 py-2 text-xs font-bold text-slate-300 transition-colors hover:border-white/20 hover:text-white"
+        className="inline-flex items-center gap-2 rounded-xl border-2 border-slate-700 bg-slate-900 px-4 py-2 text-xs font-black uppercase tracking-wider text-slate-300 transition-all hover:border-slate-600 hover:text-white active:translate-x-0.5 active:translate-y-0.5 shadow-[2px_2px_0px_#000000]"
       >
         <ChevronLeft className="h-4 w-4" /> {t('burnEvents.back')}
       </button>
 
-      <div className="relative overflow-hidden rounded-[2rem] border border-orange-500/25 bg-gradient-to-br from-orange-900/30 via-slate-900 to-slate-900 p-5 sm:p-6">
+      <Card overflowHidden className="relative p-5 sm:p-6 border-orange-500/30">
         <div className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-orange-500/20 blur-3xl" />
         <div className="relative z-10 flex flex-col items-center gap-5 text-center sm:items-start sm:text-left">
           <BurnPrizeImage
@@ -672,63 +681,63 @@ function EventDetail({
             <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
               <StatusBadge status={getEventStatus(event)} />
               {range ? (
-                <span className="inline-flex items-center gap-1.5 text-[11px] text-slate-400">
+                <span className="inline-flex items-center gap-1.5 text-[11px] text-slate-400 font-mono">
                   <Calendar className="h-3.5 w-3.5" />
                   {range} UTC
                 </span>
               ) : null}
             </div>
-            <p className="font-mono text-[10px] uppercase tracking-widest text-orange-400">
+            <p className="font-mono text-[10px] uppercase tracking-widest text-orange-400 font-bold">
               {t('burnEvents.prize')}
             </p>
             <h2 className="text-2xl font-black tracking-tight text-white">{event.rewardMiner.name}</h2>
-            <p className="text-sm font-bold text-emerald-400">
+            <p className="text-sm font-black text-emerald-400 font-mono">
               {formatHashRate(event.rewardMiner.baseHashRate)}
             </p>
             <p className="text-sm font-black text-white/90">{event.title}</p>
-            {event.description ? <p className="text-xs text-slate-400">{event.description}</p> : null}
+            {event.description ? <p className="text-xs text-slate-400 font-medium">{event.description}</p> : null}
           </div>
         </div>
 
         <div className="relative z-10 mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3">
-          <div className="rounded-2xl border border-white/10 bg-black/25 px-3 py-2.5">
-            <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">
+          <div className="rounded-2xl border-2 border-slate-800 bg-slate-950/80 px-3.5 py-2.5 shadow-[1px_1px_0px_#000000]">
+            <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">
               {t('burnEvents.required_label')}
             </p>
-            <p className="mt-1 text-sm font-black text-orange-300">
+            <p className="mt-1 text-sm font-black text-orange-300 font-mono">
               {formatHashRate(event.requiredHashRate)}
             </p>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-black/25 px-3 py-2.5">
-            <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">
+          <div className="rounded-2xl border-2 border-slate-800 bg-slate-950/80 px-3.5 py-2.5 shadow-[1px_1px_0px_#000000]">
+            <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">
               {t('burnEvents.stock_label')}
             </p>
-            <p className="mt-1 text-sm font-black text-white">{stockLabel}</p>
+            <p className="mt-1 text-sm font-black text-white font-mono">{stockLabel}</p>
           </div>
-          <div className="col-span-2 rounded-2xl border border-white/10 bg-black/25 px-3 py-2.5 sm:col-span-1">
-            <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">
+          <div className="col-span-2 rounded-2xl border-2 border-slate-800 bg-slate-950/80 px-3.5 py-2.5 sm:col-span-1 shadow-[1px_1px_0px_#000000]">
+            <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">
               {t('burnEvents.your_claims')}
             </p>
-            <p className="mt-1 text-sm font-black text-white">
+            <p className="mt-1 text-sm font-black text-white font-mono">
               {event.userClaimsCount} / {event.claimLimitPerUser}
             </p>
           </div>
         </div>
-      </div>
+      </Card>
 
       {burning ? (
-        <div className="rounded-[1.75rem] border border-orange-500/25 bg-gradient-to-br from-orange-950/40 via-slate-950 to-slate-950 p-4 sm:p-5">
+        <Card className="p-5 border-amber-500/30 bg-amber-950/20 shadow-[2px_2px_0px_#000000]">
           <div className="flex items-start gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-orange-500/20">
-              <Flame className={`h-5 w-5 text-orange-400 ${burnReady ? '' : 'animate-pulse'}`} />
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-500/20 border-2 border-amber-500/30 shadow-[1px_1px_0px_#000000]">
+              <Flame className={`h-5 w-5 text-amber-400 ${burnReady ? '' : 'animate-pulse'}`} />
             </div>
             <div className="min-w-0 flex-1 space-y-2">
-              <p className="text-sm font-black text-white">
+              <p className="text-sm font-black text-white uppercase tracking-tight">
                 {burnReady
                   ? t('burnEvents.ready_title', { defaultValue: 'Queima pronta' })
                   : t('burnEvents.burning_title')}
               </p>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-400 font-medium">
                 {burnReady
                   ? t('burnEvents.ready_body', {
                       defaultValue:
@@ -742,7 +751,7 @@ function EventDetail({
               {!burnReady ? (
                 <div className="space-y-2 pt-1">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-slate-400">{t('burnEvents.burning_wait')}</span>
+                    <span className="text-slate-400 font-medium">{t('burnEvents.burning_wait')}</span>
                     <span className="font-mono font-black text-orange-300">
                       {formatDurationClock(burnRemainingMs / 1000)}
                     </span>
@@ -759,7 +768,7 @@ function EventDetail({
                   type="button"
                   disabled={submitting}
                   onClick={() => void finishClaim(burning.sessionId)}
-                  className="mt-1 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-400 py-3 text-sm font-black text-white shadow-lg shadow-emerald-500/20 transition-all hover:brightness-110 disabled:opacity-50"
+                  className="mt-1 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 active:translate-x-0.5 active:translate-y-0.5 py-3.5 text-xs font-black uppercase tracking-wider text-slate-950 shadow-[2px_2px_0px_#000000] transition-all disabled:opacity-50"
                 >
                   {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Gift className="h-4 w-4" />}
                   {t('burnEvents.collect_reward', { defaultValue: 'Coletar prêmio na caixa de entrada' })}
@@ -767,35 +776,35 @@ function EventDetail({
               )}
             </div>
           </div>
-        </div>
+        </Card>
       ) : null}
 
       {!burning ? (
-      <div className="sticky top-0 z-10 space-y-3 rounded-[1.75rem] border border-orange-500/20 bg-slate-950/95 p-4 shadow-lg shadow-black/40 backdrop-blur-md">
+      <Card className="sticky top-0 z-10 space-y-3.5 p-4 sm:p-5 shadow-[4px_4px_0px_#000000] backdrop-blur-md">
         <div className="flex items-center justify-between gap-3">
           <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
             {t('burnEvents.progress')}
           </span>
           <span
-            className={`text-xs font-black ${
+            className={`text-xs font-black font-mono ${
               totalSelectedHashRate >= event.requiredHashRate ? 'text-emerald-400' : 'text-orange-300'
             }`}
           >
             {formatHashRate(totalSelectedHashRate)} / {formatHashRate(event.requiredHashRate)}
           </span>
         </div>
-        <div className="h-2.5 overflow-hidden rounded-full bg-slate-800">
+        <div className="h-2.5 overflow-hidden rounded-full bg-slate-950 border border-slate-800">
           <div
             className={`h-full rounded-full transition-all duration-300 ${
               totalSelectedHashRate >= event.requiredHashRate
-                ? 'bg-gradient-to-r from-emerald-500 to-emerald-400'
-                : 'bg-gradient-to-r from-orange-500 to-amber-400'
+                ? 'bg-emerald-500'
+                : 'bg-amber-500'
             }`}
             style={{ width: `${progress}%` }}
           />
         </div>
 
-        <div className="border-t border-white/5 pt-3">
+        <div className="border-t-2 border-slate-800 pt-3">
           <BurnFeeSelector
             selectedCurrency={feeCurrency}
             onSelectCurrency={setFeeCurrency}
@@ -809,12 +818,12 @@ function EventDetail({
           type="button"
           onClick={() => setConfirming(true)}
           disabled={!canClaim || submitting || sessionLoading}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-400 py-3.5 text-sm font-black text-white shadow-lg shadow-orange-500/20 transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 hover:bg-amber-400 active:translate-x-0.5 active:translate-y-0.5 py-3.5 text-xs font-black uppercase tracking-wider text-slate-950 shadow-[2px_2px_0px_#000000] transition-all disabled:cursor-not-allowed disabled:opacity-40"
         >
           <Flame className="h-4 w-4" />
           {t('burnEvents.burn_and_claim', { count: selected.size })}
         </button>
-      </div>
+      </Card>
       ) : null}
 
       {!burning ? (
@@ -900,90 +909,96 @@ function EventDetail({
       </div>
       ) : null}
 
-      {confirming && !burning ? (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
-          onClick={() => !submitting && setConfirming(false)}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-lg space-y-4 rounded-[2rem] border border-red-500/30 bg-slate-950 p-6 shadow-2xl max-h-[90vh] overflow-y-auto"
-          >
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-500/20">
-                <Flame className="h-6 w-6 text-red-400" />
-              </div>
-              <div>
-                <p className="text-lg font-black text-white">{t('burnEvents.confirm_title')}</p>
-                <p className="text-xs text-slate-400">{t('burnEvents.confirm_body')}</p>
-              </div>
-            </div>
+      {confirming && !burning && typeof document !== 'undefined'
+        ? createPortal(
+            <div
+              className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm animate-in fade-in duration-200"
+              onClick={() => !submitting && setConfirming(false)}
+            >
+              <div
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="burn-confirm-title"
+                onClick={(e) => e.stopPropagation()}
+                className="w-full max-w-lg space-y-4 rounded-3xl border-2 border-slate-800 bg-slate-900 p-6 sm:p-7 shadow-[4px_4px_0px_#000000] max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200"
+              >
+                <div className="flex items-center gap-3 pb-2 border-b-2 border-slate-800">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-red-500/20 border-2 border-red-500/40 shadow-[1px_1px_0px_#000000]">
+                    <Flame className="h-6 w-6 text-red-400" />
+                  </div>
+                  <div>
+                    <h3 id="burn-confirm-title" className="text-lg font-black uppercase tracking-tight text-white">{t('burnEvents.confirm_title')}</h3>
+                    <p className="text-xs text-slate-400 font-medium">{t('burnEvents.confirm_body')}</p>
+                  </div>
+                </div>
 
-            {/* Selector de taxa com exibição de saldos */}
-            <div className="rounded-2xl border border-white/10 bg-slate-900/60 p-3.5">
-              <BurnFeeSelector
-                selectedCurrency={feeCurrency}
-                onSelectCurrency={setFeeCurrency}
-                balances={balances}
-                loadingBalances={loadingBalances}
-                disabled={submitting}
-              />
-            </div>
+                {/* Selector de taxa com exibição de saldos */}
+                <div className="rounded-2xl border-2 border-slate-800 bg-slate-950/60 p-3.5 shadow-[2px_2px_0px_#000000]">
+                  <BurnFeeSelector
+                    selectedCurrency={feeCurrency}
+                    onSelectCurrency={setFeeCurrency}
+                    balances={balances}
+                    loadingBalances={loadingBalances}
+                    disabled={submitting}
+                  />
+                </div>
 
-            {/* Máquinas selecionadas consolidadas por grupo */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between text-xs text-slate-400">
-                <span>Máquinas a queimar ({selected.size} total):</span>
-                <span className="font-bold text-orange-400">
-                  {formatHashRate(totalSelectedHashRate)}
-                </span>
-              </div>
-              <div className="max-h-36 space-y-1.5 overflow-y-auto rounded-2xl border border-white/5 bg-slate-900/80 p-3">
-                {selectedGroups.map((g) => (
-                  <div key={g.groupKey} className="flex items-center justify-between text-xs">
-                    <span className="mr-2 truncate text-slate-300">
-                      <strong className="text-white">{g.selectedCount}x</strong> {g.minerName}{' '}
-                      <span className="text-[10px] text-slate-500">
-                        ({burnLocationLabel(g.location, t)})
-                      </span>
-                    </span>
-                    <span className="shrink-0 font-mono font-bold text-slate-400">
-                      {formatHashRate(g.selectedCount * g.hashRate)}
+                {/* Máquinas selecionadas consolidadas por grupo */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs text-slate-400">
+                    <span className="font-bold">Máquinas a queimar ({selected.size} total):</span>
+                    <span className="font-bold text-orange-400 font-mono">
+                      {formatHashRate(totalSelectedHashRate)}
                     </span>
                   </div>
-                ))}
+                  <div className="max-h-36 space-y-1.5 overflow-y-auto rounded-2xl border-2 border-slate-800 bg-slate-950/60 p-3 shadow-[1px_1px_0px_#000000]">
+                    {selectedGroups.map((g) => (
+                      <div key={g.groupKey} className="flex items-center justify-between text-xs">
+                        <span className="mr-2 truncate text-slate-300">
+                          <strong className="text-white">{g.selectedCount}x</strong> {g.minerName}{' '}
+                          <span className="text-[10px] text-slate-400 font-medium">
+                            ({burnLocationLabel(g.location, t)})
+                          </span>
+                        </span>
+                        <span className="shrink-0 font-mono font-bold text-slate-400">
+                          {formatHashRate(g.selectedCount * g.hashRate)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Recompensa a receber */}
+                <div className="rounded-2xl border-2 border-emerald-500/30 bg-emerald-950/20 p-3.5 text-xs shadow-[1px_1px_0px_#000000]">
+                  <p className="font-black text-emerald-400 uppercase tracking-wider">{t('burnEvents.you_receive')}</p>
+                  <p className="mt-1 font-black text-white text-sm">{event.rewardMiner.name}</p>
+                  <p className="mt-0.5 text-slate-400 font-medium">{t('burnEvents.goes_to_inbox')}</p>
+                </div>
+
+                <div className="flex gap-2.5 pt-2">
+                  <button
+                    type="button"
+                    disabled={submitting}
+                    onClick={() => setConfirming(false)}
+                    className="flex-1 rounded-xl border-2 border-slate-700 bg-slate-900 py-3 text-xs font-black uppercase tracking-wider text-slate-300 transition-all hover:text-white hover:border-slate-600 shadow-[2px_2px_0px_#000000] active:translate-x-0.5 active:translate-y-0.5 outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  >
+                    {t('burnEvents.cancel')}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={submitting || !isFeeSufficient}
+                    onClick={() => void submit()}
+                    className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-red-600 py-3 text-xs font-black uppercase tracking-wider text-white shadow-[2px_2px_0px_#000000] transition-all hover:bg-red-700 active:translate-x-0.5 active:translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-40 outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+                  >
+                    {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Flame className="h-4 w-4" />}
+                    {t('burnEvents.confirm_burn')}
+                  </button>
+                </div>
               </div>
-            </div>
-
-            {/* Recompensa a receber */}
-            <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-3.5 text-xs">
-              <p className="font-bold text-emerald-400">{t('burnEvents.you_receive')}</p>
-              <p className="mt-1 font-black text-white text-sm">{event.rewardMiner.name}</p>
-              <p className="mt-0.5 text-slate-400">{t('burnEvents.goes_to_inbox')}</p>
-            </div>
-
-            <div className="flex gap-2 pt-2">
-              <button
-                type="button"
-                disabled={submitting}
-                onClick={() => setConfirming(false)}
-                className="flex-1 rounded-2xl border border-white/10 py-3 text-sm font-bold text-slate-300 transition-colors hover:bg-white/5"
-              >
-                {t('burnEvents.cancel')}
-              </button>
-              <button
-                type="button"
-                disabled={submitting || !isFeeSufficient}
-                onClick={() => void submit()}
-                className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-red-500 py-3 text-sm font-black text-white transition-colors hover:bg-red-400 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Flame className="h-4 w-4" />}
-                {t('burnEvents.confirm_burn')}
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }
@@ -1035,7 +1050,7 @@ export default function BurnEventsPage() {
 
   if (selected) {
     return (
-      <div className="p-4 sm:p-6">
+      <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
         <EventDetail
           event={selected}
           onClose={() => setSelected(null)}
@@ -1049,49 +1064,48 @@ export default function BurnEventsPage() {
   }
 
   return (
-    <div className="space-y-6 p-4 pb-20 sm:p-6">
-      <div className="relative overflow-hidden rounded-[2rem] border border-orange-500/20 bg-gradient-to-br from-orange-900/30 via-slate-900 to-slate-900 p-5 sm:p-6">
-        <div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-orange-500/20 blur-3xl" />
-        <div className="relative z-10 flex items-start gap-4">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-orange-500/20 bg-orange-500/15 shadow-lg shadow-orange-500/20">
-            <Flame className="h-6 w-6 text-orange-400" />
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b-2 border-slate-800">
+        <div className="flex items-center gap-3">
+          <IconBadge icon={Flame} variant="amber" size="lg" />
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">{t('burnEvents.title')}</h1>
+            <p className="text-slate-400 text-xs sm:text-sm font-medium">{t('burnEvents.subtitle')}</p>
           </div>
-          <div className="min-w-0 flex-1">
-            <h1 className="text-2xl font-black tracking-tight text-white">{t('burnEvents.title')}</h1>
-            <p className="mt-1 text-sm text-slate-400">{t('burnEvents.subtitle')}</p>
-          </div>
-          <button
-            type="button"
-            onClick={() => void load()}
-            className="rounded-xl border border-white/10 bg-slate-900/60 p-2.5 text-slate-400 transition-colors hover:border-white/20 hover:text-white"
-          >
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          </button>
         </div>
+        <button
+          type="button"
+          onClick={() => void load()}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 border-2 border-slate-800 text-slate-300 text-xs font-black uppercase tracking-wider hover:border-slate-700 hover:text-white active:translate-x-0.5 active:translate-y-0.5 shadow-[2px_2px_0px_#000000] transition-all outline-none focus-visible:ring-2 focus-visible:ring-primary w-fit"
+        >
+          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          {t('common.refresh', { defaultValue: 'Atualizar' })}
+        </button>
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-16">
-          <Loader2 className="h-6 w-6 animate-spin text-slate-500" />
-        </div>
+        <Card className="h-[40vh] flex flex-col items-center justify-center gap-4 text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-slate-400 font-extrabold uppercase tracking-widest text-xs">{t('common.loading')}</p>
+        </Card>
       ) : loadFailed ? (
-        <div className="flex flex-col items-center justify-center rounded-[2rem] border border-red-500/20 bg-red-950/20 py-16 text-center text-slate-400 gap-4 px-6">
-          <p className="text-sm font-bold text-red-300/90">{t('burnEvents.load_error')}</p>
+        <Card className="flex flex-col items-center justify-center py-16 text-center text-slate-400 gap-4 px-6 border-red-500/30 bg-red-950/20 shadow-[2px_2px_0px_#000000]">
+          <p className="text-sm font-black text-red-400 uppercase tracking-tight">{t('burnEvents.load_error')}</p>
           <button
             type="button"
             onClick={() => void load()}
-            className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-slate-900/60 px-4 py-2 text-xs font-bold text-white hover:border-white/20"
+            className="inline-flex items-center gap-2 rounded-xl border-2 border-slate-700 bg-slate-900 px-5 py-2.5 text-xs font-black uppercase tracking-wider text-white hover:border-slate-600 active:translate-x-0.5 active:translate-y-0.5 shadow-[2px_2px_0px_#000000] transition-all"
           >
             <RefreshCw className="h-3.5 w-3.5" />
             {t('common.retry')}
           </button>
-        </div>
+        </Card>
       ) : events.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-[2rem] border border-dashed border-white/10 bg-slate-950/40 py-16 text-center text-slate-500">
-          <Flame className="mb-3 h-12 w-12 opacity-30" />
-          <p className="text-sm font-bold">{t('burnEvents.empty')}</p>
-          <p className="mt-1 text-xs">{t('burnEvents.empty_hint')}</p>
-        </div>
+        <Card className="flex flex-col items-center justify-center py-16 text-center text-slate-400 gap-2">
+          <Flame className="mb-2 h-12 w-12 text-slate-600 opacity-40" />
+          <p className="text-sm font-black uppercase tracking-tight text-white">{t('burnEvents.empty')}</p>
+          <p className="text-xs text-slate-400 font-medium">{t('burnEvents.empty_hint')}</p>
+        </Card>
       ) : (
         <div className="space-y-4">
           {events.map((e) => (

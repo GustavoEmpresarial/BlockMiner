@@ -14,6 +14,8 @@ import {
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { isAxiosError } from 'axios';
+import Card from '../../../shared/components/Card';
+import SectionHeader from '../../../shared/components/SectionHeader';
 import { api } from '../../../shared/auth/auth.store';
 import { ALLOWED_PHOTO_TYPES, MAX_PHOTO_BYTES } from '../creator.constants';
 import { uploadChannelPhoto } from '../creator.upload';
@@ -132,35 +134,34 @@ export function CredentialRequestForm({
   };
 
   return (
-    <div className="rounded-2xl border border-red-500/20 bg-red-950/10 p-5 space-y-4">
-      <div className="flex items-center gap-2">
-        <Star className="w-4 h-4 text-red-400" />
-        <p className="text-sm font-black text-white">
-          {isRejected ? t('ranking.social.resubmit_title') : t('ranking.social.request_title')}
-        </p>
-      </div>
-      <p className="text-xs text-gray-500">{t('ranking.social.request_hint')}</p>
+    <Card className="p-6 sm:p-7 space-y-4">
+      <SectionHeader
+        icon={Star}
+        iconVariant="red"
+        title={isRejected ? t('ranking.social.resubmit_title') : t('ranking.social.request_title')}
+      />
+      <p className="text-xs text-slate-400 font-medium">{t('ranking.social.request_hint')}</p>
 
       {isRejected && profile?.credentialRejectNote ? (
-        <div className="flex items-start gap-2 rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-3 text-sm text-red-400">
+        <div className="flex items-start gap-2.5 rounded-2xl bg-red-950/20 border-2 border-red-500/30 p-4 text-sm text-red-400 shadow-[2px_2px_0px_#000000]">
           <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
           <div>
-            <p className="font-black text-xs mb-0.5">{t('ranking.social.rejected_before')}</p>
-            <p className="text-xs">{profile.credentialRejectNote}</p>
+            <p className="font-black text-xs uppercase tracking-wider mb-0.5">{t('ranking.social.rejected_before')}</p>
+            <p className="text-xs font-medium">{profile.credentialRejectNote}</p>
           </div>
         </div>
       ) : null}
 
       {formError ? (
-        <div className="flex items-center gap-2 rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-3 text-sm text-red-400">
+        <div className="flex items-center gap-2.5 rounded-2xl bg-red-950/20 border-2 border-red-500/30 p-4 text-sm text-red-400 shadow-[2px_2px_0px_#000000]">
           <AlertTriangle className="w-4 h-4 shrink-0" />
-          {formError}
+          <span className="font-medium text-xs">{formError}</span>
         </div>
       ) : null}
 
-      <form onSubmit={(e) => void submit(e)} className="space-y-3">
+      <form onSubmit={(e) => void submit(e)} className="space-y-4">
         <div>
-          <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-1.5">
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">
             {t('ranking.social.channel_name')}
           </label>
           <input
@@ -170,12 +171,12 @@ export function CredentialRequestForm({
             placeholder={t('ranking.social.channel_name_placeholder')}
             required
             maxLength={100}
-            className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-red-500/50"
+            className="w-full bg-slate-950 border-2 border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-primary shadow-[2px_2px_0px_#000000]"
           />
         </div>
 
         <div>
-          <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-1.5">
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">
             {t('ranking.social.channel_url')}
           </label>
           <input
@@ -183,12 +184,12 @@ export function CredentialRequestForm({
             value={channelUrl}
             onChange={(ev) => setChannelUrl(ev.target.value)}
             placeholder={t('ranking.social.channel_url_placeholder')}
-            className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-red-500/50"
+            className="w-full bg-slate-950 border-2 border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-primary shadow-[2px_2px_0px_#000000]"
           />
         </div>
 
         <div>
-          <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-1.5">
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">
             {t('ranking.social.channel_photo')}
           </label>
           <div className="flex items-center gap-3">
@@ -196,11 +197,11 @@ export function CredentialRequestForm({
               <img
                 src={previewUrl}
                 alt=""
-                className="w-12 h-12 rounded-full object-cover border border-white/10 shrink-0"
+                className="w-12 h-12 rounded-xl object-cover border-2 border-slate-800 shadow-[2px_2px_0px_#000000] shrink-0"
               />
             ) : (
-              <div className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
-                <Youtube className="w-5 h-5 text-gray-600" />
+              <div className="w-12 h-12 rounded-xl bg-slate-950 border-2 border-slate-800 shadow-[2px_2px_0px_#000000] flex items-center justify-center shrink-0">
+                <Youtube className="w-5 h-5 text-slate-600" />
               </div>
             )}
             <div className="flex-1">
@@ -208,12 +209,12 @@ export function CredentialRequestForm({
                 type="button"
                 onClick={() => fileRef.current?.click()}
                 disabled={uploadingPhoto}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-bold text-gray-300 hover:text-white hover:border-white/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 border-2 border-slate-700 text-xs font-black uppercase tracking-wider text-slate-300 hover:text-white hover:border-slate-600 active:translate-x-0.5 active:translate-y-0.5 shadow-[2px_2px_0px_#000000] transition-all disabled:opacity-50 disabled:cursor-not-allowed outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 {uploadingPhoto ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
                 {uploadingPhoto ? t('ranking.social.uploading_photo') : t('ranking.social.choose_photo')}
               </button>
-              <p className="text-[10px] text-gray-600 mt-1">{t('ranking.social.photo_hint')}</p>
+              <p className="text-[10px] text-slate-500 font-medium mt-1">{t('ranking.social.photo_hint')}</p>
             </div>
           </div>
           <input
@@ -226,7 +227,7 @@ export function CredentialRequestForm({
         </div>
 
         <div>
-          <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-1.5">
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">
             {t('ranking.social.channel_about_optional')}
           </label>
           <textarea
@@ -235,20 +236,20 @@ export function CredentialRequestForm({
             placeholder={t('ranking.social.channel_about_placeholder')}
             rows={2}
             maxLength={500}
-            className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500/50 resize-none min-h-[80px]"
+            className="w-full bg-slate-950 border-2 border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-primary shadow-[2px_2px_0px_#000000] resize-none min-h-[80px]"
           />
         </div>
 
         <button
           type="submit"
           disabled={busy || uploadingPhoto || !channelName.trim()}
-          className="flex items-center gap-2 px-5 py-2.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-sm font-black text-white transition-colors"
+          className="flex items-center justify-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-700 active:translate-x-0.5 active:translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-xs font-black uppercase tracking-wider text-white shadow-[2px_2px_0px_#000000] transition-all outline-none focus-visible:ring-2 focus-visible:ring-red-500"
         >
           {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
           {isRejected ? t('ranking.social.resubmit_request') : t('ranking.social.submit_request')}
         </button>
       </form>
-    </div>
+    </Card>
   );
 }
 
@@ -345,7 +346,7 @@ export function EditProfileForm({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-xs font-bold text-gray-300 hover:text-white hover:border-white/20 transition-colors"
+        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 border-2 border-slate-700 text-xs font-black uppercase tracking-wider text-slate-300 hover:text-white hover:border-slate-600 active:translate-x-0.5 active:translate-y-0.5 shadow-[2px_2px_0px_#000000] transition-all outline-none focus-visible:ring-2 focus-visible:ring-primary"
       >
         <Pencil className="w-3.5 h-3.5" />
         {t('ranking.social.edit_profile_title')}
@@ -354,12 +355,9 @@ export function EditProfileForm({
   }
 
   return (
-    <div className="rounded-2xl border border-violet-500/20 bg-violet-950/10 p-5 space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Pencil className="w-4 h-4 text-violet-400" />
-          <p className="text-sm font-black text-white">{t('ranking.social.edit_profile_title')}</p>
-        </div>
+    <Card className="p-6 sm:p-7 space-y-4">
+      <div className="flex items-center justify-between pb-2 border-b-2 border-slate-800">
+        <SectionHeader icon={Pencil} iconVariant="violet" title={t('ranking.social.edit_profile_title')} />
         <button
           type="button"
           onClick={() => {
@@ -367,31 +365,31 @@ export function EditProfileForm({
             setFormError(null);
             setSavedFlash(false);
           }}
-          className="text-[10px] text-gray-500 hover:text-gray-300 font-bold"
+          className="text-xs text-slate-400 hover:text-white font-black uppercase tracking-wider transition-colors"
         >
           {t('common.close')}
         </button>
       </div>
 
-      <p className="text-xs text-gray-500">{t('ranking.social.edit_hint')}</p>
+      <p className="text-xs text-slate-400 font-medium">{t('ranking.social.edit_hint')}</p>
 
       {savedFlash ? (
-        <div className="flex items-center gap-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 px-4 py-3 text-sm text-emerald-400">
+        <div className="flex items-center gap-2.5 rounded-2xl bg-emerald-950/20 border-2 border-emerald-500/30 p-4 text-sm text-emerald-400 shadow-[2px_2px_0px_#000000]">
           <CheckCircle2 className="w-4 h-4 shrink-0" />
-          {t('ranking.social.profile_updated')}
+          <span className="font-bold text-xs">{t('ranking.social.profile_updated')}</span>
         </div>
       ) : null}
 
       {formError ? (
-        <div className="flex items-center gap-2 rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-3 text-sm text-red-400">
+        <div className="flex items-center gap-2.5 rounded-2xl bg-red-950/20 border-2 border-red-500/30 p-4 text-sm text-red-400 shadow-[2px_2px_0px_#000000]">
           <AlertTriangle className="w-4 h-4 shrink-0" />
-          {formError}
+          <span className="font-medium text-xs">{formError}</span>
         </div>
       ) : null}
 
-      <form onSubmit={(e) => void save(e)} className="space-y-3">
+      <form onSubmit={(e) => void save(e)} className="space-y-4">
         <div>
-          <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-1.5">
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">
             {t('ranking.social.channel_name')}
           </label>
           <input
@@ -400,12 +398,12 @@ export function EditProfileForm({
             onChange={(ev) => setChannelName(ev.target.value)}
             required
             maxLength={100}
-            className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-violet-500/50"
+            className="w-full bg-slate-950 border-2 border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-primary shadow-[2px_2px_0px_#000000]"
           />
         </div>
 
         <div>
-          <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-1.5">
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">
             {t('ranking.social.channel_url')}
           </label>
           <input
@@ -413,12 +411,12 @@ export function EditProfileForm({
             value={channelUrl}
             onChange={(ev) => setChannelUrl(ev.target.value)}
             placeholder={t('ranking.social.channel_url_placeholder')}
-            className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-violet-500/50"
+            className="w-full bg-slate-950 border-2 border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-primary shadow-[2px_2px_0px_#000000]"
           />
         </div>
 
         <div>
-          <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-1.5">
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">
             {t('ranking.social.channel_photo')}
           </label>
           <div className="flex items-center gap-3">
@@ -426,11 +424,11 @@ export function EditProfileForm({
               <img
                 src={previewUrl}
                 alt=""
-                className="w-12 h-12 rounded-full object-cover border border-white/10 shrink-0"
+                className="w-12 h-12 rounded-xl object-cover border-2 border-slate-800 shadow-[2px_2px_0px_#000000] shrink-0"
               />
             ) : (
-              <div className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
-                <Youtube className="w-5 h-5 text-gray-600" />
+              <div className="w-12 h-12 rounded-xl bg-slate-950 border-2 border-slate-800 shadow-[2px_2px_0px_#000000] flex items-center justify-center shrink-0">
+                <Youtube className="w-5 h-5 text-slate-600" />
               </div>
             )}
             <div className="flex-1">
@@ -438,12 +436,12 @@ export function EditProfileForm({
                 type="button"
                 onClick={() => fileRef.current?.click()}
                 disabled={uploadingPhoto}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-bold text-gray-300 hover:text-white hover:border-white/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 border-2 border-slate-700 text-xs font-black uppercase tracking-wider text-slate-300 hover:text-white hover:border-slate-600 active:translate-x-0.5 active:translate-y-0.5 shadow-[2px_2px_0px_#000000] transition-all disabled:opacity-50 disabled:cursor-not-allowed outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 {uploadingPhoto ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
                 {uploadingPhoto ? t('ranking.social.uploading_photo') : t('ranking.social.change_photo')}
               </button>
-              <p className="text-[10px] text-gray-600 mt-1">{t('ranking.social.photo_hint')}</p>
+              <p className="text-[10px] text-slate-500 font-medium mt-1">{t('ranking.social.photo_hint')}</p>
             </div>
           </div>
           <input
@@ -456,7 +454,7 @@ export function EditProfileForm({
         </div>
 
         <div>
-          <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-1.5">
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">
             {t('ranking.social.channel_about')}
           </label>
           <textarea
@@ -464,20 +462,20 @@ export function EditProfileForm({
             onChange={(ev) => setBio(ev.target.value)}
             rows={2}
             maxLength={500}
-            className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-violet-500/50 resize-none"
+            className="w-full bg-slate-950 border-2 border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-primary shadow-[2px_2px_0px_#000000] resize-none min-h-[80px]"
           />
         </div>
 
         <button
           type="submit"
           disabled={busy || uploadingPhoto || !channelName.trim()}
-          className="flex items-center gap-2 px-5 py-2.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-sm font-black text-white transition-colors"
+          className="flex items-center justify-center gap-2 px-6 py-3 bg-violet-600 hover:bg-violet-700 active:translate-x-0.5 active:translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-xs font-black uppercase tracking-wider text-white shadow-[2px_2px_0px_#000000] transition-all outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
         >
           {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
           {t('ranking.social.save_changes')}
         </button>
       </form>
-    </div>
+    </Card>
   );
 }
 
@@ -515,39 +513,40 @@ export function SubmitForm({ onSubmitted }: { onSubmitted: () => void }) {
   };
 
   return (
-    <form
+    <Card
+      as="form"
       onSubmit={(e) => void submit(e)}
-      className="rounded-2xl border border-red-500/20 bg-red-950/10 p-4 space-y-3"
+      className="p-6 sm:p-7 space-y-4"
     >
-      <p className="text-sm font-black text-white">{t('ranking.social.send_video_title')}</p>
+      <SectionHeader icon={Send} iconVariant="red" title={t('ranking.social.send_video_title')} />
       <input
         type="url"
         value={videoUrl}
         onChange={(ev) => setVideoUrl(ev.target.value)}
         placeholder={t('ranking.social.video_url_placeholder')}
-        className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white"
+        className="w-full bg-slate-950 border-2 border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-primary shadow-[2px_2px_0px_#000000]"
         required
       />
       <div>
-        <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-1.5">
+        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">
           {t('ranking.social.video_title_label')}
         </label>
         <input
           value={title}
           onChange={(ev) => setTitle(ev.target.value)}
           placeholder={t('ranking.social.video_title_placeholder')}
-          className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white"
+          className="w-full bg-slate-950 border-2 border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-primary shadow-[2px_2px_0px_#000000]"
         />
       </div>
       <button
         type="submit"
         disabled={busy}
-        className="flex items-center gap-2 px-5 py-2.5 bg-red-600 hover:bg-red-500 rounded-xl text-sm font-black text-white transition-colors disabled:opacity-50"
+        className="flex items-center justify-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-700 active:translate-x-0.5 active:translate-y-0.5 rounded-xl text-xs font-black uppercase tracking-wider text-white shadow-[2px_2px_0px_#000000] transition-all disabled:opacity-50 outline-none focus-visible:ring-2 focus-visible:ring-red-500"
       >
         {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
         {t('ranking.social.send_for_review')}
       </button>
-    </form>
+    </Card>
   );
 }
 
@@ -575,53 +574,53 @@ export function MySubmissions({ refreshToken }: { refreshToken?: number }) {
 
   if (loading) {
     return (
-      <div className="flex justify-center py-6">
-        <Loader2 className="w-5 h-5 animate-spin text-gray-500" />
-      </div>
+      <Card className="flex justify-center py-8">
+        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+      </Card>
     );
   }
   if (!rows.length) return null;
 
   return (
-    <div className="rounded-2xl border border-white/8 overflow-hidden">
-      <div className="px-4 py-3 border-b border-white/8 bg-white/3">
-        <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
+    <Card variant="table">
+      <div className="px-5 py-3.5 border-b-2 border-slate-800 bg-slate-950/80">
+        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest font-mono">
           {t('ranking.social.my_submissions')}
         </p>
       </div>
-      <div className="divide-y divide-white/5">
+      <div className="divide-y-2 divide-slate-800/80">
         {rows.map((row) => {
           const cfg = statusStyles[row.status] ?? statusStyles.pending;
           const Icon = cfg.icon;
           return (
-            <div key={row.id} className="flex items-center gap-3 px-4 py-3">
+            <div key={row.id} className="flex items-center gap-3.5 px-5 py-3.5 hover:bg-slate-800/40 transition-colors">
               <img
                 src={`https://img.youtube.com/vi/${row.videoId}/default.jpg`}
                 alt=""
-                className="w-12 h-9 rounded-lg object-cover shrink-0 border border-white/10"
+                className="w-12 h-9 rounded-lg object-cover shrink-0 border-2 border-slate-800 shadow-[1px_1px_0px_#000000]"
                 onError={(ev) => {
                   ev.currentTarget.style.display = 'none';
                 }}
               />
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-bold text-white truncate">{row.title ?? row.videoUrl}</p>
-                {row.reviewNote ? <p className="text-[10px] text-gray-500 mt-0.5">{row.reviewNote}</p> : null}
+                {row.reviewNote ? <p className="text-[10px] text-slate-400 mt-0.5 font-medium">{row.reviewNote}</p> : null}
               </div>
               <div className="shrink-0 flex flex-col items-end gap-1">
                 <span
-                  className={`inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full border ${cfg.cls}`}
+                  className={`inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border shadow-sm ${cfg.cls}`}
                 >
                   <Icon className="w-3 h-3" />
                   {cfg.label}
                 </span>
                 {row.status === 'approved' && row.rewardGranted ? (
-                  <span className="text-[10px] text-emerald-400">{t('ranking.social.machine_granted')}</span>
+                  <span className="text-[10px] font-bold text-emerald-400">{t('ranking.social.machine_granted')}</span>
                 ) : null}
               </div>
             </div>
           );
         })}
       </div>
-    </div>
+    </Card>
   );
 }

@@ -5,6 +5,8 @@ export type CardSpacing = 'none' | 'sm' | 'md' | 'lg';
 
 export interface CardProps extends HTMLAttributes<HTMLElement> {
   as?: ElementType;
+  type?: string;
+  disabled?: boolean;
   variant?: CardVariant;
   glow?: boolean;
   glowColor?: string;

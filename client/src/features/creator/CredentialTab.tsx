@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Clock, Loader2, Star } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { api, useAuthStore } from '../../shared/auth/auth.store';
+import Card from '../../shared/components/Card';
+import IconBadge from '../../shared/components/IconBadge';
 import { ChannelAvatar } from './components/ChannelAvatar';
 import { PartnerBenefits } from './components/PartnerBenefits';
 import {
@@ -37,44 +39,35 @@ export function CredentialTab() {
 
   if (!user) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 gap-3 text-gray-600">
-        <Star className="w-10 h-10 opacity-30" />
-        <p className="text-sm font-bold">{t('ranking.social.login_required')}</p>
-      </div>
+      <Card className="flex flex-col items-center justify-center py-16 gap-3 text-center">
+        <IconBadge icon={Star} variant="amber" size="md" />
+        <p className="text-sm font-bold text-slate-400">{t('ranking.social.login_required')}</p>
+      </Card>
     );
   }
 
   if (profile === undefined) {
     return (
-      <div className="flex justify-center py-12">
-        <Loader2 className="w-6 h-6 animate-spin text-gray-500" />
-      </div>
+      <Card className="flex flex-col items-center justify-center py-16 gap-3 text-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <p className="text-slate-400 font-extrabold uppercase tracking-widest text-xs">{t('common.loading')}</p>
+      </Card>
     );
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
-      <div className="flex items-center gap-3">
-        <div className="w-9 h-9 rounded-xl bg-violet-500/20 flex items-center justify-center">
-          <Star className="w-5 h-5 text-violet-400" />
-        </div>
-        <div>
-          <p className="text-sm font-black text-white">{t('ranking.social.creator_area')}</p>
-          <p className="text-[10px] text-gray-500">{t('ranking.social.creator_area_sub')}</p>
-        </div>
-      </div>
-
+    <div className="space-y-6">
       <PartnerBenefits />
 
       {isCredentialed && profile ? (
         <div className="space-y-4">
-          <div className="flex items-center gap-3 rounded-xl border border-red-500/20 bg-red-950/10 px-4 py-3">
+          <Card className="flex items-center gap-3.5 p-4 border-red-500/30 bg-red-950/20 shadow-[2px_2px_0px_#000000]">
             <ChannelAvatar photo={profile.channelPhoto} name={profile.channelName} />
-            <div className="flex-1">
-              <p className="text-sm font-black text-white">{profile.channelName}</p>
-              <p className="text-[10px] text-red-400">{t('ranking.creator_badge')}</p>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-black text-white truncate">{profile.channelName}</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-red-400">{t('ranking.creator_badge')}</p>
             </div>
-          </div>
+          </Card>
           <EditProfileForm profile={profile} onSaved={(p) => setProfile(p)} />
           <SubmitForm onSubmitted={() => setSubmissionsRefresh((n) => n + 1)} />
           <MySubmissions refreshToken={submissionsRefresh} />
@@ -82,15 +75,13 @@ export function CredentialTab() {
       ) : null}
 
       {isPending ? (
-        <div className="flex items-center gap-3 rounded-xl border border-amber-500/20 bg-amber-950/10 px-4 py-4">
-          <div className="w-9 h-9 rounded-xl bg-amber-500/20 flex items-center justify-center shrink-0">
-            <Clock className="w-5 h-5 text-amber-400" />
+        <Card className="flex items-center gap-4 p-5 border-amber-500/30 bg-amber-950/20 shadow-[2px_2px_0px_#000000]">
+          <IconBadge icon={Clock} variant="amber" size="md" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-black text-white uppercase tracking-tight">{t('ranking.social.pending_title')}</p>
+            <p className="text-xs text-amber-400/90 font-medium mt-0.5">{t('ranking.social.pending_sub')}</p>
           </div>
-          <div>
-            <p className="text-sm font-black text-white">{t('ranking.social.pending_title')}</p>
-            <p className="text-xs text-amber-400/70">{t('ranking.social.pending_sub')}</p>
-          </div>
-        </div>
+        </Card>
       ) : null}
 
       {isRejected ? (
