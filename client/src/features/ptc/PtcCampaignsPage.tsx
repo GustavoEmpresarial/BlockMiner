@@ -7,8 +7,6 @@ import {
     XCircle, AlertCircle, Layers
 } from 'lucide-react';
 import { api } from '../../shared/auth/auth.store';
-import Card from '../../shared/components/Card';
-import IconBadge from '../../shared/components/IconBadge';
 import StatusPill from '../../shared/components/StatusPill';
 
 interface Campaign {
@@ -196,7 +194,7 @@ export default function PtcCampaignsPage() {
             </div>
             <button
                 onClick={() => setShowCreate(!showCreate)}
-                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-orange-600 text-white font-black text-xs uppercase tracking-wider rounded-xl hover:bg-orange-500 active:translate-x-0.5 active:translate-y-0.5 transition-all shadow-[2px_2px_0px_#000000] outline-none focus-visible:ring-2 focus-visible:ring-primary shrink-0"
+                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-orange-700 text-white font-black text-xs uppercase tracking-wider rounded-xl hover:bg-orange-600 active:translate-x-0.5 active:translate-y-0.5 transition-all shadow-[2px_2px_0px_#000000] outline-none focus-visible:ring-2 focus-visible:ring-primary shrink-0"
             >
                 <Plus className="w-4 h-4" />
                 {t('ptc.new_campaign')}
@@ -293,7 +291,7 @@ export default function PtcCampaignsPage() {
 
                         <div className="flex gap-3">
                             <button type="submit" disabled={actionLoading}
-                                className="flex-1 py-3.5 bg-orange-600 hover:bg-orange-500 active:translate-x-0.5 active:translate-y-0.5 text-white font-black uppercase tracking-wider text-xs rounded-xl transition-all shadow-[2px_2px_0px_#000000] disabled:opacity-50 flex items-center justify-center gap-2 outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                                className="flex-1 py-3.5 bg-orange-700 hover:bg-orange-600 active:translate-x-0.5 active:translate-y-0.5 text-white font-black uppercase tracking-wider text-xs rounded-xl transition-all shadow-[2px_2px_0px_#000000] disabled:opacity-50 flex items-center justify-center gap-2 outline-none focus-visible:ring-2 focus-visible:ring-primary">
                                 {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                                 {t('ptc.submit_for_approval')}
                             </button>
@@ -392,7 +390,7 @@ export default function PtcCampaignsPage() {
                                                     className="w-full bg-slate-900 border-2 border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-orange-500 transition-colors resize-none shadow-[2px_2px_0px_#000000]" rows={2} placeholder={t('ptc.field_description_short')} />
                                                 <div className="flex gap-2">
                                                     <button onClick={() => handleEdit(c.id)} disabled={actionLoading}
-                                                        className="px-4 py-2 bg-orange-600 hover:bg-orange-500 active:translate-x-0.5 active:translate-y-0.5 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition-all shadow-[2px_2px_0px_#000000] disabled:opacity-50 outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                                                        className="px-4 py-2 bg-orange-700 hover:bg-orange-600 active:translate-x-0.5 active:translate-y-0.5 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition-all shadow-[2px_2px_0px_#000000] disabled:opacity-50 outline-none focus-visible:ring-2 focus-visible:ring-primary">
                                                         {t('common.save')}
                                                     </button>
                                                     <button onClick={() => setEditingId(null)}

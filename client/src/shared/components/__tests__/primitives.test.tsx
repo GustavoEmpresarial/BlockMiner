@@ -116,6 +116,19 @@ describe('Shared UI Primitives — Transparency Standard', () => {
       expect(screen.getByText('154.20 POL')).toBeInTheDocument();
       expect(screen.getByText('+12% today')).toBeInTheDocument();
     });
+
+    it('renders custom ReactNode icon such as an image badge', () => {
+      render(
+        <StatCard
+          icon={<img src="/test.png" alt="custom" data-testid="custom-icon" />}
+          label="Custom Icon Stat"
+          value="100 SHIB"
+        />,
+      );
+      expect(screen.getByTestId('custom-icon')).toBeInTheDocument();
+      expect(screen.getByText('Custom Icon Stat')).toBeInTheDocument();
+      expect(screen.getByText('100 SHIB')).toBeInTheDocument();
+    });
   });
 
   describe('StatusPill', () => {

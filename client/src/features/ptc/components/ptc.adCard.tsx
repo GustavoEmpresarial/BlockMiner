@@ -13,9 +13,6 @@ import { usePtcSessionStore } from '../lib/ptcSession.store';
 import { useActiveViewSeconds } from '../lib/ptcOfferwallHooks';
 import { useDocumentTitleCountdown } from '../../../shared/hooks/useDocumentTitleCountdown';
 import { useUtcDailyResetCountdown } from '../../../shared/hooks/useUtcDailyResetCountdown';
-import Card from '../../../shared/components/Card';
-import IconBadge from '../../../shared/components/IconBadge';
-import SectionHeader from '../../../shared/components/SectionHeader';
 import StatusPill, { type StatusPillVariant } from '../../../shared/components/StatusPill';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -53,17 +50,17 @@ export const AdCard = memo(function AdCard({
   const viewedToday = Boolean(ad.viewedToday) && !isThisAdActive;
   const remainingViews = Math.max(0, (ad.targetViews ?? 0) - (ad.views ?? 0));
 
-  const badge = useMemo(() => {
+  const badge = useMemo<{ label: string; variant: StatusPillVariant }>(() => {
     if (viewedToday) {
-      return { label: t('ptc.badge_viewed_today'), variant: 'neutral' as StatusPillVariant };
+      return { label: t('ptc.badge_viewed_today'), variant: 'neutral' };
     }
     if (isThisAdActive) {
-      if (storeStatus === 'completed') return { label: t('ptc.badge_completed'), variant: 'success' as StatusPillVariant };
-      if (storeStatus === 'paused')    return { label: t('ptc.badge_paused'),   variant: 'warning' as StatusPillVariant };
-      if (storeStatus === 'opening')   return { label: t('ptc.badge_opening'),  variant: 'orange' as StatusPillVariant };
-      return { label: t('ptc.badge_in_progress'), variant: 'info' as StatusPillVariant };
+      if (storeStatus === 'completed') return { label: t('ptc.badge_completed'), variant: 'success' };
+      if (storeStatus === 'paused')    return { label: t('ptc.badge_paused'),   variant: 'warning' };
+      if (storeStatus === 'opening')   return { label: t('ptc.badge_opening'),  variant: 'orange' };
+      return { label: t('ptc.badge_in_progress'), variant: 'info' };
     }
-    return { label: t('ptc.badge_available'), variant: 'success' as StatusPillVariant };
+    return { label: t('ptc.badge_available'), variant: 'success' };
   }, [isThisAdActive, storeStatus, viewedToday, t]);
 
   const btn = useMemo(() => {
@@ -79,11 +76,11 @@ export const AdCard = memo(function AdCard({
       if (storeStatus === 'completed') return { label: t('ptc.btn_claim_reward'), cls: 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-[2px_2px_0px_#000000]', icon: Gift, action: 'session' as const };
       if (storeStatus === 'viewing')   return { label: t('ptc.btn_view_progress'), cls: 'bg-sky-600 hover:bg-sky-500 text-white shadow-[2px_2px_0px_#000000]', icon: PlayCircle, action: 'session' as const };
       if (storeStatus === 'paused')    return { label: t('ptc.btn_awaiting_return'), cls: 'bg-amber-600 hover:bg-amber-500 text-white shadow-[2px_2px_0px_#000000]', icon: PauseCircle, action: 'session' as const };
-      return { label: t('ptc.btn_opening'), cls: 'bg-orange-600 text-white opacity-70 cursor-wait shadow-[2px_2px_0px_#000000]', icon: Loader2, action: 'none' as const };
+      return { label: t('ptc.btn_opening'), cls: 'bg-orange-700 text-white opacity-70 cursor-wait shadow-[2px_2px_0px_#000000]', icon: Loader2, action: 'none' as const };
     }
-    if (isStarting) return { label: t('ptc.btn_starting'), cls: 'bg-orange-600 text-white cursor-wait shadow-[2px_2px_0px_#000000]', icon: Loader2, action: 'none' as const };
+    if (isStarting) return { label: t('ptc.btn_starting'), cls: 'bg-orange-700 text-white cursor-wait shadow-[2px_2px_0px_#000000]', icon: Loader2, action: 'none' as const };
     if (hasOtherSession) return { label: t('ptc.btn_open_ad'), cls: 'bg-slate-800 text-slate-500 opacity-40 cursor-not-allowed', icon: ExternalLink, action: 'none' as const };
-    return { label: t('ptc.btn_open_ad'), cls: 'bg-orange-600 hover:bg-orange-500 active:translate-x-0.5 active:translate-y-0.5 text-white shadow-[2px_2px_0px_#000000]', icon: ExternalLink, action: 'start' as const };
+    return { label: t('ptc.btn_open_ad'), cls: 'bg-orange-700 hover:bg-orange-600 active:translate-x-0.5 active:translate-y-0.5 text-white shadow-[2px_2px_0px_#000000]', icon: ExternalLink, action: 'start' as const };
   }, [isThisAdActive, storeStatus, isStarting, hasOtherSession, viewedToday, resetCountdownLabel, t]);
 
   function handleBtnClick(e: MouseEvent<HTMLButtonElement>) {

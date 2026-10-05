@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { toast } from 'sonner';
 import { useAuthStore } from '../../shared/auth/auth.store';
 import { Loader2, Zap, TrendingUp, CheckCircle2, AlertTriangle, X, Sparkles, Calendar, Clock, Minus, Plus, Package, DoorOpen, Wind, Boxes } from 'lucide-react';
-import { Card, IconBadge, SectionHeader, StatusPill } from '../../shared/components';
+import { IconBadge, StatusPill } from '../../shared/components';
 import { getActiveOfferEvents, postOfferEventPurchase, postOfferFanPurchase, postOfferRackPurchase, readActiveOffersCache, writeActiveOffersCache, clearActiveOffersCache, hasLiveRoomOffers, hasLiveGearOffers, OFFER_PURCHASE_MAX_QUANTITY, readGearMaxBulkQuantity, readOfferPurchaseError } from './lib/offers.api';
 import type { OfferEventDTO, OfferEventMinerDTO, RoomOffersDTO, FanOffersDTO, FanOfferItemDTO, RackOffersDTO } from './lib/offers.api';
 import { OfferMinerModel } from './components/OfferMinerModel';

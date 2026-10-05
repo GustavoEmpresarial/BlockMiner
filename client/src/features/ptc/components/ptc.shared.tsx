@@ -152,29 +152,23 @@ export function StatsStrip({ ads }: { ads: PtcAd[] }) {
         value={available.length}
         accent="text-sky-400"
       />
-      <div
-        data-testid="stat-card"
-        className="relative rounded-2xl border-2 border-slate-800/80 bg-slate-900/60 p-4 sm:p-5 flex flex-col justify-between gap-2 overflow-hidden shadow-[4px_4px_0px_#000000] hover:border-slate-700 transition-all"
-      >
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-[11px] text-slate-400 uppercase tracking-wider font-extrabold truncate">
-            {t('ptc.total_earn')}
-          </span>
-          <div className="w-9 h-9 shrink-0 rounded-xl flex items-center justify-center border border-white/10 shadow-[2px_2px_0px_#000000] bg-slate-950/80">
-            <img
-              src="/media/brand/shib.webp"
-              alt=""
-              className="w-4 h-4 rounded-full"
-              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-            />
-          </div>
-        </div>
-        <div>
-          <div className="text-2xl font-black text-white leading-none font-mono tracking-tight truncate">
-            +{totalReward.toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-xs font-bold text-slate-400 not-italic uppercase">SHIB</span>
-          </div>
-        </div>
-      </div>
+      <StatCard
+        icon={
+          <img
+            src="/media/brand/shib.webp"
+            alt=""
+            className="w-4 h-4 rounded-full"
+            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+          />
+        }
+        label={t('ptc.total_earn')}
+        value={
+          <>
+            +{totalReward.toLocaleString(undefined, { maximumFractionDigits: 0 })}{' '}
+            <span className="text-xs font-bold text-slate-400 not-italic uppercase">SHIB</span>
+          </>
+        }
+      />
     </div>
   );
 }
