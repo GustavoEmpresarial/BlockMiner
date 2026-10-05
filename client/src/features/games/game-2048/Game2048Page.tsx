@@ -557,7 +557,7 @@ export default function Game2048Page() {
                       ref={boardGridRef}
                       role="grid"
                       aria-label={t("game2048.grid_aria")}
-                      className="relative aspect-square w-full max-w-full touch-none select-none overflow-hidden rounded-xl border border-sky-600/30 bg-slate-950 p-1.5 shadow-[inset_0_0_24px_rgba(0,0,0,0.45)] sm:p-2"
+                      className="relative aspect-square w-full max-w-full touch-none select-none overflow-hidden rounded-3xl border-2 border-slate-800 bg-slate-900/60 p-1.5 shadow-[4px_4px_0px_#000000] sm:p-2"
                       style={{ touchAction: "none" }}
                       onPointerDown={onBoardPointerDown}
                       onPointerUp={onBoardPointerUp}

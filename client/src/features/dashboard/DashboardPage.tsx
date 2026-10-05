@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isAxiosError } from 'axios';
-import { Activity, Check, Copy, Gift, RefreshCw, Users, Wifi, WifiOff } from 'lucide-react';
+import { Activity, Check, Copy, Gift, Pickaxe, RefreshCw, Users, Wifi, WifiOff } from 'lucide-react';
+import Card from '../../shared/components/Card';
+import IconBadge from '../../shared/components/IconBadge';
+import SectionHeader from '../../shared/components/SectionHeader';
 import { toast } from 'sonner';
 import { useAuthStore } from '../../shared/auth/auth.store';
 import { useGameStore, type MiningStatsSnapshot } from '../shell/lib/game.store';
@@ -341,14 +344,17 @@ export default function DashboardPage() {
   // to prevent trapping fixed-position descendants (e.g. modals, popovers, tooltips).
   return (
     <div className="space-y-10">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div>
-          <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight mb-3">
-            {t('dashboard.welcome', { name: displayName })}
-          </h1>
-          <p className="text-slate-400 font-medium max-w-xl text-sm md:text-base leading-relaxed">
-            {t('dashboard.subtitle')}
-          </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b-2 border-slate-800">
+        <div className="flex items-center gap-3 min-w-0">
+          <IconBadge icon={Pickaxe} variant="primary" size="lg" />
+          <div className="min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">
+              {t('dashboard.welcome', { name: displayName })}
+            </h1>
+            <p className="text-slate-400 text-xs sm:text-sm font-medium">
+              {t('dashboard.subtitle')}
+            </p>
+          </div>
         </div>
         <div
           data-testid="sync-status-badge"
@@ -480,20 +486,13 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
         <div className="lg:col-span-2 space-y-8">
           <DashboardHistory blockHistory={blockHistory} tokenSymbol={cycle?.tokenSymbol} />
-          <div className="bg-surface border border-gray-800/50 rounded-2xl p-6 md:p-8 shadow-xl relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none">
+          <Card className="relative" overflow="hidden">
+            <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
               <Users className="w-32 h-32 text-primary -rotate-12" />
             </div>
             <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6 md:gap-8">
               <div className="space-y-4 max-w-md">
-                <div className="flex items-center gap-3">
-                  <div className="p-3 bg-primary/10 rounded-2xl">
-                    <Activity className="w-6 h-6 text-primary" />
-                  </div>
-                  <h2 className="text-xl md:text-2xl font-black text-white italic uppercase tracking-tighter">
-                    {t('dashboard.affiliate_title')}
-                  </h2>
-                </div>
+                <SectionHeader icon={Activity} title={t('dashboard.affiliate_title')} />
                 <p className="text-sm text-slate-400 font-medium leading-relaxed">
                   {t('dashboard.affiliate_description')}
                 </p>
@@ -542,10 +541,10 @@ export default function DashboardPage() {
                       type="button"
                       onClick={() => void copyReferral()}
                       disabled={!referralUrl}
-                      className="bg-gray-800 hover:bg-gray-700 text-white p-3 rounded-lg transition-all active:scale-95 disabled:opacity-40 disabled:pointer-events-none"
+                      className="bg-sky-500 hover:bg-sky-400 text-slate-950 p-3 rounded-xl border-2 border-slate-950 shadow-[2px_2px_0px_#000000] transition-all active:translate-x-0.5 active:translate-y-0.5 disabled:opacity-40 disabled:pointer-events-none"
                     >
                       {referralCopied ? (
-                        <Check className="w-4 h-4 text-emerald-400" />
+                        <Check className="w-4 h-4 text-slate-950" />
                       ) : (
                         <Copy className="w-4 h-4" />
                       )}
@@ -575,7 +574,7 @@ export default function DashboardPage() {
                       type="button"
                       onClick={() => void linkFriendReferral()}
                       disabled={!sanitizeReferralInput(friendCode) || linkingReferral}
-                      className="bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 text-[10px] font-black uppercase px-3 py-2 rounded-lg transition-all active:scale-95 disabled:opacity-40 disabled:pointer-events-none shrink-0"
+                      className="bg-amber-500 hover:bg-amber-400 text-slate-950 text-[10px] font-black uppercase px-3 py-2 rounded-xl border-2 border-slate-950 shadow-[2px_2px_0px_#000000] transition-all active:translate-x-0.5 active:translate-y-0.5 disabled:opacity-40 disabled:pointer-events-none shrink-0"
                     >
                       {linkingReferral ? '...' : t('dashboard.link_referral')}
                     </button>
@@ -583,7 +582,7 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
-          </div>
+          </Card>
         </div>
         <div className="lg:col-span-1 space-y-8">
           <DashboardEfficiencyCard
