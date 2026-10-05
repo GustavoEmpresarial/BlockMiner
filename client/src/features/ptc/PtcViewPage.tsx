@@ -102,7 +102,7 @@ export default function PtcViewPage() {
       </div>
       <Link
         to="/ptc/campaigns"
-        className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-orange-700 hover:bg-orange-600 active:translate-x-0.5 active:translate-y-0.5 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-[2px_2px_0px_#000000] shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-orange-700 hover:bg-orange-800 active:translate-x-0.5 active:translate-y-0.5 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-[2px_2px_0px_#000000] shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-primary"
       >
         <Megaphone className="w-4 h-4" />
         {t('ptc.my_campaigns_link')}

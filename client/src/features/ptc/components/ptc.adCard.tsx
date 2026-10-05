@@ -80,7 +80,7 @@ export const AdCard = memo(function AdCard({
     }
     if (isStarting) return { label: t('ptc.btn_starting'), cls: 'bg-orange-700 text-white cursor-wait shadow-[2px_2px_0px_#000000]', icon: Loader2, action: 'none' as const };
     if (hasOtherSession) return { label: t('ptc.btn_open_ad'), cls: 'bg-slate-800 text-slate-500 opacity-40 cursor-not-allowed', icon: ExternalLink, action: 'none' as const };
-    return { label: t('ptc.btn_open_ad'), cls: 'bg-orange-700 hover:bg-orange-600 active:translate-x-0.5 active:translate-y-0.5 text-white shadow-[2px_2px_0px_#000000]', icon: ExternalLink, action: 'start' as const };
+    return { label: t('ptc.btn_open_ad'), cls: 'bg-orange-700 hover:bg-orange-800 active:translate-x-0.5 active:translate-y-0.5 text-white shadow-[2px_2px_0px_#000000]', icon: ExternalLink, action: 'start' as const };
   }, [isThisAdActive, storeStatus, isStarting, hasOtherSession, viewedToday, resetCountdownLabel, t]);
 
   function handleBtnClick(e: MouseEvent<HTMLButtonElement>) {
