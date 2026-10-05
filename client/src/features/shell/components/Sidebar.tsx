@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -256,17 +257,17 @@ export default function Sidebar({ mobileOpen: mobileOpenProp, onNavigate }: Side
   );
 
   const linkClass = (active: boolean, extra = '') =>
-    `w-full flex items-center justify-between px-4 py-3 rounded-2xl transition-all duration-300 group ${
+    `w-full flex items-center justify-between px-4 py-3 rounded-xl transition-colors duration-300 group ${
       active
-        ? 'bg-primary/10 text-primary border border-primary/10'
-        : 'text-gray-500 hover:text-white hover:bg-gray-800/40'
+        ? 'bg-primary/10 text-primary border border-primary/25'
+        : 'text-slate-400 hover:text-white hover:bg-slate-800/40'
     } ${extra}`;
 
   const renderBadges = (path: string) => (
     <>
       {path === '/tournaments' && activeTournaments > 0 ? (
         <span
-          className="inline-flex items-center gap-1 rounded-full bg-amber-500 text-slate-950 px-1.5 min-w-[18px] h-[18px] text-[10px] font-black leading-none shadow-md shadow-amber-500/40 animate-pulse"
+          className="inline-flex items-center gap-1 rounded-full bg-amber-500 text-slate-950 px-1.5 min-w-[18px] h-[18px] text-[10px] font-black leading-none shadow-[2px_2px_0px_#000000] animate-pulse"
           aria-label={t('sidebar.active_tournaments_aria', { count: activeTournaments })}
         >
           {activeTournaments}
@@ -274,7 +275,7 @@ export default function Sidebar({ mobileOpen: mobileOpenProp, onNavigate }: Side
       ) : null}
       {path === '/inventario' && inboxPending > 0 ? (
         <span
-          className="inline-flex items-center gap-1 rounded-full bg-emerald-500 text-slate-950 px-1.5 min-w-[18px] h-[18px] text-[10px] font-black leading-none shadow-md shadow-emerald-500/40 animate-pulse"
+          className="inline-flex items-center gap-1 rounded-full bg-emerald-500 text-slate-950 px-1.5 min-w-[18px] h-[18px] text-[10px] font-black leading-none shadow-[2px_2px_0px_#000000] animate-pulse"
           aria-label={t('sidebar.inbox_pending_aria', { count: inboxPending })}
         >
           {inboxPending}
@@ -282,7 +283,7 @@ export default function Sidebar({ mobileOpen: mobileOpenProp, onNavigate }: Side
       ) : null}
       {path === '/taxes' && energyTaxDue ? (
         <span
-          className="inline-flex items-center gap-1 rounded bg-orange-500 text-slate-950 px-1.5 h-[16px] text-[9px] font-black tracking-widest uppercase leading-none shadow-md shadow-orange-500/40 animate-pulse"
+          className="inline-flex items-center gap-1 rounded bg-orange-500 text-slate-950 px-1.5 h-[16px] text-[9px] font-black tracking-widest uppercase leading-none shadow-[2px_2px_0px_#000000] animate-pulse"
           aria-label={t('sidebar.energy_tax_pay_today_aria')}
         >
           -25%
@@ -290,7 +291,7 @@ export default function Sidebar({ mobileOpen: mobileOpenProp, onNavigate }: Side
       ) : null}
       {path === '/offers' && offersLive ? (
         <span
-          className="inline-flex items-center gap-1 rounded bg-red-600 text-white px-1.5 h-[16px] text-[9px] font-black tracking-widest uppercase leading-none shadow-md shadow-red-600/40"
+          className="inline-flex items-center gap-1 rounded bg-red-600 text-white px-1.5 h-[16px] text-[9px] font-black tracking-widest uppercase leading-none shadow-[2px_2px_0px_#000000]"
           aria-label={t('sidebar.live_offers_aria')}
         >
           <span className="h-1 w-1 rounded-full bg-white animate-pulse" />
@@ -308,7 +309,7 @@ export default function Sidebar({ mobileOpen: mobileOpenProp, onNavigate }: Side
       >
         {categories.map((category) => (
           <div key={category.title} className="space-y-2">
-            <h3 className="text-[9px] font-black text-gray-600 uppercase tracking-[0.3em] px-4 mb-4">
+            <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] px-4 mb-4">
               {category.title}
             </h3>
             <div className="space-y-1">
@@ -431,18 +432,18 @@ export default function Sidebar({ mobileOpen: mobileOpenProp, onNavigate }: Side
         <button
           type="button"
           onClick={() => go('/settings')}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl border border-gray-800/80 bg-gray-900/40 text-gray-300 hover:text-white hover:bg-gray-800/50 transition-all"
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 border-slate-800 bg-slate-900/60 text-slate-300 hover:text-white hover:border-slate-600 transition-colors shadow-[2px_2px_0px_#000000]"
         >
           <Settings className="w-4 h-4 text-sky-400 shrink-0" aria-hidden />
           <span className="text-xs font-bold uppercase tracking-wide">{t('sidebar.settings')}</span>
         </button>
       </div>
 
-      <div className="p-4 mt-auto border-t border-gray-800/50">
+      <div className="p-4 mt-auto border-t border-slate-800">
         <button
           type="button"
           onClick={() => void logout()}
-          className="w-full flex items-center gap-3 px-4 py-4 text-gray-500 hover:text-red-400 hover:bg-red-400/5 rounded-2xl transition-all duration-300 group"
+          className="w-full flex items-center gap-3 px-4 py-4 text-slate-400 hover:text-red-400 hover:bg-red-400/5 rounded-xl transition-colors duration-300 group"
         >
           <LogOut className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
           <span className="font-bold text-xs uppercase tracking-widest">{t('common.logout')}</span>
@@ -460,9 +461,11 @@ export default function Sidebar({ mobileOpen: mobileOpenProp, onNavigate }: Side
   return (
     <>
       {/* Mobile top chrome (Header is desktop-only). */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-3 h-14 bg-surface border-b border-gray-800/50 shadow-lg">
-        <BrandLogo variant="header" />
-        <div className="flex items-center gap-0.5">
+      <div className="md:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-3 h-14 bg-slate-950/90 border-b-2 border-slate-800">
+        <div className="min-w-0 overflow-hidden">
+          <BrandLogo variant="header" />
+        </div>
+        <div className="flex items-center gap-0.5 shrink-0">
           <button
             type="button"
             onClick={() => toggleChat()}
@@ -490,8 +493,8 @@ export default function Sidebar({ mobileOpen: mobileOpenProp, onNavigate }: Side
               ) : null}
             </button>
             {notificationsOpen ? (
-              <div className="absolute right-0 mt-2 w-72 bg-surface border border-gray-800 rounded-2xl shadow-2xl overflow-hidden z-50">
-                <div className="px-4 py-3 border-b border-gray-800 flex items-center justify-between bg-gray-900/50">
+              <div className="absolute right-0 mt-2 w-72 max-w-[calc(100vw-1rem)] bg-slate-900/60 border-2 border-slate-800 rounded-3xl shadow-[4px_4px_0px_#000000] overflow-hidden z-50">
+                <div className="px-4 py-3 border-b border-slate-800 flex items-center justify-between bg-slate-950/40">
                   <h3 className="text-xs font-black text-white uppercase tracking-widest">
                     {t('sidebar.notifications')}
                   </h3>
@@ -505,9 +508,9 @@ export default function Sidebar({ mobileOpen: mobileOpenProp, onNavigate }: Side
                     </button>
                   ) : null}
                 </div>
-                <div className="max-h-72 overflow-y-auto scrollbar-hide divide-y divide-gray-800/30">
+                <div className="max-h-72 overflow-y-auto scrollbar-hide divide-y divide-slate-800/30">
                   {(notifications || []).length === 0 ? (
-                    <p className="py-8 text-center text-[10px] text-gray-600 font-bold uppercase tracking-widest italic">
+                    <p className="py-8 text-center text-[10px] text-slate-400 font-bold uppercase tracking-widest italic">
                       {t('sidebar.no_notifications')}
                     </p>
                   ) : (
@@ -519,14 +522,14 @@ export default function Sidebar({ mobileOpen: mobileOpenProp, onNavigate }: Side
                           void markNotificationRead(n.id);
                           setNotificationsOpen(false);
                         }}
-                        className={`w-full text-left px-4 py-3 hover:bg-gray-800/30 transition-colors ${n.isRead ? '' : 'bg-primary/5'}`}
+                        className={`w-full text-left px-4 py-3 hover:bg-slate-800/30 transition-colors ${n.isRead ? '' : 'bg-primary/5'}`}
                       >
                         <p
-                          className={`text-xs font-bold truncate ${n.isRead ? 'text-gray-400' : 'text-white'}`}
+                          className={`text-xs font-bold truncate ${n.isRead ? 'text-slate-400' : 'text-white'}`}
                         >
                           {n.title}
                         </p>
-                        <p className="text-[11px] text-gray-500 mt-0.5 line-clamp-2">{n.message}</p>
+                        <p className="text-[11px] text-slate-400 mt-0.5 line-clamp-2">{n.message}</p>
                       </button>
                     ))
                   )}
@@ -545,25 +548,31 @@ export default function Sidebar({ mobileOpen: mobileOpenProp, onNavigate }: Side
         </div>
       </div>
 
-      {mobileOpen ? (
-        <button
-          type="button"
-          role="presentation"
-          className="md:hidden fixed inset-0 z-30 bg-black/60 backdrop-blur-sm"
-          aria-label={t('sidebar.menu')}
-          onClick={() => setMobileOpen(false)}
-        />
-      ) : null}
+      {typeof document !== 'undefined'
+        ? createPortal(
+            <>
+              {mobileOpen ? (
+                <button
+                  type="button"
+                  role="presentation"
+                  className="md:hidden fixed inset-0 z-30 bg-black/60 backdrop-blur-sm"
+                  aria-label={t('sidebar.menu')}
+                  onClick={() => setMobileOpen(false)}
+                />
+              ) : null}
+              <aside
+                className={`md:hidden fixed top-14 bottom-16 left-0 z-40 w-72 bg-slate-900/60 border-r-2 border-slate-800 flex flex-col shadow-[4px_4px_0px_#000000] transition-transform duration-300 overflow-y-auto ${
+                  mobileOpen ? 'translate-x-0' : '-translate-x-full'
+                }`}
+              >
+                {renderNavBody()}
+              </aside>
+            </>,
+            document.body,
+          )
+        : null}
 
-      <aside
-        className={`md:hidden fixed top-14 bottom-16 left-0 z-40 w-72 bg-surface border-r border-gray-800/50 flex flex-col shadow-2xl transition-transform duration-300 overflow-y-auto ${
-          mobileOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
-      >
-        {renderNavBody()}
-      </aside>
-
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 h-16 bg-surface border-t border-gray-800/50 flex items-center justify-around px-1 shadow-2xl supports-[padding:max(0px)]:pb-[max(0px,env(safe-area-inset-bottom))]">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 h-16 bg-slate-950 border-t-2 border-slate-800 flex items-center justify-around px-1 supports-[padding:max(0px)]:pb-[max(0px,env(safe-area-inset-bottom))]">
         {bottomItems.map((item) => {
           const active = location.pathname === item.path;
           const Icon = item.icon;
@@ -573,7 +582,7 @@ export default function Sidebar({ mobileOpen: mobileOpenProp, onNavigate }: Side
               type="button"
               onClick={() => go(item.path)}
               className={`flex flex-col items-center justify-center gap-1 flex-1 py-2 rounded-xl transition-all duration-300 ${
-                active ? 'text-primary' : 'text-gray-500 hover:text-white'
+                active ? 'text-primary' : 'text-slate-400 hover:text-white'
               }`}
             >
               <Icon className="w-5 h-5" />
@@ -586,7 +595,7 @@ export default function Sidebar({ mobileOpen: mobileOpenProp, onNavigate }: Side
         <button
           type="button"
           onClick={() => setMobileOpen(true)}
-          className="flex flex-col items-center justify-center gap-1 flex-1 py-2 rounded-xl transition-all text-gray-500 hover:text-white"
+          className="flex flex-col items-center justify-center gap-1 flex-1 py-2 rounded-xl transition-all text-slate-400 hover:text-white"
         >
           <Menu className="w-5 h-5" />
           <span className="text-[8px] font-black uppercase tracking-widest leading-none">
@@ -596,7 +605,7 @@ export default function Sidebar({ mobileOpen: mobileOpenProp, onNavigate }: Side
       </nav>
 
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex w-72 bg-surface border-r border-gray-800/50 shrink-0 flex-col h-[100dvh] sticky top-0 shadow-2xl relative z-20">
+      <aside className="hidden md:flex w-72 bg-slate-900/60 border-r-2 border-slate-800 shrink-0 flex-col h-[100dvh] sticky top-0 shadow-[4px_4px_0px_#000000] relative z-20">
         <div className="p-8">
           <BrandLogo variant="sidebar" />
         </div>

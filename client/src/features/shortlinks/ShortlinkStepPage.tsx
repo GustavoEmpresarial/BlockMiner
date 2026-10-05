@@ -309,9 +309,9 @@ export default function ShortlinkStepPage() {
                         <Zap className="w-7 h-7 text-primary" />
                     </div>
                     <div>
-                        <h2 className="text-xl sm:text-2xl font-black text-white italic uppercase tracking-tight">
+                        <h1 className="text-xl sm:text-2xl font-black text-white italic uppercase tracking-tight">
                             {t('shortlinks.step_title', { step: currentStepNum, total: 3 })}
-                        </h2>
+                        </h1>
                         <p className="text-slate-400 font-bold mt-1 uppercase text-[10px] tracking-widest">
                             {t('shortlinks.step_subtitle')}
                         </p>
