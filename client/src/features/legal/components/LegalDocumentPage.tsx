@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { ChevronDown } from 'lucide-react';
+import Card from '../../../shared/components/Card';
 import SiteFooter from '../../../shared/components/SiteFooter';
 
 type SectionBodyProps = {
@@ -147,29 +148,29 @@ export function LegalDocumentPage({
 
       <main id="legal-main" className="px-5 py-12 sm:px-8 sm:py-16 lg:py-20">
         <article className="mx-auto max-w-6xl">
-          <header className="mb-8 rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.07] to-white/[0.02] p-8 md:p-10">
-            <p className="text-xs font-bold uppercase tracking-[0.28em] text-sky-400">{t(eyebrowKey)}</p>
-            <h1 className="mt-4 text-balance text-3xl font-black tracking-tight text-white sm:text-4xl md:text-5xl">
+          <Card as="header" className="mb-8 p-8 md:p-10 border-slate-800 shadow-[4px_4px_0px_#000000]">
+            <p className="text-xs font-black uppercase tracking-[0.28em] text-sky-400 font-mono">{t(eyebrowKey)}</p>
+            <h1 className="mt-4 text-balance text-3xl font-black uppercase tracking-tight text-white sm:text-4xl md:text-5xl">
               {t(titleKey)}
             </h1>
-            <p className="mt-5 max-w-3xl text-base leading-7 text-white/90 md:text-lg md:leading-8">{t(introKey)}</p>
-            <div className="mt-8 flex flex-wrap items-center gap-3 border-t border-white/10 pt-6">
-              <p className="text-xs uppercase tracking-[0.2em] text-white/70">
+            <p className="mt-5 max-w-3xl text-base leading-7 text-slate-200 md:text-lg md:leading-8 font-medium">{t(introKey)}</p>
+            <div className="mt-8 flex flex-wrap items-center gap-4 border-t-2 border-slate-800 pt-6">
+              <p className="text-xs font-mono uppercase tracking-[0.2em] text-slate-400">
                 {t('legal.common.lastUpdated', { date: t('legal.common.lastUpdatedDate') })}
               </p>
-              <Link className="text-xs font-semibold uppercase tracking-wide text-sky-400 hover:text-sky-300" to="/">
+              <Link className="text-xs font-black uppercase tracking-wider text-sky-400 hover:text-sky-300 transition-colors" to="/">
                 {t('legal.common.backToHome')}
               </Link>
             </div>
-          </header>
+          </Card>
 
           {/* Mobile/tablet: a collapsed <details> instead of dumping all N section links above
               the content — that flat dump before any actual text was the biggest complaint
               about this page being hard to use on a phone. Desktop keeps the sticky sidebar. */}
-          <details className="mb-8 rounded-2xl border border-white/10 bg-white/[0.04] p-4 print:hidden lg:hidden">
-            <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-bold uppercase tracking-[0.18em] text-white">
+          <details className="mb-8 rounded-2xl border-2 border-slate-800 bg-slate-900/60 p-4 shadow-[2px_2px_0px_#000000] print:hidden lg:hidden">
+            <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-black uppercase tracking-[0.18em] text-white">
               {t('legal.common.onThisPage')}
-              <ChevronDown className="h-4 w-4 text-white/70" aria-hidden />
+              <ChevronDown className="h-4 w-4 text-slate-400" aria-hidden />
             </summary>
             <nav aria-label={t('legal.common.sectionNavigationAriaLabel')} className="mt-3">
               {tocList()}
@@ -178,29 +179,30 @@ export function LegalDocumentPage({
 
           <div className="lg:grid lg:grid-cols-[minmax(200px,260px)_minmax(0,1fr)] lg:gap-12">
             <nav aria-label={t('legal.common.sectionNavigationAriaLabel')} className="print:hidden hidden lg:block">
-              <div className="lg:sticky lg:top-24 lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto lg:rounded-2xl lg:border lg:border-white/10 lg:bg-white/[0.04] lg:p-5">
-                <p className="text-xs font-bold uppercase tracking-[0.22em] text-white/70">{t('legal.common.onThisPage')}</p>
+              <Card as="div" className="lg:sticky lg:top-24 lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto p-5 border-slate-800 shadow-[4px_4px_0px_#000000]">
+                <p className="text-xs font-black uppercase tracking-[0.22em] text-slate-400 font-mono">{t('legal.common.onThisPage')}</p>
                 <div className="mt-4">{tocList()}</div>
-              </div>
+              </Card>
             </nav>
 
-            <div className="min-w-0 space-y-10 md:space-y-12">
+            <div className="min-w-0 space-y-8 md:space-y-10">
               {sectionIds.map((sectionKey) => {
                 const { paragraphs, bullets } = resolveSectionContent(sectionKey);
                 return (
-                  <section
+                  <Card
+                    as="section"
                     key={sectionKey}
                     id={sectionKey}
-                    className="scroll-mt-24 rounded-3xl border border-white/10 bg-white/[0.04] p-7 md:p-9"
+                    className="scroll-mt-24 p-7 md:p-9 space-y-4 border-slate-800 shadow-[4px_4px_0px_#000000]"
                     aria-labelledby={`${sectionKey}-title`}
                   >
-                    <h2 id={`${sectionKey}-title`} className="text-xl font-bold tracking-tight text-white md:text-2xl">
+                    <h2 id={`${sectionKey}-title`} className="text-xl font-black uppercase tracking-tight text-white md:text-2xl">
                       {t(`${sectionsTranslationPrefix}.${sectionKey}.title`)}
                     </h2>
                     <div className="mt-6">
                       <SectionBody paragraphs={paragraphs} bullets={bullets} />
                     </div>
-                  </section>
+                  </Card>
                 );
               })}
             </div>
@@ -208,7 +210,7 @@ export function LegalDocumentPage({
 
           <div className="mt-14 flex flex-wrap gap-3 print:hidden">
             <Link
-              className="rounded-full border border-sky-400/40 bg-sky-500/10 px-6 py-3 text-sm font-bold text-sky-200 hover:bg-sky-500/20"
+              className="rounded-xl border-2 border-sky-400 bg-sky-500 hover:bg-sky-400 active:translate-x-0.5 active:translate-y-0.5 px-6 py-3 text-xs font-black uppercase tracking-wider text-slate-950 shadow-[2px_2px_0px_#000000] transition-all"
               to="/register"
             >
               {t('legal.common.backToRegistration')}
@@ -216,14 +218,14 @@ export function LegalDocumentPage({
             {OTHER_LEGAL_PAGES.filter((p) => p.path !== canonicalPath).map((p) => (
               <Link
                 key={p.path}
-                className="rounded-full border border-white/15 px-6 py-3 text-sm font-bold text-white hover:bg-white/5"
+                className="rounded-xl border-2 border-slate-700 bg-slate-900 px-6 py-3 text-xs font-black uppercase tracking-wider text-slate-300 hover:text-white hover:border-slate-600 active:translate-x-0.5 active:translate-y-0.5 shadow-[2px_2px_0px_#000000] transition-all"
                 to={p.path}
               >
                 {t(p.labelKey)}
               </Link>
             ))}
             <Link
-              className="rounded-full border border-white/15 px-6 py-3 text-sm font-bold text-white hover:bg-white/5"
+              className="rounded-xl border-2 border-slate-700 bg-slate-900 px-6 py-3 text-xs font-black uppercase tracking-wider text-slate-300 hover:text-white hover:border-slate-600 active:translate-x-0.5 active:translate-y-0.5 shadow-[2px_2px_0px_#000000] transition-all"
               to="/"
             >
               {t('legal.common.backToHome')}
