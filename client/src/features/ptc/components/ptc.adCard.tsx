@@ -13,6 +13,10 @@ import { usePtcSessionStore } from '../lib/ptcSession.store';
 import { useActiveViewSeconds } from '../lib/ptcOfferwallHooks';
 import { useDocumentTitleCountdown } from '../../../shared/hooks/useDocumentTitleCountdown';
 import { useUtcDailyResetCountdown } from '../../../shared/hooks/useUtcDailyResetCountdown';
+import Card from '../../../shared/components/Card';
+import IconBadge from '../../../shared/components/IconBadge';
+import SectionHeader from '../../../shared/components/SectionHeader';
+import StatusPill, { type StatusPillVariant } from '../../../shared/components/StatusPill';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -51,35 +55,35 @@ export const AdCard = memo(function AdCard({
 
   const badge = useMemo(() => {
     if (viewedToday) {
-      return { label: t('ptc.badge_viewed_today'), cls: 'bg-gray-500/15 text-gray-400 border-gray-500/25' };
+      return { label: t('ptc.badge_viewed_today'), variant: 'neutral' as StatusPillVariant };
     }
     if (isThisAdActive) {
-      if (storeStatus === 'completed') return { label: t('ptc.badge_completed'), cls: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25' };
-      if (storeStatus === 'paused')    return { label: t('ptc.badge_paused'),   cls: 'bg-amber-500/15 text-amber-400 border-amber-500/25' };
-      if (storeStatus === 'opening')   return { label: t('ptc.badge_opening'),   cls: 'bg-orange-500/15 text-orange-400 border-orange-500/25' };
-      return { label: t('ptc.badge_in_progress'), cls: 'bg-sky-500/15 text-sky-400 border-sky-500/25' };
+      if (storeStatus === 'completed') return { label: t('ptc.badge_completed'), variant: 'success' as StatusPillVariant };
+      if (storeStatus === 'paused')    return { label: t('ptc.badge_paused'),   variant: 'warning' as StatusPillVariant };
+      if (storeStatus === 'opening')   return { label: t('ptc.badge_opening'),  variant: 'orange' as StatusPillVariant };
+      return { label: t('ptc.badge_in_progress'), variant: 'info' as StatusPillVariant };
     }
-    return { label: t('ptc.badge_available'), cls: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25' };
+    return { label: t('ptc.badge_available'), variant: 'success' as StatusPillVariant };
   }, [isThisAdActive, storeStatus, viewedToday, t]);
 
   const btn = useMemo(() => {
     if (viewedToday) {
       return {
         label: t('ptc.btn_reset_in', { time: resetCountdownLabel }),
-        cls: 'bg-gray-800 text-gray-500 cursor-not-allowed opacity-80',
+        cls: 'bg-slate-800 text-slate-500 cursor-not-allowed opacity-80 border-2 border-slate-700',
         icon: Timer,
         action: 'none' as const,
       };
     }
     if (isThisAdActive) {
-      if (storeStatus === 'completed') return { label: t('ptc.btn_claim_reward'), cls: 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-600/20', icon: Gift, action: 'session' as const };
-      if (storeStatus === 'viewing')   return { label: t('ptc.btn_view_progress'), cls: 'bg-sky-600 hover:bg-sky-500 shadow-sky-600/20', icon: PlayCircle, action: 'session' as const };
-      if (storeStatus === 'paused')    return { label: t('ptc.btn_awaiting_return'), cls: 'bg-amber-600 hover:bg-amber-500 shadow-amber-600/20', icon: PauseCircle, action: 'session' as const };
-      return { label: t('ptc.btn_opening'), cls: 'bg-orange-600 opacity-70 cursor-wait', icon: Loader2, action: 'none' as const };
+      if (storeStatus === 'completed') return { label: t('ptc.btn_claim_reward'), cls: 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-[2px_2px_0px_#000000]', icon: Gift, action: 'session' as const };
+      if (storeStatus === 'viewing')   return { label: t('ptc.btn_view_progress'), cls: 'bg-sky-600 hover:bg-sky-500 text-white shadow-[2px_2px_0px_#000000]', icon: PlayCircle, action: 'session' as const };
+      if (storeStatus === 'paused')    return { label: t('ptc.btn_awaiting_return'), cls: 'bg-amber-600 hover:bg-amber-500 text-white shadow-[2px_2px_0px_#000000]', icon: PauseCircle, action: 'session' as const };
+      return { label: t('ptc.btn_opening'), cls: 'bg-orange-600 text-white opacity-70 cursor-wait shadow-[2px_2px_0px_#000000]', icon: Loader2, action: 'none' as const };
     }
-    if (isStarting) return { label: t('ptc.btn_starting'), cls: 'bg-orange-500 cursor-wait', icon: Loader2, action: 'none' as const };
-    if (hasOtherSession) return { label: t('ptc.btn_open_ad'), cls: 'bg-gray-700 opacity-40 cursor-not-allowed', icon: ExternalLink, action: 'none' as const };
-    return { label: t('ptc.btn_open_ad'), cls: 'bg-orange-500 hover:bg-orange-400 shadow-orange-500/20', icon: ExternalLink, action: 'start' as const };
+    if (isStarting) return { label: t('ptc.btn_starting'), cls: 'bg-orange-600 text-white cursor-wait shadow-[2px_2px_0px_#000000]', icon: Loader2, action: 'none' as const };
+    if (hasOtherSession) return { label: t('ptc.btn_open_ad'), cls: 'bg-slate-800 text-slate-500 opacity-40 cursor-not-allowed', icon: ExternalLink, action: 'none' as const };
+    return { label: t('ptc.btn_open_ad'), cls: 'bg-orange-600 hover:bg-orange-500 active:translate-x-0.5 active:translate-y-0.5 text-white shadow-[2px_2px_0px_#000000]', icon: ExternalLink, action: 'start' as const };
   }, [isThisAdActive, storeStatus, isStarting, hasOtherSession, viewedToday, resetCountdownLabel, t]);
 
   function handleBtnClick(e: MouseEvent<HTMLButtonElement>) {
@@ -95,12 +99,12 @@ export const AdCard = memo(function AdCard({
 
   return (
     <article
-      className={`group bg-surface border rounded-3xl overflow-hidden flex flex-col transition-all duration-300 ${
+      className={`group bg-slate-900/60 border-2 rounded-3xl overflow-hidden flex flex-col transition-all duration-300 shadow-[4px_4px_0px_#000000] ${
         viewedToday
-          ? 'border-gray-800/60 opacity-75'
+          ? 'border-slate-800/80 opacity-75'
           : isThisAdActive
-          ? 'border-sky-500/30 shadow-lg shadow-sky-500/10 ring-1 ring-sky-500/10 hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-black/40'
-          : 'border-gray-800/50 hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-black/40 hover:border-gray-700/70'
+          ? 'border-sky-500/50 shadow-[0_0_20px_rgba(56,189,248,0.15),4px_4px_0px_#000000]'
+          : 'border-slate-800 hover:border-slate-700'
       }`}
     >
       <SitePreview url={ad.url} title={ad.title} isActive={isThisAdActive} />
@@ -112,37 +116,35 @@ export const AdCard = memo(function AdCard({
             <h3 className="text-white font-black text-sm uppercase italic tracking-tight leading-tight line-clamp-1 flex-1">
               {ad.title}
             </h3>
-            <span className={`shrink-0 text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border ${badge.cls}`}>
-              {badge.label}
-            </span>
+            <StatusPill variant={badge.variant} label={badge.label} className="!text-[9px] !px-2 !py-0.5 shrink-0" />
           </div>
-          <p className="text-gray-500 text-xs font-medium leading-relaxed line-clamp-2 min-h-[2.5rem]">
-            {ad.description || <span className="text-gray-700 italic">{t('ptc.no_description')}</span>}
+          <p className="text-slate-400 text-xs font-medium leading-relaxed line-clamp-2 min-h-[2.5rem]">
+            {ad.description || <span className="text-slate-600 italic">{t('ptc.no_description')}</span>}
           </p>
         </div>
 
         {/* Stats chips */}
         <div className="flex items-center gap-1.5 flex-wrap">
-          <div className="flex items-center gap-1 bg-gray-800/70 rounded-lg px-2 py-1">
-            <Timer className="w-3 h-3 text-gray-500" />
-            <span className="text-gray-400 text-[10px] font-bold tabular-nums">{ad.durationSeconds}s</span>
+          <div className="flex items-center gap-1 bg-slate-950/80 border border-slate-800 rounded-lg px-2.5 py-1">
+            <Timer className="w-3 h-3 text-slate-400" />
+            <span className="text-slate-300 text-[10px] font-bold tabular-nums font-mono">{ad.durationSeconds}s</span>
           </div>
           {ad.targetViews != null && (
-            <div className="flex items-center gap-1 bg-gray-800/70 rounded-lg px-2 py-1">
-              <Eye className="w-3 h-3 text-gray-500" />
-              <span className="text-gray-400 text-[10px] font-bold tabular-nums">
+            <div className="flex items-center gap-1 bg-slate-950/80 border border-slate-800 rounded-lg px-2.5 py-1">
+              <Eye className="w-3 h-3 text-slate-400" />
+              <span className="text-slate-300 text-[10px] font-bold tabular-nums font-mono">
                 {t('ptc.remaining_views', { count: remainingViews.toLocaleString() })}
               </span>
             </div>
           )}
-          <div className="flex items-center gap-1 bg-orange-500/10 border border-orange-500/20 rounded-lg px-2 py-1 ml-auto">
+          <div className="flex items-center gap-1 bg-orange-950/20 border border-orange-500/30 rounded-lg px-2.5 py-1 ml-auto">
             <img
               src={`/media/brand/${(ad.asset || 'shib').toLowerCase()}.webp`}
               alt=""
-              className="w-3 h-3 rounded-full"
+              className="w-3.5 h-3.5 rounded-full"
               onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
             />
-            <span className="text-orange-300 font-black text-[10px] tabular-nums">
+            <span className="text-orange-300 font-black text-[10px] tabular-nums font-mono">
               +{Number(ad.rewardPerViewShib).toLocaleString(undefined, { maximumFractionDigits: 6 })} {ad.asset || 'SHIB'}
             </span>
           </div>
@@ -153,18 +155,18 @@ export const AdCard = memo(function AdCard({
 
         {/* CTA button */}
         {viewedToday ? (
-          <div className="rounded-2xl border border-gray-800 bg-gray-900/60 px-4 py-3 text-center">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
+          <div className="rounded-xl border border-slate-800 bg-slate-950/60 px-4 py-3 text-center">
+            <p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
               {t('ptc.available_after_utc_reset')}
             </p>
-            <p className="mt-1 text-xs font-medium text-gray-400 tabular-nums">{resetCountdownLabel}</p>
+            <p className="mt-1 text-xs font-mono font-bold text-slate-300 tabular-nums">{resetCountdownLabel}</p>
           </div>
         ) : (
           <button
             onClick={handleBtnClick}
             disabled={btn.action === 'none'}
             aria-label={btn.label}
-            className={`w-full py-3.5 text-white font-black text-xs uppercase tracking-widest rounded-2xl transition-all duration-200 flex items-center justify-center gap-2 shadow-lg ${btn.cls} disabled:pointer-events-none`}
+            className={`w-full py-3 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 outline-none focus-visible:ring-2 focus-visible:ring-primary ${btn.cls} disabled:pointer-events-none`}
           >
             <BtnIcon className={`w-4 h-4 ${btn.icon === Loader2 ? 'animate-spin' : ''}`} />
             {btn.label}
@@ -262,19 +264,19 @@ export function AdGridView({
   const availableAds = ads.filter((a) => a.availableToday !== false && !a.viewedToday);
 
   if (ads.length === 0) return (
-    <div className="bg-surface border border-gray-800/50 rounded-[2.5rem] p-16 text-center space-y-5">
-      <div className="w-20 h-20 bg-gray-800/50 rounded-full flex items-center justify-center mx-auto">
-        <Eye className="w-9 h-9 text-gray-700" />
+    <div className="bg-slate-900/60 border-2 border-slate-800 rounded-3xl p-14 text-center space-y-4 shadow-[4px_4px_0px_#000000]">
+      <div className="w-16 h-16 bg-slate-950/80 border border-slate-800 rounded-2xl flex items-center justify-center mx-auto shadow-[2px_2px_0px_#000000]">
+        <Eye className="w-8 h-8 text-slate-500" />
       </div>
       <div>
-        <h3 className="text-white font-black uppercase tracking-widest text-sm mb-2">{t('ptc.empty_ads_title')}</h3>
-        <p className="text-gray-600 text-xs font-medium max-w-xs mx-auto leading-relaxed">
+        <h3 className="text-white font-black uppercase tracking-widest text-sm mb-1.5">{t('ptc.empty_ads_title')}</h3>
+        <p className="text-slate-400 text-xs font-medium max-w-xs mx-auto leading-relaxed">
           {t('ptc.empty_ads_hint')}
         </p>
       </div>
       <button
         onClick={() => void loadAds()}
-        className="inline-flex items-center gap-2 px-6 py-3 bg-gray-800 hover:bg-gray-700 text-white font-black text-xs uppercase tracking-widest rounded-2xl transition-colors"
+        className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-800 hover:bg-slate-700 active:translate-x-0.5 active:translate-y-0.5 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-[2px_2px_0px_#000000] outline-none focus-visible:ring-2 focus-visible:ring-primary"
       >
         <RefreshCw className="w-4 h-4" /> {t('ptc.check_again')}
       </button>
@@ -288,11 +290,11 @@ export function AdGridView({
       <StatsStrip ads={ads} />
 
       {availableAds.length === 0 && ads.length > 0 ? (
-        <div className="rounded-2xl border border-gray-800/60 bg-gray-900/40 px-5 py-4 text-center">
-          <p className="text-sm font-bold text-gray-300">{t('ptc.all_viewed_today')}</p>
-          <p className="mt-1 text-xs text-gray-500">
+        <div className="rounded-2xl border-2 border-slate-800 bg-slate-900/60 px-5 py-4 text-center shadow-[2px_2px_0px_#000000]">
+          <p className="text-sm font-bold text-slate-200">{t('ptc.all_viewed_today')}</p>
+          <p className="mt-1 text-xs text-slate-400 font-medium">
             {t('ptc.available_next_reset')}{' '}
-            <span className="font-black tabular-nums text-indigo-300">{resetCountdownLabel}</span>
+            <span className="font-black tabular-nums text-indigo-300 font-mono">{resetCountdownLabel}</span>
           </p>
         </div>
       ) : null}
@@ -301,15 +303,15 @@ export function AdGridView({
       {storeSession && (
         <button
           onClick={() => onSelectAd({ id: storeSession.adId } as PtcAd)}
-          className="w-full flex items-center gap-3 px-5 py-4 bg-sky-500/5 border border-sky-500/20 rounded-2xl hover:border-sky-500/40 transition-colors text-left group/banner"
+          className="w-full flex items-center gap-3 px-5 py-4 bg-sky-950/20 border-2 border-sky-500/30 rounded-2xl hover:border-sky-500/50 shadow-[2px_2px_0px_#000000] active:translate-x-0.5 active:translate-y-0.5 transition-all text-left group/banner outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
         >
           <div className="flex items-center gap-2 shrink-0">
             <span className="w-2 h-2 bg-sky-400 rounded-full animate-pulse block" />
             <AlertCircle className="w-4 h-4 text-sky-400" />
           </div>
-          <p className="text-xs text-sky-400/90 font-medium flex-1">
+          <p className="text-xs text-sky-300 font-medium flex-1">
             {t('ptc.active_session_before')}{' '}
-            <strong className="font-black">{t('ptc.active_session_cta')}</strong>{' '}
+            <strong className="font-black text-white">{t('ptc.active_session_cta')}</strong>{' '}
             {t('ptc.active_session_after')}
           </p>
           <PlayCircle className="w-4 h-4 text-sky-400 opacity-60 group-hover/banner:opacity-100 transition-opacity shrink-0" />
@@ -318,7 +320,7 @@ export function AdGridView({
 
       {/* Header row */}
       <div className="flex items-center justify-between">
-        <p className="text-gray-600 text-xs font-bold uppercase tracking-widest">
+        <p className="text-slate-400 text-xs font-black uppercase tracking-widest">
           {availableAds.length === 1
             ? t('ptc.ads_available_one', { count: availableAds.length })
             : t('ptc.ads_available_other', { count: availableAds.length })}
@@ -326,7 +328,8 @@ export function AdGridView({
         <button
           onClick={() => void loadAds()}
           title={t('ptc.refresh_list')}
-          className="p-2 rounded-xl text-gray-600 hover:text-white hover:bg-gray-800 transition-all"
+          aria-label={t('ptc.refresh_list')}
+          className="p-2 rounded-xl border border-slate-800 bg-slate-900/60 text-slate-400 hover:text-white hover:bg-slate-800 transition-all outline-none focus-visible:ring-2 focus-visible:ring-primary"
         >
           <RefreshCw className="w-3.5 h-3.5" />
         </button>
@@ -349,11 +352,11 @@ export function AdGridView({
       </div>
 
       {/* Info note */}
-      <div className="flex gap-3 p-4 bg-blue-500/5 border border-blue-500/10 rounded-2xl">
+      <div className="flex gap-3 p-4 bg-blue-950/20 border-2 border-blue-500/25 rounded-2xl shadow-[2px_2px_0px_#000000]">
         <Info className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
-        <p className="text-[11px] text-gray-500 font-medium leading-relaxed">
+        <p className="text-[11px] text-slate-400 font-medium leading-relaxed">
           {t('ptc.info_note_before')}{' '}
-          <strong className="text-orange-300">SHIB</strong>{' '}
+          <strong className="text-orange-300 font-black">SHIB</strong>{' '}
           {t('ptc.info_note_mid')}{' '}
           <strong className="text-white">{t('ptc.info_note_limit')}</strong>{' '}
           {t('ptc.info_note_after')}
@@ -455,13 +458,13 @@ export function ActiveSessionView({ onDone }: { onDone: () => void }) {
           if (storeStatus === 'cancelled' || storeStatus === 'claimed') { clearSession(); onDone(); }
           else void handleCancel();
         }}
-        className="flex items-center gap-1.5 text-gray-600 hover:text-white text-xs font-black uppercase tracking-widest transition-colors"
+        className="flex items-center gap-1.5 text-slate-400 hover:text-white text-xs font-black uppercase tracking-wider transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary"
       >
-        {t('ptc.back_to_list')}
+        ← {t('ptc.back_to_list')}
       </button>
 
       {/* Main card */}
-      <div className="bg-surface border border-gray-800/50 rounded-[2.5rem] overflow-hidden">
+      <div className="bg-slate-900/60 border-2 border-slate-800 rounded-3xl overflow-hidden shadow-[4px_4px_0px_#000000]">
         {/* Top gradient with site info */}
         <div className="relative px-8 pt-8 pb-6" style={{ background: gradient }}>
           <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/60" />
@@ -473,14 +476,14 @@ export function ActiveSessionView({ onDone }: { onDone: () => void }) {
               </h2>
             </div>
             <div className="shrink-0 flex flex-col items-end gap-1">
-              <div className="flex items-center gap-1.5 bg-orange-500/20 border border-orange-500/30 rounded-xl px-3 py-1.5 backdrop-blur-sm">
+              <div className="flex items-center gap-1.5 bg-orange-950/40 border border-orange-500/30 rounded-xl px-3 py-1.5 backdrop-blur-sm shadow-[2px_2px_0px_#000000]">
                 <img
                   src="/media/brand/shib.webp"
                   alt=""
                   className="w-4 h-4 rounded-full"
                   onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                 />
-                <span className="text-orange-300 font-black text-xs">
+                <span className="text-orange-300 font-black text-xs font-mono">
                   +{Number(storeSession.rewardShib).toLocaleString(undefined, { maximumFractionDigits: 4 })} SHIB
                 </span>
               </div>
@@ -490,7 +493,7 @@ export function ActiveSessionView({ onDone }: { onDone: () => void }) {
 
         {/* iframe viewer */}
         {storeSession.adType === 'iframe' && storeStatus !== 'idle' && (
-          <div className="mx-6 mt-0 rounded-2xl overflow-hidden border border-gray-700 bg-gray-900">
+          <div className="mx-6 mt-0 rounded-2xl overflow-hidden border border-slate-700 bg-slate-950">
             <iframe
               src={storeSession.adUrl}
               title={storeSession.adTitle}
@@ -504,7 +507,7 @@ export function ActiveSessionView({ onDone }: { onDone: () => void }) {
         {/* Status + timer block */}
         <div className="p-6 space-y-5">
           {statusMeta && !claimed && (
-            <div className={`rounded-2xl bg-gradient-to-b ${statusMeta.bg} to-transparent ring-1 ${statusMeta.ring} px-6 py-6 text-center space-y-4 transition-all duration-500`}>
+            <div className={`rounded-2xl border-2 border-slate-800/80 bg-slate-950/60 p-6 text-center space-y-4 shadow-[2px_2px_0px_#000000]`}>
               {/* Status label */}
               <p className={`text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5 ${statusMeta.color}`}>
                 <StatusIcon className={`w-3.5 h-3.5 ${storeStatus === 'opening' || storeStatus === 'viewing' ? 'animate-pulse' : ''}`} />
@@ -514,26 +517,26 @@ export function ActiveSessionView({ onDone }: { onDone: () => void }) {
               {/* Timer */}
               {['opening', 'viewing', 'paused'].includes(storeStatus) && (
                 <div className="space-y-3">
-                  <div className="flex items-end justify-center gap-2">
+                  <div className="flex items-end justify-center gap-2 font-mono">
                     <span className="text-5xl sm:text-6xl font-black tabular-nums tracking-tight text-white">
                       {fmtTime(displayElapsed)}
                     </span>
-                    <span className="text-2xl text-gray-600 font-black tabular-nums mb-1">
+                    <span className="text-2xl text-slate-500 font-black tabular-nums mb-1">
                       / {fmtTime(requiredSeconds)}
                     </span>
                   </div>
 
                   {/* Progress bar */}
-                  <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
+                  <div className="h-2.5 bg-slate-950 border border-slate-800 rounded-full overflow-hidden">
                     <div
                       className={`h-full rounded-full transition-all duration-1000 ${
-                        storeStatus === 'paused' ? 'bg-amber-500' : 'bg-sky-500 shadow-[0_0_8px_theme(colors.sky.500)]'
+                        storeStatus === 'paused' ? 'bg-amber-500' : 'bg-sky-500 shadow-[0_0_8px_rgba(56,189,248,0.5)]'
                       }`}
                       style={{ width: `${progress}%` }}
                     />
                   </div>
 
-                  <p className="text-[11px] text-gray-600 font-medium">
+                  <p className="text-[11px] text-slate-400 font-medium">
                     {storeStatus === 'paused'
                       ? t('ptc.hint_paused')
                       : storeStatus === 'opening'
@@ -544,7 +547,7 @@ export function ActiveSessionView({ onDone }: { onDone: () => void }) {
               )}
 
               {storeStatus === 'cancelled' && (
-                <p className="text-sm text-red-400/70 font-medium">{t('ptc.cancelled_early')}</p>
+                <p className="text-sm text-red-400 font-medium">{t('ptc.cancelled_early')}</p>
               )}
             </div>
           )}
@@ -553,7 +556,7 @@ export function ActiveSessionView({ onDone }: { onDone: () => void }) {
           {['opening', 'viewing', 'paused'].includes(storeStatus) && (
             <button
               onClick={() => void handleCancel()}
-              className="w-full py-3 bg-gray-800/60 text-gray-500 font-black text-xs uppercase tracking-widest rounded-2xl hover:bg-gray-700/60 hover:text-white transition-colors"
+              className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 active:translate-x-0.5 active:translate-y-0.5 font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-[2px_2px_0px_#000000] outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
               {t('ptc.cancel_view')}
             </button>
@@ -564,7 +567,7 @@ export function ActiveSessionView({ onDone }: { onDone: () => void }) {
             <button
               onClick={() => void handleClaim()}
               disabled={claiming}
-              className="w-full py-5 bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase tracking-widest rounded-2xl transition-all hover:scale-[1.02] flex items-center justify-center gap-3 text-sm italic shadow-xl shadow-emerald-600/25 animate-bounce disabled:opacity-70 disabled:scale-100 disabled:animate-none"
+              className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 active:translate-x-0.5 active:translate-y-0.5 text-white font-black uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 text-xs shadow-[2px_2px_0px_#000000] outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 disabled:opacity-70 disabled:pointer-events-none"
             >
               {claiming ? <Loader2 className="w-5 h-5 animate-spin" /> : <Gift className="w-5 h-5" />}
               {t('ptc.claim_shib')}
@@ -573,19 +576,19 @@ export function ActiveSessionView({ onDone }: { onDone: () => void }) {
 
           {/* Claimed state */}
           {claimed && (
-            <div className="flex items-center justify-center gap-3 py-5 bg-emerald-500/10 rounded-2xl border border-emerald-500/20 animate-in fade-in duration-300">
-              <CheckCircle2 className="w-6 h-6 text-emerald-500" />
-              <span className="text-emerald-400 font-black uppercase italic tracking-tighter text-lg">{t('ptc.shib_credited')}</span>
-              <Loader2 className="w-4 h-4 text-gray-600 animate-spin ml-2" />
+            <div className="flex items-center justify-center gap-3 py-4 bg-emerald-500/10 rounded-xl border border-emerald-500/30 shadow-[2px_2px_0px_#000000]">
+              <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+              <span className="text-emerald-400 font-black uppercase tracking-wider text-base">{t('ptc.shib_credited')}</span>
+              <Loader2 className="w-4 h-4 text-slate-400 animate-spin ml-1" />
             </div>
           )}
         </div>
       </div>
 
       {/* Tip */}
-      <div className="flex gap-3 p-4 bg-blue-500/5 border border-blue-500/10 rounded-2xl">
+      <div className="flex gap-3 p-4 bg-blue-950/20 border-2 border-blue-500/25 rounded-2xl shadow-[2px_2px_0px_#000000]">
         <Info className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
-        <p className="text-[11px] text-gray-500 font-medium leading-relaxed">
+        <p className="text-[11px] text-slate-400 font-medium leading-relaxed">
           {t('ptc.tip_timer_before')}{' '}
           <strong className="text-white">{t('ptc.tip_timer_strong')}</strong>
           {t('ptc.tip_timer_after')}

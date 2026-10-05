@@ -3139,6 +3139,8 @@
     "video_error_embed": "Este vídeo bloqueou o embed. Clique em \"Abrir no YouTube\" abaixo do player."
   },
   "offers": {
+    "title": "Ofertas e Eventos",
+    "subtitle": "Ofertas e eventos limitados de mineradores e equipamentos.",
     "empty": "Nenhuma oferta ativa no momento. Volte em breve.",
     "live": "Ao vivo",
     "coming_soon": "Em breve",

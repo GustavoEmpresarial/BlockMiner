@@ -489,22 +489,22 @@ export default function Game2048Page() {
             {t("game2048.loading")}
           </span>
         )}
-        <header className="flex shrink-0 items-center justify-between gap-1.5 border-b border-slate-800 bg-slate-950 px-2 py-2 sm:gap-2 sm:px-4">
+        <header className="flex shrink-0 items-center justify-between gap-1.5 border-b-2 border-slate-800 bg-slate-950/80 backdrop-blur-md px-2.5 py-2.5 sm:gap-3 sm:px-4 shadow-[2px_2px_0px_#000000]">
             <div className="flex min-w-0 items-center gap-2 sm:gap-3">
               <Link
                 to="/games"
-                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-700/60 text-slate-400 transition-colors hover:border-sky-500/40 hover:text-sky-400"
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border-2 border-slate-800 bg-slate-900/60 text-slate-400 transition-all hover:border-slate-700 hover:text-white shadow-[2px_2px_0px_#000000] active:translate-x-0.5 active:translate-y-0.5 outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 aria-label={t("game2048.back_arena")}
               >
                 <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
               </Link>
-              <div className="flex min-w-0 items-center gap-2 rounded-lg border border-amber-500/25 bg-amber-500/10 px-2 py-1 sm:px-3">
+              <div className="flex min-w-0 items-center gap-2 rounded-xl border-2 border-amber-500/30 bg-amber-950/20 px-3 py-1.5 shadow-[2px_2px_0px_#000000]">
                 <Coins className="h-5 w-5 shrink-0 text-amber-300" aria-hidden />
                 <div className="flex min-w-0 flex-col">
-                  <span className="text-[8px] font-black uppercase tracking-widest text-amber-200/80">
+                  <span className="text-[8px] font-black uppercase tracking-widest text-amber-300">
                     {t("game2048.score")}
                   </span>
-                  <span className="text-lg font-black tabular-nums leading-none text-amber-50 sm:text-xl">
+                  <span className="text-lg font-black tabular-nums leading-none text-white sm:text-xl font-mono">
                     {Number(session?.score) || 0}
                   </span>
                 </div>
@@ -519,7 +519,7 @@ export default function Game2048Page() {
             <div className="flex min-w-0 items-center justify-end gap-1.5 sm:gap-2">
               {(showTimer || (session?.timeLimitSeconds ?? 0) > 0) && (
                 <div className="text-right">
-                  <p className="flex items-center justify-end gap-1 text-[8px] font-black uppercase tracking-widest text-slate-500 sm:text-[9px]">
+                  <p className="flex items-center justify-end gap-1 text-[8px] font-black uppercase tracking-widest text-slate-400 sm:text-[9px]">
                     <Clock className="h-3 w-3 shrink-0" aria-hidden />
                     {t("game2048.time")}
                   </p>
@@ -533,7 +533,7 @@ export default function Game2048Page() {
                   type="button"
                   onClick={() => void restartGame()}
                   disabled={busy}
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-red-500/30 bg-red-500/20 text-red-400 transition-all hover:bg-red-500/40 disabled:opacity-40"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-red-500/40 bg-red-950/30 text-red-400 transition-all hover:bg-red-900/40 active:translate-x-0.5 active:translate-y-0.5 shadow-[2px_2px_0px_#000000] disabled:opacity-40 outline-none focus-visible:ring-2 focus-visible:ring-red-400"
                   aria-label={t("game2048.reset_aria")}
                 >
                   <RotateCcw className="h-4 w-4" aria-hidden />

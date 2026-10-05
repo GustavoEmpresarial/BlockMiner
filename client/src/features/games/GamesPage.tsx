@@ -111,10 +111,10 @@ export default function GamesPage() {
     cooldown2048 > 0 || (!allow2048Start && !has2048Session);
 
   return (
-    <div className="animate-in fade-in space-y-8 duration-1000" style={{ direction: 'ltr' }}>
+    <div className="animate-in fade-in space-y-8 duration-500 pb-20" style={{ direction: 'ltr' }}>
       <AdRotator ads={LEADERBOARD_ADS} size="728x90" className="!my-2" />
-      <div className="flex flex-col gap-4 rounded-3xl border border-slate-800 bg-slate-900/50 p-4 shadow-xl sm:p-6 lg:flex-row lg:items-stretch lg:justify-between">
-        <h1 className="min-w-0 shrink-0 text-3xl font-black uppercase italic leading-none tracking-tight text-white sm:text-4xl">
+      <div className="flex flex-col gap-4 rounded-3xl border-2 border-slate-800 bg-slate-900/60 p-5 sm:p-6 shadow-[4px_4px_0px_#000000] lg:flex-row lg:items-center lg:justify-between">
+        <h1 className="min-w-0 shrink-0 text-2xl sm:text-3xl font-black uppercase italic leading-none tracking-tight text-white sm:text-4xl">
           {t('minerGames.brand_prefix')}
           <span className="text-primary">{t('minerGames.brand_suffix')}</span>
         </h1>
