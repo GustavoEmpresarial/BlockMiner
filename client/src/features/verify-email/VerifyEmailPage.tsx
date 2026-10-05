@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Loader2, CheckCircle2, AlertCircle, MailCheck } from 'lucide-react';
 import BrandLogo from '../../shared/components/BrandLogo';
+import Card from '../../shared/components/Card';
+import IconBadge from '../../shared/components/IconBadge';
 import { api, useAuthStore } from '../../shared/auth/auth.store';
 import { resolveApiErrorMessage } from '../../shared/utils/apiErrorI18n';
 import SiteFooter from '../../shared/components/SiteFooter';
@@ -53,49 +55,48 @@ export default function VerifyEmailPage() {
 
       <div className="flex-1 flex items-center justify-center p-6">
       <div className="w-full max-w-[440px] relative z-10">
-        <div className="text-center mb-10">
-          <div className="flex justify-center mb-6">
-            <BrandLogo variant="auth" />
-          </div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">{t('auth.verifyEmail.title')}</h1>
+        <div className="flex justify-center mb-6">
+          <BrandLogo variant="auth" />
         </div>
 
-        <div className="bg-surface/50 backdrop-blur-xl border border-gray-800/50 rounded-[2.5rem] p-10 shadow-2xl text-center">
+        <Card spacing="md" className="text-center">
+          <div className="flex flex-col items-center gap-4 pb-3 border-b-2 border-slate-800">
+            <IconBadge icon={MailCheck} variant="sky" size="lg" />
+            <h1 className="text-2xl font-black uppercase tracking-tight text-white">{t('auth.verifyEmail.title')}</h1>
+          </div>
           {state === 'loading' ? (
             <div className="flex flex-col items-center gap-4 py-6">
-              <Loader2 className="w-10 h-10 text-primary animate-spin" />
-              <p className="text-gray-400 text-sm font-medium">{t('auth.verifyEmail.loading')}</p>
+              <Loader2 className="w-10 h-10 text-sky-400 animate-spin" />
+              <p className="text-slate-300 text-sm font-medium">{t('auth.verifyEmail.loading')}</p>
             </div>
           ) : null}
 
           {state === 'success' ? (
-            <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-5 flex flex-col items-center gap-3">
+            <div className="rounded-2xl border-2 border-emerald-500/40 bg-slate-950 p-5 flex flex-col items-center gap-3 shadow-[2px_2px_0px_#000000]">
               <CheckCircle2 className="w-8 h-8 text-emerald-400" />
               <p className="text-emerald-300 text-sm font-bold leading-relaxed">{t('auth.verifyEmail.success_body')}</p>
             </div>
           ) : null}
 
           {state === 'error' ? (
-            <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-5 flex flex-col items-center gap-3">
-              <AlertCircle className="w-8 h-8 text-red-400" />
-              <p className="text-red-400 text-sm font-bold leading-relaxed">{errorMessage}</p>
+            <div className="rounded-2xl border-2 border-red-500/40 bg-slate-950 p-5 flex flex-col items-center gap-3 shadow-[2px_2px_0px_#000000]">
+              <AlertCircle className="w-8 h-8 text-red-300" />
+              <p className="text-red-300 text-sm font-bold leading-relaxed">{errorMessage}</p>
             </div>
           ) : null}
 
-          <div className="mt-8">
-            <Link
-              to="/dashboard"
-              className="inline-block w-full py-4 px-6 bg-primary hover:bg-primary-hover text-white rounded-2xl font-black text-sm uppercase tracking-widest transition-all shadow-xl shadow-primary/20 active:scale-[0.98]"
-            >
-              {t('auth.verifyEmail.go_dashboard')}
-            </Link>
-          </div>
-        </div>
+          <Link
+            to="/dashboard"
+            className="inline-block w-full py-4 px-6 bg-sky-500 hover:bg-sky-400 text-slate-950 rounded-xl font-black text-sm uppercase tracking-widest shadow-[2px_2px_0px_#000000] active:translate-x-0.5 active:translate-y-0.5"
+          >
+            {t('auth.verifyEmail.go_dashboard')}
+          </Link>
+        </Card>
 
         <div className="mt-8 text-center">
           <Link
             to="/"
-            className="text-gray-600 hover:text-gray-400 text-xs font-bold uppercase tracking-[0.2em] transition-colors"
+            className="text-slate-300 hover:text-white text-xs font-black uppercase tracking-[0.2em]"
           >
             {t('common.back')}
           </Link>

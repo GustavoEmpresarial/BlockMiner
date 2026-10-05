@@ -3,6 +3,8 @@ import type { TFunction } from 'i18next';
 import type { LucideIcon } from 'lucide-react';
 import { Zap, Clock, TrendingUp, History, BarChart3, ShieldCheck } from 'lucide-react';
 import { formatHashrate } from '../../machines/lib/machines.shared';
+import Card from '../../../shared/components/Card';
+import SectionHeader from '../../../shared/components/SectionHeader';
 import { useBrazilDailyResetCountdown } from '../../../shared/hooks/useBrazilDailyResetCountdown';
 
 import type {
@@ -114,7 +116,7 @@ export function TrackerItem({
                 <div className={`p-2 rounded-lg ${colorMap[color]} group-hover:scale-110 transition-transform`}>
                     <Icon className="w-3.5 h-3.5" />
                 </div>
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{label}</span>
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{label}</span>
             </div>
             <span className="text-sm font-black text-white italic">{value}</span>
         </div>
@@ -139,18 +141,18 @@ export function YoutubeDailyResetBanner({
     }, [remainingMs, onResetElapsed]);
 
     return (
-        <div className="flex flex-col gap-1.5 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <Card variant="compact" className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between">
             <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-emerald-400/90">
+                <p className="text-[10px] font-black uppercase tracking-widest text-emerald-300">
                     {t('youtube.daily_reset_title', { date: dailyReset.localDate })}
                 </p>
-                <p className="mt-1 text-xs font-medium text-gray-400">{t('youtube.daily_reset_body')}</p>
+                <p className="mt-1 text-xs font-medium text-slate-300">{t('youtube.daily_reset_body')}</p>
             </div>
             <div className="shrink-0 text-right">
-                <p className="text-[9px] font-bold uppercase tracking-widest text-gray-600">{t('youtube.daily_reset_next')}</p>
-                <p className="text-lg font-black tabular-nums text-emerald-300">{label}</p>
+                <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">{t('youtube.daily_reset_next')}</p>
+                <p className="text-lg font-black font-mono tabular-nums text-emerald-300">{label}</p>
             </div>
-        </div>
+        </Card>
     );
 }
 
@@ -185,14 +187,10 @@ export function YoutubeTrackerSidebar({
 }: YoutubeTrackerSidebarProps) {
     return (
         <div className="space-y-4 sm:space-y-6">
-            <div className="bg-surface border border-gray-800/50 rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-8 shadow-xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-bl-[100px] -mr-10 -mt-10" />
+            <Card spacing="lg">
+                <SectionHeader icon={BarChart3} title={t('youtube.tracker_title')} />
 
-                <h3 className="text-sm font-black text-white uppercase tracking-[0.2em] mb-8 flex items-center gap-2">
-                    <BarChart3 className="w-4 h-4 text-primary" /> {t('youtube.tracker_title')}
-                </h3>
-
-                <div className="space-y-6 relative z-10">
+                <div className="space-y-6">
                     <TrackerItem
                         label={t('youtube.tracker_next')}
                         value={showClaimCountdown ? `${Math.ceil(countdownRemaining)}s` : '--'}
@@ -207,35 +205,36 @@ export function YoutubeTrackerSidebar({
                     />
                     <TrackerItem label={t('youtube.tracker_per_minute')} value={formatHashrate(Number(status?.rewardGh || 10))} icon={Zap} color="amber" />
                     <TrackerItem label={t('youtube.tracker_duration')} value={`${Number(status?.durationMin || 1440)} min`} icon={History} color="blue" />
-                    <div className="h-[1px] bg-gray-800 w-full my-2" />
+                    <div className="h-0.5 bg-slate-800 w-full my-2" />
                     <TrackerItem label={t('youtube.tracker_bonus')} value={formatHashrate(status?.activeHashRate || 0)} icon={TrendingUp} color="emerald" />
                 </div>
-            </div>
+            </Card>
 
-            <div className="bg-gray-900 border border-gray-800 rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-8 space-y-6 shadow-2xl">
+            <Card spacing="lg">
+                <SectionHeader icon={BarChart3} iconVariant="emerald" title={t('youtube.stats_daily_progress')} />
                 <div className="space-y-4">
                     <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest">
-                        <span className="text-slate-500">{t('youtube.stats_claims_today')}</span>
+                        <span className="text-slate-400">{t('youtube.stats_claims_today')}</span>
                         <span className="text-white">{claimsToday}</span>
                     </div>
                     <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest">
-                        <span className="text-slate-500">{t('youtube.stats_hash_today')}</span>
+                        <span className="text-slate-400">{t('youtube.stats_hash_today')}</span>
                         <span className="text-emerald-400">{formatHashrate(dailyHashUsed)} / {formatHashrate(dailyLimitHash)}</span>
                     </div>
                     <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest">
-                        <span className="text-slate-500">{t('youtube.stats_hash_remaining')}</span>
-                        <span className="text-gray-400">{formatHashrate(dailyHashRemaining)}</span>
+                        <span className="text-slate-400">{t('youtube.stats_hash_remaining')}</span>
+                        <span className="text-slate-200">{formatHashrate(dailyHashRemaining)}</span>
                     </div>
                     <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest">
-                        <span className="text-slate-500">{t('youtube.stats_active_hash')}</span>
+                        <span className="text-slate-400">{t('youtube.stats_active_hash')}</span>
                         <span className="text-primary">{formatHashrate(activeHashTotal)}</span>
                     </div>
-                    <p className="text-[9px] text-gray-600 font-bold uppercase leading-relaxed">{t('youtube.stats_active_hash_note')}</p>
+                    <p className="text-[9px] text-slate-400 font-bold uppercase leading-relaxed">{t('youtube.stats_active_hash_note')}</p>
 
                     <div className="space-y-2">
                         <div className="flex justify-between items-center">
-                            <span className="text-[9px] font-bold text-gray-600 uppercase">{t('youtube.stats_daily_progress')}</span>
-                            <span className="text-[9px] font-bold text-gray-400">{dailyProgress.toFixed(1)}%</span>
+                            <span className="text-[9px] font-bold text-slate-400 uppercase">{t('youtube.stats_daily_progress')}</span>
+                            <span className="text-[9px] font-bold text-slate-200 font-mono">{dailyProgress.toFixed(1)}%</span>
                         </div>
                         <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden border border-white/5 shadow-inner">
                             <div
@@ -250,15 +249,15 @@ export function YoutubeTrackerSidebar({
 
                 <div className="space-y-4">
                     <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest">
-                        <span className="text-slate-500">{t('youtube.stats_claims_all')}</span>
+                        <span className="text-slate-400">{t('youtube.stats_claims_all')}</span>
                         <span className="text-white">{stats?.claimsTotal || 0}</span>
                     </div>
                     <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest">
-                        <span className="text-slate-500">{t('youtube.stats_hash_all')}</span>
+                        <span className="text-slate-400">{t('youtube.stats_hash_all')}</span>
                         <span className="text-primary">{formatHashrate(Number(stats?.hashGrantedTotal || 0))}</span>
                     </div>
                 </div>
-            </div>
+            </Card>
         </div>
     );
 }

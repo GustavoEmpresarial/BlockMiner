@@ -77,12 +77,12 @@ export default function PowerChartsPanel({
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-6" role="region" aria-label={t('powerStats.charts.region')}>
-      <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 min-h-[280px]">
-        <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-1">{t('powerStats.charts.share_by_source')}</h3>
-        <p className="text-[10px] text-slate-600 mb-2">{t('powerStats.charts.share_by_source_note')}</p>
+      <div className="rounded-3xl border-2 border-slate-800 bg-slate-900/60 shadow-[4px_4px_0px_#000000] p-4 min-h-[280px]">
+        <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">{t('powerStats.charts.share_by_source')}</h3>
+        <p className="text-[10px] text-slate-400 mb-2">{t('powerStats.charts.share_by_source_note')}</p>
         <p className="sr-only">{pieSummary}</p>
         {pieData.length === 0 ? (
-          <p className="text-sm text-slate-600 py-12 text-center">{t('powerStats.charts.no_data')}</p>
+          <p className="text-sm text-slate-400 py-12 text-center">{t('powerStats.charts.no_data')}</p>
         ) : (
           <ResponsiveContainer width="100%" height={240}>
             <PieChart>
@@ -110,9 +110,9 @@ export default function PowerChartsPanel({
         )}
       </div>
 
-      <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 min-h-[280px]">
-        <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-1">{t('powerStats.charts.permanent_vs_temporary')}</h3>
-        <p className="text-[10px] text-slate-600 mb-2">{t('powerStats.charts.permanent_vs_temporary_note')}</p>
+      <div className="rounded-3xl border-2 border-slate-800 bg-slate-900/60 shadow-[4px_4px_0px_#000000] p-4 min-h-[280px]">
+        <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">{t('powerStats.charts.permanent_vs_temporary')}</h3>
+        <p className="text-[10px] text-slate-400 mb-2">{t('powerStats.charts.permanent_vs_temporary_note')}</p>
         <ResponsiveContainer width="100%" height={240}>
           <BarChart
             data={[
@@ -143,9 +143,9 @@ export default function PowerChartsPanel({
       </div>
 
       {lineHistory.length > 1 && (
-        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 min-h-[260px] xl:col-span-2">
-          <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-2">{t('powerStats.charts.mining_share_history')}</h3>
-          <p className="text-[10px] text-slate-600 mb-2">{t('powerStats.charts.mining_share_note')}</p>
+        <div className="rounded-3xl border-2 border-slate-800 bg-slate-900/60 shadow-[4px_4px_0px_#000000] p-4 min-h-[260px] xl:col-span-2">
+          <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">{t('powerStats.charts.mining_share_history')}</h3>
+          <p className="text-[10px] text-slate-400 mb-2">{t('powerStats.charts.mining_share_note')}</p>
           <ResponsiveContainer width="100%" height={220}>
             <LineChart data={lineHistory} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
@@ -161,9 +161,9 @@ export default function PowerChartsPanel({
       )}
 
       {lineBlk.length > 1 && (
-        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 min-h-[260px] xl:col-span-2">
-          <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-2">{t('powerStats.charts.blk_pool_history')}</h3>
-          <p className="text-[10px] text-slate-600 mb-2">{t('powerStats.charts.blk_pool_note')}</p>
+        <div className="rounded-3xl border-2 border-slate-800 bg-slate-900/60 shadow-[4px_4px_0px_#000000] p-4 min-h-[260px] xl:col-span-2">
+          <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">{t('powerStats.charts.blk_pool_history')}</h3>
+          <p className="text-[10px] text-slate-400 mb-2">{t('powerStats.charts.blk_pool_note')}</p>
           <ResponsiveContainer width="100%" height={220}>
             <LineChart data={lineBlk} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#334155" />

@@ -19,7 +19,7 @@ function MachinesPowerChart({ power }: { power: UserPowerStatsPayload }) {
   }, [power.machines?.items]);
 
   if (data.length === 0) {
-    return <p className="text-sm text-slate-600 py-8 text-center">{t('powerStats.charts.no_data')}</p>;
+    return <p className="text-sm text-slate-400 py-8 text-center">{t('powerStats.charts.no_data')}</p>;
   }
 
   return (

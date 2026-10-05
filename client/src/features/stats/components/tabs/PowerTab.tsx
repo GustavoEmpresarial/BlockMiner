@@ -50,8 +50,8 @@ function PowerTab({ power, ratioBar }: StatsDashboardContext) {
         />
       </div>
 
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6">
-        <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3">{t('powerStats.mix')}</p>
+      <div className="rounded-3xl border-2 border-slate-800 bg-slate-900/60 shadow-[4px_4px_0px_#000000] p-6">
+        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">{t('powerStats.mix')}</p>
         <div className="h-3 rounded-full bg-slate-800 overflow-hidden flex mb-3">
           <div className="h-full bg-emerald-500" style={{ width: `${ratioBar.p}%` }} />
           <div className="h-full bg-amber-500" style={{ width: `${ratioBar.tmp}%` }} />
@@ -66,7 +66,7 @@ function PowerTab({ power, ratioBar }: StatsDashboardContext) {
         <PowerChartsPanel overview={overview} history={power.history} />
       </Suspense>
 
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6 space-y-2">
+      <div className="rounded-3xl border-2 border-slate-800 bg-slate-900/60 shadow-[4px_4px_0px_#000000] p-6 space-y-2">
         <h3 className="text-sm font-black text-white uppercase tracking-widest">{t('powerStats.projections_title')}</h3>
         <p className="text-sm text-slate-400">
           {t('powerStats.projection_permanent', { hr: (overview?.permanentHashrate ?? 0).toFixed(2) })}
@@ -74,7 +74,7 @@ function PowerTab({ power, ratioBar }: StatsDashboardContext) {
         <p className="text-sm text-slate-400">
           {t('powerStats.projection_temporary', { hr: (overview?.temporaryHashrate ?? 0).toFixed(2) })}
         </p>
-        <ul className="list-disc list-inside text-xs text-slate-500 space-y-1 mt-2">
+        <ul className="list-disc list-inside text-xs text-slate-400 space-y-1 mt-2">
           {(power.projections?.hintKeys || []).map((k) => (
             <li key={k}>{t(k)}</li>
           ))}

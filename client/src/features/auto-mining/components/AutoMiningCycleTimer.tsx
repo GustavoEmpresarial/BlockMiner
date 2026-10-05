@@ -182,7 +182,7 @@ export default function AutoMiningCycleTimer({
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center px-2">
           <span className="text-3xl font-black text-white italic tabular-nums">{formatTime(remain)}</span>
-          <span className="text-[8px] font-bold text-gray-500 uppercase tracking-widest mt-1 text-center leading-tight">
+          <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-1 text-center leading-tight">
             {ready ? labelReady : labelNext}
           </span>
         </div>

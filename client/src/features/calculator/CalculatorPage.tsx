@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Calculator, Zap, TrendingUp, RefreshCw, Info, Cpu, Wifi } from 'lucide-react';
+import Card from '../../shared/components/Card';
+import IconBadge from '../../shared/components/IconBadge';
+import SectionHeader from '../../shared/components/SectionHeader';
+import StatCard from '../../shared/components/StatCard';
 import { api } from '../../shared/auth/auth.store';
 import { useGameStore } from '../shell/lib/game.store';
 import { DEFAULT_MINER_IMAGE_URL, formatHashrate } from '../machines/lib/machines.shared';
@@ -146,24 +150,22 @@ export default function CalculatorPage() {
   ];
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700">
-      <div className="space-y-2">
-        <div className="inline-flex p-3 bg-primary/10 rounded-2xl">
-          <Calculator className="w-6 h-6 text-primary" />
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+      <div className="flex items-center gap-4 pb-3 border-b-2 border-slate-800">
+        <IconBadge icon={Calculator} variant="sky" size="lg" />
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">{t('calculator.title')}</h1>
+          <p className="text-slate-400 text-xs sm:text-sm font-medium">{t('calculator.subtitle')}</p>
         </div>
-        <h1 className="text-3xl font-black text-white tracking-tight">{t('calculator.title')}</h1>
-        <p className="text-gray-500 font-medium">{t('calculator.subtitle')}</p>
       </div>
 
       {(stats?.miner?.estimatedHashRate ?? 0) > 0 && (
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-primary/5 border border-primary/20 rounded-2xl px-6 py-4">
+        <Card className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary/10 rounded-xl">
-              <Wifi className="w-4 h-4 text-primary" />
-            </div>
+            <IconBadge icon={Wifi} variant="primary" size="md" />
             <div>
-              <p className="text-xs font-black text-white">{t('calculator.auto_banner_title')}</p>
-              <p className="text-[10px] text-gray-400 font-medium">
+              <p className="text-xs font-black uppercase tracking-widest text-white">{t('calculator.auto_banner_title')}</p>
+              <p className="text-[10px] text-slate-300 font-medium">
                 {t('calculator.auto_banner_desc', {
                   hashRate: formatHashrate(stats?.miner?.estimatedHashRate ?? 0),
                   networkRate: stats?.networkHashRate ? formatHashrate(stats.networkHashRate) : '—',
@@ -178,31 +180,29 @@ export default function CalculatorPage() {
               setNetworkManual(false);
               setSelectedMiners({});
             }}
-            className="px-5 py-2.5 bg-primary hover:bg-primary-hover text-white rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-lg shadow-primary/20 whitespace-nowrap"
+            className="px-5 py-2.5 bg-sky-500 hover:bg-sky-400 text-slate-950 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-[2px_2px_0px_#000000] active:translate-x-0.5 active:translate-y-0.5 whitespace-nowrap"
           >
             {t('calculator.auto_fill_btn')}
           </button>
-        </div>
+        </Card>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-surface border border-gray-800/50 rounded-[2.5rem] p-8 shadow-xl space-y-6">
-            <h2 className="text-sm font-black text-white uppercase tracking-[0.2em]">
-              {t('calculator.section_params')}
-            </h2>
+          <Card spacing="lg">
+            <SectionHeader title={t('calculator.section_params')} icon={Cpu} />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
                     {t('calculator.my_hashrate_label')}
                   </label>
                   {(stats?.miner?.estimatedHashRate ?? 0) > 0 && (
                     <button
                       type="button"
                       onClick={handleResetMyHash}
-                      className="flex items-center gap-1 text-[9px] font-bold text-primary hover:text-primary-hover uppercase tracking-widest transition-colors"
+                      className="flex items-center gap-1 text-[9px] font-bold text-sky-400 hover:text-sky-300 uppercase tracking-widest"
                     >
                       <Cpu className="w-3 h-3" /> {t('calculator.my_inventory_btn')}
                     </button>
@@ -218,7 +218,7 @@ export default function CalculatorPage() {
                     setSelectedMiners({});
                   }}
                   placeholder="Ex: 150"
-                  className="w-full bg-gray-900/50 border border-gray-800 rounded-2xl py-4 px-6 text-gray-200 text-sm focus:outline-none focus:border-primary/50 transition-all"
+                  className="w-full border-2 border-slate-700 bg-slate-950 rounded-xl py-4 px-6 text-white text-sm shadow-[2px_2px_0px_#000000] focus:outline-none focus:border-sky-400"
                 />
                 {!myHashManual && (stats?.miner?.estimatedHashRate ?? 0) > 0 ? (
                   <p className="text-[10px] text-green-400 font-bold flex items-center gap-1">
@@ -242,13 +242,13 @@ export default function CalculatorPage() {
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
                     {t('calculator.network_hashrate_label')}
                   </label>
                   <button
                     type="button"
                     onClick={handleResetNetwork}
-                    className="flex items-center gap-1 text-[9px] font-bold text-primary hover:text-primary-hover uppercase tracking-widest transition-colors"
+                    className="flex items-center gap-1 text-[9px] font-bold text-sky-400 hover:text-sky-300 uppercase tracking-widest"
                   >
                     <RefreshCw className="w-3 h-3" /> {t('calculator.live_btn')}
                   </button>
@@ -264,7 +264,7 @@ export default function CalculatorPage() {
                   placeholder={
                     stats?.networkHashRate ? String(Math.round(stats.networkHashRate)) : 'Ex: 5000'
                   }
-                  className="w-full bg-gray-900/50 border border-gray-800 rounded-2xl py-4 px-6 text-gray-200 text-sm focus:outline-none focus:border-primary/50 transition-all"
+                  className="w-full border-2 border-slate-700 bg-slate-950 rounded-xl py-4 px-6 text-white text-sm shadow-[2px_2px_0px_#000000] focus:outline-none focus:border-sky-400"
                 />
                 {stats?.networkHashRate && !networkManual ? (
                   <p className="text-[10px] text-green-400 font-bold flex items-center gap-1">
@@ -281,7 +281,7 @@ export default function CalculatorPage() {
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
                     {t('calculator.token_price_label')}
                   </label>
                   {tokenPriceLive && tokenPriceManual && (
@@ -291,7 +291,7 @@ export default function CalculatorPage() {
                         setTokenPriceManual(false);
                         setTokenPriceInput(String(tokenPriceLive));
                       }}
-                      className="flex items-center gap-1 text-[9px] font-bold text-primary hover:text-primary-hover uppercase tracking-widest transition-colors"
+                      className="flex items-center gap-1 text-[9px] font-bold text-sky-400 hover:text-sky-300 uppercase tracking-widest"
                     >
                       <RefreshCw className="w-3 h-3" /> {t('calculator.live_btn')}
                     </button>
@@ -307,7 +307,7 @@ export default function CalculatorPage() {
                     setTokenPriceManual(true);
                   }}
                   placeholder="0.35"
-                  className="w-full bg-gray-900/50 border border-gray-800 rounded-2xl py-4 px-6 text-gray-200 text-sm focus:outline-none focus:border-primary/50 transition-all"
+                  className="w-full border-2 border-slate-700 bg-slate-950 rounded-xl py-4 px-6 text-white text-sm shadow-[2px_2px_0px_#000000] focus:outline-none focus:border-sky-400"
                 />
                 {tokenPriceLive && !tokenPriceManual ? (
                   <p className="text-[10px] text-green-400 font-bold flex items-center gap-1">
@@ -323,42 +323,44 @@ export default function CalculatorPage() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
                   {t('calculator.share_label')}
                 </label>
-                <div className="w-full bg-gray-900/50 border border-gray-800 rounded-2xl py-4 px-6 text-sm">
+                <div className="w-full border-2 border-slate-700 bg-slate-950 rounded-xl py-4 px-6 text-sm shadow-[2px_2px_0px_#000000]">
                   {share > 0 ? (
-                    <span className="text-primary font-black">{(share * 100).toFixed(6)}%</span>
+                    <span className="text-sky-400 font-black font-mono">{(share * 100).toFixed(6)}%</span>
                   ) : (
-                    <span className="text-gray-600">{t('calculator.share_placeholder')}</span>
+                    <span className="text-slate-400">{t('calculator.share_placeholder')}</span>
                   )}
                 </div>
               </div>
             </div>
-          </div>
+          </Card>
 
-          <div className="bg-surface border border-gray-800/50 rounded-[2.5rem] p-8 shadow-xl space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-black text-white uppercase tracking-[0.2em]">
-                {t('calculator.section_simulate')}
-              </h2>
-              {Object.keys(selectedMiners).length > 0 && (
-                <button
-                  type="button"
-                  onClick={clearMiners}
-                  className="text-[10px] font-bold text-gray-500 hover:text-red-400 uppercase tracking-widest transition-colors"
-                >
-                  {t('calculator.clear_selection')}
-                </button>
-              )}
-            </div>
+          <Card spacing="lg">
+            <SectionHeader
+              title={t('calculator.section_simulate')}
+              icon={Zap}
+              iconVariant="amber"
+              action={
+                Object.keys(selectedMiners).length > 0 ? (
+                  <button
+                    type="button"
+                    onClick={clearMiners}
+                    className="text-[10px] font-bold text-slate-300 hover:text-red-300 uppercase tracking-widest"
+                  >
+                    {t('calculator.clear_selection')}
+                  </button>
+                ) : null
+              }
+            />
 
             {loadingMiners ? (
               <div className="flex justify-center py-8">
                 <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
               </div>
             ) : miners.length === 0 ? (
-              <p className="text-gray-600 text-sm text-center py-8">{t('calculator.no_miners')}</p>
+              <p className="text-slate-300 text-sm text-center py-8">{t('calculator.no_miners')}</p>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {miners.map((m: ShopMiner) => {
@@ -366,8 +368,8 @@ export default function CalculatorPage() {
                   return (
                     <div
                       key={m.id}
-                      className={`flex items-center gap-4 p-4 rounded-2xl border transition-all ${
-                        qty > 0 ? 'border-primary/40 bg-primary/5' : 'border-gray-800/50 bg-gray-900/20'
+                      className={`flex items-center gap-4 p-4 rounded-2xl border-2 transition-all ${
+                        qty > 0 ? 'border-sky-500 bg-sky-500/10 shadow-[2px_2px_0px_#000000]' : 'border-slate-800 bg-slate-950/40'
                       }`}
                     >
                       <img
@@ -377,11 +379,11 @@ export default function CalculatorPage() {
                       />
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-black text-white truncate">{m.name}</p>
-                        <p className="text-[10px] text-primary font-bold">
+                        <p className="text-[10px] text-sky-400 font-bold">
                           {formatHashrate(m.baseHashRate)}
                         </p>
                         {qty > 0 && (
-                          <p className="text-[9px] text-gray-500 font-bold">
+                          <p className="text-[9px] text-slate-400 font-bold">
                             {t('calculator.miner_total', {
                               value: formatHashrate(m.baseHashRate * qty),
                             })}
@@ -393,15 +395,15 @@ export default function CalculatorPage() {
                           type="button"
                           onClick={() => handleMinerQty(m.id, -1)}
                           disabled={qty === 0}
-                          className="w-7 h-7 rounded-lg bg-gray-800 hover:bg-gray-700 text-white font-black text-sm flex items-center justify-center disabled:opacity-30 transition-all"
+                          className="w-7 h-7 rounded-lg border-2 border-slate-600 bg-slate-800 hover:bg-slate-700 text-slate-100 font-black text-sm flex items-center justify-center disabled:bg-slate-900 disabled:text-slate-400 disabled:border-slate-800"
                         >
                           −
                         </button>
-                        <span className="w-5 text-center text-sm font-black text-white">{qty}</span>
+                        <span className="w-5 text-center text-sm font-black text-white font-mono">{qty}</span>
                         <button
                           type="button"
                           onClick={() => handleMinerQty(m.id, 1)}
-                          className="w-7 h-7 rounded-lg bg-primary hover:bg-primary-hover text-white font-black text-sm flex items-center justify-center transition-all"
+                          className="w-7 h-7 rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 font-black text-sm flex items-center justify-center shadow-[2px_2px_0px_#000000] active:translate-x-0.5 active:translate-y-0.5"
                         >
                           +
                         </button>
@@ -411,40 +413,27 @@ export default function CalculatorPage() {
                 })}
               </div>
             )}
-          </div>
+          </Card>
         </div>
 
         <div className="space-y-6">
-          <div className="bg-surface border border-gray-800/50 rounded-[2.5rem] p-8 shadow-xl space-y-6 sticky top-6">
-            <h2 className="text-sm font-black text-white uppercase tracking-[0.2em] flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-primary" />
-              {t('calculator.section_results')}
-            </h2>
+          <Card spacing="lg" className="sticky top-6">
+            <SectionHeader title={t('calculator.section_results')} icon={TrendingUp} iconVariant="emerald" />
 
             {share > 0 ? (
               <div className="space-y-3">
                 {resultRows.map(({ key, pol, sub }) => (
-                  <div
+                  <StatCard
                     key={key}
-                    className="bg-gray-900/50 rounded-2xl p-4 border border-gray-800/50 space-y-0.5"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
-                        {t(`calculator.${key}`)}
-                      </span>
-                      <span className="text-[9px] text-gray-600 font-mono">{sub}</span>
-                    </div>
-                    <p className="text-base font-black text-white italic">
-                      {pol.toFixed(6)}{' '}
-                      <span className="text-xs text-primary not-italic font-bold">POL</span>
-                    </p>
-                    {price > 0 && (
-                      <p className="text-[11px] font-bold text-gray-400">≈ ${toUSD(pol)} USD</p>
-                    )}
-                  </div>
+                    icon={TrendingUp}
+                    accent="text-emerald-400"
+                    label={t(`calculator.${key}`)}
+                    value={`${pol.toFixed(6)} POL`}
+                    sub={price > 0 ? `${sub} · ≈ $${toUSD(pol)} USD` : sub}
+                  />
                 ))}
 
-                <div className="flex gap-2 pt-2 border-t border-gray-800 text-[9px] text-gray-600">
+                <div className="flex gap-2 pt-2 border-t-2 border-slate-800 text-[9px] text-slate-400">
                   <Info className="w-3 h-3 mt-0.5 shrink-0" />
                   <div className="space-y-0.5">
                     <p>
@@ -459,14 +448,14 @@ export default function CalculatorPage() {
                 </div>
               </div>
             ) : (
-              <div className="text-center text-gray-600 py-10 space-y-3">
-                <Calculator className="w-14 h-14 opacity-10 mx-auto" />
+              <div className="text-center text-slate-300 py-10 space-y-3">
+                <Calculator className="w-14 h-14 mx-auto text-slate-400" />
                 <p className="text-xs font-bold uppercase tracking-widest">
                   {t('calculator.results_placeholder')}
                 </p>
               </div>
             )}
-          </div>
+          </Card>
         </div>
       </div>
     </div>

@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   Inbox,
   ArrowRight,
@@ -22,6 +22,11 @@ import {
   collectAllRewards,
 } from './lib/rewardInboxClient';
 import { useTranslation } from 'react-i18next';
+import type { LucideIcon } from 'lucide-react';
+import Card from '../../shared/components/Card';
+import IconBadge from '../../shared/components/IconBadge';
+import StatusPill from '../../shared/components/StatusPill';
+import type { StatusPillVariant } from '../../shared/components/StatusPill';
 
 type RewardInboxItem = {
   id: number;
@@ -74,36 +79,31 @@ function RewardCard({
       : null;
 
   let typeLabel = '';
-  let typeColor = 'text-gray-400';
-  let typeBg = 'border-gray-700/50 bg-gray-800/40';
-  let icon: React.ReactNode = null;
+  let pillVariant: StatusPillVariant = 'neutral';
+  let PillIcon: LucideIcon = PackageOpen;
 
   if (item.rewardType === 'machine') {
     typeLabel = t('inventario.type_machine');
-    typeColor = 'text-primary';
-    typeBg = 'border-primary/20 bg-primary/10';
-    icon = <Cpu className="h-4 w-4 shrink-0 text-primary" aria-hidden />;
+    pillVariant = 'primary';
+    PillIcon = Cpu;
   } else if (item.rewardType === 'pol') {
     typeLabel = t('inventario.type_pol');
-    typeColor = 'text-amber-400';
-    typeBg = 'border-amber-500/20 bg-amber-500/10';
-    icon = <Coins className="h-4 w-4 shrink-0 text-amber-400" aria-hidden />;
+    pillVariant = 'warning';
+    PillIcon = Coins;
   } else if (item.rewardType === 'blk') {
     typeLabel = t('inventario.type_blk');
-    typeColor = 'text-violet-400';
-    typeBg = 'border-violet-500/20 bg-violet-500/10';
-    icon = <Coins className="h-4 w-4 shrink-0 text-violet-400" aria-hidden />;
+    pillVariant = 'orange';
+    PillIcon = Coins;
   } else if (item.rewardType === 'temporary_power' || item.rewardType === 'hashrate_boost') {
     typeLabel = t('inventario.type_power');
-    typeColor = 'text-sky-400';
-    typeBg = 'border-sky-500/20 bg-sky-500/10';
-    icon = <Zap className="h-4 w-4 shrink-0 text-sky-400" aria-hidden />;
+    pillVariant = 'info';
+    PillIcon = Zap;
   }
 
   return (
-    <div className="flex flex-col gap-4 rounded-3xl border border-gray-800/50 bg-surface p-5 shadow-xl">
+    <Card spacing="md" className="flex flex-col">
       <div className="flex items-start gap-4">
-        <div className="relative h-16 w-16 shrink-0 rounded-2xl border border-gray-800/50 bg-gray-900/50 p-3 flex items-center justify-center">
+        <div className="relative h-16 w-16 shrink-0 rounded-2xl border-2 border-slate-800 bg-slate-950 p-3 flex items-center justify-center shadow-[2px_2px_0px_#000000]">
           {item.rewardType === 'machine' && imageUrl ? (
             <MachineImage
               imageUrl={imageUrl}
@@ -111,16 +111,11 @@ function RewardCard({
               className="h-full w-full object-contain"
             />
           ) : (
-            <span className="text-2xl flex items-center justify-center">
-              {icon}
-            </span>
+            <PillIcon className="h-6 w-6 text-slate-200" aria-hidden />
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <div className={`mb-1.5 inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${typeBg} ${typeColor}`}>
-            {icon}
-            {typeLabel}
-          </div>
+          <StatusPill variant={pillVariant} icon={PillIcon} label={typeLabel} />
           <div className="text-sm font-bold text-white leading-snug">
             {item.rewardType === 'machine'
               ? (item.minerName ?? typeLabel)
@@ -128,7 +123,7 @@ function RewardCard({
               ? `${formatHashrate(value)}${item.durationHours != null ? ` · ${item.durationHours}h` : ''}`
               : `${value} ${typeLabel}`}
           </div>
-          <div className="mt-1 flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-gray-500">
+          <div className="mt-1 flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-slate-400">
             <Clock className="h-3 w-3 shrink-0" aria-hidden />
             {sourceLabel}
           </div>
@@ -140,13 +135,13 @@ function RewardCard({
           type="button"
           disabled={busy}
           onClick={() => onCollect(item.id)}
-          className="flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-3 py-2 text-[11px] font-black uppercase tracking-wider text-primary transition-colors hover:bg-primary/20 disabled:pointer-events-none disabled:opacity-40"
+          className="flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-sky-500 px-3 py-2 text-[11px] font-black uppercase tracking-wider text-slate-950 shadow-[2px_2px_0px_#000000] hover:bg-sky-400 active:translate-x-0.5 active:translate-y-0.5 disabled:pointer-events-none disabled:bg-slate-800 disabled:text-slate-300 disabled:shadow-none"
         >
           <CheckCircle2 className="h-3.5 w-3.5 shrink-0" aria-hidden />
           {t('inventario.collect')}
         </button>
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -289,8 +284,16 @@ export default function InventarioPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-64">
-        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+        <div className="flex items-center gap-4 pb-3 border-b-2 border-slate-800">
+          <IconBadge icon={Inbox} variant="amber" size="lg" />
+          <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">{t('inventario.inbox_title')}</h1>
+        </div>
+        <Card>
+          <div className="flex items-center justify-center py-16">
+            <div className="w-10 h-10 border-4 border-sky-400 border-t-transparent rounded-full animate-spin" />
+          </div>
+        </Card>
       </div>
     );
   }
@@ -298,26 +301,26 @@ export default function InventarioPage() {
   const anyBusy = collectingId != null || collectingAll;
 
   return (
-    <div className="space-y-6 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-black text-white tracking-tight">{t('inventario.inbox_title')}</h1>
-          <p className="text-gray-500 font-medium">{t('inventario.inbox_subtitle')}</p>
+    <div className="space-y-8 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pb-3 border-b-2 border-slate-800">
+        <div className="flex items-center gap-4">
+          <IconBadge icon={Inbox} variant="amber" size="lg" />
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">{t('inventario.inbox_title')}</h1>
+            <p className="text-slate-400 text-xs sm:text-sm font-medium">{t('inventario.inbox_subtitle')}</p>
+          </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <div className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-primary/20 bg-primary/10 px-4 py-2 text-xs font-bold text-primary">
-            <Inbox className="h-3.5 w-3.5 shrink-0" aria-hidden />
-            {t('inventario.pending_count', { count: items.length })}
-          </div>
+          <StatusPill variant="primary" icon={Inbox} label={t('inventario.pending_count', { count: items.length })} />
           {items.length > 0 && (
             <button
               type="button"
               disabled={anyBusy}
               onClick={() => void handleCollectAll()}
-              className="inline-flex min-h-11 items-center gap-2 rounded-2xl border border-primary/30 bg-primary/10 px-4 py-2 text-xs font-black uppercase tracking-wider text-primary transition-colors hover:bg-primary/20 disabled:pointer-events-none disabled:opacity-40"
+              className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-sky-500 px-4 py-2 text-xs font-black uppercase tracking-wider text-slate-950 shadow-[2px_2px_0px_#000000] hover:bg-sky-400 active:translate-x-0.5 active:translate-y-0.5 disabled:pointer-events-none disabled:bg-slate-800 disabled:text-slate-300 disabled:shadow-none"
             >
               {collectingAll ? (
-                <div className="h-3.5 w-3.5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                <div className="h-3.5 w-3.5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
               ) : (
                 <CheckCircle2 className="h-3.5 w-3.5 shrink-0" aria-hidden />
               )}
@@ -327,7 +330,7 @@ export default function InventarioPage() {
           <button
             type="button"
             onClick={() => navigate('/inventory')}
-            className="inline-flex min-h-11 items-center gap-2 rounded-2xl border border-gray-700 bg-gray-800/50 px-4 py-2 text-xs font-black uppercase tracking-wider text-gray-300 transition-colors hover:bg-gray-700"
+            className="inline-flex min-h-11 items-center gap-2 rounded-xl border-2 border-slate-600 bg-slate-800 px-4 py-2 text-xs font-black uppercase tracking-wider text-slate-100 shadow-[2px_2px_0px_#000000] hover:bg-slate-700"
           >
             {t('inventario.go_to_machines')}
             <ArrowRight className="h-3.5 w-3.5 shrink-0" aria-hidden />
@@ -336,19 +339,21 @@ export default function InventarioPage() {
       </div>
 
       {items.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-gray-800 bg-gray-900/30 px-8 py-20 text-center">
-          <PackageOpen className="mb-4 h-12 w-12 text-gray-700" aria-hidden />
-          <p className="text-base font-bold text-gray-500">{t('inventario.empty_title')}</p>
-          <p className="mt-1 text-sm text-gray-600">{t('inventario.empty_hint')}</p>
+        <Card>
+          <div className="flex flex-col items-center justify-center px-8 py-16 text-center">
+          <PackageOpen className="mb-4 h-12 w-12 text-slate-400" aria-hidden />
+          <p className="text-base font-bold text-slate-200">{t('inventario.empty_title')}</p>
+          <p className="mt-1 text-sm text-slate-400">{t('inventario.empty_hint')}</p>
           <button
             type="button"
             onClick={() => navigate('/inventory')}
-            className="mt-6 inline-flex items-center gap-2 rounded-2xl border border-gray-700 bg-gray-800/50 px-4 py-2 text-xs font-black uppercase tracking-wider text-gray-300 transition-colors hover:bg-gray-700"
+            className="mt-6 inline-flex items-center gap-2 rounded-xl border-2 border-slate-600 bg-slate-800 px-4 py-2 text-xs font-black uppercase tracking-wider text-slate-100 shadow-[2px_2px_0px_#000000] hover:bg-slate-700"
           >
             {t('inventario.go_to_machines')}
             <ArrowRight className="h-3.5 w-3.5 shrink-0" aria-hidden />
           </button>
-        </div>
+          </div>
+        </Card>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {items.map((item) => (
