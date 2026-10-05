@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo, type ReactNode } from 'react';
 import {
   Bell,
+  LayoutDashboard,
   Search,
   Settings,
   MessageSquare,
@@ -21,6 +22,14 @@ import CommunityShortcuts from './CommunityShortcuts';
 import { usePtcSessionStore } from '../../ptc/lib/ptcSession.store';
 import { useOfferwallTimerStore } from '../../offerwall/lib/offerwallTimer.store';
 import LanguageSwitcher from '../../../shared/components/LanguageSwitcher';
+
+function headerActionBadge(active = false): string {
+  return `inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border shadow-[2px_2px_0px_#000000] transition-colors ${
+    active
+      ? 'border-primary/40 bg-primary/20 text-white'
+      : 'border-primary/25 bg-primary/10 text-primary hover:border-primary/40 hover:bg-primary/20 hover:text-white focus:text-white'
+  }`;
+}
 
 function fmtPtcTime(seconds: number): string {
   const s = Math.max(0, Math.floor(seconds));
@@ -254,13 +263,19 @@ export default function Header() {
         : '?';
 
   return (
-    <header className="hidden md:flex h-20 min-w-0 bg-slate-950/80 backdrop-blur-md border-b-2 border-slate-800 items-center px-8 sticky top-0 z-30">
-      <div className="flex min-w-0 flex-col">
-        <p className="truncate text-xl font-bold text-white tracking-tight">{title}</p>
-        <p className="text-[11px] text-slate-400 font-medium">{t('header.protocol_active')}</p>
+    <header className="hidden md:flex h-20 min-w-0 items-center border-b-2 border-slate-800 bg-gradient-to-br from-[#0c1220] via-slate-900 to-[#101b33] px-8 backdrop-blur-md sticky top-0 z-30">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(59,130,246,0.15),transparent_60%)]" aria-hidden />
+      <div className="relative flex min-w-0 items-center gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border-2 border-primary/30 bg-primary/15 shadow-[2px_2px_0px_#000000]">
+          <LayoutDashboard className="h-5 w-5 text-primary drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]" aria-hidden />
+        </div>
+        <div className="flex min-w-0 flex-col">
+          <p className="truncate text-xl font-bold text-white tracking-tight">{title}</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-primary/80">{t('header.protocol_active')}</p>
+        </div>
       </div>
 
-      <div className="ml-auto flex min-w-0 items-center gap-6">
+      <div className="relative ml-auto flex min-w-0 items-center gap-6">
         <OfferwallGlobalTimer />
         <PtcGlobalTimer />
 
@@ -269,7 +284,7 @@ export default function Header() {
           <input
             type="text"
             placeholder={t('header.search_placeholder')}
-            className="bg-slate-900/60 border-2 border-slate-800 rounded-xl py-2 pl-10 pr-4 text-sm text-slate-300 focus:outline-none focus:border-primary/50 transition-colors w-64"
+            className="w-64 rounded-xl border-2 border-slate-800 bg-slate-900/60 py-2 pl-10 pr-4 text-sm text-slate-300 shadow-[2px_2px_0px_#000000] transition-colors focus:border-primary/50 focus:outline-none focus:shadow-[0_0_18px_rgba(59,130,246,0.35),2px_2px_0px_#000000]"
           />
         </div>
 
@@ -277,23 +292,23 @@ export default function Header() {
           <button
             type="button"
             onClick={toggleChat}
-            className="p-2.5 text-slate-400 hover:text-white hover:bg-slate-800/50 rounded-xl transition-all relative group"
+            className={`${headerActionBadge()} relative`}
             title={t('header.community')}
           >
             <MessageSquare className="w-5 h-5" />
           </button>
 
-          <CommunityShortcuts gapClass="gap-0.5" />
+          <CommunityShortcuts gapClass="gap-0.5" variant="badge" />
 
           <div className="relative" ref={notificationRef}>
             <button
               type="button"
               onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
-              className={`p-2.5 rounded-xl transition-all relative group ${isNotificationsOpen ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800/50'}`}
+              className={`${headerActionBadge(isNotificationsOpen)} relative`}
             >
               <Bell className="w-5 h-5" />
               {unreadCount > 0 && (
-                <span className="absolute top-2.5 right-2.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-background animate-pulse" />
+                <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-background animate-pulse" />
               )}
             </button>
 
@@ -369,7 +384,7 @@ export default function Header() {
 
           <Link
             to="/settings"
-            className="p-2.5 text-slate-400 hover:text-white hover:bg-slate-800/50 rounded-xl transition-all"
+            className={headerActionBadge()}
             title={t('header.settings')}
           >
             <Settings className="w-5 h-5" />
