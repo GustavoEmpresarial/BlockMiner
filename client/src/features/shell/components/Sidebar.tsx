@@ -259,7 +259,7 @@ export default function Sidebar({ mobileOpen: mobileOpenProp, onNavigate }: Side
   const linkClass = (active: boolean, extra = '') =>
     `w-full flex items-center justify-between px-4 py-3 rounded-xl transition-colors duration-300 group ${
       active
-        ? 'bg-primary/10 text-primary border border-primary/25'
+        ? 'bg-primary/10 text-primary border-2 border-primary/25 shadow-[2px_2px_0px_#000000]'
         : 'text-slate-400 hover:text-white hover:bg-slate-800/40'
     } ${extra}`;
 
@@ -304,12 +304,12 @@ export default function Sidebar({ mobileOpen: mobileOpenProp, onNavigate }: Side
   const renderNavBody = (navId?: string) => (
     <>
       <nav
-        className="flex-1 overflow-y-auto px-4 space-y-8 scrollbar-hide py-6"
+        className="relative flex-1 overflow-y-auto px-4 space-y-8 scrollbar-hide py-6"
         id={navId}
       >
         {categories.map((category) => (
           <div key={category.title} className="space-y-2">
-            <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] px-4 mb-4">
+            <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] px-4 pb-2 mb-4 border-b border-slate-800/80">
               {category.title}
             </h3>
             <div className="space-y-1">
@@ -428,7 +428,7 @@ export default function Sidebar({ mobileOpen: mobileOpenProp, onNavigate }: Side
         ))}
       </nav>
 
-      <div className="md:hidden px-4 pb-3">
+      <div className="relative md:hidden px-4 pb-3">
         <button
           type="button"
           onClick={() => go('/settings')}
@@ -439,11 +439,11 @@ export default function Sidebar({ mobileOpen: mobileOpenProp, onNavigate }: Side
         </button>
       </div>
 
-      <div className="p-4 mt-auto border-t border-slate-800">
+      <div className="relative p-4 mt-auto border-t border-slate-800">
         <button
           type="button"
           onClick={() => void logout()}
-          className="w-full flex items-center gap-3 px-4 py-4 text-slate-400 hover:text-red-400 hover:bg-red-400/5 rounded-xl transition-colors duration-300 group"
+          className="w-full flex items-center gap-3 px-4 py-4 rounded-xl border-2 border-slate-800 bg-slate-900/60 text-slate-300 shadow-[2px_2px_0px_#000000] hover:border-slate-600 hover:text-white transition-colors duration-300 group"
         >
           <LogOut className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
           <span className="font-bold text-xs uppercase tracking-widest">{t('common.logout')}</span>
@@ -605,8 +605,9 @@ export default function Sidebar({ mobileOpen: mobileOpenProp, onNavigate }: Side
       </nav>
 
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex w-72 bg-slate-900/60 border-r-2 border-slate-800 shrink-0 flex-col h-[100dvh] sticky top-0 shadow-[4px_4px_0px_#000000] relative z-20">
-        <div className="p-8">
+      <aside className="relative hidden md:flex w-72 shrink-0 flex-col h-[100dvh] sticky top-0 z-20 border-r-2 border-slate-800 bg-gradient-to-br from-[#101826] via-slate-900 to-[#161e30] shadow-[4px_4px_0px_#000000]">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(59,130,246,0.08),transparent_62%)]" aria-hidden />
+        <div className="relative p-8 border-b-2 border-slate-800">
           <BrandLogo variant="sidebar" />
         </div>
         {renderNavBody('app-main-nav')}
