@@ -8,6 +8,8 @@ import {
     Star, AlertCircle, Info, CheckCircle2, Lock, Layers, Bolt,
     Crosshair, ListChecks, Globe, Sparkles, Receipt,
 } from 'lucide-react';
+import Card from '../../../shared/components/Card';
+import IconBadge from '../../../shared/components/IconBadge';
 
 interface SectionProps {
     id: string;
@@ -23,17 +25,15 @@ export function Section({ id, icon: Icon, color = 'text-primary', badge, title, 
     return (
         <section id={id} className="space-y-4">
             <div className="flex items-start gap-4">
-                <div className="p-3 rounded-2xl bg-gray-900 border border-gray-800/60 shrink-0">
-                    <Icon className={`w-5 h-5 ${color}`} />
-                </div>
+                <IconBadge icon={Icon} variant="primary" size="md" />
                 <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                         <h2 className="text-xl font-black text-white italic uppercase tracking-tight">{title}</h2>
                         {badge && (
-                            <span className="px-2 py-0.5 bg-primary/10 border border-primary/20 rounded-md text-[9px] font-black text-primary uppercase tracking-widest">{badge}</span>
+                            <span className="px-2.5 py-0.5 bg-primary/10 border border-primary/25 rounded-full text-[9px] font-black text-primary uppercase tracking-widest">{badge}</span>
                         )}
                     </div>
-                    {subtitle && <p className="text-sm text-gray-500 font-medium mt-0.5">{subtitle}</p>}
+                    {subtitle && <p className="text-sm text-slate-400 font-medium mt-0.5">{subtitle}</p>}
                 </div>
             </div>
             <div className="ml-0 sm:ml-14">{children}</div>
@@ -41,20 +41,11 @@ export function Section({ id, icon: Icon, color = 'text-primary', badge, title, 
     );
 }
 
-interface CardProps { children: ReactNode; className?: string; }
-export function Card({ children, className = '' }: CardProps) {
-    return (
-        <div className={`bg-gray-900/60 border border-gray-800/60 rounded-2xl p-4 sm:p-5 ${className}`}>
-            {children}
-        </div>
-    );
-}
-
 interface InfoRowProps { label: string; value: ReactNode; valueClass?: string; }
 export function InfoRow({ label, value, valueClass = 'text-white' }: InfoRowProps) {
     return (
-        <div className="flex items-center justify-between py-2 border-b border-gray-800/40 last:border-0">
-            <span className="text-[11px] font-black text-gray-500 uppercase tracking-widest">{label}</span>
+        <div className="flex items-center justify-between py-2 border-b-2 border-slate-800 last:border-0">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest font-mono">{label}</span>
             <span className={`text-xs font-black ${valueClass}`}>{value}</span>
         </div>
     );
@@ -63,7 +54,7 @@ export function InfoRow({ label, value, valueClass = 'text-white' }: InfoRowProp
 interface PillProps { children: ReactNode; color?: string; }
 export function Pill({ children, color = 'bg-primary/10 text-primary border-primary/20' }: PillProps) {
     return (
-        <span className={`inline-flex items-center px-2.5 py-1 rounded-lg border text-[10px] font-black uppercase tracking-widest ${color}`}>
+        <span className={`inline-flex items-center px-2.5 py-1 rounded-full border text-[10px] font-black uppercase tracking-widest ${color}`}>
             {children}
         </span>
     );
@@ -73,19 +64,19 @@ interface AccordionProps { title: string; icon?: LucideIcon; children: ReactNode
 export function Accordion({ title, icon: Icon, children }: AccordionProps) {
     const [open, setOpen] = useState(false);
     return (
-        <div className="border border-gray-800/50 rounded-2xl overflow-hidden">
+        <div className="border-2 border-slate-800 bg-slate-900/60 rounded-2xl overflow-hidden shadow-[2px_2px_0px_#000000]">
             <button
-                className="w-full flex items-center justify-between px-5 py-4 bg-gray-900/40 hover:bg-gray-900/70 transition-colors text-left"
+                className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-800/40 transition-colors text-left outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 onClick={() => setOpen(o => !o)}
             >
                 <div className="flex items-center gap-3">
                     {Icon && <Icon className="w-4 h-4 text-primary shrink-0" />}
                     <span className="text-sm font-black text-white uppercase tracking-tight">{title}</span>
                 </div>
-                {open ? <ChevronUp className="w-4 h-4 text-gray-500 shrink-0" /> : <ChevronDown className="w-4 h-4 text-gray-500 shrink-0" />}
+                {open ? <ChevronUp className="w-4 h-4 text-slate-400 shrink-0" /> : <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />}
             </button>
             {open && (
-                <div className="px-5 py-4 bg-gray-950/30 border-t border-gray-800/40 space-y-3 text-sm text-gray-400 leading-relaxed">
+                <div className="px-5 py-4 bg-slate-950/60 border-t-2 border-slate-800 space-y-3 text-sm text-slate-300 leading-relaxed font-medium">
                     {children}
                 </div>
             )}
@@ -95,26 +86,24 @@ export function Accordion({ title, icon: Icon, children }: AccordionProps) {
 
 export function ManualCover() {
     return (
-        <div className="relative rounded-2xl sm:rounded-[2.5rem] overflow-hidden border border-gray-800/60 bg-gray-900/40 mb-8">
+        <Card overflowHidden className="relative mb-8 p-6 sm:p-10 border-slate-800 shadow-[4px_4px_0px_#000000]">
             <div className="absolute inset-0 pointer-events-none">
-                <div className="absolute -top-12 left-1/4 w-72 h-72 bg-primary/6 rounded-full blur-[100px]" />
-                <div className="absolute -bottom-8 right-0 w-48 h-48 bg-blue-500/5 rounded-full blur-[80px]" />
+                <div className="absolute -top-12 left-1/4 w-72 h-72 bg-primary/10 rounded-full blur-[100px]" />
+                <div className="absolute -bottom-8 right-0 w-48 h-48 bg-sky-500/10 rounded-full blur-[80px]" />
             </div>
-            <div className="relative z-10 p-6 sm:p-10 flex flex-col sm:flex-row items-start sm:items-center gap-6">
-                <div className="p-4 bg-primary/10 border border-primary/20 rounded-2xl shrink-0">
-                    <BookOpen className="w-8 h-8 text-primary" />
-                </div>
+            <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center gap-6">
+                <IconBadge icon={BookOpen} variant="primary" size="lg" />
                 <div>
                     <div className="flex flex-wrap items-center gap-2 mb-2">
-                        <h1 className="text-2xl sm:text-3xl font-black text-white italic uppercase tracking-tight">Manual do Operador</h1>
+                        <h2 className="text-2xl sm:text-3xl font-black text-white italic uppercase tracking-tight">Manual do Operador</h2>
                         <Pill>v2.1</Pill>
                     </div>
-                    <p className="text-gray-500 font-medium max-w-xl text-sm">
+                    <p className="text-slate-400 font-medium max-w-xl text-sm leading-relaxed">
                         Guia de referência técnica, econômica e operacional do protocolo BlockMiner. Tudo que você precisa para maximizar sua operação de mineração.
                     </p>
                 </div>
             </div>
-        </div>
+        </Card>
     );
 }
 
