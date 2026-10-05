@@ -47,14 +47,14 @@ export function BurnMachineGroupCard({
 
   return (
     <div
-      className={`relative flex flex-col justify-between gap-3 rounded-2xl border p-3.5 transition-all duration-200 sm:flex-row sm:items-center ${
+      className={`relative flex flex-col justify-between gap-3 rounded-2xl border-2 p-3.5 transition-all sm:flex-row sm:items-center shadow-[2px_2px_0px_#000000] ${
         isSelected
-          ? 'border-orange-500/35 bg-gradient-to-r from-orange-500/15 via-slate-900/90 to-slate-950 shadow-md shadow-orange-500/10 ring-1 ring-orange-500/30'
-          : 'border-white/10 bg-slate-950/60 hover:border-white/20 hover:bg-slate-900/70'
+          ? 'border-amber-500/50 bg-amber-500/10'
+          : 'border-slate-800 bg-slate-950/60 hover:border-slate-700 hover:bg-slate-900/60'
       }`}
     >
       <div className="flex items-center gap-3 min-w-0">
-        <div className="relative flex h-14 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-orange-500/15 bg-gradient-to-b from-slate-800 to-slate-950 p-1">
+        <div className="relative flex h-14 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border-2 border-slate-800 bg-slate-950 p-1 shadow-[1px_1px_0px_#000000]">
           {img ? (
             <MachineImage
               imageUrl={img}
@@ -70,10 +70,10 @@ export function BurnMachineGroupCard({
           <div className="flex flex-wrap items-center gap-1.5">
             <p className="truncate text-sm font-black text-white">{group.minerName}</p>
             <span
-              className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
+              className={`rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wider border shadow-sm ${
                 group.location === 'WAREHOUSE'
-                  ? 'border border-sky-500/30 bg-sky-500/10 text-sky-300'
-                  : 'border border-slate-700 bg-slate-800 text-slate-300'
+                  ? 'border-sky-500/30 bg-sky-500/10 text-sky-300'
+                  : 'border-slate-700 bg-slate-800 text-slate-300'
               }`}
             >
               {locationLabel(group.location, t)}
@@ -81,35 +81,35 @@ export function BurnMachineGroupCard({
           </div>
 
           <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
-            <span className="font-bold text-orange-400">
+            <span className="font-bold text-orange-400 font-mono">
               {formatHashRate(group.hashRate)}{' '}
-              <span className="text-[10px] font-medium text-slate-400">/ un</span>
+              <span className="text-[10px] font-medium text-slate-400 font-sans">/ un</span>
             </span>
             <span className="text-slate-600">•</span>
-            <span className="text-slate-400">
+            <span className="text-slate-400 font-medium">
               {group.availableCount} {t('burnEvents.available_unit', { defaultValue: 'disponíveis' })}
             </span>
           </div>
         </div>
       </div>
 
-      <div className="flex items-center justify-between gap-2 border-t border-white/5 pt-2 sm:border-t-0 sm:pt-0">
+      <div className="flex items-center justify-between gap-2 border-t border-slate-800 pt-2 sm:border-t-0 sm:pt-0">
         {isSelected && (
           <div className="text-right sm:mr-2">
             <span className="text-[10px] uppercase font-bold text-slate-400">Total: </span>
-            <span className="text-xs font-black text-emerald-400">
+            <span className="text-xs font-black text-emerald-400 font-mono">
               {formatHashRate(group.selectedCount * group.hashRate)}
             </span>
           </div>
         )}
 
-        <div className="flex items-center gap-1.5 bg-slate-900/90 rounded-xl border border-white/10 p-1">
+        <div className="flex items-center gap-1.5 bg-slate-900 rounded-xl border-2 border-slate-800 p-1 shadow-[1px_1px_0px_#000000]">
           <button
             type="button"
             aria-label={t('common.decrease', { defaultValue: 'Diminuir' })}
             disabled={group.selectedCount <= 0}
             onClick={onRemove}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-300 transition-colors hover:bg-white/10 active:scale-95 disabled:cursor-not-allowed disabled:opacity-30"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-300 transition-colors hover:bg-slate-800 active:translate-x-0.5 active:translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-30"
           >
             <Minus className="h-3.5 w-3.5" />
           </button>
@@ -123,7 +123,7 @@ export function BurnMachineGroupCard({
             aria-label={t('common.increase', { defaultValue: 'Aumentar' })}
             disabled={isFullySelected}
             onClick={onAdd}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-300 transition-colors hover:bg-white/10 active:scale-95 disabled:cursor-not-allowed disabled:opacity-30"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-300 transition-colors hover:bg-slate-800 active:translate-x-0.5 active:translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-30"
           >
             <Plus className="h-3.5 w-3.5" />
           </button>
@@ -132,10 +132,10 @@ export function BurnMachineGroupCard({
         <button
           type="button"
           onClick={onToggleMax}
-          className={`rounded-xl border px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider transition-all active:scale-95 ${
+          className={`rounded-xl border-2 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider transition-all active:translate-x-0.5 active:translate-y-0.5 shadow-[2px_2px_0px_#000000] outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${
             showClearMax
-              ? 'border-orange-500/40 bg-orange-500/20 text-orange-300 hover:bg-orange-500/30'
-              : 'border-white/10 bg-slate-900/60 text-slate-400 hover:border-white/20 hover:text-white'
+              ? 'border-amber-500/60 bg-amber-500/20 text-amber-300 hover:bg-amber-500/30'
+              : 'border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-600 hover:text-white'
           }`}
         >
           {showClearMax ? 'Limpar' : 'Max'}

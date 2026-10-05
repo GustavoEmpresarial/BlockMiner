@@ -91,10 +91,10 @@ export function BurnFeeSelector({
               aria-label={`fee-${curr}`}
               disabled={disabled}
               onClick={() => onSelectCurrency(curr)}
-              className={`relative flex flex-col justify-between rounded-2xl border p-3 text-left transition-all duration-200 active:scale-[0.98] ${
+              className={`relative flex flex-col justify-between rounded-2xl border-2 p-3.5 text-left transition-all shadow-[2px_2px_0px_#000000] active:translate-x-0.5 active:translate-y-0.5 outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${
                 isSelected
-                  ? 'border-orange-500/60 bg-gradient-to-b from-orange-500/15 via-slate-900 to-slate-950 shadow-md shadow-orange-500/10 ring-1 ring-orange-500/40'
-                  : 'border-white/10 bg-slate-950/60 hover:border-white/20 hover:bg-slate-900/60'
+                  ? 'border-amber-500 bg-amber-500/15'
+                  : 'border-slate-800 bg-slate-950/60 hover:border-slate-700 hover:bg-slate-900/60'
               } ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
             >
               <div className="flex items-center justify-between gap-2">

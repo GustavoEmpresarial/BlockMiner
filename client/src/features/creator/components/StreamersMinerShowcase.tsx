@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import Card from '../../../shared/components/Card';
 import {
   MODEL_VIEWER_SCRIPT,
   STREAMERS_MINER_CAMERA_ORBIT,
@@ -82,26 +83,30 @@ export function StreamersMinerShowcase() {
   const { t } = useTranslation();
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <section className="space-y-2">
-        <p className="text-sm font-black text-white">{t('ranking.social.miner_static_title')}</p>
-        <p className="text-[10px] text-gray-500">{t('ranking.social.miner_static_body')}</p>
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <Card as="section" overflowHidden className="p-5 sm:p-6 space-y-3">
+        <div>
+          <p className="text-sm font-black uppercase tracking-tight text-white">{t('ranking.social.miner_static_title')}</p>
+          <p className="text-xs text-slate-400 font-medium mt-0.5">{t('ranking.social.miner_static_body')}</p>
+        </div>
         <video
-          className="w-full h-[280px] sm:h-[360px] rounded-2xl bg-slate-950 object-contain"
+          className="w-full h-[280px] sm:h-[360px] rounded-2xl bg-slate-950 object-contain border-2 border-slate-800 shadow-[2px_2px_0px_#000000]"
           src={STREAMERS_MINER_SPIN}
           autoPlay
           muted
           loop
           playsInline
         />
-      </section>
-      <section className="space-y-2">
-        <p className="text-sm font-black text-white">{t('ranking.social.miner_orbit_title')}</p>
-        <p className="text-[10px] text-gray-500">{t('ranking.social.miner_orbit_body')}</p>
-        <div className="w-full h-[280px] sm:h-[360px] rounded-2xl overflow-hidden bg-slate-950">
+      </Card>
+      <Card as="section" overflowHidden className="p-5 sm:p-6 space-y-3">
+        <div>
+          <p className="text-sm font-black uppercase tracking-tight text-white">{t('ranking.social.miner_orbit_title')}</p>
+          <p className="text-xs text-slate-400 font-medium mt-0.5">{t('ranking.social.miner_orbit_body')}</p>
+        </div>
+        <div className="w-full h-[280px] sm:h-[360px] rounded-2xl overflow-hidden bg-slate-950 border-2 border-slate-800 shadow-[2px_2px_0px_#000000]">
           <OrbitMiner />
         </div>
-      </section>
+      </Card>
     </div>
   );
 }
