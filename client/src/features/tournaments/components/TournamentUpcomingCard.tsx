@@ -19,7 +19,7 @@ export function TournamentUpcomingCard({
     <button
       type="button"
       onClick={onOpen}
-      className="group text-left rounded-2xl border border-white/8 bg-slate-900/50 p-5 hover:border-sky-500/30 hover:bg-slate-900/70 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-sky-500/8 w-full"
+      className="group text-left rounded-3xl border-2 border-slate-800 bg-slate-900/60 p-6 hover:border-slate-700 active:translate-x-0.5 active:translate-y-0.5 transition-all shadow-[4px_4px_0px_#000000] w-full outline-none focus-visible:ring-2 focus-visible:ring-primary"
     >
       <div className="flex items-start justify-between gap-2 mb-3">
         <span

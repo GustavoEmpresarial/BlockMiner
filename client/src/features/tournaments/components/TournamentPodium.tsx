@@ -21,16 +21,16 @@ export function TournamentPodium({
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
-      <div className="order-2 md:order-1 bg-slate-900/60 border border-slate-700/40 rounded-[2.5rem] overflow-hidden text-center relative group">
-        <div className="p-8 space-y-4 flex flex-col justify-center items-center min-h-[280px]">
+      <div className="order-2 md:order-1 bg-slate-900/60 border-2 border-slate-700 rounded-3xl overflow-hidden text-center relative group shadow-[4px_4px_0px_#000000]">
+        <div className="p-7 sm:p-8 space-y-4 flex flex-col justify-center items-center min-h-[280px]">
           <div className="absolute top-0 inset-x-0 h-1 bg-slate-400/40" />
           <div className="absolute top-4 left-4">
-            <span className="w-8 h-8 bg-slate-400 text-slate-950 rounded-lg flex items-center justify-center font-black text-xs shadow-lg">
+            <span className="w-8 h-8 bg-slate-400 text-slate-950 rounded-lg flex items-center justify-center font-black text-xs shadow-[2px_2px_0px_#000000]">
               2
             </span>
           </div>
           <div className="relative z-10">
-            <div className="w-16 h-16 bg-slate-400/10 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-slate-400/20 group-hover:scale-110 transition-transform">
+            <div className="w-16 h-16 bg-slate-400/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border-2 border-slate-400/20 group-hover:scale-105 transition-transform shadow-[2px_2px_0px_#000000]">
               <Medal className="w-8 h-8 text-slate-300" />
             </div>
             <h3 className="text-xl font-black text-white truncate px-4">{displayName(second)}</h3>
@@ -42,24 +42,24 @@ export function TournamentPodium({
                 align="center"
               />
             </p>
-            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
               {t('tournaments.podium.second')}
             </span>
           </div>
         </div>
       </div>
 
-      <div className="order-1 md:order-2 bg-gradient-to-b from-amber-500/15 to-slate-900/80 border border-amber-500/40 rounded-[3rem] overflow-hidden text-center relative shadow-2xl shadow-amber-500/10 group">
-        <div className="p-10 space-y-6 flex flex-col justify-center items-center min-h-[340px]">
+      <div className="order-1 md:order-2 bg-gradient-to-b from-amber-500/15 to-slate-900/80 border-2 border-amber-500/50 rounded-3xl overflow-hidden text-center relative shadow-[0_0_20px_rgba(245,158,11,0.15),4px_4px_0px_#000000] group">
+        <div className="p-8 sm:p-10 space-y-6 flex flex-col justify-center items-center min-h-[340px]">
           <div className="absolute top-0 inset-x-0 h-1.5 bg-amber-500" />
           <div className="absolute top-6 left-6">
-            <span className="w-10 h-10 bg-amber-500 text-slate-950 rounded-xl flex items-center justify-center font-black text-base shadow-xl animate-bounce">
+            <span className="w-10 h-10 bg-amber-500 text-slate-950 rounded-xl flex items-center justify-center font-black text-base shadow-[2px_2px_0px_#000000] animate-bounce">
               1
             </span>
           </div>
           <div className="relative z-10">
-            <div className="w-24 h-24 bg-amber-500 rounded-full flex items-center justify-center mx-auto mb-6 border-4 border-amber-500/30 shadow-xl group-hover:scale-110 transition-transform duration-500">
-              <Crown className="w-12 h-12 text-slate-950" />
+            <div className="w-20 h-20 bg-amber-500 rounded-2xl flex items-center justify-center mx-auto mb-5 border-4 border-amber-500/30 shadow-[4px_4px_0px_#000000] group-hover:scale-105 transition-transform duration-300">
+              <Crown className="w-10 h-10 text-slate-950" />
             </div>
             <h3 className="text-2xl font-black text-white truncate px-4">{displayName(first)}</h3>
             <p className="text-amber-400 font-black text-2xl font-mono">
@@ -70,23 +70,23 @@ export function TournamentPodium({
                 align="center"
               />
             </p>
-            <span className="text-xs font-black text-amber-500/60 uppercase tracking-[0.3em]">
+            <span className="text-xs font-black text-amber-400 uppercase tracking-[0.3em]">
               {t('tournaments.podium.champion')}
             </span>
           </div>
         </div>
       </div>
 
-      <div className="order-3 md:order-3 bg-slate-900/60 border border-orange-700/40 rounded-[2.5rem] overflow-hidden text-center relative group">
-        <div className="p-8 space-y-4 flex flex-col justify-center items-center min-h-[280px]">
+      <div className="order-3 md:order-3 bg-slate-900/60 border-2 border-orange-700/60 rounded-3xl overflow-hidden text-center relative group shadow-[4px_4px_0px_#000000]">
+        <div className="p-7 sm:p-8 space-y-4 flex flex-col justify-center items-center min-h-[280px]">
           <div className="absolute top-0 inset-x-0 h-1 bg-orange-700/40" />
           <div className="absolute top-4 left-4">
-            <span className="w-8 h-8 bg-orange-700 text-white rounded-lg flex items-center justify-center font-black text-xs shadow-lg">
+            <span className="w-8 h-8 bg-orange-700 text-white rounded-lg flex items-center justify-center font-black text-xs shadow-[2px_2px_0px_#000000]">
               3
             </span>
           </div>
           <div className="relative z-10">
-            <div className="w-16 h-16 bg-orange-700/15 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-orange-700/30 group-hover:scale-110 transition-transform">
+            <div className="w-16 h-16 bg-orange-700/15 rounded-2xl flex items-center justify-center mx-auto mb-4 border-2 border-orange-700/30 group-hover:scale-105 transition-transform shadow-[2px_2px_0px_#000000]">
               <Medal className="w-8 h-8 text-orange-500" />
             </div>
             <h3 className="text-xl font-black text-white truncate px-4">{displayName(third)}</h3>
@@ -98,7 +98,7 @@ export function TournamentPodium({
                 align="center"
               />
             </p>
-            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
               {t('tournaments.podium.third')}
             </span>
           </div>

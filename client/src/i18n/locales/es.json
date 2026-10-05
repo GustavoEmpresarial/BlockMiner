@@ -3134,6 +3134,8 @@
     "video_error_embed": "This video has disabled embedding. Click \"Open on YouTube\" below the player."
   },
   "offers": {
+    "title": "Ofertas y Eventos",
+    "subtitle": "Ofertas y eventos limitados de mineros y equipamiento.",
     "empty": "No active offers right now. Check back soon.",
     "live": "Live",
     "coming_soon": "Coming soon",

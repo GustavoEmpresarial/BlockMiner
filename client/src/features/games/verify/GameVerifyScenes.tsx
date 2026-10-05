@@ -96,7 +96,7 @@ function VerifyShell({
 }) {
   return (
     <motion.section
-      className={`group relative overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/55 shadow-2xl backdrop-blur-md sm:rounded-[2rem] ${className}`}
+      className={`group relative overflow-hidden rounded-3xl border-2 border-slate-800 bg-slate-900/60 shadow-[4px_4px_0px_#000000] ${className}`}
       initial={{ opacity: 0, y: 18 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10, scale: 0.985 }}
@@ -325,12 +325,12 @@ function HudStatCard({
         hidden: { opacity: 0, y: 16, scale: 0.96 },
         show: { opacity: 1, y: 0, scale: 1 },
       }}
-      className="group/stat relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/70 p-4 backdrop-blur-sm"
+      className="group/stat relative overflow-hidden rounded-2xl border-2 border-slate-800 bg-slate-950/70 p-4 shadow-[2px_2px_0px_#000000]"
     >
       <div className={`absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r ${gradient} opacity-80`} />
-      <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">{label}</p>
+      <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">{label}</p>
       <p className="mt-2 font-mono text-2xl font-black tabular-nums tracking-tight text-white sm:text-3xl">{value}</p>
-      <span className="absolute bottom-2 right-3 font-mono text-[9px] text-slate-700">#{String(index + 1).padStart(2, "0")}</span>
+      <span className="absolute bottom-2 right-3 font-mono text-[9px] text-slate-600">#{String(index + 1).padStart(2, "0")}</span>
     </motion.div>
   );
 }
@@ -460,7 +460,7 @@ export function ResultScene({
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4, duration: 0.5 }}
-              className="relative overflow-hidden rounded-2xl border border-amber-500/35 bg-gradient-to-br from-amber-500/20 via-amber-600/8 to-slate-950/80 p-5 shadow-lg shadow-amber-500/10"
+              className="relative overflow-hidden rounded-2xl border-2 border-amber-500/40 bg-amber-950/20 p-5 shadow-[4px_4px_0px_#000000]"
             >
               <motion.div
                 className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-amber-200/10 to-transparent"
@@ -472,17 +472,17 @@ export function ResultScene({
                   <Zap className="h-6 w-6 text-amber-200" aria-hidden />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-[10px] font-black uppercase tracking-[0.3em] text-amber-200/90">
+                  <p className="text-[10px] font-black uppercase tracking-[0.3em] text-amber-300">
                     {t("gameFlow.reward_label")}
                   </p>
-                  <p className="mt-1.5 text-lg font-black leading-snug text-amber-50 sm:text-xl">{resolution.rewardMessage}</p>
+                  <p className="mt-1.5 text-lg font-black leading-snug text-amber-50 sm:text-xl font-mono">{resolution.rewardMessage}</p>
                 </div>
               </div>
             </motion.div>
           ) : null}
 
           <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-center">
-            <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 sm:p-5">
+            <div className="rounded-2xl border-2 border-slate-800 bg-slate-950/60 p-4 sm:p-5 shadow-[2px_2px_0px_#000000]">
               <div className="flex items-center gap-4">
                 <div className="relative h-16 w-16 shrink-0">
                   <svg viewBox="0 0 36 36" className="h-full w-full -rotate-90" aria-hidden>
@@ -508,7 +508,7 @@ export function ResultScene({
                   </span>
                 </div>
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-500">
+                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">
                     {isResultSuccess ? t("gameFlow.next_match_label") : t("gameFlow.next_try_label")}
                   </p>
                   <p className="mt-1 font-mono text-3xl font-black tabular-nums text-white">
@@ -523,10 +523,10 @@ export function ResultScene({
                 type="button"
                 onClick={onPlayAgain}
                 disabled={blocked}
-                className={`group/btn relative overflow-hidden rounded-2xl px-6 py-4 text-sm font-black uppercase tracking-wider transition-all ${
+                className={`group/btn relative overflow-hidden rounded-xl px-6 py-3.5 text-xs font-black uppercase tracking-wider transition-all shadow-[2px_2px_0px_#000000] outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                   blocked
-                    ? "cursor-not-allowed border border-slate-800 bg-slate-950/80 text-slate-600"
-                    : "border border-primary/40 bg-gradient-to-r from-primary to-blue-600 text-white shadow-lg shadow-primary/30 hover:-translate-y-0.5 hover:shadow-primary/45"
+                    ? "cursor-not-allowed border-2 border-slate-800 bg-slate-950/80 text-slate-600"
+                    : "border-2 border-primary/50 bg-primary hover:bg-primary-hover active:translate-x-0.5 active:translate-y-0.5 text-white"
                 }`}
               >
                 {!blocked && (
@@ -546,7 +546,7 @@ export function ResultScene({
               <button
                 type="button"
                 onClick={onExit}
-                className="flex items-center justify-center gap-2 rounded-2xl border border-slate-700/80 bg-slate-900/50 px-6 py-3.5 text-sm font-black uppercase tracking-wider text-slate-300 transition-all hover:border-primary/40 hover:bg-slate-800/70 hover:text-white"
+                className="flex items-center justify-center gap-2 rounded-xl border-2 border-slate-700 bg-slate-800/80 px-6 py-3 text-xs font-black uppercase tracking-wider text-slate-300 transition-all hover:border-slate-600 hover:text-white hover:bg-slate-700 active:translate-x-0.5 active:translate-y-0.5 shadow-[2px_2px_0px_#000000] outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 <ArrowLeft className="h-4 w-4" aria-hidden />
                 {isResultSuccess ? t("gameFlow.back_to_arena") : t("gameFlow.back")}

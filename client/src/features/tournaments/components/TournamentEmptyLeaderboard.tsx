@@ -47,7 +47,7 @@ export function TournamentEmptyLeaderboard({ tournament }: { tournament: Tournam
 
   return (
     <div className="space-y-6">
-      <div className="rounded-[2.5rem] border border-amber-500/20 bg-gradient-to-br from-amber-950/30 via-slate-900/60 to-slate-900/80 p-8 text-center relative overflow-hidden">
+      <div className="rounded-3xl border-2 border-amber-500/30 bg-slate-900/60 p-8 text-center relative overflow-hidden shadow-[4px_4px_0px_#000000]">
         <div
           className="absolute inset-0 opacity-10"
           style={{ backgroundImage: 'radial-gradient(circle at 50% 0%, #f59e0b, transparent 70%)' }}
@@ -76,24 +76,24 @@ export function TournamentEmptyLeaderboard({ tournament }: { tournament: Tournam
             return (
               <div
                 key={prize.id}
-                className={`${slot.order} rounded-[2rem] border ${slot.border} bg-gradient-to-b ${slot.bg} overflow-hidden relative shadow-xl ${slot.glow} ${slot.height} flex flex-col`}
+                className={`${slot.order} rounded-3xl border-2 ${slot.border} bg-slate-900/60 overflow-hidden relative shadow-[4px_4px_0px_#000000] ${slot.height} flex flex-col`}
               >
                 <div className={`absolute top-0 inset-x-0 h-1 ${slot.bar}`} />
                 <div className="flex-1 flex flex-col items-center justify-center p-6 text-center gap-3">
                   <div className="w-16 h-16 rounded-full border-2 border-dashed border-slate-700/60 flex items-center justify-center bg-slate-800/40 mb-1">
                     <span className="text-2xl opacity-60">?</span>
                   </div>
-                  <p className="text-[11px] font-black text-slate-500 uppercase tracking-widest">
+                  <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">
                     {t(slot.labelKey)}
                   </p>
-                  <p className="text-xs text-slate-600 italic">{t('tournaments.ui.nobody_yet')}</p>
+                  <p className="text-xs text-slate-500 italic">{t('tournaments.ui.nobody_yet')}</p>
                   <div className="mt-auto pt-2 w-full px-2">
                     <TournamentPrizeCard prize={prize} />
                   </div>
                 </div>
                 <div className="absolute top-3 left-3">
                   <span
-                    className={`w-7 h-7 rounded-lg flex items-center justify-center font-black text-xs shadow ${slot.medalBg}`}
+                    className={`w-7 h-7 rounded-lg flex items-center justify-center font-black text-xs shadow-[2px_2px_0px_#000000] ${slot.medalBg}`}
                   >
                     {slot.rank}
                   </span>
@@ -105,14 +105,14 @@ export function TournamentEmptyLeaderboard({ tournament }: { tournament: Tournam
       ) : null}
 
       {rest.length > 0 ? (
-        <div className="rounded-[1.5rem] border border-white/5 bg-slate-900/40 overflow-hidden">
-          <div className="px-4 py-3 border-b border-white/5 flex items-center gap-2">
+        <div className="rounded-2xl border-2 border-slate-800 bg-slate-900/60 overflow-hidden shadow-[4px_4px_0px_#000000]">
+          <div className="px-4 py-3 border-b border-slate-800 flex items-center gap-2">
             <Gift className="w-4 h-4 text-amber-400/70" />
             <span className="text-xs font-black text-slate-400 uppercase tracking-widest">
               {t('tournaments.ui.other_prizes')}
             </span>
           </div>
-          <ul className="divide-y divide-white/[0.04] py-1">
+          <ul className="divide-y divide-slate-800/80 py-1">
             {rest.map((prize) => (
               <li key={prize.id} className="px-2">
                 <TournamentPrizeCard prize={prize} />

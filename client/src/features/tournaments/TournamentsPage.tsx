@@ -15,6 +15,7 @@ import { TournamentEmptyLeaderboard } from './components/TournamentEmptyLeaderbo
 import { TournamentLeaderboardTable } from './components/TournamentLeaderboardTable';
 import { TournamentPodium } from './components/TournamentPodium';
 import { TournamentUpcomingCard } from './components/TournamentUpcomingCard';
+import IconBadge from '../../shared/components/IconBadge';
 import {
   HUB_CATEGORY_META,
   TOURNAMENT_HUB_ORDER,
@@ -173,8 +174,8 @@ export default function TournamentsPage() {
   const showDetail = selectedId != null && detail?.tournament.id === selectedId;
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between flex-wrap gap-3">
+    <div className="space-y-8 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="flex items-center justify-between flex-wrap gap-4 pb-3 border-b-2 border-slate-800">
         <div className="flex items-center gap-3">
           {hubId && hubs.length > 1 ? (
             <button
@@ -185,25 +186,23 @@ export default function TournamentsPage() {
                 setSelectedId(null);
                 setDetail(null);
               }}
-              className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-800/60 border border-white/10 text-slate-300 hover:bg-slate-700/60 transition-colors"
+              className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-800/80 border-2 border-slate-700 text-slate-300 hover:text-white hover:border-slate-600 transition-colors shadow-[2px_2px_0px_#000000] outline-none focus-visible:ring-2 focus-visible:ring-primary"
               aria-label={t('tournaments.header.back')}
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
           ) : (
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/15">
-              <Trophy className="h-5 w-5 text-amber-400" />
-            </div>
+            <IconBadge icon={Trophy} variant="amber" size="lg" />
           )}
           <div>
-            <h1 className="text-xl font-black text-white">
+            <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">
               {currentHub
                 ? t('tournaments.header.titleWithCategory', {
                     category: t(`tournaments.categories.${currentHub.id}`),
                   })
                 : t('tournaments.header.title')}
             </h1>
-            <p className="text-xs text-slate-500">{t('tournaments.header.subtitle')}</p>
+            <p className="text-xs sm:text-sm text-slate-400 font-medium">{t('tournaments.header.subtitle')}</p>
           </div>
         </div>
         <button
@@ -212,7 +211,7 @@ export default function TournamentsPage() {
             void loadList();
             if (selectedId) void loadDetail(selectedId);
           }}
-          className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-slate-800/60 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-700/60 transition-colors"
+          className="flex items-center gap-2 rounded-xl border-2 border-slate-800 bg-slate-900/60 px-4 py-2 text-xs font-black uppercase tracking-wider text-slate-300 hover:text-white hover:border-slate-700 transition-all shadow-[2px_2px_0px_#000000] active:translate-x-0.5 active:translate-y-0.5 outline-none focus-visible:ring-2 focus-visible:ring-primary"
         >
           <RefreshCw className={`h-3.5 w-3.5 ${listLoading || detailLoading ? 'animate-spin' : ''}`} />
           {t('tournaments.header.refresh')}
@@ -220,7 +219,7 @@ export default function TournamentsPage() {
       </div>
 
       {!currentHub && hubs.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {hubs.map(({ id, items }) => {
             const Icon = HUB_CATEGORY_META[id].icon;
             const participants = items.reduce((sum, i) => sum + (i._count?.entries ?? 0), 0);
@@ -230,31 +229,29 @@ export default function TournamentsPage() {
                 key={id}
                 type="button"
                 onClick={() => setHubId(id)}
-                className="group rounded-2xl border border-white/8 bg-slate-900/40 p-5 text-left hover:border-sky-500/40 hover:bg-slate-900/60 transition-colors"
+                className="group rounded-3xl border-2 border-slate-800 bg-slate-900/60 p-6 text-left hover:border-slate-700 active:translate-x-0.5 active:translate-y-0.5 transition-all shadow-[4px_4px_0px_#000000] outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-sky-500/15 text-sky-400 group-hover:bg-sky-500/25 transition-colors">
-                    <Icon className="h-6 w-6" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-base font-black text-white">{t(`tournaments.categories.${id}`)}</p>
-                    <p className="text-[11px] text-slate-500 font-mono">
+                <div className="flex items-center gap-3.5 mb-4">
+                  <IconBadge icon={Icon} variant="sky" size="lg" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-base font-black text-white uppercase italic tracking-tight truncate">{t(`tournaments.categories.${id}`)}</p>
+                    <p className="text-xs text-slate-400 font-mono mt-0.5">
                       {items.length}{' '}
                       {t('tournaments.activeTournaments', { count: items.length })}
                     </p>
                   </div>
-                  <ChevronRight className="h-4 w-4 text-slate-500 group-hover:text-sky-400 transition-colors" />
+                  <ChevronRight className="h-5 w-5 text-slate-500 group-hover:text-sky-400 group-hover:translate-x-0.5 transition-all shrink-0" />
                 </div>
-                <div className="flex items-center gap-3 text-[11px] text-slate-400 flex-wrap">
-                  <span className="flex items-center gap-1">
-                    <Users className="h-3 w-3 text-sky-400" />
+                <div className="flex items-center gap-3 text-xs text-slate-400 flex-wrap">
+                  <span className="flex items-center gap-1 font-mono font-medium">
+                    <Users className="h-3.5 w-3.5 text-sky-400" />
                     {t('tournaments.participants', { count: participants })}
                   </span>
-                  <span className="flex items-center gap-1 flex-wrap">
+                  <span className="flex items-center gap-1.5 flex-wrap">
                     {typeTags.map((type) => (
                       <span
                         key={type}
-                        className={`rounded-full border px-1.5 py-0.5 text-[9px] uppercase ${TOURNAMENT_TYPE_BADGE[type] ?? ''}`}
+                        className={`rounded-full border px-2 py-0.5 text-[9px] font-extrabold uppercase ${TOURNAMENT_TYPE_BADGE[type] ?? ''}`}
                       >
                         {t(`tournaments.types.${type}`)}
                       </span>
@@ -262,7 +259,7 @@ export default function TournamentsPage() {
                   </span>
                 </div>
                 {id === 'games' ? (
-                  <p className="mt-3 text-[10px] text-emerald-400/90 leading-snug border-t border-white/5 pt-3">
+                  <p className="mt-3.5 text-[10px] text-emerald-400 font-medium leading-snug border-t border-slate-800/80 pt-3">
                     {t('tournaments.minigame_scoring_hint_short')}
                   </p>
                 ) : null}
@@ -273,7 +270,7 @@ export default function TournamentsPage() {
       ) : null}
 
       {currentHub ? (
-        <div className="space-y-2">
+        <div className="space-y-3">
           <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1 pb-1">
             {sortTypes([...new Set(currentHub.items.map((i) => i.type))]).map((type) => {
               const selected = type === typeFilter;
@@ -282,10 +279,10 @@ export default function TournamentsPage() {
                   key={type}
                   type="button"
                   onClick={() => setTypeFilter(type)}
-                  className={`shrink-0 rounded-xl border px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all ${
+                  className={`shrink-0 rounded-xl border-2 px-4 py-2 text-xs font-black uppercase tracking-wider transition-all outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                     selected
-                      ? 'border-sky-500/50 bg-sky-500/10 text-white'
-                      : 'border-white/8 bg-slate-900/40 text-slate-400 hover:border-white/20 hover:text-white'
+                      ? 'border-sky-500 bg-sky-500/20 text-white shadow-[2px_2px_0px_#000000] translate-y-[-1px]'
+                      : 'border-slate-800 bg-slate-900/60 text-slate-400 hover:border-slate-700 hover:text-white'
                   }`}
                 >
                   {t(`tournaments.types.${type}`)}
@@ -300,10 +297,10 @@ export default function TournamentsPage() {
                   key={row.id}
                   type="button"
                   onClick={() => setSelectedId(row.id)}
-                  className={`shrink-0 rounded-lg border px-3 py-1.5 text-[11px] transition-all ${
+                  className={`shrink-0 rounded-lg border-2 px-3 py-1.5 text-xs font-bold transition-all outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                     selectedId === row.id
-                      ? 'border-sky-500/40 bg-sky-500/10 text-white'
-                      : 'border-white/8 bg-slate-900/30 text-slate-400 hover:text-white'
+                      ? 'border-sky-500/50 bg-sky-500/15 text-white shadow-[2px_2px_0px_#000000]'
+                      : 'border-slate-800 bg-slate-900/40 text-slate-400 hover:border-slate-700 hover:text-white'
                   }`}
                 >
                   {row.name}
