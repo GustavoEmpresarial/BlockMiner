@@ -1,8 +1,8 @@
+import { isValidElement, type HTMLAttributes, type ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import type { HTMLAttributes, ReactNode } from 'react';
 
 export interface StatCardProps extends HTMLAttributes<HTMLDivElement> {
-  icon: LucideIcon;
+  icon: LucideIcon | ReactNode;
   label: ReactNode;
   value: ReactNode;
   sub?: ReactNode;
@@ -20,6 +20,18 @@ export default function StatCard({
   className = '',
   ...props
 }: StatCardProps) {
+  const renderIcon = () => {
+    if (isValidElement(Icon)) return Icon;
+    if (
+      typeof Icon === 'function' ||
+      (typeof Icon === 'object' && Icon !== null && ('$$typeof' in (Icon as unknown as Record<string, unknown>) || 'render' in (Icon as unknown as Record<string, unknown>)))
+    ) {
+      const IconComponent = Icon as LucideIcon;
+      return <IconComponent className={`w-4 h-4 ${accent}`} aria-hidden="true" />;
+    }
+    return Icon;
+  };
+
   return (
     <div
       data-testid="stat-card"
@@ -37,7 +49,7 @@ export default function StatCard({
             glow ? 'bg-primary/15 border-primary/30' : 'bg-slate-950/80'
           }`}
         >
-          <Icon className={`w-4 h-4 ${accent}`} aria-hidden="true" />
+          {renderIcon()}
         </div>
       </div>
       <div>

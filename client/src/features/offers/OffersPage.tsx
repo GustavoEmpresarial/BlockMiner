@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { toast } from 'sonner';
 import { useAuthStore } from '../../shared/auth/auth.store';
 import { Loader2, Zap, TrendingUp, CheckCircle2, AlertTriangle, X, Sparkles, Calendar, Clock, Minus, Plus, Package, DoorOpen, Wind, Boxes } from 'lucide-react';
+import { IconBadge, StatusPill } from '../../shared/components';
 import { getActiveOfferEvents, postOfferEventPurchase, postOfferFanPurchase, postOfferRackPurchase, readActiveOffersCache, writeActiveOffersCache, clearActiveOffersCache, hasLiveRoomOffers, hasLiveGearOffers, OFFER_PURCHASE_MAX_QUANTITY, readGearMaxBulkQuantity, readOfferPurchaseError } from './lib/offers.api';
 import type { OfferEventDTO, OfferEventMinerDTO, RoomOffersDTO, FanOffersDTO, FanOfferItemDTO, RackOffersDTO } from './lib/offers.api';
 import { OfferMinerModel } from './components/OfferMinerModel';
@@ -54,7 +55,7 @@ const GEAR = {
         Icon: Wind,
         badgeKey: 'shop.fan_badge',
         purchase: postOfferFanPurchase,
-        card: 'bg-surface border border-cyan-500/20 hover:border-cyan-400/40 rounded-[2.5rem] p-8 shadow-xl transition-all duration-500 group relative overflow-hidden',
+        card: 'bg-surface border-2 border-cyan-500/30 hover:border-cyan-400/50 rounded-3xl p-6 sm:p-7 shadow-[4px_4px_0px_#000000] bg-slate-900/60 transition-all duration-300 group relative overflow-hidden',
         badge: 'px-3 py-1 rounded-full border bg-cyan-500/10 border-cyan-500/30 text-[9px] font-black uppercase tracking-widest text-cyan-300',
         icon: 'w-5 h-5 text-cyan-400',
     },
@@ -63,7 +64,7 @@ const GEAR = {
         Icon: Boxes,
         badgeKey: 'shop.rack_badge',
         purchase: postOfferRackPurchase,
-        card: 'bg-surface border border-amber-500/20 hover:border-amber-400/40 rounded-[2.5rem] p-8 shadow-xl transition-all duration-500 group relative overflow-hidden',
+        card: 'bg-surface border-2 border-amber-500/30 hover:border-amber-400/50 rounded-3xl p-6 sm:p-7 shadow-[4px_4px_0px_#000000] bg-slate-900/60 transition-all duration-300 group relative overflow-hidden',
         badge: 'px-3 py-1 rounded-full border bg-amber-500/10 border-amber-500/30 text-[9px] font-black uppercase tracking-widest text-amber-300',
         icon: 'w-5 h-5 text-amber-400',
     },
@@ -83,33 +84,28 @@ function GearOffersSection({ kind, offers, locale, buying, onBuy }: {
     const Icon = style.Icon;
     return (
             <div className="space-y-6">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-800">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b-2 border-slate-800">
                     <div className="flex items-center gap-3">
+                        <IconBadge icon={Icon} variant={kind === 'fan' ? 'sky' : 'amber'} size="md" />
+                        <h2 className="text-lg sm:text-xl font-black text-white uppercase italic tracking-tight">{offers?.title}</h2>
                         {offers?.isPurchaseLive ? (
-                            <span className="flex items-center gap-1.5 px-3 py-1 bg-green-500/10 border border-green-500/30 rounded-full text-[9px] font-black text-green-400 uppercase tracking-widest">
-                                <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
-                                {t('offers.live')}
-                            </span>
+                            <StatusPill variant="success" label={t('offers.live')} />
                         ) : (
-                            <span className="flex items-center gap-1.5 px-3 py-1 bg-amber-500/10 border border-amber-500/30 rounded-full text-[9px] font-black text-amber-400 uppercase tracking-widest">
-                                <Clock className="w-3 h-3" />
-                                {t('offers.coming_soon')}
-                            </span>
+                            <StatusPill variant="warning" icon={Clock} label={t('offers.coming_soon')} />
                         )}
-                        <h2 className="text-xl font-black text-white uppercase italic tracking-tight">{offers?.title}</h2>
                     </div>
-                    <div className="flex flex-col sm:flex-row gap-3 text-xs text-gray-500">
+                    <div className="flex flex-col sm:flex-row gap-3 text-xs text-slate-400 font-medium">
                         {offers?.salesAvailableAt && (
                             <div className="flex items-center gap-1.5">
-                                <Calendar className="w-3.5 h-3.5 text-gray-600" />
-                                <span className="font-semibold">{t('shop.sales_opens_at')}:</span>
+                                <Calendar className="w-3.5 h-3.5 text-slate-500" />
+                                <span className="font-semibold text-slate-300">{t('shop.sales_opens_at')}:</span>
                                 <span>{fmtDate(offers.salesAvailableAt, locale)}</span>
                             </div>
                         )}
                     </div>
                 </div>
                 {offers?.description && (
-                    <p className="text-sm text-gray-500 max-w-3xl">{offers.description}</p>
+                    <p className="text-sm text-slate-400 max-w-3xl font-medium">{offers.description}</p>
                 )}
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                     {(offers?.items || []).map((item) => {
@@ -122,7 +118,7 @@ function GearOffersSection({ kind, offers, locale, buying, onBuy }: {
                                 key={item.sku}
                                 className={style.card}
                             >
-                                <div className="relative z-10 space-y-6">
+                                <div className="relative z-10 space-y-5">
                                     <div className="flex justify-between items-start">
                                         <div className={style.badge}>
                                             {discountPercent > 0
@@ -131,25 +127,25 @@ function GearOffersSection({ kind, offers, locale, buying, onBuy }: {
                                         </div>
                                         <Icon className={style.icon} />
                                     </div>
-                                    <div className="aspect-square bg-gray-900/50 rounded-3xl p-4 border border-gray-800 flex items-center justify-center overflow-hidden group-hover:scale-[1.02] transition-transform duration-500">
+                                    <div className="aspect-square bg-slate-950/60 rounded-2xl p-4 border border-slate-800 flex items-center justify-center overflow-hidden group-hover:scale-[1.02] transition-transform duration-300">
                                         <Art />
                                     </div>
                                     <div className="space-y-1">
-                                        <h3 className="text-xl font-black text-white">{t(item.nameKey)}</h3>
-                                        <p className="text-xs text-gray-500">{t(item.descriptionKey)}</p>
+                                        <h3 className="text-lg font-black text-white">{t(item.nameKey)}</h3>
+                                        <p className="text-xs text-slate-400 font-medium">{t(item.descriptionKey)}</p>
                                     </div>
-                                    <div className="pt-4 border-t border-gray-800/50 flex items-center justify-between gap-4">
+                                    <div className="pt-4 border-t border-slate-800/80 flex items-center justify-between gap-4">
                                         <div className="flex flex-col">
-                                            <span className="text-[9px] font-bold text-gray-600 uppercase tracking-widest">{t('shop.price')}</span>
+                                            <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest">{t('shop.price')}</span>
                                             <div className="flex items-baseline gap-2">
                                                 {item.listPrice > item.price && (
-                                                    <span className="text-sm font-bold text-gray-500 line-through">
+                                                    <span className="text-sm font-bold text-slate-400 line-through">
                                                         {formatPrice(item.listPrice)} {item.currency}
                                                     </span>
                                                 )}
-                                                <span className="text-lg font-black text-white italic">
+                                                <span className="text-lg font-black text-white italic font-mono">
                                                     {formatPrice(item.price)}{' '}
-                                                    <span className="text-xs font-bold text-gray-500 not-italic uppercase">{item.currency}</span>
+                                                    <span className="text-xs font-bold text-slate-400 not-italic uppercase">{item.currency}</span>
                                                 </span>
                                             </div>
                                         </div>
@@ -157,7 +153,7 @@ function GearOffersSection({ kind, offers, locale, buying, onBuy }: {
                                             type="button"
                                             disabled={!purchaseLive || buying}
                                             onClick={() => onBuy(kind, item)}
-                                            className="px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-lg active:scale-95 disabled:opacity-40 bg-primary hover:bg-primary-hover text-white shadow-primary/20"
+                                            className="px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-wider transition-all shadow-[2px_2px_0px_#000000] active:translate-x-0.5 active:translate-y-0.5 disabled:opacity-40 bg-primary hover:bg-primary-hover text-white outline-none focus-visible:ring-2 focus-visible:ring-primary"
                                         >
                                             {purchaseLive ? t('offers.buy') : t('offers.coming_soon')}
                                         </button>
@@ -327,17 +323,32 @@ export default function OffersPage() {
         ? readGearMaxBulkQuantity(gearModal.kind === 'fan' ? fanOffers : rackOffers)
         : OFFER_PURCHASE_MAX_QUANTITY;
 
+    const pageHeader = (
+        <div className="space-y-2">
+            <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">
+                {t('offers.title')}
+            </h1>
+            <p className="max-w-3xl text-xs sm:text-sm text-slate-400 font-medium">
+                {t('offers.subtitle')}
+            </p>
+        </div>
+    );
+
     if (loading) {
         return (
-            <div className="h-[60vh] flex flex-col items-center justify-center gap-4">
-                <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-                <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">{t('common.loading')}</p>
+            <div className="space-y-12 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                {pageHeader}
+                <div className="h-[45vh] flex flex-col items-center justify-center gap-4 rounded-3xl border-2 border-slate-800 bg-slate-900/60 shadow-[4px_4px_0px_#000000]">
+                    <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                    <p className="text-slate-400 font-extrabold uppercase tracking-widest text-xs">{t('common.loading')}</p>
+                </div>
             </div>
         );
     }
 
     return (
-        <div className="space-y-14 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div className="space-y-12 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {pageHeader}
 
             <GearOffersSection kind="fan" offers={fanOffers} locale={offerDateLocale} buying={buying} onBuy={openGearModal} />
 
@@ -345,37 +356,35 @@ export default function OffersPage() {
 
             {hasLiveRoomOffers(roomOffers) && (
                 <div className="space-y-6">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-800">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b-2 border-slate-800">
                         <div className="flex items-center gap-3">
-                            <span className="flex items-center gap-1.5 px-3 py-1 bg-green-500/10 border border-green-500/30 rounded-full text-[9px] font-black text-green-400 uppercase tracking-widest">
-                                <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
-                                {t('offers.live')}
-                            </span>
-                            <h2 className="text-xl font-black text-white uppercase italic tracking-tight">{roomOffers.title}</h2>
+                            <IconBadge icon={DoorOpen} variant="primary" size="md" />
+                            <h2 className="text-lg sm:text-xl font-black text-white uppercase italic tracking-tight">{roomOffers.title}</h2>
+                            <StatusPill variant="success" label={t('offers.live')} />
                         </div>
-                        <div className="flex flex-col sm:flex-row gap-3 text-xs text-gray-500">
+                        <div className="flex flex-col sm:flex-row gap-3 text-xs text-slate-400 font-medium">
                             <div className="flex items-center gap-1.5">
-                                <Calendar className="w-3.5 h-3.5 text-gray-600" />
-                                <span className="font-semibold">{t('offers.start')}:</span>
+                                <Calendar className="w-3.5 h-3.5 text-slate-500" />
+                                <span className="font-semibold text-slate-300">{t('offers.start')}:</span>
                                 <span>{fmtDate(roomOffers.startsAt, offerDateLocale)}</span>
                             </div>
                             <div className="flex items-center gap-1.5">
-                                <Calendar className="w-3.5 h-3.5 text-gray-600" />
-                                <span className="font-semibold">{t('offers.end')}:</span>
+                                <Calendar className="w-3.5 h-3.5 text-slate-500" />
+                                <span className="font-semibold text-slate-300">{t('offers.end')}:</span>
                                 <span>{fmtDate(roomOffers.endsAt, offerDateLocale)}</span>
                             </div>
                         </div>
                     </div>
                     {roomOffers.description && (
-                        <p className="text-sm text-gray-500 max-w-3xl">{roomOffers.description}</p>
+                        <p className="text-sm text-slate-400 max-w-3xl font-medium">{roomOffers.description}</p>
                     )}
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                         {(roomOffers.rooms || []).map((room) => (
                             <div
                                 key={room.roomNumber}
-                                className="bg-surface border border-primary/20 hover:border-primary/40 rounded-[2.5rem] p-8 shadow-xl transition-all duration-500 group relative overflow-hidden"
+                                className="bg-surface border-2 border-slate-800 hover:border-slate-700 bg-slate-900/60 rounded-3xl p-6 sm:p-7 shadow-[4px_4px_0px_#000000] transition-all duration-300 group relative overflow-hidden"
                             >
-                                <div className="relative z-10 space-y-6">
+                                <div className="relative z-10 space-y-5">
                                     <div className="flex justify-between items-start">
                                         <div className="px-3 py-1 rounded-full border bg-primary/10 border-primary/30 text-[9px] font-black uppercase tracking-widest text-primary">
                                             {t('offers.room_offer_badge', { percent: room.discountPercent })}
@@ -385,31 +394,31 @@ export default function OffersPage() {
                                             <span className="text-[10px] font-bold uppercase tracking-widest">{t('offers.event')}</span>
                                         </div>
                                     </div>
-                                    <div className="aspect-square bg-gray-900/50 rounded-3xl p-4 border border-gray-800 flex items-center justify-center overflow-hidden group-hover:scale-[1.02] transition-transform duration-500">
+                                    <div className="aspect-square bg-slate-950/60 rounded-2xl p-4 border border-slate-800 flex items-center justify-center overflow-hidden group-hover:scale-[1.02] transition-transform duration-300">
                                         {room.imageUrl ? (
                                             <img
                                                 src={room.imageUrl}
                                                 alt={t('offers.room_number', { room: room.roomNumber })}
-                                                className="w-full h-full object-cover rounded-2xl"
+                                                className="w-full h-full object-cover rounded-xl"
                                             />
                                         ) : (
-                                            <DoorOpen className="w-20 h-20 text-primary/40 group-hover:text-primary/60 transition-colors" />
+                                            <DoorOpen className="w-16 h-16 text-primary/40 group-hover:text-primary/60 transition-colors" />
                                         )}
                                     </div>
                                     <div className="space-y-1">
-                                        <h3 className="text-xl font-black text-white">{t('offers.room_number', { room: room.roomNumber })}</h3>
-                                        <p className="text-xs text-gray-500">{t('offers.room_offer_desc')}</p>
+                                        <h3 className="text-lg font-black text-white">{t('offers.room_number', { room: room.roomNumber })}</h3>
+                                        <p className="text-xs text-slate-400 font-medium">{t('offers.room_offer_desc')}</p>
                                     </div>
-                                    <div className="pt-4 border-t border-gray-800/50 flex items-center justify-between gap-4">
+                                    <div className="pt-4 border-t border-slate-800/80 flex items-center justify-between gap-4">
                                         <div className="flex flex-col">
-                                            <span className="text-[9px] font-bold text-gray-600 uppercase tracking-widest">{t('shop.price')}</span>
+                                            <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest">{t('shop.price')}</span>
                                             <div className="flex items-baseline gap-2">
-                                                <span className="text-sm font-bold text-gray-500 line-through">
+                                                <span className="text-sm font-bold text-slate-400 line-through">
                                                     {formatPrice(room.listPrice)} {room.currency}
                                                 </span>
-                                                <span className="text-lg font-black text-white italic">
+                                                <span className="text-lg font-black text-white italic font-mono">
                                                     {formatPrice(room.price)}{' '}
-                                                    <span className="text-xs font-bold text-gray-500 not-italic uppercase">{room.currency}</span>
+                                                    <span className="text-xs font-bold text-slate-400 not-italic uppercase">{room.currency}</span>
                                                 </span>
                                             </div>
                                         </div>
@@ -417,7 +426,7 @@ export default function OffersPage() {
                                             type="button"
                                             disabled={buyingRoom}
                                             onClick={() => void handleBuyRoom()}
-                                            className="px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-lg active:scale-95 disabled:opacity-40 bg-primary hover:bg-primary-hover text-white shadow-primary/20"
+                                            className="px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-wider transition-all shadow-[2px_2px_0px_#000000] active:translate-x-0.5 active:translate-y-0.5 disabled:opacity-40 bg-primary hover:bg-primary-hover text-white outline-none focus-visible:ring-2 focus-visible:ring-primary"
                                         >
                                             {buyingRoom ? (
                                                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -436,35 +445,27 @@ export default function OffersPage() {
             {events.map((ev: OfferEventDTO) => (
                 <div key={ev.id} className="space-y-6">
                     {/* Cabeçalho do Evento */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-800">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b-2 border-slate-800">
                         <div className="flex items-center gap-3">
+                            <IconBadge icon={Zap} variant="amber" size="md" />
+                            <h2 className="text-lg sm:text-xl font-black text-white uppercase italic tracking-tight">{ev.title}</h2>
                             {getEventState(now, ev) === 'live' ? (
-                                <span className="flex items-center gap-1.5 px-3 py-1 bg-green-500/10 border border-green-500/30 rounded-full text-[9px] font-black text-green-400 uppercase tracking-widest">
-                                    <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
-                                    {t('offers.live')}
-                                </span>
+                                <StatusPill variant="success" label={t('offers.live')} />
                             ) : getEventState(now, ev) === 'upcoming' ? (
-                                <span className="flex items-center gap-1.5 px-3 py-1 bg-amber-500/10 border border-amber-500/30 rounded-full text-[9px] font-black text-amber-400 uppercase tracking-widest">
-                                    <Clock className="w-3 h-3" />
-                                    {t('offers.coming_soon')}
-                                </span>
+                                <StatusPill variant="warning" icon={Clock} label={t('offers.coming_soon')} />
                             ) : (
-                                <span className="flex items-center gap-1.5 px-3 py-1 bg-gray-500/10 border border-gray-500/30 rounded-full text-[9px] font-black text-gray-400 uppercase tracking-widest">
-                                    <Clock className="w-3 h-3" />
-                                    {t('offers.ended')}
-                                </span>
+                                <StatusPill variant="neutral" icon={Clock} label={t('offers.ended')} />
                             )}
-                            <h2 className="text-xl font-black text-white uppercase italic tracking-tight">{ev.title}</h2>
                         </div>
-                        <div className="flex flex-col sm:flex-row gap-3 text-xs text-gray-500">
+                        <div className="flex flex-col sm:flex-row gap-3 text-xs text-slate-400 font-medium">
                             <div className="flex items-center gap-1.5">
-                                <Calendar className="w-3.5 h-3.5 text-gray-600" />
-                                <span className="font-semibold">{t('offers.start')}:</span>
+                                <Calendar className="w-3.5 h-3.5 text-slate-500" />
+                                <span className="font-semibold text-slate-300">{t('offers.start')}:</span>
                                 <span>{fmtDate(ev.startsAt, offerDateLocale)}</span>
                             </div>
                             <div className="flex items-center gap-1.5">
-                                <Calendar className="w-3.5 h-3.5 text-gray-600" />
-                                <span className="font-semibold">{t('offers.end')}:</span>
+                                <Calendar className="w-3.5 h-3.5 text-slate-500" />
+                                <span className="font-semibold text-slate-300">{t('offers.end')}:</span>
                                 <span>{fmtDate(ev.endsAt, offerDateLocale)}</span>
                             </div>
                         </div>
@@ -484,27 +485,27 @@ export default function OffersPage() {
                                   !alreadyClaimed &&
                                   m.onSale !== false;
                                 return (
-                                <div key={m.id} className={`bg-surface border rounded-[2.5rem] shadow-xl transition-all duration-500 group relative overflow-hidden ${
-                                    m.modelUrl ? 'md:col-span-2 p-6' : 'p-8'
+                                <div key={m.id} className={`bg-surface border-2 rounded-3xl shadow-[4px_4px_0px_#000000] bg-slate-900/60 transition-all duration-300 group relative overflow-hidden ${
+                                    m.modelUrl ? 'md:col-span-2 p-6' : 'p-6 sm:p-7'
                                 } ${
                                     effectivelyFree
-                                        ? 'border-green-500/20 hover:border-green-400/40'
+                                        ? 'border-emerald-500/30 hover:border-emerald-400/50'
                                         : m.modelUrl
-                                        ? 'border-cyan-400/25 hover:border-cyan-300/50 shadow-cyan-500/10'
-                                        : 'border-gray-800/50 hover:border-primary/30'
+                                        ? 'border-cyan-400/35 hover:border-cyan-300/60 shadow-[0_0_20px_rgba(34,211,238,0.1),4px_4px_0px_#000000]'
+                                        : 'border-slate-800 hover:border-slate-700'
                                 }`}>
-                                    <div className="relative z-10 space-y-6">
+                                    <div className="relative z-10 space-y-5">
                                         <div className="flex justify-between items-start">
                                             <div className={`px-3 py-1 rounded-full border text-[9px] font-black uppercase tracking-widest transition-colors ${
                                                 effectivelyFree
-                                                    ? 'bg-green-500/10 border-green-500/30 text-green-500'
-                                                    : 'bg-gray-900 border-gray-800 text-gray-500 group-hover:text-primary'
+                                                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                                                    : 'bg-slate-800 border-slate-700 text-slate-300 group-hover:text-primary'
                                             }`}>
                                                 {effectivelyFree ? t('offers.free_machine') : t('offers.limited_edition')}
                                             </div>
                                             <div className="flex items-center gap-1.5">
                                                 {effectivelyFree ? (
-                                                    <span className="flex items-center gap-1 px-3 py-1 bg-green-500/15 border border-green-500/30 rounded-full text-[9px] font-black text-green-400 uppercase tracking-widest">
+                                                    <span className="flex items-center gap-1 px-3 py-1 bg-emerald-500/15 border border-emerald-500/30 rounded-full text-[9px] font-black text-emerald-400 uppercase tracking-widest">
                                                         {t('offers.free')}
                                                     </span>
                                                 ) : (
@@ -518,16 +519,16 @@ export default function OffersPage() {
 
                                         {/* Info free: limite por jogador */}
                                         {effectivelyFree && (
-                                            <div className="bg-green-500/5 border border-green-500/20 rounded-2xl px-4 py-3 space-y-2">
+                                            <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-2xl px-4 py-3 space-y-2">
                                                 <div className="flex items-center justify-between">
-                                                    <span className="text-[9px] font-black text-green-500/70 uppercase tracking-widest">{t('offers.claim_limit_per_user')}</span>
-                                                    <span className="text-xs font-black text-green-400">
+                                                    <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">{t('offers.claim_limit_per_user')}</span>
+                                                    <span className="text-xs font-black text-emerald-400">
                                                         {claimLimit === 0 ? t('offers.unlimited') : `${claimLimit}x`}
                                                     </span>
                                                 </div>
                                                 <div className="flex items-center justify-between">
-                                                    <span className="text-[9px] font-black text-green-500/70 uppercase tracking-widest">{t('offers.your_claims')}</span>
-                                                    <span className={`text-xs font-black ${alreadyClaimed ? 'text-slate-400' : 'text-green-400'}`}>
+                                                    <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">{t('offers.your_claims')}</span>
+                                                    <span className={`text-xs font-black ${alreadyClaimed ? 'text-slate-400' : 'text-emerald-400'}`}>
                                                         {claimLimit === 0
                                                             ? t('offers.claimed_count', { count: m.userClaimCount || 0 })
                                                             : `${m.userClaimCount || 0} / ${claimLimit}`
@@ -536,7 +537,7 @@ export default function OffersPage() {
                                                 </div>
                                                 {alreadyClaimed && (
                                                     <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400">
-                                                        <CheckCircle2 className="w-3 h-3" />
+                                                        <CheckCircle2 className="w-3 h-3 text-emerald-400" />
                                                         {t('offers.claim_limit_reached')}
                                                     </div>
                                                 )}
@@ -550,7 +551,7 @@ export default function OffersPage() {
                                                     ? 'bg-red-500/10 text-red-400 border border-red-500/20'
                                                     : m.remaining <= 5
                                                     ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                                                    : 'bg-green-500/10 text-green-400 border border-green-500/20'
+                                                    : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
                                             }`}>
                                                 <Package className="w-3 h-3" />
                                                 {m.remaining === 0
@@ -561,17 +562,17 @@ export default function OffersPage() {
                                         )}
 
                                         <div className={m.modelUrl
-                                            ? 'relative aspect-[3/2] min-h-[18rem] bg-slate-950 rounded-3xl border border-cyan-400/20 shadow-[0_0_48px_rgba(34,211,238,0.16)] flex items-center justify-center overflow-hidden'
-                                            : 'aspect-square bg-gray-900/50 rounded-3xl p-2 border border-gray-800 group-hover:scale-105 transition-transform duration-500 flex items-center justify-center overflow-hidden'
+                                            ? 'relative aspect-[3/2] min-h-[18rem] bg-slate-950 rounded-2xl border border-cyan-400/25 shadow-[0_0_30px_rgba(34,211,238,0.12)] flex items-center justify-center overflow-hidden'
+                                            : 'aspect-square bg-slate-950/60 rounded-2xl p-2 border border-slate-800 group-hover:scale-105 transition-transform duration-300 flex items-center justify-center overflow-hidden'
                                         }>
                                             {m.modelUrl && (
-                                                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(34,211,238,0.28),rgba(245,158,11,0.08)_40%,transparent_68%)]" />
+                                                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(34,211,238,0.2),rgba(245,158,11,0.05)_40%,transparent_68%)]" />
                                             )}
                                             {m.modelUrl
                                                 ? <div className="absolute inset-0 z-10"><OfferMinerModel featured src={m.modelUrl} alt={m.name || 'MinerCore'} /></div>
                                                 : m.imageUrl
-                                                ? <img src={m.imageUrl} alt={m.name} className="w-full h-full object-contain scale-110" />
-                                                : <Zap className="w-20 h-20 text-amber-500/30" />
+                                                ? <img src={m.imageUrl} alt={m.name} className="w-full h-full object-contain scale-105" />
+                                                : <Zap className="w-16 h-16 text-amber-500/30" />
                                             }
                                         </div>
                                         {(m.pendingDeliveryAt || (m.releaseAt && m.onSale === false)) && (
@@ -584,36 +585,36 @@ export default function OffersPage() {
                                         )}
 
                                         <div className="space-y-1">
-                                            <h3 className="text-xl font-black text-white truncate">{m.name}</h3>
+                                            <h3 className="text-lg font-black text-white truncate">{m.name}</h3>
                                             <div className="flex items-center gap-2 text-primary font-bold">
                                                 <Zap className="w-4 h-4" />
-                                                <span className="text-sm">{formatHashrate(Number(m.hashRate) || 0)}</span>
+                                                <span className="text-sm font-mono">{formatHashrate(Number(m.hashRate) || 0)}</span>
                                             </div>
                                         </div>
 
                                         {/* Datas do evento no card */}
-                                        <div className="bg-gray-900/40 rounded-2xl px-4 py-3 border border-gray-800/60 space-y-1.5">
-                                            <div className="flex items-center gap-2 text-[10px] text-gray-500">
-                                                <Clock className="w-3 h-3 shrink-0" />
-                                                <span className="font-bold text-gray-600">{t('offers.start')}:</span>
+                                        <div className="bg-slate-950/60 rounded-xl px-3.5 py-2.5 border border-slate-800/80 space-y-1">
+                                            <div className="flex items-center gap-2 text-[10px] text-slate-400 font-medium">
+                                                <Clock className="w-3 h-3 shrink-0 text-slate-500" />
+                                                <span className="font-bold text-slate-300">{t('offers.start')}:</span>
                                                 <span>{fmtDate(ev.startsAt, offerDateLocale)}</span>
                                             </div>
-                                            <div className="flex items-center gap-2 text-[10px] text-gray-500">
-                                                <Clock className="w-3 h-3 shrink-0" />
-                                                <span className="font-bold text-gray-600">{t('offers.end')}:</span>
+                                            <div className="flex items-center gap-2 text-[10px] text-slate-400 font-medium">
+                                                <Clock className="w-3 h-3 shrink-0 text-slate-500" />
+                                                <span className="font-bold text-slate-300">{t('offers.end')}:</span>
                                                 <span>{fmtDate(ev.endsAt, offerDateLocale)}</span>
                                             </div>
                                         </div>
 
-                                        <div className="pt-4 border-t border-gray-800/50 flex items-center justify-between">
+                                        <div className="pt-4 border-t border-slate-800/80 flex items-center justify-between">
                                             <div className="flex flex-col">
-                                                <span className="text-[9px] font-bold text-gray-600 uppercase tracking-widest">{effectivelyFree ? 'Custo' : t('shop.price')}</span>
+                                                <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest">{effectivelyFree ? 'Custo' : t('shop.price')}</span>
                                                 {effectivelyFree ? (
-                                                    <span className="text-lg font-black text-green-400 italic">{t('offers.free')}</span>
+                                                    <span className="text-lg font-black text-emerald-400 italic">{t('offers.free')}</span>
                                                 ) : (
-                                                    <span className="text-lg font-black text-white italic">
+                                                    <span className="text-lg font-black text-white italic font-mono">
                                                         {formatPrice(m.price)}{' '}
-                                                        <span className="text-xs font-bold text-gray-500 not-italic uppercase">{m.currency}</span>
+                                                        <span className="text-xs font-bold text-slate-400 not-italic uppercase">{m.currency}</span>
                                                     </span>
                                                 )}
                                             </div>
@@ -621,9 +622,9 @@ export default function OffersPage() {
                                                 type="button"
                                                 disabled={eventState !== 'live' || !m.inStock || alreadyClaimed || m.onSale === false}
                                                 onClick={() => canCollect && openModal(ev, m)}
-                                                className={`px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-lg active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${
+                                                className={`px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-wider transition-all shadow-[2px_2px_0px_#000000] active:translate-x-0.5 active:translate-y-0.5 disabled:opacity-40 disabled:cursor-not-allowed outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                                                     effectivelyFree
-                                                        ? 'bg-green-500 hover:bg-green-400 text-slate-950 shadow-green-500/20'
+                                                        ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-emerald-500/20'
                                                         : 'bg-primary hover:bg-primary-hover text-white shadow-primary/20'
                                                 }`}
                                             >
@@ -643,7 +644,6 @@ export default function OffersPage() {
                                             </button>
                                         </div>
                                     </div>
-                                    <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-bl-[100px] -z-0 translate-x-10 -translate-y-10 group-hover:translate-x-0 group-hover:translate-y-0 transition-transform duration-700" />
                                 </div>
                                 );
                             })}
@@ -653,40 +653,40 @@ export default function OffersPage() {
             ))}
 
             {events.length === 0 && !hasLiveRoomOffers(roomOffers) && !hasLiveGearOffers(fanOffers) && !hasLiveGearOffers(rackOffers) && (
-                <div className="rounded-3xl border border-dashed border-gray-800 p-16 text-center text-gray-500">
+                <div className="rounded-3xl border-2 border-dashed border-slate-800 bg-slate-900/40 p-16 text-center text-slate-400 font-medium">
                     {t('offers.empty')}
                 </div>
             )}
 
             {modal && createPortal(
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/80 backdrop-blur-md animate-in fade-in duration-300">
-                    <div className="bg-surface border border-gray-800 rounded-[3rem] w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 relative">
-                        <div className="absolute top-0 right-0 p-6">
-                            <button onClick={() => setModal(null)} className="p-2 text-gray-500 hover:text-white transition-colors">
-                                <X className="w-6 h-6" />
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-slate-900 border-2 border-slate-800 rounded-3xl w-full max-w-md overflow-hidden shadow-[4px_4px_0px_#000000] animate-in zoom-in-95 duration-200 relative">
+                        <div className="absolute top-0 right-0 p-5 z-10">
+                            <button onClick={() => setModal(null)} aria-label={t('common.cancel')} className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition-colors">
+                                <X className="w-5 h-5" />
                             </button>
                         </div>
-                        <div className="p-10 text-center space-y-8">
-                            <div className={`w-20 h-20 rounded-3xl flex items-center justify-center mx-auto border ${
+                        <div className="p-7 sm:p-8 text-center space-y-6">
+                            <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto border shadow-[2px_2px_0px_#000000] ${
                                 modal.miner.effectivelyFree
-                                    ? 'bg-green-500/10 border-green-500/20'
-                                    : 'bg-primary/10 border-primary/20'
+                                    ? 'bg-emerald-500/10 border-emerald-500/25'
+                                    : 'bg-primary/10 border-primary/25'
                             }`}>
-                                <Sparkles className={`w-10 h-10 ${modal.miner.effectivelyFree ? 'text-green-400' : 'text-primary'}`} />
+                                <Sparkles className={`w-8 h-8 ${modal.miner.effectivelyFree ? 'text-emerald-400' : 'text-primary'}`} />
                             </div>
-                            <div className="space-y-2">
-                                <h3 className="text-2xl font-black text-white uppercase italic tracking-tighter">
+                            <div className="space-y-1.5">
+                                <h3 className="text-xl font-black text-white uppercase italic tracking-tight">
                                     {modal.miner.effectivelyFree ? t('offers.collect_free_machine') : t('offers.confirm_title')}
                                 </h3>
-                                <p className="text-gray-500 font-medium">
+                                <p className="text-slate-400 text-xs sm:text-sm font-medium">
                                     {modal.miner.effectivelyFree
                                         ? t('offers.collect_free_desc')
                                         : t('offers.confirm_limited_desc')}
                                 </p>
                             </div>
-                            <div className="bg-gray-900/50 border border-gray-800 rounded-3xl p-6 space-y-4">
+                            <div className="bg-slate-950/60 border border-slate-800 rounded-2xl p-5 space-y-4">
                                 <div className="flex items-center gap-4 text-left">
-                                    <div className="w-36 h-36 bg-gray-800 rounded-2xl p-1 border border-cyan-400/20 flex items-center justify-center overflow-hidden">
+                                    <div className="w-24 h-24 bg-slate-900 rounded-xl p-1 border border-slate-800 flex items-center justify-center overflow-hidden">
                                         {modal.miner.modelUrl
                                             ? <OfferMinerModel src={modal.miner.modelUrl} alt={modal.miner.name || 'MinerCore'} />
                                             : modal.miner.imageUrl
@@ -695,23 +695,23 @@ export default function OffersPage() {
                                         }
                                     </div>
                                     <div>
-                                        <h4 className="font-bold text-white leading-none">{modal.miner.name}</h4>
-                                        <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mt-2 block">
+                                        <h4 className="font-bold text-white leading-none text-base">{modal.miner.name}</h4>
+                                        <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mt-2 block font-mono">
                                             {formatHashrate(Number(modal.miner.hashRate) || 0)}
                                         </span>
                                         {modal.miner.effectivelyFree && (
-                                            <span className="text-[10px] font-black text-green-400 uppercase mt-1 block">{t('offers.free')}</span>
+                                            <span className="text-[10px] font-black text-emerald-400 uppercase mt-1 block">{t('offers.free')}</span>
                                         )}
                                     </div>
                                 </div>
-                                <div className="h-[1px] bg-gray-800 w-full" />
+                                <div className="h-[1px] bg-slate-800 w-full" />
                                 <div className="flex items-center justify-between">
-                                    <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">{t('offers.quantity')}</span>
+                                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t('offers.quantity')}</span>
                                     <div className="flex items-center gap-2">
                                         <button
                                             onClick={() => setQuantity(q => Math.max(1, q - 1))}
                                             disabled={quantity <= 1}
-                                            className="w-8 h-8 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 flex items-center justify-center disabled:opacity-30 transition-colors"
+                                            className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center disabled:opacity-30 transition-colors"
                                         >
                                             <Minus className="w-3.5 h-3.5" />
                                         </button>
@@ -730,55 +730,55 @@ export default function OffersPage() {
                                                     ? modalClaimLimit > 0 && quantity >= Math.max(0, modalClaimLimit - (modal.miner.userClaimCount || 0))
                                                     : quantity >= MAX_QTY;
                                             })()}
-                                            className="w-8 h-8 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 flex items-center justify-center disabled:opacity-30 transition-colors"
+                                            className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center disabled:opacity-30 transition-colors"
                                         >
                                             <Plus className="w-3.5 h-3.5" />
                                         </button>
                                     </div>
                                 </div>
-                                <div className="h-[1px] bg-gray-800 w-full" />
+                                <div className="h-[1px] bg-slate-800 w-full" />
                                 <div className="flex justify-between items-center">
-                                    <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">{t('offers.total')}</span>
+                                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t('offers.total')}</span>
                                     <div className="text-right">
                                         {modal.miner.effectivelyFree ? (
-                                            <span className="text-xl font-black text-green-400 italic">{t('offers.free')}</span>
+                                            <span className="text-xl font-black text-emerald-400 italic">{t('offers.free')}</span>
                                         ) : (
                                             <>
-                                                <span className="text-xl font-black text-white italic">
+                                                <span className="text-xl font-black text-white italic font-mono">
                                                     {formatPrice(Number(modal.miner.price) * quantity)}{' '}
-                                                    <span className="text-xs font-bold text-gray-500 not-italic uppercase">{modal.miner.currency}</span>
+                                                    <span className="text-xs font-bold text-slate-400 not-italic uppercase">{modal.miner.currency}</span>
                                                 </span>
-                                                {quantity > 1 && <p className="text-[10px] text-gray-600 mt-0.5">{formatPrice(modal.miner.price)} x {quantity}</p>}
+                                                {quantity > 1 && <p className="text-[10px] text-slate-400 mt-0.5">{formatPrice(modal.miner.price)} x {quantity}</p>}
                                             </>
                                         )}
                                     </div>
                                 </div>
                             </div>
-                            <div className="flex flex-col gap-3">
+                            <div className="flex flex-col gap-2.5">
                                 <button
                                     onClick={confirmBuy}
                                     disabled={buying}
-                                    className={`w-full py-5 rounded-[2rem] font-black text-sm uppercase tracking-[0.2em] transition-all shadow-xl flex items-center justify-center gap-3 active:scale-[0.98] disabled:opacity-50 ${
+                                    className={`w-full py-3.5 rounded-xl font-black text-xs uppercase tracking-wider transition-all shadow-[2px_2px_0px_#000000] flex items-center justify-center gap-2 active:translate-x-0.5 active:translate-y-0.5 disabled:opacity-50 outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                                         modal.miner.effectivelyFree
-                                            ? 'bg-green-500 hover:bg-green-400 text-slate-950 shadow-green-500/20'
-                                            : 'bg-primary hover:bg-primary-hover text-white shadow-primary/20'
+                                            ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950'
+                                            : 'bg-primary hover:bg-primary-hover text-white'
                                     }`}
                                 >
                                     {buying
-                                        ? <Loader2 className="w-5 h-5 animate-spin" />
-                                        : <><CheckCircle2 className="w-5 h-5" /> {modal.miner.effectivelyFree ? t('offers.confirm_collect') : t('offers.confirm_payment')}</>
+                                        ? <Loader2 className="w-4 h-4 animate-spin" />
+                                        : <><CheckCircle2 className="w-4 h-4" /> {modal.miner.effectivelyFree ? t('offers.confirm_collect') : t('offers.confirm_payment')}</>
                                     }
                                 </button>
                                 <button
                                     onClick={() => setModal(null)}
                                     disabled={buying}
-                                    className="w-full py-4 text-gray-500 hover:text-white font-bold text-xs uppercase tracking-widest transition-colors disabled:opacity-50"
+                                    className="w-full py-2.5 text-slate-400 hover:text-white font-bold text-xs uppercase tracking-wider transition-colors disabled:opacity-50"
                                 >
                                     {t('common.cancel')}
                                 </button>
                             </div>
                             {!modal.miner.effectivelyFree && (
-                                <div className="flex items-center justify-center gap-2 text-amber-500/50">
+                                <div className="flex items-center justify-center gap-2 text-amber-400/80">
                                     <AlertTriangle className="w-3.5 h-3.5" />
                                     <span className="text-[9px] font-black uppercase tracking-widest">{t('offers.irreversible')}</span>
                                 </div>
@@ -791,66 +791,71 @@ export default function OffersPage() {
 
             {gearModal && createPortal(
                 <div
-                    className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/80 backdrop-blur-md animate-in fade-in duration-300"
+                    className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200"
                     onClick={() => { if (!buying) setGearModal(null); }}
                 >
                     <div
-                        className="bg-surface border border-gray-800 rounded-[3rem] w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 relative"
+                        className="bg-slate-900 border-2 border-slate-800 rounded-3xl w-full max-w-md overflow-hidden shadow-[4px_4px_0px_#000000] animate-in zoom-in-95 duration-200 relative"
                         onClick={(ev) => ev.stopPropagation()}
                     >
-                        <div className="absolute top-0 right-0 p-6 z-10">
+                        <div className="absolute top-0 right-0 p-5 z-10">
                             <button
                                 type="button"
                                 onClick={() => setGearModal(null)}
                                 disabled={buying}
                                 aria-label={t('common.cancel')}
-                                className="p-2 rounded-xl text-gray-400 hover:text-white hover:bg-gray-800 transition-colors disabled:opacity-40"
+                                className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors disabled:opacity-40"
                             >
-                                <X className="w-6 h-6" />
+                                <X className="w-5 h-5" />
                             </button>
                         </div>
-                        <div className="p-10 text-center space-y-8">
-                            <div className="aspect-square max-h-40 mx-auto bg-gray-900/50 rounded-3xl p-4 border border-gray-800 flex items-center justify-center overflow-hidden">
+                        <div className="p-7 sm:p-8 text-center space-y-6">
+                            <div className="aspect-square max-h-36 mx-auto bg-slate-950/60 rounded-2xl p-4 border border-slate-800 flex items-center justify-center overflow-hidden">
                                 <GearArt />
                             </div>
-                            <div className="space-y-2">
-                                <h3 className="text-2xl font-black text-white uppercase italic tracking-tighter">{t('offers.confirm_title')}</h3>
-                                <p className="text-gray-500 font-medium">{t(gearModal.item.nameKey)}</p>
+                            <div className="space-y-1.5">
+                                <h3 className="text-xl font-black text-white uppercase italic tracking-tight">{t('offers.confirm_title')}</h3>
+                                <p className="text-slate-400 text-xs sm:text-sm font-medium">{t(gearModal.item.nameKey)}</p>
                             </div>
-                            <div className="flex items-center justify-between bg-gray-900/50 rounded-2xl p-4 border border-gray-800">
-                                <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">{t('offers.quantity')}</span>
-                                <div className="flex items-center gap-3">
-                                    <button type="button" disabled={buying || quantity <= 1} onClick={() => setQuantity((q) => Math.max(1, q - 1))} className="p-2 rounded-xl border border-gray-700 text-gray-400 hover:text-white disabled:opacity-40">
-                                        <Minus className="w-4 h-4" />
-                                    </button>
-                                    <span className="text-lg font-black text-white min-w-[2rem]">{quantity}</span>
-                                    <button type="button" disabled={buying || quantity >= gearMaxQty} onClick={() => setQuantity((q) => Math.min(gearMaxQty, q + 1))} className="p-2 rounded-xl border border-gray-700 text-gray-400 hover:text-white disabled:opacity-40">
-                                        <Plus className="w-4 h-4" />
-                                    </button>
+                            <div className="space-y-4 bg-slate-950/60 rounded-2xl p-5 border border-slate-800">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t('offers.quantity')}</span>
+                                    <div className="flex items-center gap-2">
+                                        <button type="button" disabled={buying || quantity <= 1} onClick={() => setQuantity((q) => Math.max(1, q - 1))} className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center disabled:opacity-30 transition-colors">
+                                            <Minus className="w-3.5 h-3.5" />
+                                        </button>
+                                        <span className="w-8 text-center font-black text-white text-sm">{quantity}</span>
+                                        <button type="button" disabled={buying || quantity >= gearMaxQty} onClick={() => setQuantity((q) => Math.min(gearMaxQty, q + 1))} className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center disabled:opacity-30 transition-colors">
+                                            <Plus className="w-3.5 h-3.5" />
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="h-[1px] bg-slate-800 w-full" />
+                                <div className="flex justify-between items-center">
+                                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t('offers.total')}</span>
+                                    <span className="text-xl font-black text-white italic font-mono">
+                                        {formatPrice(gearModal.item.price * quantity)}{' '}
+                                        <span className="text-xs font-bold text-slate-400 not-italic uppercase">{gearModal.item.currency}</span>
+                                    </span>
                                 </div>
                             </div>
-                            <div className="flex justify-between items-center">
-                                <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">{t('offers.total')}</span>
-                                <span className="text-xl font-black text-white italic">
-                                    {formatPrice(gearModal.item.price * quantity)}{' '}
-                                    <span className="text-xs font-bold text-gray-500 not-italic uppercase">{gearModal.item.currency}</span>
-                                </span>
+                            <div className="flex flex-col gap-2.5">
+                                <button
+                                    onClick={() => void confirmGearBuy()}
+                                    disabled={buying}
+                                    className="w-full py-3.5 bg-primary hover:bg-primary-hover text-white rounded-xl font-black text-xs uppercase tracking-wider transition-all shadow-[2px_2px_0px_#000000] flex items-center justify-center gap-2 active:translate-x-0.5 active:translate-y-0.5 disabled:opacity-50 outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                                >
+                                    {buying ? <Loader2 className="w-4 h-4 animate-spin" /> : t('offers.confirm_payment')}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setGearModal(null)}
+                                    disabled={buying}
+                                    className="w-full py-2.5 text-slate-400 hover:text-white font-bold text-xs uppercase tracking-wider disabled:opacity-40 transition-colors"
+                                >
+                                    {t('common.cancel')}
+                                </button>
                             </div>
-                            <button
-                                onClick={() => void confirmGearBuy()}
-                                disabled={buying}
-                                className="w-full py-5 bg-primary hover:bg-primary-hover text-white rounded-[2rem] font-black text-sm uppercase tracking-[0.2em] transition-all shadow-xl shadow-primary/20 flex items-center justify-center gap-3 active:scale-[0.98] disabled:opacity-50"
-                            >
-                                {buying ? <Loader2 className="w-5 h-5 animate-spin" /> : t('offers.confirm_payment')}
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setGearModal(null)}
-                                disabled={buying}
-                                className="w-full py-3 text-gray-500 hover:text-white font-bold text-xs uppercase tracking-widest disabled:opacity-40"
-                            >
-                                {t('common.cancel')}
-                            </button>
                         </div>
                     </div>
                 </div>,

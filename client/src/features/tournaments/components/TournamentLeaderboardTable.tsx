@@ -39,10 +39,10 @@ export function TournamentLeaderboardTable({ detail }: { detail: TournamentDetai
 
   return (
     <>
-      <div className="bg-slate-900/60 border border-white/8 rounded-[2.5rem] overflow-hidden shadow-xl">
+      <div className="bg-slate-900/60 border-2 border-slate-800 rounded-3xl overflow-hidden shadow-[4px_4px_0px_#000000]">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm text-gray-400">
-            <thead className="bg-slate-800/40 text-[10px] uppercase font-bold tracking-widest text-gray-500">
+          <table className="w-full text-left text-sm text-slate-400">
+            <thead className="bg-slate-950/80 border-b-2 border-slate-800 text-[10px] uppercase font-black tracking-widest text-slate-400">
               <tr>
                 <th className="px-3 py-4 sm:px-6 sm:py-5 md:px-8 md:py-6 w-12 sm:w-20">
                   Rank
@@ -56,7 +56,7 @@ export function TournamentLeaderboardTable({ detail }: { detail: TournamentDetai
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5 font-medium">
+            <tbody className="divide-y divide-slate-800/80 font-medium">
               {tableRows.map((entry, index) => {
                 const rank = index + 1;
                 const isMe = myRank != null && rank === myRank;
@@ -64,11 +64,11 @@ export function TournamentLeaderboardTable({ detail }: { detail: TournamentDetai
                 return (
                   <tr
                     key={entry.id}
-                    className={`hover:bg-white/4 transition-colors ${isMe ? 'bg-sky-500/8' : index < 3 ? 'bg-amber-500/5' : ''}`}
+                    className={`hover:bg-slate-800/30 transition-colors ${isMe ? 'bg-sky-500/10' : index < 3 ? 'bg-amber-500/5' : ''}`}
                   >
                     <td className="px-3 py-3 sm:px-6 sm:py-4 md:px-8 md:py-5">
                       <span
-                        className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs ${rankBadgeRowClass(index)}`}
+                        className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs shadow-[2px_2px_0px_#000000] ${rankBadgeRowClass(index)}`}
                       >
                         {rank}
                       </span>
@@ -106,16 +106,16 @@ export function TournamentLeaderboardTable({ detail }: { detail: TournamentDetai
       </div>
 
       {others.length > 0 ? (
-        <div className="rounded-2xl border border-white/8 bg-slate-900/40 overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-3 border-b border-white/5">
-            <span className="text-[10px] uppercase tracking-widest font-mono text-slate-500">
+        <div className="rounded-2xl border-2 border-slate-800 bg-slate-900/60 overflow-hidden shadow-[4px_4px_0px_#000000]">
+          <div className="flex items-center justify-between px-5 py-3 border-b border-slate-800">
+            <span className="text-[10px] uppercase tracking-widest font-mono text-slate-400 font-bold">
               {t('tournaments.otherParticipants')}
             </span>
-            <span className="text-[10px] font-mono text-slate-600">
+            <span className="text-[10px] font-mono text-slate-500">
               {t('tournaments.remainingCount', { count: others.length })}
             </span>
           </div>
-          <ul className="divide-y divide-white/[0.04]">
+          <ul className="divide-y divide-slate-800/80">
             {others.map((entry, index) => {
               const rank = index + 11;
               const isMe = myRank != null && rank === myRank;

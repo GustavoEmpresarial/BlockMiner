@@ -28,7 +28,7 @@ export function TournamentDetailHeader({
   const polHint = detail.myDepositBreakdown?.breakdown.totalPol;
 
   return (
-    <div className="rounded-[2rem] border border-white/8 bg-gradient-to-br from-slate-900/80 via-slate-900/60 to-slate-950 overflow-hidden">
+    <div className="rounded-3xl border-2 border-slate-800 bg-slate-900/60 shadow-[4px_4px_0px_#000000] overflow-hidden">
       <div className="grid md:grid-cols-[1fr_auto] gap-6 p-6 md:p-7 items-center">
         <div className="space-y-2">
           <div className="flex items-center gap-2 flex-wrap">
@@ -120,7 +120,7 @@ export function TournamentDetailHeader({
           ) : null}
         </div>
 
-        <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4 max-w-xs w-full">
+        <div className="rounded-2xl border-2 border-amber-500/30 bg-amber-950/20 p-4 max-w-xs w-full shadow-[2px_2px_0px_#000000]">
           <p className="text-[10px] uppercase tracking-widest text-amber-400 font-mono mb-2">
             {t('tournaments.prizes')}
           </p>
@@ -130,7 +130,7 @@ export function TournamentDetailHeader({
 
       {myEntry ? (
         <div
-          className={`border-t border-white/8 px-6 py-3 flex flex-col gap-2 text-xs ${depositMetric ? 'bg-amber-500/5' : 'bg-sky-500/5'}`}
+          className={`border-t-2 border-slate-800 px-6 py-3.5 flex flex-col gap-2 text-xs bg-slate-950/60 shadow-[2px_2px_0px_#000000]`}
         >
           <div className="flex items-center justify-between flex-wrap gap-2">
             <span className="text-primary font-bold uppercase tracking-wider">

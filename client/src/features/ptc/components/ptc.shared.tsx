@@ -7,6 +7,7 @@ import {
   Globe, PlayCircle,
 } from 'lucide-react';
 import { useUtcDailyResetCountdown } from '../../../shared/hooks/useUtcDailyResetCountdown';
+import StatCard from '../../../shared/components/StatCard';
 import type { PtcAd, PtcDailyReset, PtcSettings, SessionApiResponse } from '../ptc.types';
 
 export type { PtcAd, PtcDailyReset, PtcSettings, SessionApiResponse };
@@ -37,21 +38,21 @@ export function domainToGradient(domain: string): string {
 
 export function SkeletonCard() {
   return (
-    <div className="bg-surface border border-gray-800/50 rounded-3xl overflow-hidden animate-pulse">
-      <div className="aspect-video bg-gray-800/70" />
+    <div className="bg-slate-900/60 border-2 border-slate-800 rounded-3xl overflow-hidden shadow-[4px_4px_0px_#000000] animate-pulse">
+      <div className="aspect-video bg-slate-800/80" />
       <div className="p-5 space-y-3">
         <div className="flex items-center justify-between gap-2">
-          <div className="h-4 bg-gray-800 rounded w-3/5" />
-          <div className="h-5 bg-gray-800 rounded-full w-16" />
+          <div className="h-4 bg-slate-800 rounded w-3/5" />
+          <div className="h-5 bg-slate-800 rounded-full w-16" />
         </div>
-        <div className="h-3 bg-gray-800 rounded w-full" />
-        <div className="h-3 bg-gray-800 rounded w-4/5" />
+        <div className="h-3 bg-slate-800 rounded w-full" />
+        <div className="h-3 bg-slate-800 rounded w-4/5" />
         <div className="flex gap-2 pt-1">
-          <div className="h-6 bg-gray-800 rounded-lg w-14" />
-          <div className="h-6 bg-gray-800 rounded-lg w-24" />
-          <div className="h-6 bg-gray-800 rounded-lg w-20 ml-auto" />
+          <div className="h-6 bg-slate-800 rounded-lg w-14" />
+          <div className="h-6 bg-slate-800 rounded-lg w-24" />
+          <div className="h-6 bg-slate-800 rounded-lg w-20 ml-auto" />
         </div>
-        <div className="h-11 bg-gray-800 rounded-2xl mt-1" />
+        <div className="h-11 bg-slate-800 rounded-xl mt-1" />
       </div>
     </div>
   );
@@ -69,7 +70,7 @@ export const SitePreview = memo(function SitePreview({ url, isActive }: { url: s
 
   return (
     <div
-      className="relative aspect-video shrink-0 rounded-t-3xl overflow-hidden"
+      className="relative aspect-video shrink-0 rounded-t-[22px] overflow-hidden"
       style={{ background: gradient }}
     >
       {/* Gradient overlay for depth */}
@@ -120,19 +121,19 @@ export function UtcResetBanner({ utcDate, initialMs }: { utcDate: string; initia
   const { t } = useTranslation();
   const { label } = useUtcDailyResetCountdown(initialMs);
   return (
-    <div className="flex flex-col gap-1.5 rounded-2xl border border-indigo-500/20 bg-indigo-500/5 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-2 rounded-2xl border-2 border-indigo-500/30 bg-indigo-950/20 px-5 py-4 shadow-[2px_2px_0px_#000000] sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <p className="text-[10px] font-black uppercase tracking-widest text-indigo-400/90">
+        <p className="text-[10px] font-black uppercase tracking-widest text-indigo-400">
           {t('ptc.daily_reset_utc', { date: utcDate })}
         </p>
-        <p className="mt-1 text-xs font-medium text-gray-400">
+        <p className="mt-1 text-xs font-medium text-slate-400">
           {t('ptc.rules_once_day')}{' '}
           {t('ptc.rules_reset')}
         </p>
       </div>
-      <div className="shrink-0 text-right">
-        <p className="text-[9px] font-bold uppercase tracking-widest text-gray-600">{t('ptc.next_reset')}</p>
-        <p className="text-lg font-black tabular-nums text-indigo-300">{label}</p>
+      <div className="shrink-0 text-left sm:text-right">
+        <p className="text-[9px] font-extrabold uppercase tracking-widest text-slate-500">{t('ptc.next_reset')}</p>
+        <p className="text-lg font-black tabular-nums text-indigo-300 font-mono">{label}</p>
       </div>
     </div>
   );
@@ -144,39 +145,30 @@ export function StatsStrip({ ads }: { ads: PtcAd[] }) {
   const totalReward = available.reduce((s, a) => s + Number(a.rewardPerViewShib), 0);
 
   return (
-    <div className="grid grid-cols-2 gap-4">
-      {/* Disponíveis hoje */}
-      <div className="flex items-center gap-4 px-6 py-5 rounded-2xl bg-sky-500/10 border border-sky-500/20">
-        <div className="p-3 rounded-2xl bg-sky-500/15 shrink-0">
-          <Eye className="w-5 h-5 text-sky-400" />
-        </div>
-        <div>
-          <p className="text-sky-300 font-black text-3xl leading-none tabular-nums">{available.length}</p>
-          <p className="text-sky-600 text-[10px] font-bold uppercase tracking-widest mt-1 leading-none">
-            {t('ptc.available_today')}
-          </p>
-        </div>
-      </div>
-
-      {/* Total a ganhar */}
-      <div className="flex items-center gap-4 px-6 py-5 rounded-2xl bg-orange-500/10 border border-orange-500/20">
-        <div className="p-3 rounded-2xl bg-orange-500/15 shrink-0">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <StatCard
+        icon={Eye}
+        label={t('ptc.available_today')}
+        value={available.length}
+        accent="text-sky-400"
+      />
+      <StatCard
+        icon={
           <img
             src="/media/brand/shib.webp"
             alt=""
-            className="w-5 h-5 rounded-full"
+            className="w-4 h-4 rounded-full"
             onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
           />
-        </div>
-        <div className="min-w-0">
-          <p className="text-orange-300 font-black text-3xl leading-none tabular-nums truncate">
-            +{totalReward.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
-          </p>
-          <p className="text-orange-600 text-[10px] font-bold uppercase tracking-widest mt-1 leading-none">
-            {t('ptc.total_earn')}
-          </p>
-        </div>
-      </div>
+        }
+        label={t('ptc.total_earn')}
+        value={
+          <>
+            +{totalReward.toLocaleString(undefined, { maximumFractionDigits: 0 })}{' '}
+            <span className="text-xs font-bold text-slate-400 not-italic uppercase">SHIB</span>
+          </>
+        }
+      />
     </div>
   );
 }
