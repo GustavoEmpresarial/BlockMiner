@@ -4923,10 +4923,11 @@
     "view_room": "View Room",
     "col_rank": "Rank",
     "col_miner": "Miner",
-    "col_hash": "Total",
+    "col_hash": "Hash",
     "col_room": "Room",
     "col_games": "Games",
     "col_view": "View",
+    "fetch_error": "Failed to load ranking",
     "sort_total": "Total power",
     "sort_room": "Room only",
     "social": {

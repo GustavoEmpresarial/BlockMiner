@@ -2,6 +2,7 @@
 import type { SyntheticEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { NavigateFunction } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Trophy, Zap, Cpu, Gamepad2, RefreshCw, ExternalLink, Crown, Medal, Loader2, ChevronRight } from 'lucide-react';
 import Card from '../../shared/components/Card';
 import IconBadge from '../../shared/components/IconBadge';
@@ -59,10 +60,11 @@ interface RankingListApiResponse {
 }
 
 function YtBadge({ youtubeUrl, className = '' }: { youtubeUrl?: string | null; className?: string }) {
+  const { t } = useTranslation();
   const inner = (
     <span
       className={`inline-flex items-center justify-center rounded-lg bg-red-600 shadow-lg shadow-red-900/50 ${className}`}
-      title="Criador de ConteÃºdo"
+      title={t('ranking.creator_badge')}
     >
       <svg viewBox="0 0 24 24" className="w-full h-full p-[20%]" fill="white">
         <path d="M23.5 6.2a3.01 3.01 0 0 0-2.12-2.13C19.54 3.6 12 3.6 12 3.6s-7.54 0-9.38.47A3.01 3.01 0 0 0 .5 6.2C.05 8.05 0 12 0 12s.05 3.95.5 5.8a3.01 3.01 0 0 0 2.12 2.13C4.46 20.4 12 20.4 12 20.4s7.54 0 9.38-.47a3.01 3.01 0 0 0 2.12-2.13C23.95 15.95 24 12 24 12s-.05-3.95-.5-5.8zM9.6 15.6V8.4l6.4 3.6-6.4 3.6z" />
@@ -80,6 +82,7 @@ function YtBadge({ youtubeUrl, className = '' }: { youtubeUrl?: string | null; c
 }
 
 function MiniRacks({ username, navigate }: { username: string; navigate: NavigateFunction }) {
+  const { t } = useTranslation();
   const [data, setData] = useState<PublicRoomUserPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const fetchedRef = useRef(false);
@@ -97,13 +100,13 @@ function MiniRacks({ username, navigate }: { username: string; navigate: Navigat
     return (
       <div className="flex items-center justify-center py-10 gap-3 text-slate-500">
         <Loader2 className="w-5 h-5 animate-spin" />
-        <span className="text-xs font-bold uppercase tracking-widest">Carregando sala...</span>
+        <span className="text-xs font-bold uppercase tracking-widest">{t('ranking.loading_room')}</span>
       </div>
     );
   }
 
   if (!data) {
-    return <div className="py-8 text-center text-sm text-slate-400">NÃ£o foi possÃ­vel carregar a sala.</div>;
+    return <div className="py-8 text-center text-sm text-slate-400">{t('ranking.room_load_error')}</div>;
   }
 
   const machines: RoomMiner[] = data.miners || [];
@@ -116,7 +119,10 @@ function MiniRacks({ username, navigate }: { username: string; navigate: Navigat
         <div className="flex items-center gap-3">
           <Zap className="w-4 h-4 text-primary" />
           <span className="text-xs font-black text-slate-400 uppercase tracking-widest">
-            {machines.length} mÃ¡quina(s) ativa(s) Â· {formatHashrate(machines.reduce((s: number, m) => s + Number(m.hashRate || m.hash_rate || 0), 0))}
+            {t('ranking.active_machines', {
+              count: machines.length,
+              hashrate: formatHashrate(machines.reduce((s: number, m) => s + Number(m.hashRate || m.hash_rate || 0), 0)) || '—',
+            })}
           </span>
         </div>
         <button
@@ -124,7 +130,7 @@ function MiniRacks({ username, navigate }: { username: string; navigate: Navigat
           className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg text-xs font-black transition-colors border border-primary/20"
         >
           <ExternalLink className="w-3 h-3" />
-          Abrir Sala
+          {t('ranking.open_room')}
         </button>
       </div>
 
@@ -192,6 +198,7 @@ function MiniRacks({ username, navigate }: { username: string; navigate: Navigat
 }
 
 export default function Ranking() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [ranking, setRanking] = useState<RankingEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -202,11 +209,11 @@ export default function Ranking() {
       const res = await api.get<RankingListApiResponse>('/ranking?limit=50');
       if (res.data.ok && Array.isArray(res.data.ranking)) setRanking(res.data.ranking);
     } catch (err: unknown) {
-      console.error("Erro ao buscar ranking", err);
+      console.error(t('ranking.fetch_error'), err);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => { fetchRanking(); }, [fetchRanking]);
 
@@ -216,8 +223,8 @@ export default function Ranking() {
         <div className="flex items-center gap-3">
           <IconBadge icon={Trophy} variant="amber" size="lg" />
           <div>
-            <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">Hall da Fama</h1>
-            <p className="text-slate-400 text-xs sm:text-sm font-medium">Os mineradores mais poderosos da rede global.</p>
+            <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">{t('ranking.title')}</h1>
+            <p className="text-slate-400 text-xs sm:text-sm font-medium">{t('ranking.subtitle')}</p>
           </div>
         </div>
         <button
@@ -250,11 +257,11 @@ export default function Ranking() {
                 </div>
                 <h3 className="text-xl font-black text-white truncate px-4 group-hover:text-primary transition-colors">{ranking[1].username}</h3>
                 <p className="text-primary font-bold text-lg">{formatHashrate(ranking[1].totalHashRate)}</p>
-                <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">2º LUGAR</span>
+                <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">{t('ranking.place_2')}</span>
               </div>
               <div className="flex items-center gap-1 text-[10px] font-black text-slate-300 uppercase tracking-widest transition-colors group-hover:text-white">
                 <ChevronRight className="w-3 h-3" />
-                Ver Sala
+                {t('ranking.view_room')}
               </div>
             </div>
           </div>
@@ -277,11 +284,11 @@ export default function Ranking() {
                 </div>
                 <h3 className="text-2xl font-black text-white truncate px-4 group-hover:tracking-wider transition-all">{ranking[0].username}</h3>
                 <p className="text-amber-500 font-black text-2xl">{formatHashrate(ranking[0].totalHashRate)}</p>
-                <span className="text-xs font-black text-amber-300 uppercase tracking-[0.3em]">REI DO BLOCO</span>
+                <span className="text-xs font-black text-amber-300 uppercase tracking-[0.3em]">{t('ranking.king')}</span>
               </div>
               <div className="flex items-center gap-1 text-[10px] font-black text-amber-300 uppercase tracking-widest transition-colors group-hover:text-amber-200">
                 <ChevronRight className="w-3 h-3" />
-                Ver Sala
+                {t('ranking.view_room')}
               </div>
             </div>
           </div>
@@ -304,11 +311,11 @@ export default function Ranking() {
                 </div>
                 <h3 className="text-xl font-black text-white truncate px-4 group-hover:text-primary transition-colors">{ranking[2].username}</h3>
                 <p className="text-primary font-bold text-lg">{formatHashrate(ranking[2].totalHashRate)}</p>
-                <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">3º LUGAR</span>
+                <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">{t('ranking.place_3')}</span>
               </div>
               <div className="flex items-center gap-1 text-[10px] font-black text-slate-300 uppercase tracking-widest transition-colors group-hover:text-white">
                 <ChevronRight className="w-3 h-3" />
-                Ver Sala
+                {t('ranking.view_room')}
               </div>
             </div>
           </div>
@@ -321,12 +328,12 @@ export default function Ranking() {
           <table className="w-full text-left text-sm text-slate-300">
             <thead className="bg-slate-950/90 text-[10px] uppercase font-black tracking-widest text-slate-400 border-b-2 border-slate-800 font-mono">
               <tr>
-                <th className="px-3 py-4 sm:px-6 sm:py-5 md:px-8 md:py-6 w-12 sm:w-20">Rank</th>
-                <th className="px-3 py-4 sm:px-6 sm:py-5 md:px-8 md:py-6">Minerador</th>
-                <th className="px-3 py-4 sm:px-6 sm:py-5 md:px-8 md:py-6">Hash</th>
-                <th className="px-3 py-4 sm:px-6 sm:py-5 md:px-8 md:py-6 hidden md:table-cell">Sala</th>
-                <th className="px-3 py-4 sm:px-6 sm:py-5 md:px-8 md:py-6 hidden md:table-cell">Games</th>
-                <th className="px-3 py-4 sm:px-6 sm:py-5 md:px-8 md:py-6 text-right">Ver</th>
+                <th className="px-3 py-4 sm:px-6 sm:py-5 md:px-8 md:py-6 w-12 sm:w-20">{t('ranking.col_rank')}</th>
+                <th className="px-3 py-4 sm:px-6 sm:py-5 md:px-8 md:py-6">{t('ranking.col_miner')}</th>
+                <th className="px-3 py-4 sm:px-6 sm:py-5 md:px-8 md:py-6">{t('ranking.col_hash')}</th>
+                <th className="px-3 py-4 sm:px-6 sm:py-5 md:px-8 md:py-6 hidden md:table-cell">{t('ranking.col_room')}</th>
+                <th className="px-3 py-4 sm:px-6 sm:py-5 md:px-8 md:py-6 hidden md:table-cell">{t('ranking.col_games')}</th>
+                <th className="px-3 py-4 sm:px-6 sm:py-5 md:px-8 md:py-6 text-right">{t('ranking.col_view')}</th>
               </tr>
             </thead>
             <tbody className="divide-y-2 divide-slate-800/80 font-medium">
@@ -379,7 +386,7 @@ export default function Ranking() {
                   <td className="px-3 py-3 sm:px-6 sm:py-4 md:px-8 md:py-5 text-right">
                     <div className="inline-flex items-center gap-1 sm:gap-1.5 px-2 py-1.5 sm:px-3 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all border-2 bg-slate-900 border-slate-700 text-slate-300 group-hover:border-primary group-hover:text-white">
                       <ChevronRight className="w-3 h-3" />
-                      <span className="hidden sm:inline">Ver</span>
+                      <span className="hidden sm:inline">{t('ranking.col_view')}</span>
                     </div>
                   </td>
                 </tr>
