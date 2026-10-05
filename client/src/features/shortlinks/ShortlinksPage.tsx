@@ -14,6 +14,7 @@ import {
 import { api } from '../../shared/auth/auth.store';
 import { useNavigate } from 'react-router-dom';
 import { isAxiosError } from 'axios';
+import IconBadge from '../../shared/components/IconBadge';
 import PowerBoostBanner from '../../shared/components/PowerBoostBanner';
 import { reportApiFailure } from '../../shared/utils/reportApiFailure';
 import { useBrazilDailyResetCountdown } from '../../shared/hooks/useBrazilDailyResetCountdown';
@@ -101,7 +102,33 @@ export default function Shortlinks() {
         }
     };
 
-    if (isLoading) return <div className="p-8 text-gray-400">{t('common.loading')}</div>;
+    const pageHeader = (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b-2 border-slate-800">
+            <div className="flex items-center gap-3">
+                <IconBadge icon={LinkIcon} variant="sky" size="lg" />
+                <div>
+                    <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">{t('shortlinks.title')}</h1>
+                    <p className="text-slate-400 text-xs sm:text-sm font-medium">{t('shortlinks.subtitle')}</p>
+                </div>
+            </div>
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-900/60 border-2 border-slate-800 rounded-xl shadow-[2px_2px_0px_#000000]">
+                <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">{t('shortlinks.verified_links')}</span>
+            </div>
+        </div>
+    );
+
+    if (isLoading) {
+        return (
+            <div className="space-y-8 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                {pageHeader}
+                <div className="h-[45vh] flex flex-col items-center justify-center gap-4 rounded-3xl border-2 border-slate-800 bg-slate-900/60 shadow-[4px_4px_0px_#000000]">
+                    <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                    <p className="text-slate-400 font-extrabold uppercase tracking-widest text-xs">{t('common.loading')}</p>
+                </div>
+            </div>
+        );
+    }
 
     const runsToday = status?.dailyRuns || 0;
     const maxRuns = status?.maxDailyRuns || 1;
@@ -123,43 +150,31 @@ export default function Shortlinks() {
         adlinkfly != null && (!adlinkfly.enabled || adlinkfly.maintenance);
 
     return (
-        <div className=" space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
             <PowerBoostBanner />
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-                <div className="space-y-2">
-                    <div className="inline-flex p-3 bg-blue-500/10 rounded-2xl">
-                        <LinkIcon className="w-6 h-6 text-blue-400" />
-                    </div>
-                    <h1 className="text-3xl font-black text-white tracking-tight">{t('shortlinks.title')}</h1>
-                    <p className="text-gray-500 font-medium">{t('shortlinks.subtitle')}</p>
-                </div>
-                <div className="flex items-center gap-3 px-4 py-2 bg-gray-800/50 border border-gray-700/50 rounded-xl">
-                    <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{t('shortlinks.verified_links')}</span>
-                </div>
-            </div>
+            {pageHeader}
 
             {dailyReset ? <ShortlinkDailyResetBanner dailyReset={dailyReset} t={t} onResetElapsed={fetchStatus} /> : null}
 
             <div className="grid grid-cols-1 gap-6">
                 {pastead?.enabled ? (
                     <div
-                        className={`bg-surface border rounded-[2.5rem] p-10 shadow-xl transition-all duration-500 ${
-                            pasteadLimitReached ? 'border-gray-800 opacity-80' : 'border-amber-500/20 hover:border-amber-500/40'
+                        className={`bg-slate-900/60 border-2 rounded-3xl p-6 sm:p-8 shadow-[4px_4px_0px_#000000] transition-all duration-300 ${
+                            pasteadLimitReached ? 'border-slate-800 opacity-80' : 'border-amber-500/30 hover:border-amber-500/50'
                         }`}
                     >
                         <div className="flex flex-col md:flex-row justify-between gap-8">
                             <div className="space-y-6 flex-1">
                                 <div className="flex items-center gap-4">
-                                    <div className="p-4 bg-gray-900/50 rounded-2xl border border-gray-800">
-                                        <ExternalLink className="w-8 h-8 text-amber-400" />
+                                    <div className="p-3.5 bg-slate-950/80 rounded-2xl border-2 border-slate-800 shadow-[2px_2px_0px_#000000]">
+                                        <ExternalLink className="w-7 h-7 text-amber-400" />
                                     </div>
                                     <div>
                                         <h3 className="text-2xl font-black text-white">{pastead.shortlinkName || 'ZerAds Shortlink'}</h3>
-                                        <p className="text-sm font-bold text-amber-400 mt-1">
+                                        <p className="text-sm font-bold text-amber-400 mt-0.5">
                                             {t('shortlinks.reward')}: {pastead.rewardName || '+20 H/s por 24h'}
                                         </p>
-                                        <p className="text-xs text-gray-500 mt-1 font-medium">
+                                        <p className="text-xs text-slate-400 mt-1 font-medium">
                                             {t('shortlinks.pastead_cap', {
                                                 earned: pastead.dailyHsEarned ?? 0,
                                                 cap: pastead.dailyHsCap ?? 1000,
@@ -168,9 +183,9 @@ export default function Shortlinks() {
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                    <div className="bg-gray-800/20 p-4 rounded-2xl border border-gray-800/50">
-                                        <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">{t('shortlinks.status_label')}</p>
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-3.5">
+                                    <div className="bg-slate-950/60 p-4 rounded-xl border border-slate-800 shadow-[2px_2px_0px_#000000]">
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{t('shortlinks.status_label')}</p>
                                         <p
                                             className={`text-sm font-bold ${
                                                 pasteadLimitReached
@@ -191,25 +206,25 @@ export default function Shortlinks() {
                                             )}
                                         </p>
                                     </div>
-                                    <div className="bg-gray-800/20 p-4 rounded-2xl border border-gray-800/50">
-                                        <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">{t('shortlinks.daily_usage')}</p>
-                                        <p className="text-sm font-bold text-white">
+                                    <div className="bg-slate-950/60 p-4 rounded-xl border border-slate-800 shadow-[2px_2px_0px_#000000]">
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{t('shortlinks.daily_usage')}</p>
+                                        <p className="text-sm font-black text-white font-mono">
                                             {pasteadRuns} / {pasteadMaxRuns}
                                         </p>
                                     </div>
-                                    <div className="hidden md:block bg-gray-800/20 p-4 rounded-2xl border border-gray-800/50">
-                                        <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">{t('shortlinks.difficulty')}</p>
-                                        <div className="flex gap-1 mt-1">
-                                            <div className="w-3 h-1.5 bg-amber-400 rounded-full" />
-                                            <div className="w-3 h-1.5 bg-amber-400 rounded-full" />
-                                            <div className="w-3 h-1.5 bg-gray-700 rounded-full" />
+                                    <div className="hidden md:block bg-slate-950/60 p-4 rounded-xl border border-slate-800 shadow-[2px_2px_0px_#000000]">
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{t('shortlinks.difficulty')}</p>
+                                        <div className="flex gap-1.5 mt-2">
+                                            <div className="w-3.5 h-2 bg-amber-400 rounded-full" />
+                                            <div className="w-3.5 h-2 bg-amber-400 rounded-full" />
+                                            <div className="w-3.5 h-2 bg-slate-800 rounded-full" />
                                         </div>
                                     </div>
                                 </div>
 
                                 {pasteadPending ? (
-                                    <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 px-4 py-3">
-                                        <p className="text-xs font-medium text-amber-200/90 leading-relaxed">
+                                    <div className="rounded-2xl border-2 border-amber-500/30 bg-amber-950/20 px-4 py-3 shadow-[2px_2px_0px_#000000]">
+                                        <p className="text-xs font-medium text-amber-300 leading-relaxed">
                                             {t(
                                                 zerads.isAutoClaiming
                                                     ? zerads.claimPhase === 'waiting'
@@ -220,21 +235,21 @@ export default function Shortlinks() {
                                         </p>
                                     </div>
                                 ) : (
-                                    <p className="text-xs text-gray-500 font-medium leading-relaxed">{t('shortlinks.pastead_help')}</p>
+                                    <p className="text-xs text-slate-400 font-medium leading-relaxed">{t('shortlinks.pastead_help')}</p>
                                 )}
                             </div>
 
                             <div className="flex flex-col justify-center gap-3 md:w-64">
                                 {pasteadLimitReached ? (
-                                    <div className="p-6 bg-red-500/5 border border-red-500/10 rounded-3xl text-center space-y-2">
+                                    <div className="p-6 bg-red-950/20 border-2 border-red-500/30 rounded-2xl text-center space-y-2 shadow-[2px_2px_0px_#000000]">
                                         <Clock className="w-8 h-8 text-red-400 mx-auto" />
-                                        <p className="text-xs font-bold text-gray-400">{t('shortlinks.wait_reset')}</p>
+                                        <p className="text-xs font-bold text-slate-400">{t('shortlinks.wait_reset')}</p>
                                     </div>
                                 ) : pasteadPending ? (
                                     <div className="space-y-3">
                                         {zerads.isAutoClaiming ? (
-                                            <div className="w-full py-6 bg-amber-500/10 border border-amber-500/30 text-amber-200 rounded-[2rem] font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3">
-                                                <Loader2 className="w-5 h-5 animate-spin" />
+                                            <div className="w-full py-5 bg-amber-950/30 border-2 border-amber-500/40 text-amber-300 rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-[2px_2px_0px_#000000]">
+                                                <Loader2 className="w-4 h-4 animate-spin" />
                                                 {t(
                                                     zerads.claimPhase === 'waiting'
                                                         ? 'shortlinks.pastead_claim_waiting'
@@ -242,8 +257,8 @@ export default function Shortlinks() {
                                                 )}
                                             </div>
                                         ) : (
-                                            <div className="w-full py-5 px-4 bg-gray-900/40 border border-amber-500/20 rounded-[2rem] text-center">
-                                                <p className="text-xs font-bold text-amber-200/80 leading-relaxed">
+                                            <div className="w-full py-4 px-4 bg-slate-950/60 border-2 border-amber-500/30 rounded-xl text-center shadow-[2px_2px_0px_#000000]">
+                                                <p className="text-xs font-bold text-amber-300 leading-relaxed">
                                                     {t('shortlinks.pastead_waiting_popup')}
                                                 </p>
                                             </div>
@@ -252,7 +267,7 @@ export default function Shortlinks() {
                                             type="button"
                                             onClick={() => void zerads.handleReopen()}
                                             disabled={zerads.isStarting || zerads.isAutoClaiming}
-                                            className="w-full py-3 text-xs font-bold uppercase tracking-widest text-amber-300/60 hover:text-amber-200 transition-colors disabled:opacity-50"
+                                            className="w-full py-2.5 text-xs font-black uppercase tracking-wider text-amber-400/80 hover:text-amber-300 transition-colors disabled:opacity-50 outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
                                         >
                                             {t('shortlinks.pastead_reopen_link')}
                                         </button>
@@ -262,17 +277,17 @@ export default function Shortlinks() {
                                         type="button"
                                         onClick={() => void zerads.handleStart()}
                                         disabled={zerads.isStarting}
-                                        className="w-full py-6 bg-amber-500 hover:bg-amber-400 text-black rounded-[2rem] font-black text-sm uppercase tracking-widest transition-all shadow-xl shadow-amber-500/20 active:scale-[0.98] flex items-center justify-center gap-3 disabled:opacity-60"
+                                        className="w-full py-4 bg-amber-500 hover:bg-amber-400 active:translate-x-0.5 active:translate-y-0.5 text-slate-950 rounded-xl font-black text-xs uppercase tracking-wider transition-all shadow-[2px_2px_0px_#000000] flex items-center justify-center gap-2 disabled:opacity-60 outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
                                     >
                                         {zerads.isStarting ? (
                                             <>
-                                                <Loader2 className="w-5 h-5 animate-spin" />
+                                                <Loader2 className="w-4 h-4 animate-spin" />
                                                 {t('shortlinks.starting')}
                                             </>
                                         ) : (
                                             <>
                                                 {t('shortlinks.pastead_start')}
-                                                <ExternalLink className="w-5 h-5" />
+                                                <ExternalLink className="w-4 h-4" />
                                             </>
                                         )}
                                     </button>
@@ -292,23 +307,23 @@ export default function Shortlinks() {
 
                 {adlinkfly?.enabled ? (
                     <div
-                        className={`bg-surface border rounded-[2.5rem] p-10 shadow-xl transition-all duration-500 ${
-                            adlinkflyLimitReached ? 'border-gray-800 opacity-80' : 'border-sky-500/20 hover:border-sky-500/40'
+                        className={`bg-slate-900/60 border-2 rounded-3xl p-6 sm:p-8 shadow-[4px_4px_0px_#000000] transition-all duration-300 ${
+                            adlinkflyLimitReached ? 'border-slate-800 opacity-80' : 'border-sky-500/30 hover:border-sky-500/50'
                         }`}
                         data-bm-adlinkfly-card="1"
                     >
                         <div className="flex flex-col md:flex-row justify-between gap-8">
                             <div className="space-y-6 flex-1">
                                 <div className="flex items-center gap-4">
-                                    <div className="p-4 bg-gray-900/50 rounded-2xl border border-gray-800">
-                                        <ExternalLink className="w-8 h-8 text-sky-400" />
+                                    <div className="p-3.5 bg-slate-950/80 rounded-2xl border-2 border-slate-800 shadow-[2px_2px_0px_#000000]">
+                                        <ExternalLink className="w-7 h-7 text-sky-400" />
                                     </div>
                                     <div>
                                         <h3 className="text-2xl font-black text-white">{adlinkfly.shortlinkName || 'AdLinkFly Shortlink'}</h3>
-                                        <p className="text-sm font-bold text-sky-400 mt-1">
+                                        <p className="text-sm font-bold text-sky-400 mt-0.5">
                                             {t('shortlinks.reward')}: {adlinkfly.rewardName || '+20 H/s por 24h'}
                                         </p>
-                                        <p className="text-xs text-gray-500 mt-1 font-medium">
+                                        <p className="text-xs text-slate-400 mt-1 font-medium">
                                             {t('shortlinks.pastead_cap', {
                                                 earned: adlinkfly.dailyHsEarned ?? 0,
                                                 cap: adlinkfly.dailyHsCap ?? 1000,
@@ -317,9 +332,9 @@ export default function Shortlinks() {
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                    <div className="bg-gray-800/20 p-4 rounded-2xl border border-gray-800/50">
-                                        <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">{t('shortlinks.status_label')}</p>
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-3.5">
+                                    <div className="bg-slate-950/60 p-4 rounded-xl border border-slate-800 shadow-[2px_2px_0px_#000000]">
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{t('shortlinks.status_label')}</p>
                                         <p
                                             className={`text-sm font-bold ${
                                                 adlinkflyLimitReached
@@ -340,25 +355,25 @@ export default function Shortlinks() {
                                             )}
                                         </p>
                                     </div>
-                                    <div className="bg-gray-800/20 p-4 rounded-2xl border border-gray-800/50">
-                                        <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">{t('shortlinks.daily_usage')}</p>
-                                        <p className="text-sm font-bold text-white">
+                                    <div className="bg-slate-950/60 p-4 rounded-xl border border-slate-800 shadow-[2px_2px_0px_#000000]">
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{t('shortlinks.daily_usage')}</p>
+                                        <p className="text-sm font-black text-white font-mono">
                                             {adlinkflyRuns} / {adlinkflyMaxRuns}
                                         </p>
                                     </div>
-                                    <div className="hidden md:block bg-gray-800/20 p-4 rounded-2xl border border-gray-800/50">
-                                        <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">{t('shortlinks.difficulty')}</p>
-                                        <div className="flex gap-1 mt-1">
-                                            <div className="w-3 h-1.5 bg-sky-400 rounded-full" />
-                                            <div className="w-3 h-1.5 bg-sky-400 rounded-full" />
-                                            <div className="w-3 h-1.5 bg-gray-700 rounded-full" />
+                                    <div className="hidden md:block bg-slate-950/60 p-4 rounded-xl border border-slate-800 shadow-[2px_2px_0px_#000000]">
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{t('shortlinks.difficulty')}</p>
+                                        <div className="flex gap-1.5 mt-2">
+                                            <div className="w-3.5 h-2 bg-sky-400 rounded-full" />
+                                            <div className="w-3.5 h-2 bg-sky-400 rounded-full" />
+                                            <div className="w-3.5 h-2 bg-slate-800 rounded-full" />
                                         </div>
                                     </div>
                                 </div>
 
                                 {adlinkflyPending ? (
-                                    <div className="rounded-2xl border border-sky-500/20 bg-sky-500/5 px-4 py-3">
-                                        <p className="text-xs font-medium text-blue-100/90 leading-relaxed">
+                                    <div className="rounded-2xl border-2 border-sky-500/30 bg-sky-950/20 px-4 py-3 shadow-[2px_2px_0px_#000000]">
+                                        <p className="text-xs font-medium text-sky-300 leading-relaxed">
                                             {t(
                                                 adl.isAutoClaiming
                                                     ? adl.claimPhase === 'waiting'
@@ -369,21 +384,21 @@ export default function Shortlinks() {
                                         </p>
                                     </div>
                                 ) : (
-                                    <p className="text-xs text-gray-500 font-medium leading-relaxed">{t('shortlinks.adlinkfly_help')}</p>
+                                    <p className="text-xs text-slate-400 font-medium leading-relaxed">{t('shortlinks.adlinkfly_help')}</p>
                                 )}
                             </div>
 
                             <div className="flex flex-col justify-center gap-3 md:w-64">
                                 {adlinkflyLimitReached ? (
-                                    <div className="p-6 bg-red-500/5 border border-red-500/10 rounded-3xl text-center space-y-2">
+                                    <div className="p-6 bg-red-950/20 border-2 border-red-500/30 rounded-2xl text-center space-y-2 shadow-[2px_2px_0px_#000000]">
                                         <Clock className="w-8 h-8 text-red-400 mx-auto" />
-                                        <p className="text-xs font-bold text-gray-400">{t('shortlinks.wait_reset')}</p>
+                                        <p className="text-xs font-bold text-slate-400">{t('shortlinks.wait_reset')}</p>
                                     </div>
                                 ) : adlinkflyPending ? (
                                     <div className="space-y-3">
                                         {adl.isAutoClaiming ? (
-                                            <div className="w-full py-6 bg-sky-500/10 border border-sky-500/30 text-blue-100 rounded-[2rem] font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3">
-                                                <Loader2 className="w-5 h-5 animate-spin" />
+                                            <div className="w-full py-5 bg-sky-950/30 border-2 border-sky-500/40 text-sky-300 rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-[2px_2px_0px_#000000]">
+                                                <Loader2 className="w-4 h-4 animate-spin" />
                                                 {t(
                                                     adl.claimPhase === 'waiting'
                                                         ? 'shortlinks.pastead_claim_waiting'
@@ -391,8 +406,8 @@ export default function Shortlinks() {
                                                 )}
                                             </div>
                                         ) : (
-                                            <div className="w-full py-5 px-4 bg-gray-900/40 border border-sky-500/20 rounded-[2rem] text-center">
-                                                <p className="text-xs font-bold text-blue-100/80 leading-relaxed">
+                                            <div className="w-full py-4 px-4 bg-slate-950/60 border-2 border-sky-500/30 rounded-xl text-center shadow-[2px_2px_0px_#000000]">
+                                                <p className="text-xs font-bold text-sky-300 leading-relaxed">
                                                     {t('shortlinks.adlinkfly_waiting_redirect')}
                                                 </p>
                                             </div>
@@ -401,7 +416,7 @@ export default function Shortlinks() {
                                             type="button"
                                             onClick={() => void adl.handleReopen()}
                                             disabled={adl.isStarting || adl.isAutoClaiming}
-                                            className="w-full py-3 text-xs font-bold uppercase tracking-widest text-sky-300/60 hover:text-blue-100 transition-colors disabled:opacity-50"
+                                            className="w-full py-2.5 text-xs font-black uppercase tracking-wider text-sky-400/80 hover:text-sky-300 transition-colors disabled:opacity-50 outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
                                         >
                                             {t('shortlinks.adlinkfly_reopen_link')}
                                         </button>
@@ -411,17 +426,17 @@ export default function Shortlinks() {
                                         type="button"
                                         onClick={() => void adl.handleStart()}
                                         disabled={adl.isStarting}
-                                        className="w-full py-6 bg-sky-500 hover:bg-sky-400 text-black rounded-[2rem] font-black text-sm uppercase tracking-widest transition-all shadow-xl shadow-sky-500/20 active:scale-[0.98] flex items-center justify-center gap-3 disabled:opacity-60"
+                                        className="w-full py-4 bg-sky-500 hover:bg-sky-400 active:translate-x-0.5 active:translate-y-0.5 text-slate-950 rounded-xl font-black text-xs uppercase tracking-wider transition-all shadow-[2px_2px_0px_#000000] flex items-center justify-center gap-2 disabled:opacity-60 outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
                                     >
                                         {adl.isStarting ? (
                                             <>
-                                                <Loader2 className="w-5 h-5 animate-spin" />
+                                                <Loader2 className="w-4 h-4 animate-spin" />
                                                 {t('shortlinks.starting')}
                                             </>
                                         ) : (
                                             <>
                                                 {t('shortlinks.adlinkfly_start')}
-                                                <ExternalLink className="w-5 h-5" />
+                                                <ExternalLink className="w-4 h-4" />
                                             </>
                                         )}
                                     </button>
@@ -440,37 +455,37 @@ export default function Shortlinks() {
                     />
                 ) : null}
 
-                <div className={`bg-surface border rounded-[2.5rem] p-10 shadow-xl transition-all duration-500 ${isLimitReached ? 'border-gray-800 opacity-80' : 'border-primary/20 hover:border-primary/40'
+                <div className={`bg-slate-900/60 border-2 rounded-3xl p-6 sm:p-8 shadow-[4px_4px_0px_#000000] transition-all duration-300 ${isLimitReached ? 'border-slate-800 opacity-80' : 'border-primary/30 hover:border-primary/50'
                     }`}>
                     <div className="flex flex-col md:flex-row justify-between gap-8">
                         <div className="space-y-6 flex-1">
                             <div className="flex items-center gap-4">
-                                <div className="p-4 bg-gray-900/50 rounded-2xl border border-gray-800">
-                                    <Zap className="w-8 h-8 text-primary" />
+                                <div className="p-3.5 bg-slate-950/80 rounded-2xl border-2 border-slate-800 shadow-[2px_2px_0px_#000000]">
+                                    <Zap className="w-7 h-7 text-primary" />
                                 </div>
                                 <div>
                                     <h3 className="text-2xl font-black text-white">{status?.shortlinkName || 'Internal Shortlink'}</h3>
-                                    <p className="text-sm font-bold text-primary mt-1">{t('shortlinks.reward')}: {status?.rewardName || '+5 H/s por 24h'}</p>
+                                    <p className="text-sm font-bold text-primary mt-0.5">{t('shortlinks.reward')}: {status?.rewardName || '+5 H/s por 24h'}</p>
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                <div className="bg-gray-800/20 p-4 rounded-2xl border border-gray-800/50">
-                                    <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">{t('shortlinks.status_label')}</p>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3.5">
+                                <div className="bg-slate-950/60 p-4 rounded-xl border border-slate-800 shadow-[2px_2px_0px_#000000]">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{t('shortlinks.status_label')}</p>
                                     <p className={`text-sm font-bold ${isLimitReached ? 'text-red-400' : 'text-emerald-400'}`}>
                                         {isLimitReached ? t('shortlinks.limit_reached') : inProgress ? t('shortlinks.in_progress') : t('shortlinks.available')}
                                     </p>
                                 </div>
-                                <div className="bg-gray-800/20 p-4 rounded-2xl border border-gray-800/50">
-                                    <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">{t('shortlinks.daily_usage')}</p>
-                                    <p className="text-sm font-bold text-white">{runsToday} / {maxRuns}</p>
+                                <div className="bg-slate-950/60 p-4 rounded-xl border border-slate-800 shadow-[2px_2px_0px_#000000]">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{t('shortlinks.daily_usage')}</p>
+                                    <p className="text-sm font-black text-white font-mono">{runsToday} / {maxRuns}</p>
                                 </div>
-                                <div className="hidden md:block bg-gray-800/20 p-4 rounded-2xl border border-gray-800/50">
-                                    <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">{t('shortlinks.difficulty')}</p>
-                                    <div className="flex gap-1 mt-1">
-                                        <div className="w-3 h-1.5 bg-primary rounded-full" />
-                                        <div className="w-3 h-1.5 bg-primary rounded-full" />
-                                        <div className="w-3 h-1.5 bg-gray-700 rounded-full" />
+                                <div className="hidden md:block bg-slate-950/60 p-4 rounded-xl border border-slate-800 shadow-[2px_2px_0px_#000000]">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{t('shortlinks.difficulty')}</p>
+                                    <div className="flex gap-1.5 mt-2">
+                                        <div className="w-3.5 h-2 bg-primary rounded-full" />
+                                        <div className="w-3.5 h-2 bg-primary rounded-full" />
+                                        <div className="w-3.5 h-2 bg-slate-800 rounded-full" />
                                     </div>
                                 </div>
                             </div>
@@ -478,16 +493,16 @@ export default function Shortlinks() {
 
                         <div className="flex flex-col justify-center gap-4 md:w-64">
                             {isLimitReached ? (
-                                <div className="p-6 bg-red-500/5 border border-red-500/10 rounded-3xl text-center space-y-2">
+                                <div className="p-6 bg-red-950/20 border-2 border-red-500/30 rounded-2xl text-center space-y-2 shadow-[2px_2px_0px_#000000]">
                                     <Clock className="w-8 h-8 text-red-400 mx-auto" />
-                                    <p className="text-xs font-bold text-gray-400">{t('shortlinks.wait_reset')}</p>
+                                    <p className="text-xs font-bold text-slate-400">{t('shortlinks.wait_reset')}</p>
                                 </div>
                             ) : (
-                                <button onClick={handleStart} disabled={isStarting} className="w-full py-6 bg-primary hover:bg-primary-hover text-white rounded-[2rem] font-black text-sm uppercase tracking-widest transition-all shadow-xl shadow-primary/20 active:scale-[0.98] flex items-center justify-center gap-3">
+                                <button onClick={handleStart} disabled={isStarting} className="w-full py-4 bg-blue-600 hover:bg-blue-700 active:translate-x-0.5 active:translate-y-0.5 text-white rounded-xl font-black text-xs uppercase tracking-wider transition-all shadow-[2px_2px_0px_#000000] flex items-center justify-center gap-2 outline-none focus-visible:ring-2 focus-visible:ring-primary">
                                     {isStarting ? t('shortlinks.starting') : (
                                         <>
                                             {inProgress ? t('shortlinks.continue_link') : t('shortlinks.start_link')}
-                                            <ArrowRight className="w-5 h-5" />
+                                            <ArrowRight className="w-4 h-4" />
                                         </>
                                     )}
                                 </button>
@@ -496,13 +511,13 @@ export default function Shortlinks() {
                     </div>
                 </div>
 
-                <div className="bg-gray-800/30 border border-gray-800 rounded-3xl p-8 flex items-start gap-6">
-                    <div className="p-4 bg-blue-500/10 rounded-2xl shrink-0">
-                        <AlertCircle className="w-8 h-8 text-blue-400" />
+                <div className="bg-slate-900/60 border-2 border-slate-800 rounded-3xl p-6 sm:p-8 shadow-[4px_4px_0px_#000000] flex items-start gap-4">
+                    <div className="p-3 bg-blue-950/40 border border-blue-500/30 rounded-2xl shrink-0 shadow-[2px_2px_0px_#000000]">
+                        <AlertCircle className="w-6 h-6 text-blue-400" />
                     </div>
-                    <div className="space-y-2">
-                        <h4 className="text-white font-black text-lg">{t('shortlinks.what_is_shortlink')}</h4>
-                        <p className="text-sm text-gray-500 leading-relaxed font-medium">{t('shortlinks.shortlink_msg')}</p>
+                    <div className="space-y-1.5">
+                        <h4 className="text-white font-black text-base sm:text-lg">{t('shortlinks.what_is_shortlink')}</h4>
+                        <p className="text-xs sm:text-sm text-slate-400 leading-relaxed font-medium">{t('shortlinks.shortlink_msg')}</p>
                     </div>
                 </div>
             </div>
@@ -526,30 +541,30 @@ function ExternalShortlinkMaintenanceCard({
     dataAttr?: 'adlinkfly';
 }) {
     const border = accent === 'sky' ? 'border-sky-500/30' : 'border-amber-500/30';
-    const iconBg = accent === 'sky' ? 'bg-sky-500/10 border-sky-500/20' : 'bg-amber-500/10 border-amber-500/20';
+    const iconBg = accent === 'sky' ? 'bg-sky-950/40 border-sky-500/30' : 'bg-amber-950/40 border-amber-500/30';
     const iconColor = accent === 'sky' ? 'text-sky-400' : 'text-amber-400';
     const badgeBorder = accent === 'sky' ? 'border-sky-500/40 bg-sky-500/15 text-sky-300' : 'border-amber-500/40 bg-amber-500/15 text-amber-300';
-    const messageColor = accent === 'sky' ? 'text-blue-100/90' : 'text-amber-100/90';
+    const messageColor = accent === 'sky' ? 'text-sky-200' : 'text-amber-200';
 
     return (
         <div
-            className={`bg-surface border ${border} rounded-[2.5rem] p-10 shadow-xl opacity-95`}
+            className={`bg-slate-900/60 border-2 ${border} rounded-3xl p-6 sm:p-8 shadow-[4px_4px_0px_#000000]`}
             {...(dataAttr === 'adlinkfly' ? { 'data-bm-adlinkfly-card': '1' } : {})}
         >
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-                <div className={`p-4 ${iconBg} rounded-2xl border w-fit`}>
-                    <ExternalLink className={`w-8 h-8 ${iconColor}`} />
+                <div className={`p-3.5 ${iconBg} rounded-2xl border-2 shadow-[2px_2px_0px_#000000] w-fit`}>
+                    <ExternalLink className={`w-7 h-7 ${iconColor}`} />
                 </div>
                 <div className="space-y-2">
                     <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="text-2xl font-black text-white">{title}</h3>
+                        <h3 className="text-xl sm:text-2xl font-black text-white">{title}</h3>
                         <span
                             className={`rounded-full border px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider ${badgeBorder}`}
                         >
                             {t(badgeKey)}
                         </span>
                     </div>
-                    <p className={`text-sm font-medium leading-relaxed ${messageColor}`}>{t(messageKey)}</p>
+                    <p className={`text-xs sm:text-sm font-medium leading-relaxed ${messageColor}`}>{t(messageKey)}</p>
                 </div>
             </div>
         </div>
@@ -574,16 +589,16 @@ function ShortlinkDailyResetBanner({
     }, [remainingMs, onResetElapsed]);
 
     return (
-        <div className="flex flex-col gap-1.5 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-2 rounded-2xl border-2 border-emerald-500/30 bg-emerald-950/20 px-5 py-4 shadow-[2px_2px_0px_#000000] sm:flex-row sm:items-center sm:justify-between">
             <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-emerald-400/90">
+                <p className="text-[10px] font-black uppercase tracking-widest text-emerald-400">
                     {t('shortlinks.daily_reset_title', { date: dailyReset.localDate })}
                 </p>
-                <p className="mt-1 text-xs font-medium text-gray-400">{t('shortlinks.daily_reset_body')}</p>
+                <p className="mt-1 text-xs font-medium text-slate-400">{t('shortlinks.daily_reset_body')}</p>
             </div>
-            <div className="shrink-0 text-right">
-                <p className="text-[9px] font-bold uppercase tracking-widest text-gray-600">{t('shortlinks.daily_reset_next')}</p>
-                <p className="text-lg font-black tabular-nums text-emerald-300">{label}</p>
+            <div className="shrink-0 text-left sm:text-right">
+                <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">{t('shortlinks.daily_reset_next')}</p>
+                <p className="text-lg font-black tabular-nums text-emerald-300 font-mono">{label}</p>
             </div>
         </div>
     );

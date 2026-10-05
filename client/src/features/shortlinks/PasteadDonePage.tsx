@@ -62,12 +62,12 @@ export default function PasteadDonePage() {
   }, [navigate, params]);
 
   return (
-    <div className="flex min-h-[40vh] flex-col items-center justify-center gap-4 p-8 text-center">
+    <div className="flex min-h-[45vh] flex-col items-center justify-center gap-4 p-8 text-center max-w-lg mx-auto rounded-3xl border-2 border-slate-800 bg-slate-900/60 shadow-[4px_4px_0px_#000000]">
       <Loader2 className="h-8 w-8 animate-spin text-sky-400" />
-      <p className="text-sm font-bold text-gray-300">
+      <p className="text-sm font-black text-white">
         {t('shortlinks.pastead_auto_validating', { defaultValue: 'Validating shortlink…' })}
       </p>
-      <p className="text-xs font-medium text-gray-500">
+      <p className="text-xs font-medium text-slate-400">
         {t('shortlinks.pastead_auto_validating_hint', { defaultValue: 'You can return to the main tab shortly.' })}
       </p>
     </div>

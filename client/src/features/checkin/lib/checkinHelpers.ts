@@ -186,23 +186,22 @@ export function formatMilestoneDurationHours(t: CheckinT, durationHours: unknown
 }
 
 function milestoneI18nParams(m: CheckinMilestone, t: CheckinT): Record<string, string | number> {
-  const day = m.dayThreshold;
+  const day = m.dayThreshold ?? '—';
   const amount = formatPositiveNumber(m.rewardValue ?? m.amount);
   const rewardKind = normalizeMilestoneRewardType(m.rewardType);
   const machinePower = formatPositiveNumber(
     m.minerBaseHashRate ?? (rewardKind === 'machine' ? m.powerAmount : null),
   );
   const power = formatPositiveNumber(m.powerAmount ?? m.rewardValue ?? m.amount);
-  const params: Record<string, string | number> = {
+  const duration = formatMilestoneDurationHours(t, m.durationHours);
+
+  return {
     day,
     name: m.minerName || '—',
+    amount: amount || '—',
+    power: (rewardKind === 'machine' && machinePower) ? machinePower : (power || '—'),
+    duration: duration || '—',
   };
-  if (amount) params.amount = amount;
-  if (rewardKind === 'machine' && machinePower) params.power = machinePower;
-  else if (power) params.power = power;
-  const duration = formatMilestoneDurationHours(t, m.durationHours);
-  if (duration) params.duration = duration;
-  return params;
 }
 
 function milestoneRewardI18nKey(rewardType: CheckinMilestoneRewardType): string {
