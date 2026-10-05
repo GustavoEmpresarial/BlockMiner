@@ -33,6 +33,7 @@ import {
 
 const MULTIWALL_ADS_MAINTENANCE = false;
 const OFFERWALLGG_MAINTENANCE = true;
+const OFFERWALLME_MAINTENANCE = true;
 
 const DEFAULT_OFFERWALL_RATE = 0.0005;
 
@@ -149,12 +150,13 @@ function useStatsAndHistory(statsPath: string, historyPath: string) {
 function OfferwallHubCard({ provider, onSelect }: { provider: HubProvider; onSelect: () => void }) {
   const accent = HUB_CARD_ACCENT[provider.accentColor] ?? HUB_CARD_ACCENT.purple;
   const { Icon } = provider;
+  const isUnderMaintenance = Boolean(provider.maintenance);
   return (
-    <div className={`rounded-2xl border ${accent.border} bg-white/5 overflow-hidden flex flex-col`}>
+    <div className={`rounded-2xl border ${accent.border} bg-white/5 overflow-hidden flex flex-col ${isUnderMaintenance ? 'opacity-80' : ''}`}>
       <div className={`h-24 ${accent.bg} flex items-center justify-center relative`}>
         <Icon className={`w-10 h-10 ${accent.icon} opacity-80`} />
-        {provider.maintenance ? (
-          <span className="absolute top-2 right-2 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/25">
+        {isUnderMaintenance ? (
+          <span className="absolute top-2 right-2 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/25 shadow-sm">
             {t('offerwall.panel.maintenance_badge')}
           </span>
         ) : null}
@@ -176,10 +178,15 @@ function OfferwallHubCard({ provider, onSelect }: { provider: HubProvider; onSel
         </div>
         <button
           type="button"
-          onClick={onSelect}
-          className={`mt-auto w-full py-2 rounded-xl text-sm font-semibold text-white transition-all ${accent.bg} border ${accent.border} hover:brightness-125`}
+          onClick={isUnderMaintenance ? undefined : onSelect}
+          disabled={isUnderMaintenance}
+          className={`mt-auto w-full py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
+            isUnderMaintenance
+              ? 'bg-slate-800/80 border border-slate-700/60 text-slate-400 cursor-not-allowed opacity-60'
+              : `${accent.bg} border ${accent.border} text-white hover:brightness-125 active:translate-y-0.5`
+          }`}
         >
-          {provider.maintenance ? t('offerwall.panel.maintenance_badge') : t('offerwall.access')}
+          {isUnderMaintenance ? t('offerwall.panel.maintenance_badge') : t('offerwall.access')}
         </button>
       </div>
     </div>
@@ -239,9 +246,23 @@ function usdOfferHistoryCols(): OfferwallHistoryColumn[] {
 
 export default function OfferwallPage() {
   const [panel, setPanel] = useState<Panel>(null);
+  const [offerwallMeMaintenance, setOfferwallMeMaintenance] = useState(OFFERWALLME_MAINTENANCE);
+
+  useEffect(() => {
+    api.get<{ ok?: boolean; maintenance?: boolean }>('/offerwallme/status')
+      .then((res) => {
+        if (typeof res.data?.maintenance === 'boolean') {
+          setOfferwallMeMaintenance(res.data.maintenance);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   if (panel === 'zerads') return <ZeradsPanel onBack={() => setPanel(null)} />;
-  if (panel === 'offerwallme') return <OfferwallMePanel onBack={() => setPanel(null)} />;
+  if (panel === 'offerwallme') {
+    if (offerwallMeMaintenance) return <MaintenancePanel onBack={() => setPanel(null)} msgKey="offerwall.offerwallme.maintenance_msg" />;
+    return <OfferwallMePanel onBack={() => setPanel(null)} />;
+  }
   if (panel === 'moneyrain') return <MoneyRainPanel onBack={() => setPanel(null)} />;
   if (panel === 'multiwall') {
     if (MULTIWALL_ADS_MAINTENANCE) return <MaintenancePanel onBack={() => setPanel(null)} msgKey="offerwall.multiwall.maintenance_msg" />;
@@ -270,6 +291,7 @@ export default function OfferwallPage() {
       creditTime: t('offerwall.providers.offerwallme_credit'),
       accentColor: 'violet',
       Icon: LayoutGrid,
+      maintenance: offerwallMeMaintenance,
     },
     {
       id: 'moneyrain',

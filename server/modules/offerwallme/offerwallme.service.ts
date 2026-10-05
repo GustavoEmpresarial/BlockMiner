@@ -27,6 +27,20 @@ const log = logger.child("offerwallme.service");
 export const OFFERWALLME_API_KEY = (process.env.OFFERWALLME_API_KEY ?? "").trim();
 const SECRET_KEY = (process.env.OFFERWALLME_SECRET ?? "").trim();
 
+export function isOfferwallMeMaintenance(): boolean {
+  const value = process.env.OFFERWALLME_MAINTENANCE;
+  if (value === undefined || value === null || value === "") return false;
+  return ["1", "true", "yes", "on"].includes(String(value).trim().toLowerCase());
+}
+
+if (isOfferwallMeMaintenance()) {
+  log.warn("offerwallme.maintenance_active", {
+    code: "OFFERWALLME_MAINTENANCE_ACTIVE",
+    provider: "offerwallme",
+    timestamp: new Date().toISOString(),
+  });
+}
+
 export function offerwallMePublisherId(): string {
   return String(process.env.OFFERWALLME_PUBLISHER_ID || "yyu8i3jt58by9do1fbdr0fyn60yn5u").trim();
 }
