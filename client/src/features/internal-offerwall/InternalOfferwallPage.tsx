@@ -6,6 +6,8 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import axios from 'axios';
 import { LayoutGrid, Loader2 } from 'lucide-react';
+import Card from '../../shared/components/Card';
+import IconBadge from '../../shared/components/IconBadge';
 import { api } from '../../shared/auth/auth.store';
 import { formatHoursClock, openPartnerWithReferrer, rewardLine } from './lib/internalOfferwallHelpers';
 import { useActiveViewSeconds, useDecountingSeconds } from './lib/internalOfferwallHooks';
@@ -266,43 +268,63 @@ export default function InternalOfferwall() {
 
   if (flagLoading) {
     return (
-      <div className="flex justify-center py-24">
-        <Loader2 className="w-10 h-10 animate-spin text-sky-400" aria-hidden />
+      <div className="space-y-8 animate-in fade-in duration-500 pb-20">
+        <div className="flex items-center gap-3 pb-3 border-b-2 border-slate-800">
+          <IconBadge icon={LayoutGrid} variant="sky" size="lg" />
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">{t('internalOfferwallPage.title')}</h1>
+            <p className="text-slate-400 text-xs sm:text-sm font-medium">{t('internalOfferwallPage.subtitle')}</p>
+          </div>
+        </div>
+        <Card className="h-[45vh] flex flex-col items-center justify-center gap-4 text-center">
+          <Loader2 className="w-10 h-10 animate-spin text-sky-400" aria-hidden />
+          <p className="text-slate-400 font-extrabold uppercase tracking-widest text-xs">{t('common.loading')}</p>
+        </Card>
       </div>
     );
   }
 
   if (!featureEnabled) {
     return (
-      <div className=" rounded-2xl border border-white/5 bg-slate-900/50 p-8 text-center text-slate-400">
-        <LayoutGrid className="w-12 h-12 mx-auto mb-3 text-slate-600" aria-hidden />
-        <p>{t('internalOfferwallPage.disabled')}</p>
+      <div className="space-y-8 animate-in fade-in duration-500 pb-20">
+        <div className="flex items-center gap-3 pb-3 border-b-2 border-slate-800">
+          <IconBadge icon={LayoutGrid} variant="sky" size="lg" />
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">{t('internalOfferwallPage.title')}</h1>
+            <p className="text-slate-400 text-xs sm:text-sm font-medium">{t('internalOfferwallPage.subtitle')}</p>
+          </div>
+        </div>
+        <Card className="p-8 text-center text-slate-400 space-y-3">
+          <LayoutGrid className="w-12 h-12 mx-auto text-slate-600" aria-hidden />
+          <p className="font-bold text-sm">{t('internalOfferwallPage.disabled')}</p>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className=" space-y-8">
-      <div className="flex items-start gap-4">
-        <div className="p-3 rounded-2xl bg-sky-500/10 border border-sky-500/20">
-          <LayoutGrid className="w-8 h-8 text-sky-400" aria-hidden />
-        </div>
-        <div>
-          <h1 className="text-2xl md:text-3xl font-black tracking-tight text-white">{t('internalOfferwallPage.title')}</h1>
-          <p className="text-slate-400 mt-1 text-sm md:text-base max-w-xl">{t('internalOfferwallPage.subtitle')}</p>
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b-2 border-slate-800">
+        <div className="flex items-center gap-3">
+          <IconBadge icon={LayoutGrid} variant="sky" size="lg" />
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">{t('internalOfferwallPage.title')}</h1>
+            <p className="text-slate-400 text-xs sm:text-sm font-medium">{t('internalOfferwallPage.subtitle')}</p>
+          </div>
         </div>
       </div>
 
       {dailyReset ? <InternalOfferwallDailyResetBanner dailyReset={dailyReset} t={t} onResetElapsed={loadOffers} /> : null}
 
       {offersLoading ? (
-        <div className="flex justify-center py-16">
+        <Card className="h-[35vh] flex flex-col items-center justify-center gap-4 text-center">
           <Loader2 className="w-10 h-10 animate-spin text-sky-400" aria-hidden />
-        </div>
+          <p className="text-slate-400 font-extrabold uppercase tracking-widest text-xs">{t('common.loading')}</p>
+        </Card>
       ) : offers.length === 0 ? (
-        <div className="rounded-2xl border border-white/5 bg-slate-900/40 p-10 text-center text-slate-500">
+        <Card className="p-10 text-center text-slate-400 font-medium">
           {t('internalOfferwallPage.empty')}
-        </div>
+        </Card>
       ) : (
         <ul className="space-y-6">
           {offers.map((offer) => {
