@@ -153,7 +153,7 @@ export function YoutubeVideoPanel({
                 </div>
 
                 {videoId && playerState === 'ended' && (
-                    <div className="mt-4 flex items-start gap-3 p-4 rounded-2xl border border-amber-500/25 bg-amber-500/10 relative z-10">
+                    <div className="mt-4 flex items-start gap-3 p-4 rounded-3xl border-2 border-amber-500/40 bg-amber-500/10 relative z-10 shadow-[4px_4px_0px_#000000]">
                         <PlayCircle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
                         <p className="text-[11px] text-amber-100/90 font-medium leading-relaxed">
                             {t('youtube.video_ended_hint')}
@@ -162,7 +162,7 @@ export function YoutubeVideoPanel({
                 )}
 
                 {isPaused && (
-                    <div className="mt-4 relative z-10 flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30">
+                    <div className="mt-4 relative z-10 flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-3xl bg-amber-500/10 border-2 border-amber-500/40 shadow-[4px_4px_0px_#000000]">
                         <PauseCircle className="w-6 h-6 text-amber-400 shrink-0" />
                         <div className="flex-1">
                             <p className="text-xs font-black text-amber-300 uppercase tracking-widest">
@@ -212,7 +212,7 @@ export function YoutubeVideoPanel({
                 <div className="mt-4 sm:mt-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 relative z-10">
                     <div className="flex items-center gap-4">
                         {showClaimCountdown && (
-                            <div className="flex items-center gap-3 px-6 py-4 bg-gray-800/50 rounded-2xl border border-gray-700/50 shadow-inner">
+                            <div className="flex items-center gap-3 px-5 py-4 rounded-3xl border-2 border-slate-800 bg-slate-900/60 shadow-[4px_4px_0px_#000000]">
                                 <Clock className={`w-4 h-4 text-primary ${isActivelyWatching ? 'animate-pulse' : ''}`} />
                                 <span className="text-sm font-bold text-white uppercase italic tracking-tighter">
                                     {t('youtube.next_claim', { seconds: Math.ceil(countdownRemaining) })}

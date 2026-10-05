@@ -17,6 +17,9 @@ import {
 } from 'lucide-react';
 import type { DashboardBlockRow, DashboardCycleState } from '../lib/dashboard.types';
 import { safeDashboardNumber, Card, formatDashboardBlockTime } from './dashboard.shared';
+import ShellCard from '../../../shared/components/Card';
+import IconBadge from '../../../shared/components/IconBadge';
+import SectionHeader from '../../../shared/components/SectionHeader';
 import {
   DASHBOARD_BALANCE_CURRENCIES,
   DASHBOARD_BALANCE_CURRENCY_META,
@@ -150,9 +153,9 @@ function BalanceCurrencyPicker({
             ref={menuRef}
             role="listbox"
             style={{ top: menuPos.top, left: menuPos.left, width: MENU_W }}
-            className="fixed z-[200] rounded-2xl border border-gray-700 bg-slate-950 shadow-2xl overflow-hidden"
+            className="fixed z-[200] rounded-3xl border-2 border-slate-800 bg-slate-900/60 shadow-[4px_4px_0px_#000000] overflow-hidden"
           >
-            <p className="px-3.5 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-500 border-b border-gray-800">
+            <p className="px-5 sm:px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-800 bg-slate-950/40">
               {t('dashboard.balance_currency_pick')}
             </p>
             <ul className="max-h-72 overflow-y-auto py-1.5">
@@ -177,7 +180,7 @@ function BalanceCurrencyPicker({
                       <CurrencyLogo url={m.logoUrl} symbol={symbol} className="w-8 h-8" />
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-black truncate">{t(m.nameKey)}</p>
-                        <p className="text-xs text-slate-500 tabular-nums">
+                        <p className="text-xs text-slate-400 tabular-nums">
                           {safeDashboardNumber(amount, m.decimals)} {symbol}
                         </p>
                       </div>
@@ -198,7 +201,7 @@ function BalanceCurrencyPicker({
         ref={btnRef}
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-1.5 rounded-xl border border-gray-700/70 bg-gray-900/90 px-2.5 py-1.5 text-xs sm:text-sm font-black uppercase tracking-wider text-gray-200 hover:border-primary/50 hover:text-white transition-colors shadow-sm"
+        className="inline-flex items-center gap-1.5 rounded-xl border-2 border-slate-800 bg-slate-900/60 px-2.5 py-1.5 text-xs sm:text-sm font-black uppercase tracking-wider text-slate-200 hover:border-slate-600 hover:text-white transition-colors shadow-[2px_2px_0px_#000000]"
         title={t('dashboard.balance_currency_pick')}
         aria-haspopup="listbox"
         aria-expanded={open}
@@ -301,13 +304,15 @@ export function DashboardHistory({ blockHistory, tokenSymbol }: DashboardHistory
   const rows = blockHistory.slice(0, 5);
 
   return (
-    <div className="bg-surface border border-gray-800/50 rounded-2xl overflow-hidden shadow-xl">
-      <div className="px-4 sm:px-6 md:px-8 py-4 sm:py-6 border-b border-gray-800/50 flex flex-col gap-1 sm:flex-row sm:justify-between sm:items-center bg-gray-800/20">
-        <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2 sm:gap-3 min-w-0">
-          <Activity className="w-5 h-5 text-primary shrink-0" />
-          <span className="truncate">{t('dashboard.history_title')}</span>
-        </h2>
-        <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest pl-7 sm:pl-0">
+    <ShellCard variant="table">
+      <div className="px-5 sm:px-6 py-4 border-b border-slate-800 bg-slate-950/40 flex flex-col gap-1 sm:flex-row sm:justify-between sm:items-center">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <IconBadge icon={Activity} size="sm" />
+          <h2 className="text-xs sm:text-sm font-black text-slate-300 uppercase tracking-widest truncate">
+            {t('dashboard.history_title')}
+          </h2>
+        </div>
+        <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest pl-10 sm:pl-0">
           {t('dashboard.last_blocks')}
         </span>
       </div>
@@ -371,7 +376,7 @@ export function DashboardHistory({ blockHistory, tokenSymbol }: DashboardHistory
 
       <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-left text-sm text-slate-300">
-          <thead className="bg-gray-800/30 text-[10px] uppercase font-bold tracking-widest text-slate-400">
+          <thead className="bg-slate-950/90 text-[10px] uppercase font-black tracking-widest text-slate-400 border-b-2 border-slate-800 font-mono">
             <tr>
               <th scope="col" className="px-6 md:px-8 py-4">{t('dashboard.block_id')}</th>
               <th scope="col" className="px-6 md:px-8 py-4">{t('dashboard.my_gain')}</th>
@@ -379,9 +384,9 @@ export function DashboardHistory({ blockHistory, tokenSymbol }: DashboardHistory
               <th scope="col" className="px-6 md:px-8 py-4 text-right">{t('dashboard.time')}</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-800/50 font-medium">
+          <tbody className="divide-y-2 divide-slate-800/80 font-medium">
             {rows.map((block) => (
-              <tr key={String(block.blockNumber)} className="hover:bg-primary/5 transition-colors group">
+              <tr key={String(block.blockNumber)} className="hover:bg-slate-800/40 transition-colors group">
                 <td className="px-6 md:px-8 py-5">
                   <span className="bg-gray-800/50 px-3 py-1 rounded-lg text-xs font-bold text-white group-hover:text-primary transition-colors">
                     #{Number(block.blockNumber)}
@@ -437,7 +442,7 @@ export function DashboardHistory({ blockHistory, tokenSymbol }: DashboardHistory
           </tbody>
         </table>
       </div>
-    </div>
+    </ShellCard>
   );
 }
 
@@ -469,13 +474,8 @@ export function DashboardEfficiencyCard({ freeRacks, inventoryCount, loading }: 
   }
 
   return (
-    <div className="bg-surface border border-gray-800/50 rounded-2xl p-6 shadow-xl">
-      <div className="flex items-center gap-3 mb-4">
-        <div className="p-2.5 bg-sky-500/10 rounded-xl">
-          <Gauge className="w-5 h-5 text-sky-400" />
-        </div>
-        <h3 className="text-sm font-black text-white uppercase tracking-widest">{t('dashboard.efficiency_title')}</h3>
-      </div>
+    <ShellCard spacing="md">
+      <SectionHeader icon={Gauge} iconVariant="sky" title={t('dashboard.efficiency_title')} />
       {loading ? (
         <div className="h-16 flex items-center justify-center">
           <div className="w-5 h-5 border-2 border-sky-400/40 border-t-sky-400 rounded-full animate-spin" />
@@ -485,13 +485,13 @@ export function DashboardEfficiencyCard({ freeRacks, inventoryCount, loading }: 
           <p className="text-sm text-slate-400 leading-relaxed mb-4">{message}</p>
           <Link
             to={ctaTo}
-            className="inline-flex items-center justify-center gap-2 w-full rounded-xl bg-sky-500/10 border border-sky-500/25 px-4 py-2.5 text-xs font-black uppercase tracking-widest text-sky-300 transition-colors hover:bg-sky-500/20"
+            className="inline-flex items-center justify-center gap-2 w-full rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 border-2 border-slate-950 shadow-[2px_2px_0px_#000000] px-4 py-2.5 text-xs font-black uppercase tracking-widest transition-colors active:translate-x-0.5 active:translate-y-0.5"
           >
             {ctaLabel}
           </Link>
         </>
       )}
-    </div>
+    </ShellCard>
   );
 }
 
@@ -521,13 +521,8 @@ export function DashboardActivityCard({
   const pct = Math.min(100, Math.round((done / required) * 100));
 
   return (
-    <div className="bg-surface border border-gray-800/50 rounded-2xl p-6 shadow-xl">
-      <div className="flex items-center gap-3 mb-4">
-        <div className="p-2.5 bg-emerald-500/10 rounded-xl">
-          <Sparkles className="w-5 h-5 text-emerald-400" />
-        </div>
-        <h3 className="text-sm font-black text-white uppercase tracking-widest">{t('dashboard.activity_title')}</h3>
-      </div>
+    <ShellCard spacing="md">
+      <SectionHeader icon={Sparkles} iconVariant="emerald" title={t('dashboard.activity_title')} />
       {loading ? (
         <div className="h-16 flex items-center justify-center">
           <div className="w-5 h-5 border-2 border-emerald-400/40 border-t-emerald-400 rounded-full animate-spin" />
@@ -544,12 +539,12 @@ export function DashboardActivityCard({
           </div>
           <Link
             to="/offerwall"
-            className="inline-flex items-center justify-center gap-2 w-full rounded-xl bg-emerald-500/10 border border-emerald-500/25 px-4 py-2.5 text-xs font-black uppercase tracking-widest text-emerald-300 transition-colors hover:bg-emerald-500/20"
+            className="inline-flex items-center justify-center gap-2 w-full rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 border-2 border-slate-950 shadow-[2px_2px_0px_#000000] px-4 py-2.5 text-xs font-black uppercase tracking-widest transition-colors active:translate-x-0.5 active:translate-y-0.5"
           >
             {t('dashboard.activity_cta')}
           </Link>
         </>
       )}
-    </div>
+    </ShellCard>
   );
 }

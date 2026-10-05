@@ -1,5 +1,7 @@
 import { useEffect, type ReactElement } from 'react';
 import { createPortal } from 'react-dom';
+import Card from '../../../shared/components/Card';
+import SectionHeader from '../../../shared/components/SectionHeader';
 import { useTranslation } from 'react-i18next';
 import { Clock3, Lock, Sliders, X } from 'lucide-react';
 import { DASHBOARD_COIN_LOGO } from '../lib/dashboardCoinLogos';
@@ -85,19 +87,18 @@ export function MiningAllocationPanel({
 
   return (
     <>
-      <div className="bg-surface border border-gray-800/50 rounded-2xl p-6 md:p-8 shadow-lg overflow-hidden relative">
+      <Card className="relative" overflow="hidden">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(99,102,241,0.08),transparent_55%)]" />
 
         <div className="relative flex flex-col gap-5">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
             <div>
-              <h2 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
-                <Sliders className="w-4 h-4 text-indigo-400" />
-                {t('dashboard.mining_allocation_title')}
-              </h2>
-              <p className="text-[11px] text-slate-400 mt-1.5 max-w-xl leading-relaxed">
-                {t('dashboard.mining_allocation_description')}
-              </p>
+              <SectionHeader
+                icon={Sliders}
+                iconVariant="violet"
+                title={t('dashboard.mining_allocation_title')}
+                subtitle={t('dashboard.mining_allocation_description')}
+              />
             </div>
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest self-start sm:self-auto">
               {savingAlloc
@@ -164,14 +165,14 @@ export function MiningAllocationPanel({
               type="button"
               onClick={onOpenModal}
               disabled={savingAlloc}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest bg-indigo-500/10 border border-indigo-500/30 text-indigo-200 hover:bg-indigo-500/20 hover:border-indigo-400/50 transition disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest bg-sky-500 hover:bg-sky-400 text-slate-950 border-2 border-slate-950 shadow-[2px_2px_0px_#000000] transition active:translate-x-0.5 active:translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
             >
               <Sliders className="w-3.5 h-3.5" />
               {t('dashboard.mining_allocation_edit_split')}
             </button>
           </div>
         </div>
-      </div>
+      </Card>
 
       {allocModalOpen && typeof document !== 'undefined'
         ? createPortal(
@@ -185,7 +186,7 @@ export function MiningAllocationPanel({
               }}
             >
           <div
-            className="bg-surface border border-gray-800/80 rounded-2xl shadow-2xl w-full max-w-lg p-6 relative overflow-hidden"
+            className="rounded-3xl border-2 border-slate-800 bg-slate-900/60 shadow-[4px_4px_0px_#000000] w-full max-w-lg p-5 sm:p-6 relative overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-indigo-500/10 to-transparent" />
@@ -355,10 +356,10 @@ export function MiningAllocationPanel({
                     type="button"
                     disabled={savingAlloc}
                     onClick={() => onPreset(preset.pol)}
-                    className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border transition disabled:opacity-50 ${
+                    className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border-2 transition disabled:opacity-50 ${
                       active
-                        ? 'bg-indigo-500/25 border-indigo-400/50 text-indigo-100'
-                        : 'bg-gray-800/60 border-gray-700/60 text-gray-300 hover:bg-gray-700/60 hover:text-white'
+                        ? 'bg-sky-500 border-slate-950 text-slate-950 shadow-[2px_2px_0px_#000000]'
+                        : 'bg-slate-900/60 border-slate-800 text-slate-300 hover:border-slate-600 hover:text-white'
                     }`}
                   >
                     {preset.label}

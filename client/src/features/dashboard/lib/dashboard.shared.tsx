@@ -42,11 +42,11 @@ export function formatDashboardBlockTime(block: DashboardBlockRow): string {
 }
 
 const CARD_COLOR_CLASS: Record<string, string> = {
-  blue: 'bg-blue-500/10 text-blue-400',
-  cyan: 'bg-cyan-500/10 text-cyan-400',
-  purple: 'bg-purple-500/10 text-purple-400',
-  amber: 'bg-amber-500/10 text-amber-400',
-  emerald: 'bg-emerald-500/10 text-emerald-400',
+  blue: 'bg-blue-500/10 text-blue-400 border-blue-400/30',
+  cyan: 'bg-cyan-500/10 text-cyan-400 border-cyan-400/30',
+  purple: 'bg-purple-500/10 text-purple-400 border-purple-400/30',
+  amber: 'bg-amber-500/10 text-amber-400 border-amber-400/30',
+  emerald: 'bg-emerald-500/10 text-emerald-400 border-emerald-400/30',
 };
 
 export type DashboardStatCardProps = {
@@ -74,7 +74,7 @@ export function Card({
 
   if (children != null && label === undefined) {
     return (
-      <div className={`rounded-2xl border border-gray-800/50 bg-surface p-6 ${className}`}>{children}</div>
+      <div className={`rounded-3xl border-2 border-slate-800 bg-slate-900/60 p-5 sm:p-6 shadow-[4px_4px_0px_#000000] ${className}`}>{children}</div>
     );
   }
 
@@ -82,9 +82,9 @@ export function Card({
   const showLogo = Boolean(logoUrl && !logoFailed);
 
   return (
-    <div className="bg-surface border border-gray-800/50 hover:border-gray-700/50 rounded-2xl p-5 md:p-6 shadow-lg transition-all group overflow-hidden relative h-full flex flex-col">
+    <div className="rounded-3xl border-2 border-slate-800 bg-slate-900/60 hover:border-slate-700 p-5 sm:p-6 shadow-[4px_4px_0px_#000000] transition-colors group overflow-hidden relative h-full flex flex-col">
       <div
-        className={`p-3 rounded-xl ${tone} group-hover:scale-110 transition-transform duration-300 w-fit mb-4 relative z-10 overflow-hidden`}
+        className={`w-8 h-8 rounded-xl border shadow-[2px_2px_0px_#000000] ${tone} flex items-center justify-center mb-4 relative z-10 overflow-hidden`}
       >
         {showLogo ? (
           <img

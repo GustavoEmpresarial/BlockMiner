@@ -584,8 +584,8 @@ export default function GameSessionPage() {
             <div
               className={
                 activeGame === "sky"
-                  ? "relative overflow-hidden rounded-[1.75rem] border border-cyan-300/30 bg-slate-950 shadow-[0_24px_80px_rgba(2,8,23,0.9),0_0_70px_rgba(14,165,233,0.18)]"
-                  : "relative overflow-hidden rounded-2xl border-2 border-slate-700 bg-black shadow-[0_0_50px_rgba(0,0,0,0.5)]"
+                  ? "relative overflow-hidden rounded-3xl border-2 border-slate-800 bg-slate-900/60 shadow-[4px_4px_0px_#000000]"
+                  : "relative overflow-hidden rounded-3xl border-2 border-slate-800 bg-slate-900/60 shadow-[4px_4px_0px_#000000]"
               }
               style={getCanvasViewportStyle(activeGame)}
             >
