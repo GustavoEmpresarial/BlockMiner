@@ -1,4 +1,5 @@
 import { CalendarClock, CheckCircle2, CircleDashed, Gift, Loader2, PlayCircle } from 'lucide-react';
+import IconBadge from '../../shared/components/IconBadge';
 import { CADENCE_SECTIONS } from './lib/dailyTasksCadence';
 import {
   cadenceLabel,
@@ -13,32 +14,44 @@ export default function TasksPage() {
   const { t, loading, loadFailed, tasks, tasksByCadence, nextResetLabel, claimingId, load, claim } =
     useDailyTasksDashboard();
 
+  const pageHeader = (
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b-2 border-slate-800">
+      <div className="flex items-center gap-3">
+        <IconBadge icon={PlayCircle} variant="emerald" size="lg" />
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">{t('dailyTasks.title')}</h1>
+          <p className="text-slate-400 text-xs sm:text-sm font-medium">{t('dailyTasks.subtitle')}</p>
+        </div>
+      </div>
+      {tasks.length > 0 && nextResetLabel && (
+        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900/60 border-2 border-slate-800 rounded-xl shadow-[2px_2px_0px_#000000] text-xs text-slate-400 font-mono">
+          <CalendarClock className="w-3.5 h-3.5 text-slate-500" aria-hidden />
+          <span>{t('dailyTasks.earliest_reset')}:</span>
+          <span className="font-bold text-white">{nextResetLabel}</span>
+        </div>
+      )}
+    </div>
+  );
+
   if (loading) {
     return (
-      <div className="flex justify-center py-24">
-        <Loader2 className="w-10 h-10 text-emerald-400 animate-spin" aria-hidden />
+      <div className="space-y-8 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        {pageHeader}
+        <div className="h-[45vh] flex flex-col items-center justify-center gap-4 rounded-3xl border-2 border-slate-800 bg-slate-900/60 shadow-[4px_4px_0px_#000000]">
+          <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-slate-400 font-extrabold uppercase tracking-widest text-xs">{t('common.loading')}</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {pageHeader}
+
       <div className="flex flex-col gap-2">
-        <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight flex items-center gap-3">
-          <PlayCircle className="w-8 h-8 text-emerald-400 shrink-0" aria-hidden />
-          {t('dailyTasks.title')}
-        </h1>
-        <p className="text-slate-400 text-sm max-w-2xl">{t('dailyTasks.subtitle')}</p>
-        {tasks.length > 0 && nextResetLabel && (
-          <div className="flex flex-wrap gap-4 text-xs text-slate-500 font-mono uppercase tracking-widest">
-            <span className="flex items-center gap-1">
-              <CalendarClock className="w-3.5 h-3.5" aria-hidden />
-              {t('dailyTasks.earliest_reset')}: {nextResetLabel}
-            </span>
-          </div>
-        )}
         {!loadFailed && tasks.length > 0 ? (
-          <nav className="flex flex-wrap gap-2 pt-2" aria-label={t('dailyTasks.nav_aria')}>
+          <nav className="flex flex-wrap gap-2 pt-1" aria-label={t('dailyTasks.nav_aria')}>
             {CADENCE_SECTIONS.map((c) => {
               const count = tasksByCadence[c]?.length ?? 0;
               if (count === 0) return null;
@@ -52,7 +65,7 @@ export default function TasksPage() {
                       block: 'start'
                     })
                   }
-                  className="rounded-xl border border-white/10 bg-slate-900/60 px-4 py-2.5 text-xs font-black uppercase tracking-widest text-slate-300 transition-all hover:border-violet-400/40 hover:bg-violet-500/10 hover:text-violet-100"
+                  className="rounded-xl border-2 border-slate-800 bg-slate-900/60 px-4 py-2 text-xs font-black uppercase tracking-wider text-slate-300 hover:border-slate-700 hover:text-white active:translate-x-0.5 active:translate-y-0.5 shadow-[2px_2px_0px_#000000] transition-all outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 >
                   {t(`dailyTasks.jump_${c}`)}
                 </button>
@@ -63,18 +76,20 @@ export default function TasksPage() {
       </div>
 
       {loadFailed ? (
-        <div className="rounded-2xl border border-white/10 bg-slate-900/50 p-6 space-y-4 max-w-xl">
-          <p className="text-slate-300 text-sm leading-relaxed">{t('dailyTasks.load_error_body')}</p>
+        <div className="rounded-3xl border-2 border-slate-800 bg-slate-900/60 p-6 sm:p-8 space-y-4 max-w-xl shadow-[4px_4px_0px_#000000]">
+          <p className="text-slate-300 text-sm leading-relaxed font-medium">{t('dailyTasks.load_error_body')}</p>
           <button
             type="button"
             onClick={() => void load()}
-            className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest bg-white/10 hover:bg-white/15 border border-white/10 text-white transition-colors"
+            className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider bg-slate-800 hover:bg-slate-700 active:translate-x-0.5 active:translate-y-0.5 border-2 border-slate-700 text-white shadow-[2px_2px_0px_#000000] transition-all outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             {t('dailyTasks.retry')}
           </button>
         </div>
       ) : tasks.length === 0 ? (
-        <p className="text-slate-500">{t('dailyTasks.empty')}</p>
+        <div className="rounded-3xl border-2 border-dashed border-slate-800 bg-slate-900/40 p-16 text-center text-slate-400 font-medium">
+          {t('dailyTasks.empty')}
+        </div>
       ) : (
         <div className="space-y-10">
           {CADENCE_SECTIONS.map((cadence) => {
@@ -89,7 +104,7 @@ export default function TasksPage() {
               >
                 <h2
                   id={`tasks-heading-${cadence}`}
-                  className="text-sm font-black uppercase tracking-[0.25em] text-violet-300/90 border-b border-violet-500/20 pb-2"
+                  className="text-xs sm:text-sm font-black uppercase tracking-widest text-emerald-400 border-b-2 border-slate-800 pb-2.5"
                 >
                   {t(`dailyTasks.section_${cadence}`)}
                 </h2>
@@ -104,7 +119,7 @@ export default function TasksPage() {
                     return (
                       <li
                         key={task.id}
-                        className="rounded-2xl border border-white/5 bg-slate-900/40 p-5 backdrop-blur-sm"
+                        className="rounded-2xl border-2 border-slate-800 bg-slate-900/60 p-5 sm:p-6 shadow-[4px_4px_0px_#000000] transition-all"
                       >
                         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                           <div className="space-y-2 flex-1 min-w-0">
@@ -115,40 +130,40 @@ export default function TasksPage() {
                                 <CircleDashed className="w-5 h-5 text-slate-500 shrink-0" aria-hidden />
                               )}
                               <span
-                                className={`text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-full border ${
+                                className={`text-[9px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full border shadow-sm ${
                                   task.status === 'claimed'
-                                    ? 'border-emerald-500/30 text-emerald-300'
+                                    ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
                                     : task.status === 'completed'
-                                      ? 'border-amber-500/30 text-amber-200'
+                                      ? 'border-amber-500/30 bg-amber-500/10 text-amber-300'
                                       : task.status === 'in_progress'
-                                        ? 'border-sky-500/30 text-sky-200'
-                                        : 'border-slate-600 text-slate-400'
+                                        ? 'border-sky-500/30 bg-sky-500/10 text-sky-300'
+                                        : 'border-slate-700 bg-slate-800 text-slate-400'
                                 }`}
                               >
                                 {statusLabel(t, String(task.status))}
                               </span>
-                              <span className="text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-full border border-violet-500/30 text-violet-200">
+                              <span className="text-[9px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full border border-violet-500/30 bg-violet-500/10 text-violet-300">
                                 {cadenceLabel(t, task.resetCadence)}
                               </span>
                             </div>
-                            <p className="text-white font-medium leading-snug">{taskDescription(t, task)}</p>
-                            <p className="text-[11px] text-slate-500 font-mono leading-snug">
+                            <p className="text-white font-bold leading-snug">{taskDescription(t, task)}</p>
+                            <p className="text-[11px] text-slate-400 font-mono leading-snug">
                               {t('dailyTasks.period')}: {task.periodKey}
                               <span className="text-slate-600"> · </span>
                               {t('dailyTasks.next_reset')}: {formatIsoLocal(task.nextResetAt)}
                             </p>
-                            <p className="text-xs text-slate-500 flex items-center gap-2">
-                              <Gift className="w-3.5 h-3.5 text-amber-400/80" aria-hidden />
+                            <p className="text-xs text-slate-400 font-medium flex items-center gap-2">
+                              <Gift className="w-3.5 h-3.5 text-amber-400" aria-hidden />
                               {formatRewardSummary(t, task.reward)}
                             </p>
                             <div className="pt-1">
-                              <div className="h-2 rounded-full bg-slate-800 overflow-hidden">
+                              <div className="h-2 rounded-full bg-slate-950 border border-slate-800 overflow-hidden">
                                 <div
-                                  className="h-full bg-gradient-to-r from-emerald-600 to-emerald-400 transition-all duration-500"
+                                  className="h-full bg-emerald-500 transition-all duration-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"
                                   style={{ width: `${pct}%` }}
                                 />
                               </div>
-                              <p className="text-[10px] text-slate-500 mt-1 font-mono">
+                              <p className="text-[10px] text-slate-400 mt-1 font-mono font-medium">
                                 {t('dailyTasks.progress', {
                                   current: Number(cur.toFixed(4)),
                                   target: Number(tgt.toFixed(4))
@@ -161,7 +176,11 @@ export default function TasksPage() {
                               type="button"
                               disabled={!canClaim || claimingId === task.id}
                               onClick={() => void claim(task.id)}
-                              className="w-full px-6 py-3.5 rounded-2xl text-xs font-black uppercase tracking-[0.2em] bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 disabled:opacity-35 disabled:cursor-not-allowed text-white transition-all shadow-lg shadow-emerald-900/30 border border-emerald-400/20 disabled:border-transparent disabled:shadow-none"
+                              className={`w-full px-5 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-[2px_2px_0px_#000000] border-2 outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${
+                                canClaim && claimingId !== task.id
+                                  ? 'bg-emerald-500 hover:bg-emerald-400 active:translate-x-0.5 active:translate-y-0.5 text-slate-950 border-emerald-400/80 shadow-emerald-900/30'
+                                  : 'bg-slate-950/60 border-slate-800 text-slate-600 cursor-not-allowed opacity-40'
+                              }`}
                             >
                               {claimingId === task.id ? (
                                 <span className="flex items-center justify-center gap-2">

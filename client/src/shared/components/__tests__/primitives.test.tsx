@@ -15,7 +15,7 @@ describe('Shared UI Primitives — Transparency Standard', () => {
     cleanup();
   });
   describe('Card', () => {
-    it('renders default card with neo-brutalist shadow and border classes', () => {
+    it('renders default card with neo-brutalist shadow and border classes without forced overflow or spacing', () => {
       render(<Card>Card Content</Card>);
       const card = screen.getByTestId('card');
       expect(card).toBeInTheDocument();
@@ -24,7 +24,23 @@ describe('Shared UI Primitives — Transparency Standard', () => {
       expect(card.className).toContain('border-slate-800');
       expect(card.className).toContain('bg-slate-900/60');
       expect(card.className).toContain('shadow-[4px_4px_0px_#000000]');
-      expect(card.className).toContain('p-5 sm:p-6 space-y-4');
+      expect(card.className).toContain('p-5 sm:p-6');
+      expect(card.className).not.toContain('overflow-hidden');
+      expect(card.className).not.toContain('space-y-4');
+    });
+
+    it('applies optional spacing when requested (boolean or preset)', () => {
+      const { rerender } = render(<Card spacing>Spaced Card</Card>);
+      expect(screen.getByTestId('card').className).toContain('space-y-4');
+
+      rerender(<Card spacing="sm">Compact Spacing</Card>);
+      expect(screen.getByTestId('card').className).toContain('space-y-2');
+
+      rerender(<Card spacing="lg">Large Spacing</Card>);
+      expect(screen.getByTestId('card').className).toContain('space-y-6');
+
+      rerender(<Card spacing={false}>No Spacing</Card>);
+      expect(screen.getByTestId('card').className).not.toContain('space-y-');
     });
 
     it('renders table variant without outer padding and with overflow-hidden', () => {
@@ -32,6 +48,17 @@ describe('Shared UI Primitives — Transparency Standard', () => {
       const card = screen.getByTestId('card');
       expect(card.className).toContain('overflow-hidden');
       expect(card.className).not.toContain('p-5 sm:p-6');
+    });
+
+    it('applies overflow-hidden when explicitly requested via prop', () => {
+      const { rerender } = render(<Card overflowHidden>Card</Card>);
+      expect(screen.getByTestId('card').className).toContain('overflow-hidden');
+
+      rerender(<Card overflow="hidden">Card</Card>);
+      expect(screen.getByTestId('card').className).toContain('overflow-hidden');
+
+      rerender(<Card overflow="auto">Card</Card>);
+      expect(screen.getByTestId('card').className).toContain('overflow-auto');
     });
 
     it('renders glow styling when glow=true', () => {
