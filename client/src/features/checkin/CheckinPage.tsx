@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Calendar, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { isAxiosError } from 'axios';
+import IconBadge from '../../shared/components/IconBadge';
 import { fetchCheckinStatus, postCheckinBalanceDaily } from './lib/checkin.api';
 import type { CheckinPeriodInfo, CheckinStatusPayload } from './lib/checkin.types';
 import { CHECKIN_STATUS_POLL_MS } from './lib/checkin.config';
@@ -140,32 +141,50 @@ export function CheckinPage() {
     }
   };
 
+  const pageHeader = (
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b-2 border-slate-800">
+      <div className="flex items-center gap-3">
+        <IconBadge icon={Calendar} variant="amber" size="lg" />
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">{t('checkin.title')}</h1>
+          <p className="text-slate-400 text-xs sm:text-sm font-medium">{t('checkin.subtitle_balance_only')}</p>
+        </div>
+      </div>
+    </div>
+  );
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-16 text-gray-400 gap-3">
-        <Loader2 className="w-6 h-6 animate-spin" />
-        {t('common.loading')}
+      <div className="space-y-8 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        {pageHeader}
+        <div className="h-[45vh] flex flex-col items-center justify-center gap-4 rounded-3xl border-2 border-slate-800 bg-slate-900/60 shadow-[4px_4px_0px_#000000]">
+          <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-slate-400 font-extrabold uppercase tracking-widest text-xs">{t('common.loading')}</p>
+        </div>
       </div>
     );
   }
 
   if (!status?.ok || status.statusDegraded) {
     return (
-      <div className="p-8 text-center text-gray-400 space-y-3 max-w-md mx-auto">
-        <p>{status?.statusDegraded ? t('checkin.status_degraded') : error || t('checkin.unavailable')}</p>
-        {status?.statusDegraded ? <p className="text-xs text-slate-600">{t('checkin.status_degraded_hint')}</p> : null}
-        {!status?.statusDegraded ? (
-          <button
-            type="button"
-            onClick={() => {
-              pollStopped.current = false;
-              void load();
-            }}
-            className="mt-2 px-4 py-2 rounded-xl bg-surface border border-gray-700 text-sm font-semibold text-white hover:border-primary/50"
-          >
-            {t('common.retry')}
-          </button>
-        ) : null}
+      <div className="space-y-8 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        {pageHeader}
+        <div className="p-8 text-center text-slate-300 space-y-3 max-w-md mx-auto rounded-3xl border-2 border-slate-800 bg-slate-900/60 shadow-[4px_4px_0px_#000000]">
+          <p className="text-sm font-medium">{status?.statusDegraded ? t('checkin.status_degraded') : error || t('checkin.unavailable')}</p>
+          {status?.statusDegraded ? <p className="text-xs text-slate-500">{t('checkin.status_degraded_hint')}</p> : null}
+          {!status?.statusDegraded ? (
+            <button
+              type="button"
+              onClick={() => {
+                pollStopped.current = false;
+                void load();
+              }}
+              className="mt-2 px-5 py-2.5 rounded-xl bg-slate-800 border-2 border-slate-700 text-xs font-black uppercase tracking-wider text-white hover:bg-slate-700 active:translate-x-0.5 active:translate-y-0.5 transition-all shadow-[2px_2px_0px_#000000] outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            >
+              {t('common.retry')}
+            </button>
+          ) : null}
+        </div>
       </div>
     );
   }
@@ -173,14 +192,8 @@ export function CheckinPage() {
   const lastCheckin = status.lastCheckin;
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
-      <div className="text-center space-y-4">
-        <div className="inline-flex p-3 bg-amber-500/10 rounded-2xl mb-2">
-          <Calendar className="w-8 h-8 text-amber-500" />
-        </div>
-        <h1 className="text-4xl font-black text-white tracking-tight">{t('checkin.title')}</h1>
-        <p className="text-gray-500 font-medium max-w-lg mx-auto">{t('checkin.subtitle_balance_only')}</p>
-      </div>
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+      {pageHeader}
 
       {status.graceEndsAt ? <CheckinGraceBanner graceEndsAt={status.graceEndsAt} /> : null}
 

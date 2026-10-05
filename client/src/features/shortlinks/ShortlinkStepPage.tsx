@@ -296,64 +296,64 @@ export default function ShortlinkStepPage() {
                 />
             </div>
 
-            <div className="w-full max-w-md bg-surface border border-gray-800 rounded-[2.5rem] p-10 shadow-2xl space-y-8 text-center relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-1.5 bg-gray-800">
+            <div className="w-full max-w-md bg-slate-900/60 border-2 border-slate-800 rounded-3xl p-6 sm:p-8 shadow-[4px_4px_0px_#000000] space-y-6 text-center relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-full h-1.5 bg-slate-800">
                     <div 
-                        className="h-full bg-primary transition-all duration-1000 ease-linear" 
+                        className="h-full bg-primary transition-all duration-1000 ease-linear shadow-[0_0_8px_rgba(59,130,246,0.6)]" 
                         style={{ width: `${((currentStepNum - 1) / 3) * 100 + ((STEP_DURATION_SEC - timeLeft) / STEP_DURATION_SEC) * (100/3)}%` }}
                     />
                 </div>
 
-                <div className="space-y-4">
-                    <div className="inline-flex p-4 bg-primary/10 rounded-2xl">
-                        <Zap className="w-8 h-8 text-primary" />
+                <div className="space-y-3">
+                    <div className="inline-flex p-3 bg-primary/10 border border-primary/25 rounded-2xl shadow-[2px_2px_0px_#000000]">
+                        <Zap className="w-7 h-7 text-primary" />
                     </div>
                     <div>
-                        <h2 className="text-2xl font-black text-white italic uppercase tracking-tighter">
+                        <h2 className="text-xl sm:text-2xl font-black text-white italic uppercase tracking-tight">
                             {t('shortlinks.step_title', { step: currentStepNum, total: 3 })}
                         </h2>
-                        <p className="text-gray-500 font-medium mt-1 uppercase text-[10px] tracking-widest">
+                        <p className="text-slate-400 font-bold mt-1 uppercase text-[10px] tracking-widest">
                             {t('shortlinks.step_subtitle')}
                         </p>
                     </div>
                 </div>
 
-                <div className="py-6 flex flex-col items-center justify-center">
+                <div className="py-4 flex flex-col items-center justify-center">
                     {!canProceed ? (
                         <div className="flex flex-col items-center">
                             <div className="relative w-24 h-24 flex items-center justify-center">
                                 <div
-                                    className={`absolute inset-0 rounded-full border-4 border-gray-800 ${
+                                    className={`absolute inset-0 rounded-full border-4 border-slate-800 ${
                                         isPaused ? 'border-t-amber-500' : 'border-t-primary animate-spin'
                                     }`}
                                 />
-                                <span className="text-3xl font-black text-white">{timeLeft}</span>
+                                <span className="text-3xl font-black text-white font-mono">{timeLeft}</span>
                             </div>
                             {isPaused ? (
-                                <div className="mt-6 flex flex-col items-center gap-3">
-                                    <p className="text-[10px] font-black text-amber-400 uppercase tracking-[0.2em] text-center">
+                                <div className="mt-5 flex flex-col items-center gap-3">
+                                    <p className="text-[10px] font-black text-amber-400 uppercase tracking-wider text-center">
                                         {t('shortlinks.paused_hint')}
                                     </p>
                                     <button
                                         type="button"
                                         onClick={handleResumeCounting}
-                                        className="px-6 py-3 rounded-2xl bg-amber-500 text-black font-black text-[11px] uppercase tracking-widest hover:bg-amber-400 active:scale-[0.98] transition-all"
+                                        className="px-6 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 active:translate-x-0.5 active:translate-y-0.5 text-slate-950 font-black text-xs uppercase tracking-wider transition-all shadow-[2px_2px_0px_#000000] outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
                                     >
                                         {t('shortlinks.resume_button')}
                                     </button>
                                 </div>
                             ) : (
-                                <p className="mt-6 text-[10px] font-black text-primary animate-pulse uppercase tracking-[0.2em]">
+                                <p className="mt-5 text-[10px] font-black text-primary animate-pulse uppercase tracking-[0.2em]">
                                     {t('shortlinks.step_syncing')}
                                 </p>
                             )}
                         </div>
                     ) : (
-                        <div className="space-y-4 animate-in zoom-in duration-500">
-                            <div className="w-24 h-24 mx-auto rounded-full bg-emerald-500/10 border-4 border-emerald-500/20 flex items-center justify-center">
-                                <ShieldCheck className="w-12 h-12 text-emerald-500" />
+                        <div className="space-y-3 animate-in zoom-in duration-300">
+                            <div className="w-20 h-20 mx-auto rounded-2xl bg-emerald-500/10 border-2 border-emerald-500/30 flex items-center justify-center shadow-[2px_2px_0px_#000000]">
+                                <ShieldCheck className="w-10 h-10 text-emerald-400" />
                             </div>
-                            <p className="text-xs font-bold text-emerald-500 uppercase tracking-widest">
+                            <p className="text-xs font-black text-emerald-400 uppercase tracking-widest">
                                 {t('shortlinks.step_verified')}
                             </p>
                         </div>
@@ -364,25 +364,25 @@ export default function ShortlinkStepPage() {
                     <button
                         onClick={handleNext}
                         disabled={!canProceed || isProcessing}
-                        className={`w-full py-6 rounded-[2rem] font-black text-sm uppercase tracking-widest transition-all shadow-xl flex items-center justify-center gap-3 ${
+                        className={`w-full py-4 rounded-xl font-black text-xs uppercase tracking-wider transition-all shadow-[2px_2px_0px_#000000] flex items-center justify-center gap-2 active:translate-x-0.5 active:translate-y-0.5 outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                             canProceed && !isProcessing
-                                ? 'bg-primary text-white shadow-primary/20 hover:bg-primary-hover active:scale-[0.98]'
-                                : 'bg-gray-800 text-gray-500 cursor-not-allowed opacity-50'
+                                ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                                : 'bg-slate-800 text-slate-500 cursor-not-allowed opacity-50'
                         }`}
                     >
                         {isProcessing ? (
-                            <Loader2 className="w-5 h-5 animate-spin" />
+                            <Loader2 className="w-4 h-4 animate-spin" />
                         ) : (
                             <>
                                 {currentStepNum === 3 ? t('shortlinks.step_claim_final') : t('shortlinks.step_continue')}
-                                <ArrowRight className="w-5 h-5" />
+                                <ArrowRight className="w-4 h-4" />
                             </>
                         )}
                     </button>
 
-                    <div className="flex items-center justify-center gap-2 text-slate-600">
-                        <AlertTriangle className="w-3 h-3" />
-                        <span className="text-[9px] font-bold uppercase tracking-tighter tracking-widest">
+                    <div className="flex items-center justify-center gap-2 text-slate-500">
+                        <AlertTriangle className="w-3.5 h-3.5 text-amber-500/60" />
+                        <span className="text-[10px] font-bold uppercase tracking-wider">
                             {t('shortlinks.step_no_refresh')}
                         </span>
                     </div>

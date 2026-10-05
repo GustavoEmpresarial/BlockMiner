@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Trophy } from 'lucide-react';
 import type { CheckinPeriodInfo, CheckinStatusPayload } from '../lib/checkin.types';
 import { formatCheckinNextReset } from '../lib/checkinHelpers';
+import Card from '../../../shared/components/Card';
 
 type Props = {
   streak: number;
@@ -15,22 +16,22 @@ export function CheckinStreakCard({ streak, totalConfirmed, graceEndsAt, period,
   const { t } = useTranslation();
 
   return (
-    <div className="bg-surface border border-gray-800/50 rounded-[2.5rem] p-10 shadow-xl relative overflow-hidden group">
+    <Card overflowHidden className="relative p-6 sm:p-8 group">
       <div className="relative z-10">
-        <h3 className="text-sm font-bold text-gray-500 uppercase tracking-[0.2em] mb-8">{t('checkin.streak')}</h3>
-        <div className="flex items-center gap-6">
-          <div className="w-24 h-24 bg-gradient-to-tr from-amber-500 to-orange-600 rounded-3xl flex items-center justify-center shadow-lg shadow-amber-500/20 group-hover:scale-110 transition-transform duration-500">
-            <Trophy className="text-white w-12 h-12" />
+        <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6">{t('checkin.streak')}</h3>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5 sm:gap-6">
+          <div className="w-20 h-20 bg-gradient-to-tr from-amber-500/20 to-orange-600/20 border-2 border-amber-500/40 rounded-2xl flex items-center justify-center shadow-[2px_2px_0px_#000000] group-hover:scale-105 transition-transform duration-300 shrink-0">
+            <Trophy className="text-amber-400 w-10 h-10" />
           </div>
           <div>
             <div className="flex items-baseline gap-2">
-              <span className="text-6xl font-black text-white tracking-tighter">{streak}</span>
-              <span className="text-xl font-bold text-amber-500 uppercase">{t('checkin.days')}</span>
+              <span className="text-5xl sm:text-6xl font-black text-white tracking-tight font-mono">{streak}</span>
+              <span className="text-lg sm:text-xl font-black text-amber-400 uppercase">{t('checkin.days')}</span>
             </div>
-            <p className="text-xs font-bold text-slate-500 mt-1 uppercase tracking-widest">{t('checkin.streak_sub')}</p>
-            <p className="text-[10px] text-slate-600 mt-2 leading-relaxed">{t('checkin.streak_daily_note')}</p>
+            <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-wider">{t('checkin.streak_sub')}</p>
+            <p className="text-[11px] text-slate-400 mt-2 leading-relaxed font-medium">{t('checkin.streak_daily_note')}</p>
             {graceEndsAt ? (
-              <p className="text-[10px] text-amber-500/90 mt-1">
+              <p className="text-[11px] text-amber-300 mt-1 font-medium">
                 {t('checkin.grace_until', {
                   defaultValue: 'Grace period until {{time}}',
                   time: new Date(graceEndsAt).toLocaleString(),
@@ -38,9 +39,9 @@ export function CheckinStreakCard({ streak, totalConfirmed, graceEndsAt, period,
               </p>
             ) : null}
             {period ? (
-              <p className="text-[10px] text-slate-600 mt-1">{formatCheckinNextReset(t, period)}</p>
+              <p className="text-[11px] text-slate-400 mt-1 font-medium">{formatCheckinNextReset(t, period)}</p>
             ) : nextResetAt ? (
-              <p className="text-[10px] text-slate-600 mt-1">
+              <p className="text-[11px] text-slate-400 mt-1 font-medium">
                 {t('checkin.next_reset', {
                   defaultValue: 'Next reset: {{time}}',
                   time: new Date(nextResetAt).toLocaleString(),
@@ -48,16 +49,16 @@ export function CheckinStreakCard({ streak, totalConfirmed, graceEndsAt, period,
               </p>
             ) : null}
             {totalConfirmed > 0 ? (
-              <p className="text-[10px] text-slate-600 mt-2">
+              <p className="text-[11px] text-slate-400 mt-2 font-medium">
                 {t('checkin.total_days')}:{' '}
-                <span className="text-slate-400 font-mono">{totalConfirmed}</span>
+                <span className="text-white font-mono font-bold">{totalConfirmed}</span>
               </p>
             ) : null}
           </div>
         </div>
       </div>
-      <div className="absolute bottom-0 right-0 w-48 h-48 bg-amber-500/5 rounded-tl-[100px] -z-0" />
-    </div>
+      <div className="absolute bottom-0 right-0 w-48 h-48 bg-amber-500/5 rounded-tl-[100px] -z-0 pointer-events-none" />
+    </Card>
   );
 }
 

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Headphones, Loader2, MessageSquarePlus, RefreshCw, Send, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuthStore } from '../../shared/auth/auth.store';
+import IconBadge from '../../shared/components/IconBadge';
 import SupportAttachmentThumbnails from '../../shared/components/SupportAttachmentThumbnails';
 import { useSupportTicketSocket } from './lib/useSupportTicketSocket';
 import {
@@ -196,20 +197,22 @@ export default function SupportPage() {
   const hasMore = page * PAGE_SIZE < total;
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight flex items-center gap-3">
-            <Headphones className="w-8 h-8 text-primary" />
-            {t('support_tickets.title')}
-          </h1>
-          <p className="text-slate-500 text-sm mt-1 font-medium">{t('support_tickets.subtitle')}</p>
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b-2 border-slate-800">
+        <div className="flex items-center gap-3">
+          <IconBadge icon={Headphones} variant="primary" size="lg" />
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">
+              {t('support_tickets.title')}
+            </h1>
+            <p className="text-slate-400 text-xs sm:text-sm font-medium">{t('support_tickets.subtitle')}</p>
+          </div>
         </div>
         <div className="flex gap-2">
           <button
             type="button"
             onClick={() => void loadList(page)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 text-xs font-bold uppercase tracking-wider hover:border-primary/40"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900/60 border-2 border-slate-800 text-slate-300 text-xs font-black uppercase tracking-wider hover:border-slate-700 hover:text-white active:translate-x-0.5 active:translate-y-0.5 shadow-[2px_2px_0px_#000000] transition-all outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             <RefreshCw className={`w-4 h-4 ${listLoading ? 'animate-spin' : ''}`} />
             {t('support_tickets.refresh')}
@@ -217,7 +220,7 @@ export default function SupportPage() {
           <button
             type="button"
             onClick={() => setModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-slate-950 text-xs font-black uppercase tracking-wider hover:opacity-90"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:translate-x-0.5 active:translate-y-0.5 text-white text-xs font-black uppercase tracking-wider shadow-[2px_2px_0px_#000000] transition-all outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             <MessageSquarePlus className="w-4 h-4" />
             {t('support_tickets.new_ticket')}
@@ -225,9 +228,9 @@ export default function SupportPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 min-h-[480px]">
-        <div className="lg:col-span-4 flex flex-col rounded-2xl border border-slate-800 bg-slate-950/50 overflow-hidden">
-          <div className="p-3 border-b border-slate-800 text-[10px] font-black uppercase tracking-widest text-slate-500">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[480px]">
+        <div className="lg:col-span-4 flex flex-col rounded-3xl border-2 border-slate-800 bg-slate-900/60 overflow-hidden shadow-[4px_4px_0px_#000000]">
+          <div className="p-3.5 border-b-2 border-slate-800 bg-slate-950/80 text-[10px] font-black uppercase tracking-widest text-slate-400">
             {t('support_tickets.list_heading')}
           </div>
           <div className="flex-1 overflow-y-auto">
@@ -236,19 +239,19 @@ export default function SupportPage() {
                 <Loader2 className="w-6 h-6 animate-spin text-slate-500" />
               </div>
             ) : tickets.length === 0 ? (
-              <p className="p-6 text-sm text-slate-500">{t('support_tickets.empty_list')}</p>
+              <p className="p-6 text-sm text-slate-400 font-medium">{t('support_tickets.empty_list')}</p>
             ) : (
               tickets.map((row) => (
                 <button
                   key={row.id}
                   type="button"
                   onClick={() => setSelectedId(row.id)}
-                  className={`w-full text-left px-4 py-3 border-b border-slate-800/80 hover:bg-slate-900/80 ${
-                    selectedId === row.id ? 'bg-slate-900 border-l-2 border-l-primary' : ''
+                  className={`w-full text-left px-4 py-3 border-b border-slate-800/80 hover:bg-slate-800/40 transition-colors ${
+                    selectedId === row.id ? 'bg-slate-800/60 border-l-4 border-l-primary' : ''
                   }`}
                 >
                   <p className="text-sm font-bold text-white truncate">{row.subject}</p>
-                  <p className="text-[10px] text-slate-500 mt-1">
+                  <p className="text-[10px] text-slate-400 mt-1 font-medium">
                     {row.isReplied ? t('support_tickets.status_replied') : t('support_tickets.status_open')}
                   </p>
                 </button>
@@ -259,37 +262,39 @@ export default function SupportPage() {
             <button
               type="button"
               onClick={() => void loadList(page + 1, true)}
-              className="p-3 text-xs font-bold text-primary border-t border-slate-800 hover:bg-slate-900"
+              className="p-3 text-xs font-black uppercase tracking-wider text-primary border-t-2 border-slate-800 hover:bg-slate-800/40 transition-colors"
             >
               {t('support_tickets.load_more')}
             </button>
           ) : null}
         </div>
 
-        <div className="lg:col-span-8 flex flex-col rounded-2xl border border-slate-800 bg-slate-950/50 overflow-hidden min-h-[320px]">
+        <div className="lg:col-span-8 flex flex-col rounded-3xl border-2 border-slate-800 bg-slate-900/60 overflow-hidden min-h-[320px] shadow-[4px_4px_0px_#000000]">
           {!selectedId ? (
-            <p className="m-auto text-slate-500 text-sm p-8 text-center">{t('support_tickets.select_prompt')}</p>
+            <p className="m-auto text-slate-400 text-sm p-8 text-center font-medium">{t('support_tickets.select_prompt')}</p>
           ) : detailLoading && !detail ? (
             <div className="flex justify-center py-24">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
             </div>
           ) : detail ? (
             <>
-              <div className="p-4 border-b border-slate-800">
-                <p className="text-lg font-black text-white">{t('support_tickets.protocol', { id: detail.id })}</p>
-                <p className="text-sm text-slate-400 mt-1">{detail.subject}</p>
+              <div className="p-4 border-b-2 border-slate-800 bg-slate-950/40">
+                <p className="text-lg font-black text-white font-mono">{t('support_tickets.protocol', { id: detail.id })}</p>
+                <p className="text-sm text-slate-300 mt-0.5 font-medium">{detail.subject}</p>
               </div>
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              <div className="flex-1 overflow-y-auto p-5 space-y-4">
                 {(detail.body || detail.message || detail.attachments?.length) ? (
-                  <div className="rounded-xl border border-slate-800 bg-slate-900 p-3 text-sm">
-                    <p className="mb-1 text-[10px] font-bold uppercase text-slate-500">
+                  <div className="rounded-2xl border-2 border-slate-800 bg-slate-950/60 p-4 text-sm shadow-[2px_2px_0px_#000000]">
+                    <p className="mb-1.5 text-[10px] font-black uppercase tracking-widest text-slate-400">
                       {t('support_tickets.you')}
                     </p>
                     {detail.body || detail.message ? (
-                      <p className="whitespace-pre-wrap text-slate-200">{detail.body || detail.message}</p>
+                      <p className="whitespace-pre-wrap text-slate-200 leading-relaxed font-medium">{detail.body || detail.message}</p>
                     ) : null}
                     {detail.attachments?.length ? (
-                      <SupportAttachmentThumbnails attachments={detail.attachments} variant="compact" />
+                      <div className="mt-2">
+                        <SupportAttachmentThumbnails attachments={detail.attachments} variant="compact" />
+                      </div>
                     ) : null}
                   </div>
                 ) : null}
@@ -298,37 +303,39 @@ export default function SupportPage() {
                   return (
                     <div
                       key={r.id}
-                      className={`rounded-xl p-3 text-sm ${
+                      className={`rounded-2xl p-4 text-sm shadow-[2px_2px_0px_#000000] border-2 ${
                         fromTeam
-                          ? 'border border-primary/20 bg-primary/10'
-                          : 'border border-slate-800 bg-slate-900'
+                          ? 'border-primary/40 bg-primary/10'
+                          : 'border-slate-800 bg-slate-950/60'
                       }`}
                     >
-                      <p className="mb-1 text-[10px] font-bold uppercase text-slate-500">
+                      <p className="mb-1.5 text-[10px] font-black uppercase tracking-widest text-slate-400">
                         {fromTeam ? t('support_tickets.team') : t('support_tickets.you')}
                       </p>
-                      <p className="whitespace-pre-wrap text-slate-200">{replyText(r)}</p>
+                      <p className="whitespace-pre-wrap text-slate-200 leading-relaxed font-medium">{replyText(r)}</p>
                       {r.attachments?.length ? (
-                        <SupportAttachmentThumbnails attachments={r.attachments} variant="compact" />
+                        <div className="mt-2">
+                          <SupportAttachmentThumbnails attachments={r.attachments} variant="compact" />
+                        </div>
                       ) : null}
                     </div>
                   );
                 })}
               </div>
-              <div className="p-4 border-t border-slate-800 space-y-2">
+              <div className="p-4 border-t-2 border-slate-800 bg-slate-950/40 space-y-3">
                 <textarea
                   value={reply}
                   onChange={(e) => setReply(e.target.value)}
                   placeholder={t('support_tickets.reply_placeholder')}
-                  className="w-full min-h-[80px] rounded-xl bg-slate-900 border border-slate-800 px-3 py-2 text-sm text-white"
+                  className="w-full min-h-[80px] rounded-xl bg-slate-950 border-2 border-slate-700 px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-primary shadow-[2px_2px_0px_#000000]"
                 />
                 <div className="flex flex-wrap items-center gap-2">
-                  <label className="text-xs font-bold text-slate-400 cursor-pointer">
+                  <label className="text-xs font-black uppercase tracking-wider text-slate-400 hover:text-white cursor-pointer transition-colors">
                     {t('support_tickets.add_images')}
                     <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => onPickFiles(e, setReplyFiles, replyFiles)} />
                   </label>
                   {replyFiles.map((f, i) => (
-                    <span key={f.name} className="text-[10px] text-slate-500 flex items-center gap-1">
+                    <span key={f.name} className="text-[10px] text-slate-400 font-mono flex items-center gap-1 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded-lg">
                       {f.name}
                       <button type="button" aria-label={t('support_tickets.remove_file')} onClick={() => setReplyFiles((p) => p.filter((_, j) => j !== i))}>
                         <X className="w-3 h-3" />
@@ -339,7 +346,7 @@ export default function SupportPage() {
                     type="button"
                     disabled={sending}
                     onClick={() => void submitReply()}
-                    className="ml-auto flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-slate-950 text-xs font-black uppercase"
+                    className="ml-auto flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:translate-x-0.5 active:translate-y-0.5 text-white text-xs font-black uppercase tracking-wider shadow-[2px_2px_0px_#000000] outline-none focus-visible:ring-2 focus-visible:ring-primary transition-all disabled:opacity-50"
                   >
                     {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                     {t('support_tickets.send')}
@@ -353,32 +360,37 @@ export default function SupportPage() {
 
       {modalOpen && typeof document !== 'undefined'
         ? createPortal(
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
-              <div className="w-full max-w-lg rounded-2xl border border-slate-800 bg-slate-950 p-6 space-y-4">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-black text-white">{t('support_tickets.modal_title')}</h2>
-                  <button type="button" onClick={() => setModalOpen(false)} aria-label={t('support_tickets.close')}>
-                    <X className="w-5 h-5 text-slate-400" />
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="new-ticket-title"
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200"
+            >
+              <div className="w-full max-w-lg rounded-3xl border-2 border-slate-800 bg-slate-900 p-6 sm:p-7 space-y-4 shadow-[4px_4px_0px_#000000] animate-in zoom-in-95 duration-200">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                  <h2 id="new-ticket-title" className="text-lg font-black text-white uppercase tracking-tight">{t('support_tickets.modal_title')}</h2>
+                  <button type="button" onClick={() => setModalOpen(false)} aria-label={t('support_tickets.close')} className="p-1 text-slate-400 hover:text-white rounded-lg transition-colors">
+                    <X className="w-5 h-5" />
                   </button>
                 </div>
                 <input
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
                   placeholder={t('support_tickets.field_subject')}
-                  className="w-full rounded-xl bg-slate-900 border border-slate-800 px-3 py-2 text-sm text-white"
+                  className="w-full rounded-xl bg-slate-950 border-2 border-slate-700 px-4 py-2.5 text-sm text-white focus:outline-none focus:border-primary shadow-[2px_2px_0px_#000000]"
                 />
                 <textarea
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   placeholder={t('support_tickets.field_message')}
-                  className="w-full min-h-[120px] rounded-xl bg-slate-900 border border-slate-800 px-3 py-2 text-sm text-white"
+                  className="w-full min-h-[120px] rounded-xl bg-slate-950 border-2 border-slate-700 px-4 py-2.5 text-sm text-white focus:outline-none focus:border-primary shadow-[2px_2px_0px_#000000]"
                 />
                 <input type="file" accept="image/*" multiple onChange={(e) => onPickFiles(e, setCreateFiles, createFiles)} />
                 <button
                   type="button"
                   disabled={sending}
                   onClick={() => void submitCreate()}
-                  className="w-full py-3 rounded-xl bg-primary text-slate-950 font-black text-sm uppercase"
+                  className="w-full py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:translate-x-0.5 active:translate-y-0.5 text-white font-black text-xs uppercase tracking-wider shadow-[2px_2px_0px_#000000] outline-none focus-visible:ring-2 focus-visible:ring-primary transition-all disabled:opacity-50"
                 >
                   {sending ? t('support_tickets.submitting') : t('support_tickets.submit')}
                 </button>

@@ -45,54 +45,54 @@ function MilestoneCard({ milestone: m }: { milestone: CheckinMilestone }) {
 
   const borderClass =
     state === 'claimed'
-      ? 'border-emerald-500/35'
+      ? 'border-emerald-500/40 shadow-[2px_2px_0px_#000000]'
       : state === 'eligible'
-        ? 'border-amber-500/40 ring-1 ring-amber-500/20'
-        : 'border-gray-800 opacity-80';
+        ? 'border-amber-500/40 shadow-[0_0_15px_rgba(245,158,11,0.1),2px_2px_0px_#000000]'
+        : 'border-slate-800 shadow-[2px_2px_0px_#000000]';
   const iconBg =
     state === 'claimed'
-      ? 'bg-emerald-500/15 text-emerald-400'
+      ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
       : state === 'eligible'
-        ? 'bg-amber-500/15 text-amber-400'
-        : 'bg-slate-900 text-slate-600';
+        ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+        : 'bg-slate-950 text-slate-500 border border-slate-800';
 
   const showMachineImage = rewardKind === 'machine' && m.minerImageUrl;
   const showPolBadge = rewardKind === 'pol';
   const machinePower = Number(m.minerBaseHashRate ?? m.powerAmount);
 
   return (
-    <div className={`bg-gray-800/30 border rounded-2xl p-5 flex items-start gap-4 ${borderClass}`}>
+    <div className={`bg-slate-900/60 border-2 rounded-2xl p-5 flex items-start gap-4 ${borderClass}`}>
       {showMachineImage ? (
-        <div className="w-12 h-12 rounded-xl shrink-0 bg-slate-900/60 border border-slate-700/60 overflow-hidden flex items-center justify-center">
+        <div className="w-12 h-12 rounded-xl shrink-0 bg-slate-950 border-2 border-slate-800 shadow-[2px_2px_0px_#000000] overflow-hidden flex items-center justify-center">
           <img src={m.minerImageUrl!} alt={m.minerName ?? ''} className="w-full h-full object-contain" />
         </div>
       ) : showPolBadge ? (
         <div
-          className={`w-12 h-12 rounded-full shrink-0 flex items-center justify-center font-black text-sm ${iconBg}`}
+          className={`w-12 h-12 rounded-xl shrink-0 flex items-center justify-center font-black text-xs font-mono shadow-[2px_2px_0px_#000000] ${iconBg}`}
         >
           POL
         </div>
       ) : (
-        <div className={`p-3 rounded-xl shrink-0 ${iconBg}`}>
+        <div className={`p-3 rounded-xl shrink-0 shadow-[2px_2px_0px_#000000] ${iconBg}`}>
           {state === 'locked' ? <Lock className="w-5 h-5" /> : <Trophy className="w-5 h-5" />}
         </div>
       )}
       <div className="min-w-0 flex-1">
-        <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 font-mono">
           {milestoneDayLabel(t, m.dayThreshold).toUpperCase()}
         </p>
         <p className="text-sm font-bold text-white truncate">{title}</p>
         {rewardKind === 'machine' && machinePower > 0 ? (
-          <p className="text-xs font-black text-amber-300 mt-1 tracking-wide">+{machinePower} H/s</p>
+          <p className="text-xs font-black text-amber-400 mt-1 tracking-wide font-mono">+{machinePower} H/s</p>
         ) : line ? (
-          <p className="text-xs text-slate-400 mt-1">{line}</p>
+          <p className="text-xs text-slate-400 mt-1 font-medium">{line}</p>
         ) : null}
         {description ? (
-          <p className="text-[11px] text-slate-600 mt-1 line-clamp-2">{description}</p>
+          <p className="text-[11px] text-slate-500 mt-1 line-clamp-2 font-medium">{description}</p>
         ) : null}
-        <p className="text-[10px] font-bold uppercase tracking-wider mt-2 text-slate-500">{statusLabel}</p>
+        <p className="text-[10px] font-black uppercase tracking-wider mt-2 text-slate-400">{statusLabel}</p>
       </div>
-      {state === 'claimed' ? <Check className="w-5 h-5 text-emerald-500 shrink-0 mt-1" /> : null}
+      {state === 'claimed' ? <Check className="w-5 h-5 text-emerald-400 shrink-0 mt-1" /> : null}
     </div>
   );
 }
