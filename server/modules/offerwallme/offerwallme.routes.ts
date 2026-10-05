@@ -13,6 +13,7 @@ const postbackLimiter = createRateLimiter({ windowMs: 60_000, max: 30 });
 offerwallMeRouter.get("/postback", postbackLimiter, offerwallmeController.offerwallMePostback);
 offerwallMeRouter.post("/postback", postbackLimiter, offerwallmeController.offerwallMePostback);
 
+offerwallMeRouter.get("/status", limiter, offerwallmeController.getOfferwallMeStatus);
 offerwallMeRouter.get("/history", requireAuth, limiter, offerwallmeController.getOfferwallMeHistory);
 offerwallMeRouter.get("/stats", requireAuth, limiter, offerwallmeController.getOfferwallMeStats);
 offerwallMeRouter.get("/embed", requireAuth, limiter, offerwallmeController.getOfferwallMeEmbed);

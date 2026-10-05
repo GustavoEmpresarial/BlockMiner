@@ -355,3 +355,41 @@ Chaves adicionadas:
 | **Segurança (Security)** | Concluído | Middleware `requireAuth`, rate limiting (60 req/min no link, 30 req/min no postback), validação anti-replay/single-use de tokens HMAC do BM Captcha, proteção contra *reverse tabnabbing* (`win.opener = null`), validação de assinatura e IP em postbacks. |
 | **Erros e Observabilidade (Errors)** | Concluído | Tipos discriminados de erro, mapeamento i18n em 3 idiomas (`pt-BR`, `en`, `es`), toasts não-intrusivos para cancelamento de captcha, logging estruturado Pino no backend (`offerwallme.controller`, `offerwallme.service`). |
 | **Diferido (Deferred)** | Nenhum | Toda a especificação do fluxo direto e mitigação de restrições de provedor foi implementada e validada. |
+
+---
+
+## 10. Kill-Switch de Manutenção (`OFFERWALLME_MAINTENANCE`)
+
+Para proteger os usuários de fluxos instáveis ou indisponibilidades da rede externa sem exigir novo deploy ou alteração de código:
+
+### 10.1 Configuração e Localização
+- **Variável de Ambiente**: `OFFERWALLME_MAINTENANCE`
+- **Onde mora**: `.env`, `.env.production` ou variáveis de ambiente do contêiner / sistema operacional.
+- **Valores aceitos**:
+  - Para ATIVAR a manutenção: `true`, `1`, `yes`, `on` (insensível a maiúsculas/minúsculas).
+  - Para DESATIVAR a manutenção: `false`, `0`, `no`, `off` ou string vazia/não definida.
+
+### 10.2 Comportamento do Backend com a Flag Ativa
+1. **Bloqueio de Entradas de Usuário**:
+   - `GET /api/offerwallme/embed`: Retorna imediatamente HTTP 503 com código de erro estável:
+     ```json
+     {
+       "ok": false,
+       "code": "OFFERWALL_MAINTENANCE",
+       "message": "Offerwall provider is currently under maintenance."
+     }
+     ```
+   - `GET /api/offerwallme/link`: Retorna imediatamente HTTP 503 com o mesmo payload acima.
+2. **Preservação Absoluta do Crédito (Invariante Crítica)**:
+   - `GET /api/offerwallme/postback` e `POST /api/offerwallme/postback`: **NUNCA são bloqueados**. Continuam validando IP, assinatura HMAC e creditando os saldos dos usuários com 100% de normalidade e idempotência. Usuários que já completaram tarefas continuam recebendo seus créditos.
+   - `GET /api/offerwallme/stats` e `GET /api/offerwallme/history`: Permanecem disponíveis para consulta de histórico e estatísticas pelo usuário logado.
+3. **Endpoint de Status**:
+   - `GET /api/offerwallme/status`: Retorna `{ "ok": true, "provider": "offerwallme", "maintenance": true }`, permitindo que o frontend detecte o estado atual sem dependência de build estático.
+
+### 10.3 Comportamento do Frontend (`OfferwallPage.tsx`)
+1. O card da Offerwall.me permanece visível na grade de provedores.
+2. É exibido o selo visual de manutenção (`t('offerwall.panel.maintenance_badge')`).
+3. O botão de ação principal é desabilitado (`disabled={true}`, `cursor-not-allowed`, opacidade reduzida).
+4. O clique não abre o painel nem dispara novas sessões.
+5. Caso o painel seja acessado diretamente por URL ou estado forçado, é renderizado o `MaintenancePanel` com aviso localizado nos 3 idiomas (`pt-BR`, `en`, `es`).
+

@@ -81,11 +81,26 @@ export async function getOfferwallMeStats(req: Request, res: Response): Promise<
     const user = requireSessionUser(req, res);
     if (!user) return;
     const payload = await offerwallmeService.getStatsForUser(user.id);
-    res.json({ ok: true, ...payload });
+    res.json({
+      ok: true,
+      maintenance: offerwallmeService.isOfferwallMeMaintenance(),
+      ...payload,
+    });
   } catch (error: unknown) {
     log.error("stats failed", { error: String(error) });
     res.status(500).json({ ok: false, message: "Error loading stats." });
   }
+}
+
+/**
+ * GET /api/offerwallme/status — provider maintenance status.
+ */
+export async function getOfferwallMeStatus(_req: Request, res: Response): Promise<void> {
+  res.json({
+    ok: true,
+    provider: "offerwallme",
+    maintenance: offerwallmeService.isOfferwallMeMaintenance(),
+  });
 }
 
 /**
@@ -96,6 +111,14 @@ export async function getOfferwallMeEmbed(req: Request, res: Response): Promise<
   try {
     const user = requireSessionUser(req, res);
     if (!user) return;
+    if (offerwallmeService.isOfferwallMeMaintenance()) {
+      res.status(503).json({
+        ok: false,
+        code: "OFFERWALL_MAINTENANCE",
+        message: "Offerwall provider is currently under maintenance.",
+      });
+      return;
+    }
     const pass = await consumeOfferwallPass({
       userId: user.id,
       provider: "offerwallme",
@@ -120,6 +143,14 @@ export async function getOfferwallMeLink(req: Request, res: Response): Promise<v
   try {
     const user = requireSessionUser(req, res);
     if (!user) return;
+    if (offerwallmeService.isOfferwallMeMaintenance()) {
+      res.status(503).json({
+        ok: false,
+        code: "OFFERWALL_MAINTENANCE",
+        message: "Offerwall provider is currently under maintenance.",
+      });
+      return;
+    }
     const pass = await consumeOfferwallPass({
       userId: user.id,
       provider: "offerwallme",

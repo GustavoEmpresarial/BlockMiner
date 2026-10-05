@@ -23,6 +23,10 @@ test("offerwallMeRouter: registers /link and /embed routes", () => {
 
   const postbackRoute = routes.find((r) => r.path === "/postback");
   assert.ok(postbackRoute, "Route /postback must exist");
+
+  const statusRoute = routes.find((r) => r.path === "/status");
+  assert.ok(statusRoute, "Route /status must exist");
+  assert.ok(statusRoute.methods.includes("get"), "Route /status must handle GET");
 });
 
 test("buildOfferwallMeUrl and offerwallMePublisherId parity", () => {
@@ -80,11 +84,13 @@ test("getOfferwallMeEmbed: unauthenticated request returns 401", async () => {
   assert.equal(responseJson?.ok, false);
 });
 
-test("getOfferwallMeLink: authenticated user receives valid direct url when captcha disabled or passed", async () => {
+test("getOfferwallMeLink: authenticated user receives valid direct url when captcha disabled and maintenance off", async () => {
   // Simulate user with session
   const origEnv = process.env.BM_CAPTCHA_ENABLED;
+  const origMaint = process.env.OFFERWALLME_MAINTENANCE;
   try {
     process.env.BM_CAPTCHA_ENABLED = "0";
+    process.env.OFFERWALLME_MAINTENANCE = "false";
 
     const req = {
       headers: {},
@@ -116,5 +122,7 @@ test("getOfferwallMeLink: authenticated user receives valid direct url when capt
   } finally {
     if (origEnv !== undefined) process.env.BM_CAPTCHA_ENABLED = origEnv;
     else delete process.env.BM_CAPTCHA_ENABLED;
+    if (origMaint !== undefined) process.env.OFFERWALLME_MAINTENANCE = origMaint;
+    else delete process.env.OFFERWALLME_MAINTENANCE;
   }
 });
