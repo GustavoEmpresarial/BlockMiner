@@ -49,7 +49,7 @@ function BannerSlide({
     <button
       type="button"
       onClick={() => onOpen(banner)}
-      className="relative w-full h-full overflow-hidden rounded-2xl bg-slate-900 border border-white/[0.08] group cursor-pointer select-none text-left"
+      className="relative w-full h-full overflow-hidden rounded-3xl border-2 border-slate-800 bg-slate-900/60 shadow-[4px_4px_0px_#000000] group cursor-pointer select-none text-left"
     >
       {showMedia ? (
         isVideoMediaUrl(mediaUrl!) ? (
@@ -66,7 +66,7 @@ function BannerSlide({
           <img
             src={mediaUrl!}
             alt={banner.title}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            className="w-full h-full object-cover"
             draggable={false}
             loading="lazy"
             onError={() => setMediaFailed(true)}
@@ -77,7 +77,7 @@ function BannerSlide({
           <p className="text-sm font-bold text-slate-400 px-4 text-center">{banner.title}</p>
         </div>
       )}
-      <div className="absolute inset-0 bg-black/10 group-hover:bg-black/25 transition-colors duration-300 rounded-2xl" />
+      <div className="absolute inset-0 bg-black/10 group-hover:bg-black/25 transition-colors duration-300 rounded-3xl" />
       {endsIn ? (
         <div className="absolute top-0 left-0 right-0 flex justify-center">
           <div className="flex items-center gap-1.5 px-3 py-1.5 bg-black/70 backdrop-blur-sm rounded-b-xl text-[11px] font-black text-white tracking-wider">
@@ -119,7 +119,7 @@ function BannerDetailModal({
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-2xl overflow-hidden rounded-3xl border border-white/[0.08] bg-slate-900 shadow-2xl shadow-black/60 animate-in zoom-in-95 duration-300 max-h-[90vh] overflow-y-auto"
+        className="relative w-full max-w-2xl overflow-hidden rounded-3xl border-2 border-slate-800 bg-slate-900/60 shadow-[4px_4px_0px_#000000] max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <button
