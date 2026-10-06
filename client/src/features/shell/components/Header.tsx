@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Bell,
   LayoutDashboard,
@@ -22,6 +23,7 @@ import CommunityShortcuts from './CommunityShortcuts';
 import { usePtcSessionStore } from '../../ptc/lib/ptcSession.store';
 import { useOfferwallTimerStore } from '../../offerwall/lib/offerwallTimer.store';
 import LanguageSwitcher from '../../../shared/components/LanguageSwitcher';
+import { NOTIFICATION_PANEL_WIDTH_PX, useAnchoredFixedMenu } from '../../../shared/hooks/anchoredMenuPosition';
 
 function headerActionGhost(active = false): string {
   return `inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
@@ -197,7 +199,14 @@ export default function Header() {
   const user = useAuthStore((state) => state.user);
 
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const notificationRef = useRef<HTMLDivElement | null>(null);
+  const notificationButtonRef = useRef<HTMLButtonElement | null>(null);
+  const notificationMenuRef = useRef<HTMLDivElement | null>(null);
+  const notificationMenuPos = useAnchoredFixedMenu(
+    isNotificationsOpen,
+    notificationButtonRef,
+    notificationMenuRef,
+    NOTIFICATION_PANEL_WIDTH_PX,
+  );
 
   const getPageTitle = (): string => {
     const segments = location.pathname.split('/').filter(Boolean);
@@ -223,7 +232,9 @@ export default function Header() {
     const handleClickOutside = (event: globalThis.MouseEvent) => {
       const target = event.target;
       if (!(target instanceof Node)) return;
-      if (notificationRef.current && !notificationRef.current.contains(target)) {
+      const inButton = notificationButtonRef.current?.contains(target) ?? false;
+      const inMenu = notificationMenuRef.current?.contains(target) ?? false;
+      if (!inButton && !inMenu) {
         setIsNotificationsOpen(false);
       }
     };
@@ -233,6 +244,15 @@ export default function Header() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [fetchNotifications]);
+
+  useEffect(() => {
+    if (!isNotificationsOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsNotificationsOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [isNotificationsOpen]);
 
   const handleMarkAllRead = () => {
     markNotificationRead('all');
@@ -300,11 +320,13 @@ export default function Header() {
 
           <CommunityShortcuts gapClass="gap-0.5" variant="ghost" />
 
-          <div className="relative" ref={notificationRef}>
+          <div className="relative">
             <button
+              ref={notificationButtonRef}
               type="button"
               onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
               className={`${headerActionGhost(isNotificationsOpen)} relative`}
+              aria-expanded={isNotificationsOpen}
             >
               <Bell className="w-5 h-5" />
               {unreadCount > 0 && (
@@ -312,8 +334,17 @@ export default function Header() {
               )}
             </button>
 
-            {isNotificationsOpen && (
-              <div className="absolute right-0 mt-3 w-80 bg-slate-900/60 border-2 border-slate-800 rounded-3xl shadow-[4px_4px_0px_#000000] overflow-hidden z-50">
+            {isNotificationsOpen && typeof document !== 'undefined'
+              ? createPortal(
+              <div
+                ref={notificationMenuRef}
+                className="fixed z-50 mt-3 w-80 bg-slate-900/60 border-2 border-slate-800 rounded-3xl shadow-[4px_4px_0px_#000000] overflow-hidden"
+                style={
+                  notificationMenuPos
+                    ? { top: notificationMenuPos.top, left: notificationMenuPos.left }
+                    : { top: 0, left: 0, visibility: 'hidden' }
+                }
+              >
                 <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/40">
                   <h3 className="text-xs font-black text-white uppercase tracking-widest">{t('header.notifications')}</h3>
                   {unreadCount > 0 && (
@@ -376,8 +407,10 @@ export default function Header() {
                     {t('header.intelligence')}
                   </span>
                 </div>
-              </div>
-            )}
+              </div>,
+              document.body,
+            )
+              : null}
           </div>
 
           <LanguageSwitcher />
