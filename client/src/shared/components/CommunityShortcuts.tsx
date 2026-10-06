@@ -38,15 +38,15 @@ function TelegramIcon({ className }: { className?: string }) {
 const linkBaseClass =
   'inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl transition-all duration-200 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background';
 
-const badgeLinkClass =
-  'inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-primary/25 bg-primary/10 text-primary shadow-[2px_2px_0px_#000000] transition-colors hover:border-primary/40 hover:bg-primary/20 hover:text-white focus:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50';
+const ghostLinkClass =
+  'inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-slate-800/60 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50';
 
 export default function CommunityShortcuts({
   gapClass = 'gap-1',
   variant = 'plain',
 }: {
   gapClass?: string;
-  variant?: 'plain' | 'badge';
+  variant?: 'plain' | 'ghost';
 }) {
   const { t } = useTranslation();
   const discordUrl =
@@ -66,7 +66,7 @@ export default function CommunityShortcuts({
           href={discordUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className={variant === 'badge' ? badgeLinkClass : `${linkBaseClass} text-gray-400 hover:text-[#5865F2] hover:bg-[#5865F2]/10`}
+          className={variant === 'ghost' ? ghostLinkClass : `${linkBaseClass} text-gray-400 hover:text-[#5865F2] hover:bg-[#5865F2]/10`}
           title={discordLabel}
           aria-label={discordLabel}
         >
@@ -78,7 +78,7 @@ export default function CommunityShortcuts({
           href={telegramUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className={variant === 'badge' ? badgeLinkClass : `${linkBaseClass} text-gray-400 hover:text-[#0088cc] hover:bg-[#0088cc]/10`}
+          className={variant === 'ghost' ? ghostLinkClass : `${linkBaseClass} text-gray-400 hover:text-[#0088cc] hover:bg-[#0088cc]/10`}
           title={telegramLabel}
           aria-label={telegramLabel}
         >

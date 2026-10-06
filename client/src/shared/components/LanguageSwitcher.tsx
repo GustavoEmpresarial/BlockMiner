@@ -40,7 +40,7 @@ export default function LanguageSwitcher() {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-primary/25 bg-primary/10 text-primary shadow-[2px_2px_0px_#000000] transition-colors hover:border-primary/40 hover:bg-primary/20 hover:text-white focus:text-white"
+        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-slate-800/60 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
         title="Idioma"
         aria-label="Alterar idioma"
       >

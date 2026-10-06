@@ -72,10 +72,14 @@ BADGE DE ICONE TEMATICO
   (emerald para valores positivos/recebidos, amber para alerta, violet para
   investimento, sky para saques). Mantenha a sombra solida de 2px.
 
-BADGE DE ACAO (icone clicavel da navbar)
-  w-9 h-9 rounded-xl bg-primary/10 border border-primary/25 text-primary
-  shadow-[2px_2px_0px_#000000]
-  hover: bg-primary/20 border-primary/40, sem tirar a sombra
+ICONE FANTASMA (barra densa, varios controles lado a lado)
+  O badge NAO se repete em fila. Seis caixas iguais poluem a navbar.
+  O badge ancora titulo e secao. Numa barra com muitos icones, o controle e fantasma:
+  h-9 w-9 rounded-xl, sem borda, sem fundo e sem sombra no estado normal
+  glifo text-slate-400
+  hover: text-white bg-slate-800/60, sem borda e sem sombra
+  aberto: bg-slate-800 text-white, sem borda
+  focus-visible com anel. A area clicavel nao encolhe.
 
 ITEM DE MENU ATIVO
   border-2 border-primary/25 bg-primary/10 text-primary
