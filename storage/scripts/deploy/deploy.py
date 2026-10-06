@@ -181,8 +181,12 @@ for path in dist client/dist storage/uploads; do
 done
 # Prefer live container SPA/server dist if present (freshest running build).
 if docker inspect {container_app} >/dev/null 2>&1; then
-  docker cp {container_app}:/app/dist "$BM_KEEP/dist-from-container" 2>/dev/null || true
-  docker cp {container_app}:/app/client/dist "$BM_KEEP/client-dist-from-container" 2>/dev/null || true
+  if ! docker cp {container_app}:/app/dist "$BM_KEEP/dist-from-container"; then
+    echo "ALERTA: docker cp {container_app}:/app/dist falhou. O dist do container NAO foi preservado. Primeiro deploy sem container anterior pode falhar aqui; o deploy segue." >&2
+  fi
+  if ! docker cp {container_app}:/app/client/dist "$BM_KEEP/client-dist-from-container"; then
+    echo "ALERTA: docker cp {container_app}:/app/client/dist falhou. O client/dist do container NAO foi preservado. Primeiro deploy sem container anterior pode falhar aqui; o deploy segue." >&2
+  fi
 fi
 '''
 

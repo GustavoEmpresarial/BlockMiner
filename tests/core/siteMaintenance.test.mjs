@@ -41,6 +41,7 @@ test("resolveRequestHost prefers x-forwarded-host and strips port", () => {
 
 test("isPathAllowedDuringMaintenance allowlist", () => {
   assert.equal(isPathAllowedDuringMaintenance("/health"), true);
+  assert.equal(isPathAllowedDuringMaintenance("/health/ready"), true);
   assert.equal(isPathAllowedDuringMaintenance("/api/health"), true);
   assert.equal(isPathAllowedDuringMaintenance("/admin"), true);
   assert.equal(isPathAllowedDuringMaintenance("/admin/errors"), true);
@@ -142,7 +143,7 @@ test("middleware bypasses allowlisted host even when maintenance is on", () => {
 
 test("middleware allows /health and /admin during maintenance", () => {
   const mw = createSiteMaintenanceMiddleware({ SITE_MAINTENANCE: "1" });
-  for (const path of ["/health", "/admin", "/api/admin/x", "/assets/x.js"]) {
+  for (const path of ["/health", "/health/ready", "/admin", "/api/admin/x", "/assets/x.js"]) {
     const { req, res } = fakeReqRes({ path, headers: { host: "blockminer.space" } });
     let next = false;
     mw(req, res, () => {
