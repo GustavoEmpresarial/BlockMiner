@@ -1907,6 +1907,26 @@
     "offerwall_done": "Offerwall — Completed",
     "intelligence": "Block Miner Intelligence"
   },
+  "chat": {
+    "title": "Chat",
+    "close": "Close chat",
+    "tabs": "Chat tabs",
+    "public": "Public",
+    "private": "Private",
+    "unread": "{{n}} unread",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "placeholder": "Write a message",
+    "send": "Send",
+    "empty_public": "No messages yet.",
+    "empty_private": "No private conversations.",
+    "pick_conversation": "Choose a conversation.",
+    "unknown_user": "User",
+    "you": "You",
+    "email_not_verified": "Confirm your email to send messages.",
+    "rate_limited": "Too many messages. Wait a moment before sending again.",
+    "send_failed": "The message could not be sent."
+  },
   "dashboard": {
     "welcome": "Welcome, {{name}}",
     "subtitle": "Your mining operation is active. Track next block rewards in real-time.",

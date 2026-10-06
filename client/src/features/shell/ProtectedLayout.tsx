@@ -10,6 +10,7 @@ import ShortlinkBackgroundRunner from '../shortlinks/components/ShortlinkBackgro
 import AutoMiningBackgroundRunner from '../auto-mining/components/AutoMiningBackgroundRunner';
 import SiteFooter from '../../shared/components/SiteFooter';
 import EmailVerifyBanner from '../verify-email/EmailVerifyBanner';
+import ChatPanel from './chat/ChatPanel';
 
 export default function ProtectedLayout() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -63,6 +64,7 @@ export default function ProtectedLayout() {
         <SiteFooter />
       </div>
       <BroadcastPopup />
+      <ChatPanel />
       <PtcSessionManager />
       <ShortlinkBackgroundRunner />
       <AutoMiningBackgroundRunner />
