@@ -312,6 +312,7 @@ export default function Header() {
           <button
             type="button"
             onClick={toggleChat}
+            data-chat-toggle=""
             className={`${headerActionGhost()} relative`}
             title={t('header.community')}
           >

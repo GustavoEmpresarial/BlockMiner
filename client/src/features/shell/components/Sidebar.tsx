@@ -469,6 +469,7 @@ export default function Sidebar({ mobileOpen: mobileOpenProp, onNavigate }: Side
           <button
             type="button"
             onClick={() => toggleChat()}
+            data-chat-toggle=""
             className="p-2 text-gray-400 hover:text-white transition-colors relative"
             aria-label={t('sidebar.chat')}
           >
