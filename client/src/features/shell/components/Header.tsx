@@ -23,11 +23,11 @@ import { usePtcSessionStore } from '../../ptc/lib/ptcSession.store';
 import { useOfferwallTimerStore } from '../../offerwall/lib/offerwallTimer.store';
 import LanguageSwitcher from '../../../shared/components/LanguageSwitcher';
 
-function headerActionBadge(active = false): string {
-  return `inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border shadow-[2px_2px_0px_#000000] transition-colors ${
+function headerActionGhost(active = false): string {
+  return `inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
     active
-      ? 'border-primary/40 bg-primary/20 text-white'
-      : 'border-primary/25 bg-primary/10 text-primary hover:border-primary/40 hover:bg-primary/20 hover:text-white focus:text-white'
+      ? 'bg-slate-800 text-white'
+      : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'
   }`;
 }
 
@@ -271,7 +271,7 @@ export default function Header() {
         </div>
         <div className="flex min-w-0 flex-col">
           <p className="truncate text-xl font-bold text-white tracking-tight">{title}</p>
-          <p className="text-xs font-bold uppercase tracking-wider text-primary/80">{t('header.protocol_active')}</p>
+          <p className="text-[11px] text-slate-400 font-medium">{t('header.protocol_active')}</p>
         </div>
       </div>
 
@@ -292,19 +292,19 @@ export default function Header() {
           <button
             type="button"
             onClick={toggleChat}
-            className={`${headerActionBadge()} relative`}
+            className={`${headerActionGhost()} relative`}
             title={t('header.community')}
           >
             <MessageSquare className="w-5 h-5" />
           </button>
 
-          <CommunityShortcuts gapClass="gap-0.5" variant="badge" />
+          <CommunityShortcuts gapClass="gap-0.5" variant="ghost" />
 
           <div className="relative" ref={notificationRef}>
             <button
               type="button"
               onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
-              className={`${headerActionBadge(isNotificationsOpen)} relative`}
+              className={`${headerActionGhost(isNotificationsOpen)} relative`}
             >
               <Bell className="w-5 h-5" />
               {unreadCount > 0 && (
@@ -384,7 +384,7 @@ export default function Header() {
 
           <Link
             to="/settings"
-            className={headerActionBadge()}
+            className={headerActionGhost()}
             title={t('header.settings')}
           >
             <Settings className="w-5 h-5" />
