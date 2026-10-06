@@ -49,11 +49,24 @@ Numa barra cheia (header) nao aplique a sombra solida de 6px: ela vaza a viewpor
 No header valem o gradiente diagonal e a camada radial. O badge ao lado do titulo
 da barra e menor: w-10 h-10 rounded-xl, mesmo vocabulario.
 
+## Superficie apoiada e overlay flutuante
+
+SUPERFICIE APOIADA (card, painel dentro da pagina, campo, botao): bg-slate-900/60, translucido, pode deixar o fundo aparecer.
+
+OVERLAY FLUTUANTE (modal, dropdown, menu, painel em portal, drawer): fundo OPACO, obrigatorio. Translucido aqui deixa o conteudo da pagina atravessar e torna o texto ilegivel.
+
+BACKDROP de overlay continua translucido de proposito, porque a funcao dele e escurecer a pagina, nao esconde-la. Nao deixe o backdrop opaco: isso cobre a tela inteira de preto.
+
+O token bg-slate-900/60 e fundo de card. Em overlay flutuante use um slate solido do tema, sem alpha (bg-slate-900). Mantenha border-2 border-slate-800, rounded-3xl e shadow-[4px_4px_0px_#000000]. backdrop-blur e bem-vindo com o fundo opaco, nao no lugar dele.
+
+Faixa interna de cabecalho ou rodape (bg-slate-950/40) compoe sobre esse container opaco. Ela nao fica translucida sobre a pagina.
+
 ## Os tokens do padrao (copiar exatamente)
 
 CARD / PAINEL
   rounded-3xl border-2 border-slate-800 bg-slate-900/60 p-5 sm:p-6 space-y-4
   shadow-[4px_4px_0px_#000000]
+  Isto e superficie apoiada. Nao use este fundo num overlay flutuante.
 
 CARD QUE CONTEM TABELA (sem padding, conteudo encosta na borda)
   rounded-3xl border-2 border-slate-800 bg-slate-900/60 overflow-hidden

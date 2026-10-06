@@ -494,7 +494,7 @@ export default function Sidebar({ mobileOpen: mobileOpenProp, onNavigate }: Side
               ) : null}
             </button>
             {notificationsOpen ? (
-              <div className="absolute right-0 mt-2 w-72 max-w-[calc(100vw-1rem)] bg-slate-900/60 border-2 border-slate-800 rounded-3xl shadow-[4px_4px_0px_#000000] overflow-hidden z-50">
+              <div className="absolute right-0 mt-2 w-72 max-w-[calc(100vw-1rem)] bg-slate-900 border-2 border-slate-800 rounded-3xl shadow-[4px_4px_0px_#000000] overflow-hidden z-50">
                 <div className="px-4 py-3 border-b border-slate-800 flex items-center justify-between bg-slate-950/40">
                   <h3 className="text-xs font-black text-white uppercase tracking-widest">
                     {t('sidebar.notifications')}
@@ -562,7 +562,7 @@ export default function Sidebar({ mobileOpen: mobileOpenProp, onNavigate }: Side
                 />
               ) : null}
               <aside
-                className={`md:hidden fixed top-14 bottom-16 left-0 z-40 w-72 bg-slate-900/60 border-r-2 border-slate-800 flex flex-col shadow-[4px_4px_0px_#000000] transition-transform duration-300 overflow-y-auto ${
+                className={`md:hidden fixed top-14 bottom-16 left-0 z-40 w-72 bg-slate-900 border-r-2 border-slate-800 flex flex-col shadow-[4px_4px_0px_#000000] transition-transform duration-300 overflow-y-auto ${
                   mobileOpen ? 'translate-x-0' : '-translate-x-full'
                 }`}
               >
