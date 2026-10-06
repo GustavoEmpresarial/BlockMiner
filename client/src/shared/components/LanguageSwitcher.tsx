@@ -55,7 +55,7 @@ export default function LanguageSwitcher() {
       ? createPortal(
           <div
             ref={menuRef}
-            className="fixed z-50 mt-2 w-40 rounded-xl border border-gray-800/70 bg-gray-900/95 backdrop-blur-xl shadow-xl overflow-hidden"
+            className="fixed z-50 mt-2 w-40 overflow-hidden rounded-xl border-2 border-slate-800 bg-slate-900 shadow-[4px_4px_0px_#000000] backdrop-blur-md"
             style={
               menuPos
                 ? { top: menuPos.top, left: menuPos.left }
@@ -67,8 +67,8 @@ export default function LanguageSwitcher() {
                 key={lang.code}
                 type="button"
                 onClick={() => handleSelect(lang.code)}
-                className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-gray-800/70 transition-colors ${
-                  lang.code === current.code ? 'text-primary font-bold' : 'text-gray-300'
+                className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors hover:bg-slate-800 ${
+                  lang.code === current.code ? 'text-primary font-bold' : 'text-slate-300'
                 }`}
               >
                 <span>{lang.flag}</span>
