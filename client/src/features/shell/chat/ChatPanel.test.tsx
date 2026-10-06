@@ -19,6 +19,8 @@ const store = vi.hoisted(() => ({
   closeChat: vi.fn(),
   fetchMessages: vi.fn(),
   fetchConversations: vi.fn(),
+  searchChatUsers: vi.fn(),
+  chatUserHits: [] as { id: number; username: string }[],
   fetchPrivateMessages: vi.fn(),
   sendMessage: vi.fn(),
   sendPrivateMessage: vi.fn(),
@@ -65,6 +67,8 @@ beforeEach(() => {
   store.closeChat.mockReset();
   store.fetchMessages.mockReset();
   store.fetchConversations.mockReset();
+  store.searchChatUsers.mockReset();
+  store.chatUserHits = [];
   store.fetchPrivateMessages.mockReset();
   store.sendMessage.mockReset();
   store.sendPrivateMessage.mockReset();
@@ -210,5 +214,21 @@ describe('ChatPanel', () => {
     fireEvent.change(screen.getByLabelText('Escreva uma mensagem'), { target: { value: 'resposta' } });
     fireEvent.click(screen.getByRole('button', { name: 'Enviar' }));
     await waitFor(() => expect(store.sendPrivateMessage).toHaveBeenCalledWith(99, 'resposta'));
+  });
+
+  it('shows user search when there are no conversations and opens the chosen person', () => {
+    store.isChatOpen = true;
+    store.conversations = [];
+    store.chatUserHits = [{ id: 15, username: 'cleo' }];
+    mount();
+    fireEvent.click(screen.getByRole('tab', { name: /privado/i }));
+    expect(screen.getByLabelText('Buscar usuário')).toBeInTheDocument();
+    expect(screen.getByText('Nenhuma conversa privada.')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Buscar usuário'), { target: { value: 'cl' } });
+    expect(store.searchChatUsers).toHaveBeenCalledWith('cl');
+    fireEvent.click(screen.getByRole('button', { name: 'cleo' }));
+    expect(store.setActivePrivateUser).toHaveBeenCalledWith({ id: 15, username: 'cleo' });
+    expect(store.fetchPrivateMessages).toHaveBeenCalledWith(15);
+    expect(store.searchChatUsers).toHaveBeenCalledWith('');
   });
 });

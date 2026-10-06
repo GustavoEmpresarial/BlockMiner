@@ -2,11 +2,14 @@ import { create } from 'zustand';
 import { toast } from 'sonner';
 import { io, type Socket } from 'socket.io-client';
 import { api } from '../../../shared/auth/auth.store';
+import { chatUserSearchQuery, readChatUserSearchDebounceMs, toChatUserHit } from '../chat/chatSearch';
 
 const AUTH_REFRESH_COOLDOWN_MS = 30_000;
 
 let authRefreshInFlight = false;
 let lastAuthRefreshAttemptAt = 0;
+let chatUserSearchTimer: ReturnType<typeof setTimeout> | null = null;
+let chatUserSearchSeq = 0;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
@@ -121,6 +124,7 @@ export interface GameStoreState {
   messages: unknown[];
   privateMessages: unknown[];
   conversations: unknown[];
+  chatUserHits: { id: number; username: string }[];
   notifications: unknown[];
   activePrivateUser: { id: number; name?: string; username?: string } | null;
   socket: GameSocket | null;
@@ -148,6 +152,7 @@ export interface GameStoreState {
   fetchMessages: () => Promise<void>;
   fetchPrivateMessages: (userId: number) => Promise<void>;
   fetchConversations: () => Promise<void>;
+  searchChatUsers: (q: string) => void;
   fetchNotifications: () => Promise<void>;
   markNotificationRead: (id: number | string | 'all') => Promise<void>;
   sendMessage: (message: string, replyToId?: number | null) => Promise<{ ok: boolean; message?: string }>;
@@ -170,6 +175,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
   messages: [],
   privateMessages: [],
   conversations: [],
+  chatUserHits: [],
   notifications: [],
   activePrivateUser: null,
   socket: null,
@@ -457,6 +463,36 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
     } catch (error) {
       console.error(error);
     }
+  },
+
+  searchChatUsers: (q) => {
+    if (chatUserSearchTimer != null) {
+      clearTimeout(chatUserSearchTimer);
+      chatUserSearchTimer = null;
+    }
+    const query = chatUserSearchQuery(q);
+    const seq = ++chatUserSearchSeq;
+    if (query == null) {
+      set({ chatUserHits: [] });
+      return;
+    }
+    chatUserSearchTimer = setTimeout(() => {
+      chatUserSearchTimer = null;
+      void (async () => {
+        try {
+          const res = await api.get('/chat/users', { params: { q: query } });
+          if (seq !== chatUserSearchSeq) return;
+          const rows = isRecord(res.data) && Array.isArray(res.data.users) ? res.data.users : [];
+          set({ chatUserHits: rows.flatMap((row) => {
+            const hit = toChatUserHit(row);
+            return hit == null ? [] : [hit];
+          }) });
+        } catch (error) {
+          if (seq !== chatUserSearchSeq) return;
+          console.error(error);
+        }
+      })();
+    }, readChatUserSearchDebounceMs());
   },
 
   fetchNotifications: async () => {
