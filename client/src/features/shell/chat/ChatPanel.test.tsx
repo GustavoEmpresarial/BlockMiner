@@ -24,6 +24,7 @@ const store = vi.hoisted(() => ({
   sendPrivateMessage: vi.fn(),
   setActivePrivateUser: vi.fn(),
   clearActivePrivateUser: vi.fn(),
+  clearUnreadPms: vi.fn(),
   clearMention: vi.fn(),
 }));
 
@@ -69,6 +70,10 @@ beforeEach(() => {
   store.sendPrivateMessage.mockReset();
   store.setActivePrivateUser.mockReset();
   store.clearActivePrivateUser.mockReset();
+  store.clearUnreadPms.mockReset();
+  store.clearUnreadPms.mockImplementation(() => {
+    store.unreadPms = 0;
+  });
   store.clearMention.mockReset();
   store.sendMessage.mockResolvedValue({ ok: true, message: { id: 1, message: 'ok' } });
   store.sendPrivateMessage.mockResolvedValue({ ok: true, message: { id: 2 } });
@@ -165,6 +170,26 @@ describe('ChatPanel', () => {
 
     fireEvent.mouseDown(document.body);
     expect(store.closeChat).toHaveBeenCalledTimes(1);
+  });
+
+  it('clears the unread private count when a conversation is selected', () => {
+    store.isChatOpen = true;
+    store.unreadPms = 3;
+    store.conversations = [{ userId: 99, username: 'bea', lastMessageAt: '2026-08-25T10:00:00.000Z' }];
+    const view = mount();
+    expect(screen.getByText('3 não lidas')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('tab', { name: /privado/i }));
+    expect(store.clearUnreadPms).not.toHaveBeenCalled();
+    expect(store.unreadPms).toBe(3);
+    fireEvent.click(screen.getByRole('button', { name: 'bea' }));
+    expect(store.clearUnreadPms).toHaveBeenCalledTimes(1);
+    expect(store.unreadPms).toBe(0);
+    view.rerender(
+      <I18nextProvider i18n={i18n}>
+        <ChatPanel />
+      </I18nextProvider>,
+    );
+    expect(screen.queryByText('3 não lidas')).toBeNull();
   });
 
   it('sends a private message to the selected conversation without showing the user id', async () => {

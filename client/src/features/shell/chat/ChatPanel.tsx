@@ -42,6 +42,7 @@ export default function ChatPanel() {
   const sendPrivateMessage = useGameStore((s) => s.sendPrivateMessage);
   const setActivePrivateUser = useGameStore((s) => s.setActivePrivateUser);
   const clearActivePrivateUser = useGameStore((s) => s.clearActivePrivateUser);
+  const clearUnreadPms = useGameStore((s) => s.clearUnreadPms);
   const selfId = useAuthStore((s) => s.user?.id);
 
   const panelRef = useRef<HTMLDivElement>(null);
@@ -57,6 +58,11 @@ export default function ChatPanel() {
     void fetchMessages();
     void fetchConversations();
   }, [isChatOpen, fetchMessages, fetchConversations]);
+
+  useEffect(() => {
+    if (activePeer == null) return;
+    clearUnreadPms();
+  }, [activePeer, clearUnreadPms]);
 
   const dismiss = useCallback(() => {
     setError(null);
