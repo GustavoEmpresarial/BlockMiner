@@ -16,7 +16,7 @@ import { setupHttpStack } from "../core/http/setupHttpStack.js";
 import { reportError } from "../core/errors/index.js";
 import { attachSocketIO } from "../core/socket/index.js";
 import { mediaAdminRouter, mediaRootDir, MEDIA_PUBLIC_PREFIX, seedBundledMedia, projectRoot, createMediaStaticHeadersMiddleware } from "../modules/media/index.js";
-import { resolveClientDistPaths, attachClientDistStatic, attachSpaFallback, renderSpaIndex, } from "../shared/http/spaStatic.js";
+import { resolveClientDistPaths, createSpaIndexProbe, attachClientDistStatic, attachSpaFallback, renderSpaIndex, sendSpaReadiness, } from "../shared/http/spaStatic.js";
 import { logger } from "../core/logger/index.js";
 import prisma from "../core/database/prisma.js";
 import { shutdownRedis } from "../core/redis/index.js";
@@ -248,15 +248,20 @@ export function createApp() {
     // non-API paths. See shared/http/spaStatic.ts for the /api, /media, /socket.io, /assets
     // 404-differentiation (a bad API path must never get HTML back).
     const clientDist = resolveClientDistPaths(projectRoot());
-    if (!clientDist.indexExists) {
-        log.warn("client.dist.missing — frontend build not found, API-only mode", {
+    const spaIndexReady = createSpaIndexProbe(clientDist.indexPath);
+    // Readiness is separate from /health. Liveness must stay 200 while the SPA build is still missing, or Docker restarts a process whose API is fine.
+    app.get("/health/ready", (_req, res) => {
+        sendSpaReadiness(res, spaIndexReady);
+    });
+    if (!spaIndexReady()) {
+        log.warn("client.dist.missing — frontend build not found yet; SPA will attach when index.html appears", {
             distPath: clientDist.distPath,
         });
     }
-    attachClientDistStatic(app, clientDist.distPath, clientDist.indexExists);
+    attachClientDistStatic(app, clientDist.distPath, spaIndexReady);
     attachSpaFallback(app, {
         indexPath: clientDist.indexPath,
-        indexExists: clientDist.indexExists,
+        indexReady: spaIndexReady,
         renderIndex: renderSpaIndex,
     });
     app.use((req, res) => {

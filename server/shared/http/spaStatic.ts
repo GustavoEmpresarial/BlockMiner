@@ -26,13 +26,56 @@ import express from "express";
 export interface ClientDistPaths {
   distPath: string;
   indexPath: string;
-  indexExists: boolean;
+}
+
+/** How long a negative or positive index.html probe is reused. Short on purpose: a process that booted before the build existed must notice the file without a restart, and the SPA fallback sits on the hot path. */
+export const SPA_INDEX_PROBE_TTL_MS = 5_000;
+
+export function readSpaIndexProbeTtlMs(env: NodeJS.ProcessEnv = process.env): number {
+  const raw = env.SPA_INDEX_PROBE_TTL_MS;
+  if (raw == null || String(raw).trim() === "") return SPA_INDEX_PROBE_TTL_MS;
+  const parsed = Number(String(raw).trim());
+  if (!Number.isFinite(parsed) || parsed < 0) return SPA_INDEX_PROBE_TTL_MS;
+  return parsed;
+}
+
+export type SpaIndexProbe = () => boolean;
+
+export function createSpaIndexProbe(
+  indexPath: string,
+  options?: {
+    ttlMs?: number;
+    exists?: (filePath: string) => boolean;
+    now?: () => number;
+  },
+): SpaIndexProbe {
+  const ttlMs = options?.ttlMs ?? readSpaIndexProbeTtlMs();
+  const exists = options?.exists ?? existsSync;
+  const now = options?.now ?? Date.now;
+  let cached = false;
+  let checkedAt = Number.NEGATIVE_INFINITY;
+  return () => {
+    const t = now();
+    if (t - checkedAt < ttlMs) return cached;
+    cached = exists(indexPath);
+    checkedAt = t;
+    return cached;
+  };
 }
 
 export function resolveClientDistPaths(projectRoot: string): ClientDistPaths {
   const distPath = path.resolve(projectRoot, "client", "dist");
   const indexPath = path.join(distPath, "index.html");
-  return { distPath, indexPath, indexExists: existsSync(indexPath) };
+  return { distPath, indexPath };
+}
+
+/** Readiness, not liveness. 503 until client/dist/index.html is visible to the probe. */
+export function sendSpaReadiness(res: Response, spaIndexReady: SpaIndexProbe): void {
+  if (!spaIndexReady()) {
+    res.status(503).json({ ok: false, service: "blockminer", ready: false });
+    return;
+  }
+  res.status(200).json({ ok: true, service: "blockminer", ready: true });
 }
 
 /** Browser paths under `/api` must never hit the SPA fallback. */
@@ -107,9 +150,7 @@ function sendReservedRouteNotFound(res: Response): void {
   res.status(404).json({ ok: false, code: "ROUTE_NOT_FOUND", message: "Rota não encontrada." });
 }
 
-export function attachClientDistStatic(app: Express, distPath: string, indexExists: boolean): void {
-  if (!indexExists) return;
-
+export function attachClientDistStatic(app: Express, distPath: string, spaIndexReady: SpaIndexProbe): void {
   const adminTournamentsIndex = path.join(distPath, "admin-t", "index.html");
   app.get(["/admin-t", "/admin-t/", "/admin-t/index.html"], async (req, res, next) => {
     if (!existsSync(adminTournamentsIndex)) {
@@ -131,8 +172,7 @@ export function attachClientDistStatic(app: Express, distPath: string, indexExis
     }
   });
 
-  app.use(
-    express.static(distPath, {
+  const serveDist = express.static(distPath, {
       index: false,
       fallthrough: true,
       // Some mobile clients + HTTP/2 + nginx proxy stall on 206 Range chains for module
@@ -162,8 +202,15 @@ export function attachClientDistStatic(app: Express, distPath: string, indexExis
         res.setHeader("Cache-Control", "public, max-age=3600");
         res.setHeader("X-Content-Type-Options", "nosniff");
       },
-    }),
-  );
+    });
+
+  app.use((req, res, next) => {
+    if (!spaIndexReady()) {
+      next();
+      return;
+    }
+    serveDist(req, res, next);
+  });
 
   /** Only reached when `express.static` did not find the file (fallthrough). */
   app.use("/assets", (_req: Request, res: Response) => sendAssetNotFound(res));
@@ -173,7 +220,7 @@ export type SpaIndexRenderer = (html: string, ctx: { nonce: string }) => string;
 
 export interface SpaFallbackOptions {
   indexPath: string;
-  indexExists: boolean;
+  indexReady: SpaIndexProbe;
   renderIndex: SpaIndexRenderer;
   onMissingIndex?: (res: Response) => void;
   onRenderFailure?: (res: Response, error: unknown) => void;
@@ -184,7 +231,7 @@ function sendSpaUnavailable(res: Response): void {
 }
 
 export function attachSpaFallback(app: Express, opts: SpaFallbackOptions): void {
-  const { indexPath, indexExists, renderIndex, onMissingIndex = sendSpaUnavailable, onRenderFailure = sendSpaUnavailable } = opts;
+  const { indexPath, indexReady, renderIndex, onMissingIndex = sendSpaUnavailable, onRenderFailure = sendSpaUnavailable } = opts;
 
   app.get("/{*all}", async (req: Request, res: Response) => {
     if (isApiRequestPath(req.path)) {
@@ -203,7 +250,7 @@ export function attachSpaFallback(app: Express, opts: SpaFallbackOptions): void 
       sendAssetNotFound(res);
       return;
     }
-    if (!indexExists) {
+    if (!indexReady()) {
       onMissingIndex(res);
       return;
     }

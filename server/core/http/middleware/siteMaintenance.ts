@@ -55,7 +55,7 @@ export function isMaintenanceBypassHost(
 }
 
 export function isPathAllowedDuringMaintenance(path: string): boolean {
-  if (path === "/health" || path === "/api/health") return true;
+  if (path === "/health" || path === "/health/ready" || path === "/api/health") return true;
   if (path === "/admin" || path.startsWith("/admin/") || path.startsWith("/admin-t")) return true;
   if (path.startsWith("/api/admin")) return true;
   if (path.startsWith("/assets/")) return true;
