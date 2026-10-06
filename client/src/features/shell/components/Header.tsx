@@ -339,7 +339,7 @@ export default function Header() {
               ? createPortal(
               <div
                 ref={notificationMenuRef}
-                className="fixed z-50 mt-3 w-80 bg-slate-900/60 border-2 border-slate-800 rounded-3xl shadow-[4px_4px_0px_#000000] overflow-hidden"
+                className="fixed z-50 mt-3 w-80 border-2 border-slate-800 rounded-3xl bg-slate-900 shadow-[4px_4px_0px_#000000] overflow-hidden backdrop-blur-md"
                 style={
                   notificationMenuPos
                     ? { top: notificationMenuPos.top, left: notificationMenuPos.left }

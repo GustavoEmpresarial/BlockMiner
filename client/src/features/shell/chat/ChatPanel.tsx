@@ -154,7 +154,7 @@ export default function ChatPanel() {
       ref={panelRef}
       role="dialog"
       aria-label={t('chat.title')}
-      className="fixed z-50 bottom-20 right-4 flex w-[min(24rem,calc(100vw-2rem))] max-h-[min(32rem,calc(100dvh-8rem))] flex-col overflow-hidden rounded-3xl border-2 border-slate-800 bg-slate-900/60 shadow-[4px_4px_0px_#000000] md:bottom-6"
+      className="fixed z-50 bottom-20 right-4 flex w-[min(24rem,calc(100vw-2rem))] max-h-[min(32rem,calc(100dvh-8rem))] flex-col overflow-hidden rounded-3xl border-2 border-slate-800 bg-slate-900 shadow-[4px_4px_0px_#000000] backdrop-blur-md md:bottom-6"
     >
       <div className="flex items-center gap-2.5 border-b border-slate-800 bg-slate-950/40 px-5 py-4">
         <IconBadge icon={MessageSquare} />
