@@ -288,7 +288,7 @@ export default function Header() {
           />
         </div>
 
-        <div className="flex min-w-0 items-center gap-3 overflow-x-auto border-l border-slate-800 pl-6">
+        <div className="flex min-w-0 items-center gap-3 border-l border-slate-800 pl-6">
           <button
             type="button"
             onClick={toggleChat}
