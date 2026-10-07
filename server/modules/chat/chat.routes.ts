@@ -8,14 +8,20 @@ import { requireAuth } from "../../core/http/middleware/auth.js";
 import { requireEmailVerified } from "../../core/http/middleware/requireEmailVerified.js";
 import { createRateLimiter } from "../../core/http/middleware/rateLimit.js";
 import * as chatController from "./chat.controller.js";
+import { readChatUserSearchMaxPerWindow, readChatUserSearchWindowMs } from "./chat.config.js";
 export const chatRouter = express.Router();
 const chatLimiter = createRateLimiter({ windowMs: 60_000, max: 30 });
+const userSearchLimiter = createRateLimiter({
+  windowMs: readChatUserSearchWindowMs(),
+  max: readChatUserSearchMaxPerWindow(),
+  name: "chat-user-search",
+});
 // item 100 (pentest achado #3): PM é vetor de assédio direto a UM usuário — 30/min era o
 // mesmo teto do chat público (onde a mensagem se dilui entre todo mundo). Apertado pra
 // send-private especificamente, sem mexer no limite do chat público.
 const privateChatLimiter = createRateLimiter({ windowMs: 60_000, max: 10 });
 chatRouter.get("/messages", requireAuth, chatController.getMessages);
-chatRouter.get("/users", requireAuth, chatController.getActiveUsers);
+chatRouter.get("/users", requireAuth, userSearchLimiter, chatController.getActiveUsers);
 // item 95 Parte B: send/send-private exigem email confirmado — mitiga farming/spam por
 // contas descartáveis (o próprio pentest citou registro sem verificação como vetor).
 chatRouter.post("/send", requireAuth, requireEmailVerified, chatLimiter, chatController.sendMessage);

@@ -3,7 +3,9 @@
  * Deviation: Socket.IO emits are no-ops (core/socket not built). Persist still happens.
  */
 import { createNotification } from "../notifications/index.js";
+import { readChatConversationScanLimit } from "./chat.config.js";
 import * as chatRepo from "./chat.repository.js";
+import { buildChatUserSearchArgs, toChatUserHit } from "./chat.search.js";
 import { escapeHtml, sanitizeChatPlainText } from "../../shared/utils/htmlEscape.js";
 
 export { escapeHtml, sanitizeChatPlainText };
@@ -13,9 +15,14 @@ export async function listMessages() {
   return messages.reverse();
 }
 
-export async function listActiveUsernames() {
-  const recent = await chatRepo.listRecentUsernames(100);
-  return [...new Set(recent.map((m) => m.username))];
+export async function searchChatUsers(selfId: number, rawQuery: unknown) {
+  const args = buildChatUserSearchArgs(selfId, rawQuery);
+  if (args == null) return [];
+  const rows = await chatRepo.searchUsersForChat(args.where, args.take);
+  return rows.flatMap((row) => {
+    const hit = toChatUserHit(row);
+    return hit == null ? [] : [hit];
+  });
 }
 
 export async function sendPublicMessage(args: {
@@ -80,8 +87,9 @@ export async function sendPrivate(args: {
 }
 
 export async function listConversations(userId: number) {
-  const sent = await chatRepo.listSentPrivateMessages(userId);
-  const received = await chatRepo.listReceivedPrivateMessages(userId);
+  const take = readChatConversationScanLimit();
+  const sent = await chatRepo.listSentPrivateMessages(userId, take);
+  const received = await chatRepo.listReceivedPrivateMessages(userId, take);
   const conversationMap = new Map<number, { userId: number; username: string | null | undefined; lastMessageAt: Date }>();
 
   for (const msg of sent) {
