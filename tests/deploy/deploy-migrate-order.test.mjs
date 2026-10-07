@@ -12,7 +12,7 @@ import importlib.util
 spec = importlib.util.spec_from_file_location("deploy", "storage/scripts/deploy/deploy.py")
 mod = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(mod)
-print(mod._docker_stack(${JSON.stringify(composeFile)}, ${healthPort}))
+print(mod._docker_stack(${JSON.stringify(composeFile)}, ${healthPort}, "blockminer-current-app"))
 `,
     ],
     { encoding: "utf8" },
@@ -27,6 +27,8 @@ function assertOrder(script, { startsDb }) {
   assert.ok(migrate > 0);
   assert.ok(recreate > migrate);
   assert.equal(script.includes("migrate deploy --schema=prisma/schema.prisma || true"), false);
+  assert.equal(script.includes("/health || true"), false);
+  assert.match(script, /\/health\/ready/);
   assert.equal(script.includes("compose exec -T app npx prisma migrate deploy"), false);
   assert.match(script, /compose run --rm --no-deps --entrypoint npx app prisma migrate deploy/);
   assert.match(script, /exit 1/);

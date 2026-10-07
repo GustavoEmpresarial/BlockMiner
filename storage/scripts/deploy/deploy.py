@@ -110,6 +110,17 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
 # Per-target defaults — app_root, compose filename, container name (for the runtime-artifact
 # preserve step's docker inspect/cp) and the host-side health-check port. staging's is the
 # APP_PUBLISH_PORT host side of docker-compose.staging.yml's default (127.0.0.1:3001).
+# Measured 2026-10-07 against the local Postgres on 127.0.0.1, not the production data tier.
+# 3036 non-banned users, every one already had a refCode, concurrency 12.
+# loadMaxBlockNumber + loadRecentBlocks(12): 489 ms.
+# getOrCreateMinerProfile for each of those users: 3783 ms.
+# The process only listens after that work, so /health/ready cannot answer before it.
+# 180 seconds is 42 times that 4272 ms total. docker-compose.yml already uses 180s as
+# stop_grace_period for this same process.
+APP_READY_TIMEOUT_SEC = 180
+APP_READY_POLL_SEC = 2
+APP_READY_CURL_MAX_SEC = 5
+
 TARGET_DEFAULTS = {
     "prod": {
         "app_root": "/root/blockminer-current",
@@ -126,7 +137,68 @@ TARGET_DEFAULTS = {
 }
 
 
-def _docker_stack(compose_file: str, health_port: int) -> str:
+def _app_ready_gate(
+    container_app: str,
+    health_port: int,
+    timeout_sec: int = APP_READY_TIMEOUT_SEC,
+    poll_sec: int = APP_READY_POLL_SEC,
+) -> str:
+    """Bash that refuses a container left in Created/exited and waits for /health/ready.
+
+    Failure prints what to inspect and exits non-zero. It does not roll the deploy back.
+    """
+    container = shlex.quote(container_app)
+    url = f"http://127.0.0.1:{int(health_port)}/health/ready"
+    timeout = int(timeout_sec)
+    poll = int(poll_sec)
+    curl_max = int(APP_READY_CURL_MAX_SEC)
+    if timeout < 1 or poll < 1 or curl_max < 1:
+        raise ValueError("ready wait timings must be positive")
+    return f"""
+echo "[vm] conferindo se {container} subiu"
+app_status="$(docker inspect -f '{{{{.State.Status}}}}' {container} 2>/dev/null || echo missing)"
+if [[ "$app_status" != "running" ]]; then
+  echo "ALERTA: o container {container} nao esta running (estado: $app_status)." >&2
+  echo "O deploy NAO foi revertido. Olhe:" >&2
+  echo "  docker inspect --format '{{{{.State.Status}}}}' {container}" >&2
+  echo "  curl -sS {url}" >&2
+  echo "  docker logs --tail 200 {container}" >&2
+  exit 1
+fi
+echo "[vm] esperando /health/ready por ate {timeout}s"
+ready_started=$(date +%s)
+ready_deadline=$((ready_started + {timeout}))
+ready_body=""
+while true; do
+  ready_now=$(date +%s)
+  ready_body="$(curl -sS --max-time {curl_max} {shlex.quote(url)} || true)"
+  if printf '%s' "$ready_body" | grep -Eq '"ready"[[:space:]]*:[[:space:]]*true'; then
+    echo "[vm] /health/ready true em $((ready_now - ready_started))s"
+    break
+  fi
+  app_status="$(docker inspect -f '{{{{.State.Status}}}}' {container} 2>/dev/null || echo missing)"
+  if [[ "$app_status" != "running" ]]; then
+    echo "ALERTA: o container {container} deixou de estar running (estado: $app_status) antes do /health/ready." >&2
+    echo "O deploy NAO foi revertido. Olhe:" >&2
+    echo "  docker inspect --format '{{{{.State.Status}}}}' {container}" >&2
+    echo "  curl -sS {url}" >&2
+    echo "  docker logs --tail 200 {container}" >&2
+    exit 1
+  fi
+  if (( ready_now >= ready_deadline )); then
+    echo "ALERTA: /health/ready nao ficou true em {timeout}s." >&2
+    echo "O deploy NAO foi revertido. Olhe:" >&2
+    echo "  docker inspect --format '{{{{.State.Status}}}}' {container}" >&2
+    echo "  curl -sS {url}" >&2
+    echo "  docker logs --tail 200 {container}" >&2
+    exit 1
+  fi
+  sleep {poll}
+done
+"""
+
+
+def _docker_stack(compose_file: str, health_port: int, container_app: str) -> str:
     # Staging's DATABASE_URL is the compose service `db`. Prod must not start that
     # service: it is behind profile local-db and would boot an empty Postgres.
     staging_db = ""
@@ -169,7 +241,7 @@ fi
 # Force-recreate app so bind mounts (client/dist, dist/) pick up fresh directory inodes
 # after git pull / SPA rebuild — otherwise Docker can keep an empty stale mount.
 compose up -d --force-recreate --no-deps app
-curl -sS -o /dev/null -w "health:%{{http_code}}\\n" http://127.0.0.1:{health_port}/health || true
+{_app_ready_gate(container_app, health_port)}
 echo "[vm] docker steps finished"
 '''
 
@@ -425,7 +497,7 @@ echo "[vm] git sync OK @ $(cd "$APP_ROOT" && git rev-parse --short HEAD 2>/dev/n
 """
     return f"""set -euo pipefail
 {no_cache}{skip_server}{skip_client}APP_ROOT={shlex.quote(app_root)}
-{pull}{_docker_stack(compose_file, health_port)}
+{pull}{_docker_stack(compose_file, health_port, container_app)}
 """
 
 
