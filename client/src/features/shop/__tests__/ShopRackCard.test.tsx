@@ -44,6 +44,35 @@ describe('ShopRackCard', () => {
     expect(onSelect).toHaveBeenCalledWith(sampleRack);
   });
 
+  it('draws the built-in shelf when the catalog has no separate image', () => {
+    const view = renderWithI18n(<ShopRackCard rack={sampleRack} shopCurrency="BLK" onSelect={vi.fn()} />);
+    expect(screen.getByRole('img', { name: 'Mining rack' })).toBeInTheDocument();
+    expect(view.container.querySelector('img')).toBeNull();
+  });
+
+  it('keeps the built-in shelf for the common rack default image', () => {
+    renderWithI18n(
+      <ShopRackCard
+        rack={{ ...sampleRack, imageUrl: '/media/racks/default-shelf.svg' }}
+        shopCurrency="BLK"
+        onSelect={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole('img', { name: 'Mining rack' })).toBeInTheDocument();
+  });
+
+  it('uses the catalog image when the rack sends a different imageUrl', () => {
+    const view = renderWithI18n(
+      <ShopRackCard
+        rack={{ ...sampleRack, sku: 'showcase_3d_rack', imageUrl: '/media/racks/showcase-3d-rack-fit.svg' }}
+        shopCurrency="BLK"
+        onSelect={vi.fn()}
+      />,
+    );
+    expect(view.container.querySelector('img')).toHaveAttribute('src', '/media/racks/showcase-3d-rack-fit.svg');
+    expect(screen.queryByRole('img', { name: 'Mining rack' })).not.toBeInTheDocument();
+  });
+
   it('shows coming soon and disables button when isPurchaseLive is false', () => {
     const onSelect = vi.fn();
     const comingSoonRack = { ...sampleRack, isPurchaseLive: false };

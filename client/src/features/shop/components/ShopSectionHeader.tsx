@@ -11,6 +11,13 @@ interface ShopSectionHeaderProps {
 
 const OFFER_DATE_LOCALE = 'pt-BR';
 
+function upcomingSalesDate(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const at = new Date(iso).getTime();
+  if (!Number.isFinite(at) || at <= Date.now()) return null;
+  return iso;
+}
+
 function fmtDate(iso: string | null | undefined, localeTag: string): string {
   if (!iso) return '—';
   const d = new Date(iso);
@@ -28,6 +35,7 @@ export function ShopSectionHeader({
   salesAvailableAt,
 }: ShopSectionHeaderProps) {
   const { t } = useTranslation();
+  const opensAt = upcomingSalesDate(salesAvailableAt);
 
   return (
     <div className="space-y-2">
@@ -38,11 +46,11 @@ export function ShopSectionHeader({
           </div>
           <h2 className="text-xs sm:text-sm font-black uppercase tracking-widest text-slate-300 truncate">{title}</h2>
         </div>
-        {salesAvailableAt && (
+        {opensAt && (
           <div className="flex items-center gap-2 text-xs text-slate-400 font-medium">
             <Clock className="h-3.5 w-3.5 text-amber-400" />
             <span className="font-semibold">{t('shop.sales_opens_at')}:</span>
-            <span>{fmtDate(salesAvailableAt, OFFER_DATE_LOCALE)}</span>
+            <span>{fmtDate(opensAt, OFFER_DATE_LOCALE)}</span>
           </div>
         )}
       </div>

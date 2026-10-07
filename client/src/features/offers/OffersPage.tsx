@@ -8,6 +8,7 @@ import { getActiveOfferEvents, postOfferEventPurchase, postOfferFanPurchase, pos
 import type { OfferEventDTO, OfferEventMinerDTO, RoomOffersDTO, FanOffersDTO, FanOfferItemDTO, RackOffersDTO } from './lib/offers.api';
 import { OfferMinerModel } from './components/OfferMinerModel';
 import { CoolingFanUnit } from '../inventory2/components/CoolingFanUnit';
+import { RackCatalogArt } from '../inventory2/components/RackCatalogArt';
 import { MiningRackShelf } from '../inventory2/components/MiningRackShelf';
 import { postBuyRoom } from '../machines/lib/machines.api';
 import { useGameStore } from '../shell/lib/game.store';
@@ -23,6 +24,13 @@ function FanOfferArt() {
 
 function RackOfferArt() {
     return <MiningRackShelf className="h-auto w-full max-w-md" />;
+}
+
+function upcomingSalesDate(iso: string | null | undefined): string | null {
+    if (!iso) return null;
+    const at = new Date(iso).getTime();
+    if (!Number.isFinite(at) || at <= Date.now()) return null;
+    return iso;
 }
 
 function fmtDate(iso: string | null | undefined, localeTag: string) {
@@ -95,11 +103,11 @@ function GearOffersSection({ kind, offers, locale, buying, onBuy }: {
                         )}
                     </div>
                     <div className="flex flex-col sm:flex-row gap-3 text-xs text-slate-400 font-medium">
-                        {offers?.salesAvailableAt && (
+                        {upcomingSalesDate(offers?.salesAvailableAt) && (
                             <div className="flex items-center gap-1.5">
                                 <Calendar className="w-3.5 h-3.5 text-slate-500" />
                                 <span className="font-semibold text-slate-300">{t('shop.sales_opens_at')}:</span>
-                                <span>{fmtDate(offers.salesAvailableAt, locale)}</span>
+                                <span>{fmtDate(offers?.salesAvailableAt, locale)}</span>
                             </div>
                         )}
                     </div>
@@ -128,7 +136,7 @@ function GearOffersSection({ kind, offers, locale, buying, onBuy }: {
                                         <Icon className={style.icon} />
                                     </div>
                                     <div className="aspect-square bg-slate-950/60 rounded-2xl p-4 border border-slate-800 flex items-center justify-center overflow-hidden group-hover:scale-[1.02] transition-transform duration-300">
-                                        <Art />
+                                        {kind === 'rack' ? <RackCatalogArt imageUrl={item.imageUrl} /> : <Art />}
                                     </div>
                                     <div className="space-y-1">
                                         <h3 className="text-lg font-black text-white">{t(item.nameKey)}</h3>
@@ -817,7 +825,11 @@ export default function OffersPage() {
                         </div>
                         <div className="p-7 sm:p-8 text-center space-y-6">
                             <div className="aspect-square max-h-36 mx-auto bg-slate-950/60 rounded-2xl p-4 border border-slate-800 flex items-center justify-center overflow-hidden">
-                                <GearArt />
+                                {gearModal.kind === 'rack' ? (
+                                    <RackCatalogArt imageUrl={gearModal.item.imageUrl} />
+                                ) : (
+                                    <GearArt />
+                                )}
                             </div>
                             <div className="space-y-1.5">
                                 <h3 className="text-xl font-black text-white uppercase italic tracking-tight">{t('offers.confirm_title')}</h3>

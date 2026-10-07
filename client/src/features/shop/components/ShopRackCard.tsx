@@ -1,7 +1,7 @@
 import { Clock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { formatPrice } from '../../../shared/utils/formatPrice';
-import { MiningRackShelf } from '../../inventory2/components/MiningRackShelf';
+import { RackCatalogArt } from '../../inventory2/components/RackCatalogArt';
 import type { ShopCatalogRack } from '../lib/shop.types';
 
 interface ShopRackCardProps {
@@ -30,7 +30,7 @@ export function ShopRackCard({ rack, shopCurrency, onSelect }: ShopRackCardProps
           )}
         </div>
         <div className="flex aspect-square items-center justify-center rounded-2xl border-2 border-slate-800 bg-slate-950/80 p-4 transition-transform duration-300 group-hover:scale-105 shadow-[2px_2px_0px_#000000]">
-          <MiningRackShelf className="h-auto w-full max-w-md" />
+          <RackCatalogArt imageUrl={rack.imageUrl} />
         </div>
         <div className="space-y-1">
           <h3 className="text-lg sm:text-xl font-black text-white">
