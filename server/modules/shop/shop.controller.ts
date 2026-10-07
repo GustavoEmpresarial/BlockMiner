@@ -21,6 +21,8 @@ import {
 } from "./shop.schemas.js";
 import { purchaseFansForUser, FAN_ERROR_MESSAGE, readFanMaxBulkQuantity } from "../fans/index.js";
 import { purchaseRacksForUser, RACK_ERROR_MESSAGE, readRackMaxBulkQuantity } from "../racks/index.js";
+import { isShowcaseRackShopSku } from "../rooms/rooms.showcase.js";
+import { handleShowcaseRackCatalogPurchase } from "../rooms/rooms.showcasePurchase.js";
 
 export { readShopMaxBulkQuantity };
 
@@ -31,12 +33,15 @@ export const shopServiceRef = {
 
 export async function listMiners(req: Request, res: Response): Promise<void> {
   try {
+    const user = requireSessionUser(req, res);
+    if (!user) return;
+
     const parsedQuery = listMinersQuerySchema.safeParse(req.query);
     const page = parsedQuery.success ? parsedQuery.data.page : 1;
     const pageSize = parsedQuery.success ? parsedQuery.data.pageSize : 24;
 
     const { items, total, currency, fans, racks, fanSalesAvailableAt, rackSalesAvailableAt } =
-      await shopServiceRef.listMinersForShop(page, pageSize);
+      await shopServiceRef.listMinersForShop(page, pageSize, user.id);
 
     res.json({
       ok: true,
@@ -483,6 +488,11 @@ export async function purchaseRack(req: Request, res: Response): Promise<void> {
     }
 
     const { sku, quantity } = parsed.data;
+
+    if (isShowcaseRackShopSku(sku)) {
+      await handleShowcaseRackCatalogPurchase(req, res, "shop");
+      return;
+    }
 
     const idem = await resolveCriticalMutation(req, res);
     if (!idem) return;

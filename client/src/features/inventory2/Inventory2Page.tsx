@@ -8,7 +8,6 @@ import {
   getRooms,
   getInventory,
   postBuyRoom,
-  postBuyShowcaseRack,
   postRackInstall,
   postRackUninstall,
   postRackUninstallBatch,
@@ -60,7 +59,6 @@ export default function Inventory2Page() {
   const [summary, setSummary] = useState<RoomsSummaryState>({ totalRacks: 0, occupiedRacks: 0, freeRacks: 0 });
   const [loading, setLoading] = useState(true);
   const [buyingRoom, setBuyingRoom] = useState(false);
-  const [buyingShowcaseRack, setBuyingShowcaseRack] = useState(false);
   const [rackDismantleLoading, setRackDismantleLoading] = useState(false);
   const [rackActionBusy, setRackActionBusy] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<SelectedSlotPayload | null>(null);
@@ -80,7 +78,6 @@ export default function Inventory2Page() {
   const refreshTimerRef = useRef<number | null>(null);
   const rackMutationLock = useRef(false);
   const buyRoomLock = useRef(false);
-  const buyShowcaseLock = useRef(false);
   const backpackVaultLock = useRef(false);
   const dismantleLock = useRef(false);
   const farmRef = useRef({ rooms, inventory, summary });
@@ -259,27 +256,6 @@ export default function Inventory2Page() {
     },
     [fetchData, t],
   );
-
-  const handleBuyShowcaseRack = useCallback(async (floorSlot?: number) => {
-    if (buyShowcaseLock.current) return;
-    buyShowcaseLock.current = true;
-    setBuyingShowcaseRack(true);
-    try {
-      const res = await postBuyShowcaseRack(floorSlot);
-      if (res.data?.ok) {
-        toast.success(t('inventory.showcase_rack_bought'));
-        await fetchData();
-      } else {
-        toast.error(resolveApiPayloadMessage(res.data, t('common.error')));
-      }
-    } catch (err) {
-      logInventory2Error('INVENTORY_BUY_SHOWCASE_RACK_FAILED', err);
-      toast.error(apiErrorMessage(err, t('common.error')));
-    } finally {
-      buyShowcaseLock.current = false;
-      setBuyingShowcaseRack(false);
-    }
-  }, [fetchData, t]);
 
   const handleInstall = useCallback(
     async (rackId: number, inventoryId: number) => {
@@ -679,8 +655,6 @@ export default function Inventory2Page() {
             rackActionBusy={rackActionBusy}
             buyingRoom={buyingRoom}
             onBuyRoom={handleBuyRoom}
-            buyingShowcaseRack={buyingShowcaseRack}
-            onBuyShowcaseRack={(floorSlot) => void handleBuyShowcaseRack(floorSlot)}
             placements={currentPlacements}
             onPlaceRack={handlePlaceRack}
             mountedFans={currentMountedFans}

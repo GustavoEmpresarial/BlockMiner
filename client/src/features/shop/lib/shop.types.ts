@@ -19,6 +19,7 @@ export interface ShopCatalogFan {
   creditsPerUnit?: number;
   salesAvailableAt?: string;
   isPurchaseLive?: boolean;
+  maxQuantity?: number;
 }
 
 export type ShopCatalogRack = ShopCatalogFan;

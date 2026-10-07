@@ -2101,6 +2101,9 @@
   "racks": {
     "mining_rack_name": "Rack",
     "mining_rack_desc": "Shelf with 8 slots — install in inventory.",
+    "showcase_3d_name": "3D rack",
+    "showcase_3d_desc": "Rack for the 3D room. Buying it installs the rack in that room, up to 24.",
+    "showcase_3d_purchase_success": "{{count}} 3D rack(s) installed in the room.",
     "purchase_success": "Purchase successful!",
     "purchase_success_detail": "{{count}} rack(s) added to your inventory!",
     "errors": {
@@ -2108,7 +2111,10 @@
       "invalid_sku": "Invalid product.",
       "invalid_quantity": "Quantity must be between 1 and {{maxBulk}}.",
       "insufficient_balance": "Insufficient BLK balance.",
-      "purchase_error": "Purchase error."
+      "purchase_error": "Purchase error.",
+      "showcase_forbidden": "The 3D room is not available on this account.",
+      "showcase_full": "This room already has 24 racks.",
+      "showcase_invalid_quantity": "Invalid quantity for the 3D rack."
     }
   },
   "inventory": {
@@ -2139,6 +2145,7 @@
     "showcase_rack_empty_title": "The rack is what you pay for",
     "showcase_rack_empty_desc": "The room holds 24 racks. Each has 2 bays: one 3D machine on top and one below.",
     "showcase_buy_rack": "Buy rack for {{price}} BLK",
+    "showcase_pad_empty": "Empty pad. Buy the 3D room rack in the Shop or in Offers.",
     "showcase_rack_bought": "3D rack installed.",
     "showcase_rack_count": "{{count}} of {{max}} racks",
     "showcase_3d_only": "This room only accepts 3D machines.",

@@ -2101,6 +2101,9 @@
   "racks": {
     "mining_rack_name": "Rack",
     "mining_rack_desc": "Estantería con 8 slots — instálala en el inventario.",
+    "showcase_3d_name": "Rack 3D",
+    "showcase_3d_desc": "Rack de la Sala 3D. La compra instala el rack en la sala, hasta 24.",
+    "showcase_3d_purchase_success": "{{count}} rack(s) 3D instalado(s) en la sala.",
     "purchase_success": "¡Compra realizada!",
     "purchase_success_detail": "¡{{count}} rack(s) añadido(s) al inventario!",
     "errors": {
@@ -2108,7 +2111,10 @@
       "invalid_sku": "Producto inválido.",
       "invalid_quantity": "La cantidad debe estar entre 1 y {{maxBulk}}.",
       "insufficient_balance": "Saldo BLK insuficiente.",
-      "purchase_error": "Error al procesar la compra."
+      "purchase_error": "Error al procesar la compra.",
+      "showcase_forbidden": "La Sala 3D no está disponible en esta cuenta.",
+      "showcase_full": "Esta sala ya tiene 24 racks.",
+      "showcase_invalid_quantity": "Cantidad inválida para el rack 3D."
     }
   },
   "inventory": {
@@ -2139,6 +2145,7 @@
     "showcase_rack_empty_title": "Lo que se paga es el rack",
     "showcase_rack_empty_desc": "La sala cabe 24 racks. Cada uno tiene 2 bahías: una máquina 3D arriba y otra abajo.",
     "showcase_buy_rack": "Comprar rack por {{price}} BLK",
+    "showcase_pad_empty": "Espacio libre. El rack de la Sala 3D se compra en la Tienda o en las Ofertas.",
     "showcase_rack_bought": "Rack 3D instalado.",
     "showcase_rack_count": "{{count}} de {{max}} racks",
     "showcase_3d_only": "Esta sala solo acepta máquinas 3D.",
