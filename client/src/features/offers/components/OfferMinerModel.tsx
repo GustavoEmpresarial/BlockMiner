@@ -4,14 +4,22 @@ const OFFER_MODEL_VIEWER_SCRIPT =
   'https://cdn.jsdelivr.net/npm/@google/model-viewer@3.5.0/dist/model-viewer.min.js';
 
 /** Closer than the default frame so the GPU fills the offer stage. Radius is % of the model bounds. */
-const OFFER_MODEL_FEATURE_ORBIT = '16deg 72deg 68%';
-const OFFER_MODEL_FEATURE_FOV = '16deg';
+export const OFFER_MODEL_FEATURE_ORBIT = '16deg 72deg 68%';
+export const OFFER_MODEL_FEATURE_FOV = '16deg';
 const OFFER_MODEL_FEATURE_SPIN = '8deg';
-const OFFER_MODEL_THUMB_ORBIT = '18deg 74deg 88%';
-const OFFER_MODEL_THUMB_FOV = '20deg';
-/** Close enough that the GPU fills the wide bay instead of floating in the middle. */
-const RACK_MODEL_ORBIT = '12deg 75deg 38%';
-const RACK_MODEL_FOV = '16deg';
+export const OFFER_MODEL_THUMB_ORBIT = '18deg 74deg 88%';
+export const OFFER_MODEL_THUMB_FOV = '20deg';
+/**
+ * Percent radius is a fraction of idealCameraDistance, boundingSphere.radius / sin(fov/2).
+ * Auto-rotate yaws only. At phi 75 the end-on view is the tall projection, so framing
+ * the sphere (105%) or even the tight phi-75 fit (71%) leaves the face small in the wide bay.
+ * Phi 90 keeps the camera on the horizon. A 24-angle pixel sweep of MinerCore MCX9
+ * at the real bay boxes (651×188 and 248×66) clips below 54.5% and fits at 54.5%.
+ * Desktop alone could use 52.9%; that is about 3% of the card, so both bays share 54.5%.
+ * Offer featured and thumb keep their own orbits.
+ */
+export const RACK_MODEL_ORBIT = '12deg 90deg 54.5%';
+export const RACK_MODEL_FOV = '16deg';
 
 let modelViewerScriptPromise: Promise<void> | null = null;
 

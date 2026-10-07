@@ -40,6 +40,11 @@ const SLOT_H_PCT = 36;
 
 /** A few pixels larger than the art’s natural fit inside the shelf bay. */
 export const RACK_MACHINE_VISUAL_SCALE = 1.04;
+/**
+ * The rack camera already fills the bay height on the tall yaw. Scaling that
+ * canvas past 1 pushes the mesh through the bay.
+ */
+export const RACK_MODEL_VISUAL_SCALE = 1;
 
 function buildSlotRects(): RackSlotRect[] {
   const rects: RackSlotRect[] = [];
