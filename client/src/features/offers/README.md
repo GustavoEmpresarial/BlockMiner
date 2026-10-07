@@ -19,7 +19,9 @@ not the same checkout.
 ## Cache
 
 `writeActiveOffersCache` is module state so a sidebar remount does not blank
-the page. `ok: false` or a thrown GET must **not** wipe a successful cache.
+the page. It stores `userId`. A read for a different user returns null, so
+one account cannot see another account's 3D rack card from memory.
+`ok: false` or a thrown GET must **not** wipe a successful cache.
 Logout calls `clearActiveOffersCache`.
 
 The sidebar badge (`Sidebar.tsx`) calls `getActiveOfferEvents` (same URL,
@@ -32,7 +34,9 @@ length, or live rooms/fans/racks with at least one item.
   `OFFER_EVENT_PURCHASE_MAX_QUANTITY` on the server.
 - Fan/rack: `readGearMaxBulkQuantity(fanOffers \| rackOffers)` reads
   `maxBulkQuantity` from `GET /active`. Falling back to 25 is only for a
-  stale cache that predates that field.
+  stale cache that predates that field. An item `maxQuantity` (the 3D rack
+  sends 24) caps the stepper below that bulk limit. The server still rejects
+  a larger quantity.
 
 ## Errors
 
