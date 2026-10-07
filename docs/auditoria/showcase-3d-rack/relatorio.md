@@ -121,3 +121,21 @@ ALTER TABLE "user_rooms" ADD COLUMN IF NOT EXISTS "kind" TEXT NOT NULL DEFAULT '
 - Evidências: o texto acima. O código da aba é `468ba40`.
 - Pendências: ligar `SHOWCASE_3D_ROOM_ENABLED=1` em produção, e substituir o svg do volume se ele já existir, só depois da aprovação das capturas com máquina. As três variantes órfãs esperam o dono.
 - Commit: este arquivo
+
+## Liberação por conta
+
+Branch `fix/showcase-3d-room-allowlist`, em cima de `da5358f`. `.env.production` não foi editado. O id do dono não está nesta árvore.
+
+`SHOWCASE_3D_ROOM_ENABLED=1` continua liberando a sala para todo mundo. Com a flag desligada, `SHOWCASE_3D_ROOM_USER_IDS` é uma lista extra de ids numéricos. Quem está nela vê a sala e compra rack. Quem não está recebe o mesmo caminho de hoje: a sala não entra na lista e a compra responde `SHOWCASE_ROOM_DISABLED`.
+
+Formato, vazio por padrão:
+
+```
+SHOWCASE_3D_ROOM_USER_IDS=123,456
+```
+
+Inteiros positivos separados por vírgula. Espaço ao redor da vírgula é aceito. Texto, vazio, zero, negativo e id com zero à esquerda são ignorados. A leitura não lança e não registra a lista.
+
+A mesma função cobre a listagem, a criação da sala 101, `buyShowcaseRack` e a instalação na baia. O preço continua `readShowcaseRackPrice()`, default 1. `SHOWCASE_RACK_PRICE` não mudou.
+
+`tests/rooms/rooms.showcase.unit.test.mjs`: 9 passaram, 0 falharam. Os três caminhos e a entrada inválida estão aí. Client: `vite build` exit 0, suíte 1095 em 130, `tsc` com 61 `error TS` e nenhum arquivo deste lote.

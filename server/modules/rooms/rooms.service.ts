@@ -26,7 +26,7 @@ import { getRoomPriceQuote } from "./rooms.config.js";
 import {
   decideShowcaseInstall,
   isShowcaseRoom,
-  isShowcaseRoomEnabled,
+  isShowcaseRoomEnabledForUser,
   nextStandardRoomNumber,
   readShowcaseRackPrice,
   SHOWCASE_3D_ROOM_KIND,
@@ -138,9 +138,9 @@ export async function listRoomsForUser(userId: number) {
   if (cached) return cached;
 
   const now = new Date();
-  if (isShowcaseRoomEnabled()) await ensureShowcaseRoomForUser(userId);
+  if (isShowcaseRoomEnabledForUser(userId)) await ensureShowcaseRoomForUser(userId);
   const rooms = await roomsRepo.findRoomsWithRacksForUser(userId);
-  const result = buildListedRoomsPayload(rooms, undefined, now);
+  const result = buildListedRoomsPayload(rooms, undefined, now, userId);
   const { totalRacks, occupiedRacks, freeRacks } = countRackTotals(rooms);
   const payload: RoomsPayload = { ok: true as const, rooms: result, totalRacks, occupiedRacks, freeRacks };
   setMachinesListCache("rooms", userId, payload);
@@ -266,7 +266,7 @@ export async function buyShowcaseRackForUser(
   userId: number,
   floorSlot: number | null = null,
 ): Promise<BuyShowcaseRackResult> {
-  if (!isShowcaseRoomEnabled()) {
+  if (!isShowcaseRoomEnabledForUser(userId)) {
     return { ok: false, status: 403, code: "SHOWCASE_ROOM_DISABLED", message: "A Sala 3D está indisponível." };
   }
   const price = readShowcaseRackPrice();
@@ -435,7 +435,7 @@ async function resolveInstallMinerContext(
   if (!inventoryItem) return { status: 404, message: "Item não encontrado no inventário." };
 
   if (showcase) {
-    if (!isShowcaseRoomEnabled()) {
+    if (!isShowcaseRoomEnabledForUser(userId)) {
       return { status: 403, code: "SHOWCASE_ROOM_DISABLED", message: "A Sala 3D está indisponível." };
     }
     const decision = decideShowcaseInstall(showcaseMinerFromInventory(inventoryItem));

@@ -10,9 +10,11 @@ const {
   decideShowcaseInstall,
   isShowcase3dMiner,
   isShowcaseRoomEnabled,
+  isShowcaseRoomEnabledForUser,
   nextShowcaseRackLayout,
   nextStandardRoomNumber,
   readShowcaseRackPrice,
+  readShowcaseRoomUserIds,
   resolveShowcaseFloorSlot,
   showcaseRackAtCapacity,
   showcaseVisualCount,
@@ -104,6 +106,81 @@ test("showcase room stays hidden unless SHOWCASE_3D_ROOM_ENABLED is on", () => {
   } finally {
     if (previous === undefined) delete process.env.SHOWCASE_3D_ROOM_ENABLED;
     else process.env.SHOWCASE_3D_ROOM_ENABLED = previous;
+  }
+});
+
+function showcaseRoomRow() {
+  return {
+    id: 9,
+    roomNumber: SHOWCASE_3D_ROOM_NUMBER,
+    kind: "showcase_3d",
+    pricePaid: 0,
+    unlockedAt: new Date("2026-10-01T00:00:00.000Z"),
+    racks: [],
+  };
+}
+
+test("allowlist adds users while the global flag stays the path for everyone", () => {
+  assert.equal(isShowcaseRoomEnabledForUser(7, "1", ""), true);
+  assert.equal(isShowcaseRoomEnabledForUser(7, "1", "8"), true);
+  assert.equal(isShowcaseRoomEnabledForUser(7, "0", "7"), true);
+  assert.equal(isShowcaseRoomEnabledForUser(7, "0", "8, 7"), true);
+  assert.equal(isShowcaseRoomEnabledForUser(8, "0", "7"), false);
+  assert.equal(isShowcaseRoomEnabledForUser(7, "0", ""), false);
+  assert.equal(isShowcaseRoomEnabledForUser(7, "0", "foo"), false);
+  assert.equal(isShowcaseRoomEnabledForUser(7, "0", "-7"), false);
+  assert.equal(isShowcaseRoomEnabledForUser(7, "0", "0"), false);
+  assert.equal(isShowcaseRoomEnabledForUser(7.5, "0", "7"), false);
+  assert.deepEqual(
+    [...readShowcaseRoomUserIds("1, foo, -2, 0, 7, 01, 1.5, ")].sort((a, b) => a - b),
+    [1, 7],
+  );
+  assert.equal(readShowcaseRoomUserIds("").size, 0);
+  assert.equal(readShowcaseRoomUserIds(null).size, 0);
+});
+
+test("allowlisted user sees the room and its rack price; a user outside the list does not", () => {
+  const previousEnabled = process.env.SHOWCASE_3D_ROOM_ENABLED;
+  const previousIds = process.env.SHOWCASE_3D_ROOM_USER_IDS;
+  delete process.env.SHOWCASE_3D_ROOM_ENABLED;
+  process.env.SHOWCASE_3D_ROOM_USER_IDS = "7, foo, -1";
+  try {
+    const allowed = buildListedRoomsPayload([showcaseRoomRow()], undefined, new Date("2026-10-06T00:00:00.000Z"), 7);
+    assert.equal(allowed.length, ROOM_MAX + 1);
+    const showcase = allowed[allowed.length - 1];
+    assert.equal(showcase.roomNumber, SHOWCASE_3D_ROOM_NUMBER);
+    if (showcase.unlocked) assert.equal(showcase.showcaseRackPrice, 1);
+
+    const outsider = buildListedRoomsPayload([showcaseRoomRow()], undefined, new Date("2026-10-06T00:00:00.000Z"), 8);
+    assert.equal(outsider.length, ROOM_MAX);
+    assert.equal(outsider.some((room) => room.roomNumber === SHOWCASE_3D_ROOM_NUMBER), false);
+
+    const omitted = buildListedRoomsPayload([showcaseRoomRow()]);
+    assert.equal(omitted.some((room) => room.roomNumber === SHOWCASE_3D_ROOM_NUMBER), false);
+  } finally {
+    if (previousEnabled === undefined) delete process.env.SHOWCASE_3D_ROOM_ENABLED;
+    else process.env.SHOWCASE_3D_ROOM_ENABLED = previousEnabled;
+    if (previousIds === undefined) delete process.env.SHOWCASE_3D_ROOM_USER_IDS;
+    else process.env.SHOWCASE_3D_ROOM_USER_IDS = previousIds;
+  }
+});
+
+test("global flag lists the room for a user who is not on the allowlist", () => {
+  const previousEnabled = process.env.SHOWCASE_3D_ROOM_ENABLED;
+  const previousIds = process.env.SHOWCASE_3D_ROOM_USER_IDS;
+  process.env.SHOWCASE_3D_ROOM_ENABLED = "1";
+  process.env.SHOWCASE_3D_ROOM_USER_IDS = "8";
+  try {
+    const listed = buildListedRoomsPayload([showcaseRoomRow()], undefined, new Date("2026-10-06T00:00:00.000Z"), 7);
+    assert.equal(listed.length, ROOM_MAX + 1);
+    const showcase = listed[listed.length - 1];
+    assert.equal(showcase.roomNumber, SHOWCASE_3D_ROOM_NUMBER);
+    if (showcase.unlocked) assert.equal(showcase.showcaseRackPrice, DEFAULT_SHOWCASE_RACK_PRICE);
+  } finally {
+    if (previousEnabled === undefined) delete process.env.SHOWCASE_3D_ROOM_ENABLED;
+    else process.env.SHOWCASE_3D_ROOM_ENABLED = previousEnabled;
+    if (previousIds === undefined) delete process.env.SHOWCASE_3D_ROOM_USER_IDS;
+    else process.env.SHOWCASE_3D_ROOM_USER_IDS = previousIds;
   }
 });
 

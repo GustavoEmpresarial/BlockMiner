@@ -4,7 +4,7 @@
 import { resolveOwnedMachineImageUrl } from "../inventory/index.js";
 import { resolveOwnedMachineDisplay } from "../machines/ownedMachineDisplay.js";
 import { getRoomPriceQuote, readRoomListPrices } from "./rooms.config.js";
-import { isShowcaseRoom, isShowcaseRoomEnabled, readShowcaseRackPrice, SHOWCASE_3D_ROOM_KIND } from "./rooms.showcase.js";
+import { isShowcaseRoom, isShowcaseRoomEnabled, isShowcaseRoomEnabledForUser, readShowcaseRackPrice, SHOWCASE_3D_ROOM_KIND } from "./rooms.showcase.js";
 import { ROOM_MAX, type ListedRoomPayload, type RoomListQueryRow } from "./rooms.types.js";
 
 export function getRoomPrices(): number[] {
@@ -47,6 +47,7 @@ export function buildListedRoomsPayload(
   rooms: RoomListQueryRow[],
   _listPrices?: number[],
   now: Date = new Date(),
+  userId?: number,
 ): ListedRoomPayload[] {
   const result: ListedRoomPayload[] = [];
   for (let n = 1; n <= ROOM_MAX; n++) {
@@ -84,7 +85,8 @@ export function buildListedRoomsPayload(
     }
   }
 
-  const showcase = isShowcaseRoomEnabled() ? rooms.find((room) => isShowcaseRoom(room)) : undefined;
+  const showcaseAllowed = userId == null ? isShowcaseRoomEnabled() : isShowcaseRoomEnabledForUser(userId);
+  const showcase = showcaseAllowed ? rooms.find((room) => isShowcaseRoom(room)) : undefined;
   if (showcase) {
     result.push({
       id: showcase.id,
