@@ -51,7 +51,7 @@ Não houve SSH, não houve `deploy.py` contra a VM, não houve `docker compose b
 
 `docker-entrypoint.sh` continua com `npx prisma migrate deploy || { echo Warning; ... }` e só então sobe o `node`. Depois que o passo novo passou, esse segundo `migrate deploy` é o caso "nada pendente" (exit 0) e o servidor sobe com o schema já aplicado. Se esse segundo migrate falhar por outro motivo, o entrypoint ainda sobe o servidor. Isso não foi alterado: mudar o entrypoint para sair 1 derrubaria um container que já substituiu o antigo. Fica registrado.
 
-O `curl` do `/health` no fim do script continua com `|| true`. Não faz parte desta correção.
+O `curl` do `/health` no fim do script tinha `|| true` quando este relatório foi escrito. Isso saiu em `docs/auditoria/deploy-ready-wait/`: o script agora espera `/health/ready` e falha se o container não estiver `running`.
 
 ## Verificação do texto do script
 
