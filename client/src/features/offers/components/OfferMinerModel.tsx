@@ -10,12 +10,15 @@ const OFFER_MODEL_FEATURE_SPIN = '8deg';
 export const OFFER_MODEL_THUMB_ORBIT = '18deg 74deg 88%';
 export const OFFER_MODEL_THUMB_FOV = '20deg';
 /**
- * model-viewer turns a percent radius into a fraction of idealCameraDistance,
- * which is boundingSphere.radius / sin(fov/2). 100% fits that sphere in the
- * framed field of view, so every yaw stays inside it. 105% is the library's
- * own margin (its default orbit). The offer stage keeps a closer orbit on purpose.
+ * Percent radius is a fraction of idealCameraDistance, boundingSphere.radius / sin(fov/2).
+ * Auto-rotate yaws only. At phi 75 the end-on view is the tall projection, so framing
+ * the sphere (105%) or even the tight phi-75 fit (71%) leaves the face small in the wide bay.
+ * Phi 90 keeps the camera on the horizon. A 24-angle pixel sweep of MinerCore MCX9
+ * at the real bay boxes (651×188 and 248×66) clips below 54.5% and fits at 54.5%.
+ * Desktop alone could use 52.9%; that is about 3% of the card, so both bays share 54.5%.
+ * Offer featured and thumb keep their own orbits.
  */
-export const RACK_MODEL_ORBIT = '12deg 75deg 105%';
+export const RACK_MODEL_ORBIT = '12deg 90deg 54.5%';
 export const RACK_MODEL_FOV = '16deg';
 
 let modelViewerScriptPromise: Promise<void> | null = null;

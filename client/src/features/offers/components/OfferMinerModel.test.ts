@@ -16,10 +16,8 @@ describe('offer and rack cameras stay separate', () => {
     expect(OFFER_MODEL_THUMB_FOV).toBe('20deg');
   });
 
-  it('frames the rack orbit on the bounding sphere', () => {
-    const radius = RACK_MODEL_ORBIT.split(' ')[2] ?? '';
-    expect(radius.endsWith('%')).toBe(true);
-    expect(Number(radius.slice(0, -1))).toBeGreaterThanOrEqual(105);
+  it('frames the rack orbit on the yaw of this bay, not on the offer stage', () => {
+    expect(RACK_MODEL_ORBIT).toBe('12deg 90deg 54.5%');
     expect(RACK_MODEL_FOV).toBe('16deg');
     expect(RACK_MODEL_ORBIT).not.toBe(OFFER_MODEL_FEATURE_ORBIT);
     expect(RACK_MODEL_ORBIT).not.toBe(OFFER_MODEL_THUMB_ORBIT);
