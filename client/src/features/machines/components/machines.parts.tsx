@@ -88,7 +88,7 @@ export type MachinesRoomTabsProps = {
 export function MachinesRoomTabs({ t, rooms, activeRoom, onSelectRoom, extraTab }: MachinesRoomTabsProps) {
   return (
     <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1" role="tablist">
-      {rooms.filter((room) => room.kind !== "showcase_3d").map((room) => {
+      {rooms.map((room) => {
         const isActive = !extraTab?.active && room.roomNumber === activeRoom;
         const isUnlocked = room.unlocked;
         return (

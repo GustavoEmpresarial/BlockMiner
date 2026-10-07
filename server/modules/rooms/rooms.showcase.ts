@@ -16,8 +16,17 @@ export const SHOWCASE_RACKS_PER_ROOM = 24;
 export const SHOWCASE_RACK_PRICE_ENV_KEY = "SHOWCASE_RACK_PRICE";
 export const DEFAULT_SHOWCASE_RACK_PRICE = 1;
 
-/** Off until the 3D room is ready to show again. Set SHOWCASE_3D_ROOM_ENABLED=1 to list it. */
+/** Global switch. SHOWCASE_3D_ROOM_ENABLED=1 lists the room for every user. */
 export const SHOWCASE_3D_ROOM_ENABLED_ENV_KEY = "SHOWCASE_3D_ROOM_ENABLED";
+
+/**
+ * Extra allowlist, used only while the global switch is off.
+ * Comma-separated positive integer user ids. Empty means nobody extra.
+ * Example: SHOWCASE_3D_ROOM_USER_IDS=1001,1002
+ */
+export const SHOWCASE_3D_ROOM_USER_IDS_ENV_KEY = "SHOWCASE_3D_ROOM_USER_IDS";
+
+const SHOWCASE_USER_ID_TOKEN = /^[1-9][0-9]*$/;
 
 export const SHOWCASE_RACK_IMAGE_URL = "/media/racks/showcase-3d-rack-fit.svg";
 
@@ -36,6 +45,36 @@ export function isShowcaseRoomEnabled(
 ): boolean {
   const value = String(raw ?? "").trim().toLowerCase();
   return value === "1" || value === "true" || value === "yes" || value === "on";
+}
+
+/** Positive integer ids. Invalid tokens are skipped and never throw. */
+export function readShowcaseRoomUserIds(
+  raw: string | undefined | null = process.env[SHOWCASE_3D_ROOM_USER_IDS_ENV_KEY],
+): ReadonlySet<number> {
+  const ids = new Set<number>();
+  if (raw == null) return ids;
+  for (const part of String(raw).split(",")) {
+    const token = part.trim();
+    if (!SHOWCASE_USER_ID_TOKEN.test(token)) continue;
+    const id = Number(token);
+    if (!Number.isSafeInteger(id)) continue;
+    ids.add(id);
+  }
+  return ids;
+}
+
+/**
+ * Global flag first, then the allowlist. A user outside both stays on the off path.
+ * Does not log the list.
+ */
+export function isShowcaseRoomEnabledForUser(
+  userId: number,
+  enabledRaw: string | undefined | null = process.env[SHOWCASE_3D_ROOM_ENABLED_ENV_KEY],
+  userIdsRaw: string | undefined | null = process.env[SHOWCASE_3D_ROOM_USER_IDS_ENV_KEY],
+): boolean {
+  if (isShowcaseRoomEnabled(enabledRaw)) return true;
+  if (!Number.isSafeInteger(userId) || userId <= 0) return false;
+  return readShowcaseRoomUserIds(userIdsRaw).has(userId);
 }
 
 export function readShowcaseRackPrice(
