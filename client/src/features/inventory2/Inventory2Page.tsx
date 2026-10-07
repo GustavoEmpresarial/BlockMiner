@@ -183,7 +183,7 @@ export default function Inventory2Page() {
 
   useEffect(() => {
     if (rooms.length === 0) return;
-    if (rooms.some((room) => room.roomNumber === activeRoom && room.kind !== 'showcase_3d')) return;
+    if (rooms.some((room) => room.roomNumber === activeRoom)) return;
     const fallback = rooms.find((room) => room.kind !== 'showcase_3d' && room.unlocked)?.roomNumber ?? 1;
     setActiveRoom(fallback);
   }, [rooms, activeRoom]);
