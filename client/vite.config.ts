@@ -92,6 +92,10 @@ export default defineConfig({
         target: process.env.VITE_DEV_API_PROXY || 'http://localhost:3000',
         ws: true,
       },
+      '/media': {
+        target: process.env.VITE_DEV_API_PROXY || 'http://localhost:3000',
+        changeOrigin: true,
+      },
     },
   },
   test: {
