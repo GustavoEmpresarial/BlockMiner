@@ -1920,6 +1920,7 @@
     "send": "Enviar",
     "empty_public": "Todavía no hay mensajes.",
     "empty_private": "No hay conversaciones privadas.",
+    "search_users": "Buscar usuario",
     "pick_conversation": "Elige una conversación.",
     "unknown_user": "Usuario",
     "you": "Tú",

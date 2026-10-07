@@ -48,10 +48,12 @@ export async function sendMessage(req: Request, res: Response): Promise<void> {
   }
 }
 
-export async function getActiveUsers(_req: Request, res: Response): Promise<void> {
+export async function getActiveUsers(req: Request, res: Response): Promise<void> {
+  const user = requireSessionUser(req, res);
+  if (!user) return;
   try {
-    const usernames = await chatService.listActiveUsernames();
-    res.json({ ok: true, usernames });
+    const users = await chatService.searchChatUsers(user.id, req.query.q);
+    res.json({ ok: true, users });
   } catch {
     res.status(500).json({ ok: false, message: "Unable to fetch users." });
   }
