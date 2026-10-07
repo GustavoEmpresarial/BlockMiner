@@ -24,11 +24,19 @@ export async function createChatMessage(data: {
   });
 }
 
-export async function listRecentUsernames(take: number) {
-  return prisma.chatMessage.findMany({
+export async function searchUsersForChat(
+  where: {
+    isBanned: false;
+    id: { not: number };
+    username: { contains: string; mode: "insensitive" };
+  },
+  take: number,
+) {
+  return prisma.user.findMany({
+    where,
+    select: { id: true, username: true },
+    orderBy: { username: "asc" },
     take,
-    orderBy: { createdAt: "desc" },
-    select: { username: true },
   });
 }
 
@@ -62,18 +70,20 @@ export async function createPrivateMessage(data: { senderId: number; receiverId:
   return prisma.privateMessage.create({ data });
 }
 
-export async function listSentPrivateMessages(userId: number) {
+export async function listSentPrivateMessages(userId: number, take: number) {
   return prisma.privateMessage.findMany({
     where: { senderId: userId },
     select: { receiverId: true, receiver: { select: { username: true } }, createdAt: true },
     orderBy: { createdAt: "desc" },
+    take,
   });
 }
 
-export async function listReceivedPrivateMessages(userId: number) {
+export async function listReceivedPrivateMessages(userId: number, take: number) {
   return prisma.privateMessage.findMany({
     where: { receiverId: userId },
     select: { senderId: true, sender: { select: { username: true } }, createdAt: true },
     orderBy: { createdAt: "desc" },
+    take,
   });
 }
