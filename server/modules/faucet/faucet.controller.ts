@@ -29,7 +29,8 @@ export async function startPartnerVisit(req: Request, res: Response): Promise<vo
       res.status(400).json(featureTurnstileDenyBody(gate.code));
       return;
     }
-    const payload = await faucetService.startPartnerVisitForUser(user.id);
+    const body = req.body as { source?: unknown } | undefined;
+    const payload = await faucetService.startPartnerVisitForUser(user.id, body?.source);
     res.json(payload);
   } catch (error: unknown) {
     log.error("startPartnerVisit failed", { error: String(error) });

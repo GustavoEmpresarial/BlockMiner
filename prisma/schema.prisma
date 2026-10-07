@@ -992,6 +992,8 @@ model FaucetPartnerVisit {
   dayKey     String   @map("day_key")
   openedAt   DateTime @map("opened_at")
   eligibleAt DateTime @map("eligible_at")
+  /// click | blur | unknown. Null on rows written before the column existed.
+  source     String?  @map("source")
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 

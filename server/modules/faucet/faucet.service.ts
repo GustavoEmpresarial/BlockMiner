@@ -27,6 +27,7 @@ import { FAUCET_ERROR } from "./faucet.errors.js";
 import { buildNoRewardStatusResponse, buildStatusCore, mapPublicReward } from "./faucet.dto.js";
 import type { FaucetPartnerState, FaucetRewardInfo } from "./faucet.types.js";
 import * as faucetRepository from "./faucet.repository.js";
+import { buildFaucetClaimMeasurement, emitFaucetClaimMeasurement, normalizeFaucetPartnerVisitSource } from "./faucet.measure.js";
 import { recordTournamentAction, TOURNAMENT_ACTION_PROVIDER } from "../tournaments/index.js";
 
 const log = logger.child("faucet.service");
@@ -80,11 +81,21 @@ export function computePartnerState(
   return { hasFreshVisit, waitRemainingMs, partnerReady };
 }
 
-export async function startPartnerVisitForUser(userId: number) {
+export async function startPartnerVisitForUser(userId: number, rawSource: unknown) {
   const now = new Date();
   const todayKey = getUtcDayKey();
   const eligibleAt = new Date(now.getTime() + FAUCET_PARTNER_WAIT_MS);
   await faucetRepository.upsertFaucetPartnerVisit(userId, todayKey, now, eligibleAt);
+  const source = normalizeFaucetPartnerVisitSource(rawSource);
+  try {
+    await faucetRepository.setFaucetPartnerVisitSource(userId, todayKey, source);
+  } catch (error: unknown) {
+    try {
+      log.warn("faucet.partner_visit.source_not_stored", { userId, error: String(error) });
+    } catch {
+      // The visit is already stored. The claim clock must still start.
+    }
+  }
   return { ok: true as const, waitMs: FAUCET_PARTNER_WAIT_MS, eligibleAt: eligibleAt.getTime() };
 }
 
@@ -116,7 +127,7 @@ export type FaucetClaimResult =
   | { ok: true; message: string; nextAvailableAt: number }
   | { ok: false; code: string; status: number; message: string; remainingMs?: number };
 
-export async function claimForUser(userId: number, _req: Request): Promise<FaucetClaimResult> {
+export async function claimForUser(userId: number, req: Request): Promise<FaucetClaimResult> {
   const now = new Date();
   const reward = await getActiveReward();
   if (!reward) {
@@ -162,6 +173,29 @@ export async function claimForUser(userId: number, _req: Request): Promise<Fauce
 
   const ttlMs = faucetRewardTtlMs ?? TEMP_POWER_FALLBACK_TTL_MS;
   const durationLabel = formatRewardDurationPt(ttlMs);
+  try {
+    const audit = req.auditContext;
+    const storedSource = await faucetRepository.readFaucetPartnerVisitSource(userId);
+    emitFaucetClaimMeasurement(
+      log,
+      buildFaucetClaimMeasurement({
+        userId,
+        now,
+        openedAt: visit?.openedAt ?? null,
+        eligibleAt: visit?.eligibleAt ?? null,
+        source: storedSource,
+        userAgent: audit?.userAgent ?? null,
+        ipHash: audit?.ipHash ?? null,
+        correlationId: audit?.correlationId ?? null,
+      }),
+    );
+  } catch (error: unknown) {
+    try {
+      log.warn("faucet.claim.measure_failed", { userId, error: String(error) });
+    } catch {
+      // The reward is already granted.
+    }
+  }
   log.info("Faucet temporary power reward created", {
     userId,
     minerId: miner.id,

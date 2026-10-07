@@ -26,3 +26,23 @@ export async function upsertFaucetPartnerVisit(userId: number, dayKey: string, o
     create: { userId, dayKey, openedAt, eligibleAt },
   });
 }
+
+/** Separate from the visit upsert so a failed write cannot roll the visit back. */
+export async function setFaucetPartnerVisitSource(userId: number, dayKey: string, source: string): Promise<void> {
+  await prisma.$executeRaw`
+    UPDATE faucet_partner_visits
+    SET source = ${source}
+    WHERE user_id = ${userId} AND day_key = ${dayKey}
+  `;
+}
+
+export async function readFaucetPartnerVisitSource(userId: number): Promise<string | null> {
+  const rows = await prisma.$queryRaw<Array<{ source: string | null }>>`
+    SELECT source
+    FROM faucet_partner_visits
+    WHERE user_id = ${userId}
+    ORDER BY opened_at DESC
+    LIMIT 1
+  `;
+  return rows[0]?.source ?? null;
+}
