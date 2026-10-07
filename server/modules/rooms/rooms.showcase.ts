@@ -178,3 +178,68 @@ export function decideShowcaseInstall(machine: ShowcaseMinerRef | null | undefin
   if (!isShowcase3dMiner(machine)) return { ok: false, code: "SHOWCASE_3D_ONLY" };
   return { ok: true, blockAdjacent: false };
 }
+
+/**
+ * Shop and offer SKU for the showcase rack. Not a rack credit.
+ * Price is BLK, written as a decimal string the same way offer miners use priceBlk.
+ */
+export const SHOWCASE_RACK_SHOP_SKU = "showcase_3d_rack" as const;
+export const SHOWCASE_RACK_SHOP_PRICE_BLK = "1.5";
+export const SHOWCASE_RACK_OFFER_PRICE_BLK = "0.95";
+export const SHOWCASE_RACK_OFFER_LIST_PRICE_BLK = "1.5";
+
+export const SHOWCASE_RACK_NAME_KEY = "racks.showcase_3d_name";
+export const SHOWCASE_RACK_DESCRIPTION_KEY = "racks.showcase_3d_desc";
+
+export function isShowcaseRackShopSku(value: string): boolean {
+  return value === SHOWCASE_RACK_SHOP_SKU;
+}
+
+export function showcaseRackPriceBlk(channel: "shop" | "offer"): string {
+  return channel === "offer" ? SHOWCASE_RACK_OFFER_PRICE_BLK : SHOWCASE_RACK_SHOP_PRICE_BLK;
+}
+
+export function showcaseRackListPriceBlk(channel: "shop" | "offer"): string {
+  return channel === "offer" ? SHOWCASE_RACK_OFFER_LIST_PRICE_BLK : SHOWCASE_RACK_SHOP_PRICE_BLK;
+}
+
+export type ShowcaseRackListing = {
+  sku: typeof SHOWCASE_RACK_SHOP_SKU;
+  nameKey: string;
+  descriptionKey: string;
+  price: number;
+  listPrice: number;
+  priceBlk: string;
+  listPriceBlk: string;
+  currency: "BLK";
+  imageUrl: string;
+  creditsPerUnit: 0;
+  salesAvailableAt: string;
+  isPurchaseLive: true;
+  maxQuantity: number;
+};
+
+/** Null when the same room allowlist would hide the 3D room. No second rule. */
+export function showcaseRackListingForUser(
+  userId: number,
+  channel: "shop" | "offer",
+): ShowcaseRackListing | null {
+  if (!isShowcaseRoomEnabledForUser(userId)) return null;
+  const priceBlk = showcaseRackPriceBlk(channel);
+  const listPriceBlk = showcaseRackListPriceBlk(channel);
+  return {
+    sku: SHOWCASE_RACK_SHOP_SKU,
+    nameKey: SHOWCASE_RACK_NAME_KEY,
+    descriptionKey: SHOWCASE_RACK_DESCRIPTION_KEY,
+    price: Number(priceBlk),
+    listPrice: Number(listPriceBlk),
+    priceBlk,
+    listPriceBlk,
+    currency: "BLK",
+    imageUrl: SHOWCASE_RACK_IMAGE_URL,
+    creditsPerUnit: 0,
+    salesAvailableAt: new Date(0).toISOString(),
+    isPurchaseLive: true,
+    maxQuantity: SHOWCASE_RACKS_PER_ROOM,
+  };
+}

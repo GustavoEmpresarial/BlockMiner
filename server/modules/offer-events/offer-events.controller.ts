@@ -8,6 +8,8 @@ import { readErrorCode, requireSessionUser } from "../../shared/errors/httpStatu
 import { classifyInfrastructureError } from "../../shared/errors/prismaHttpErrors.js";
 import { purchaseFansForUser, FAN_ERROR_MESSAGE, readFanMaxBulkQuantity } from "../fans/index.js";
 import { purchaseRacksForUser, RACK_ERROR_MESSAGE, readRackMaxBulkQuantity } from "../racks/index.js";
+import { isShowcaseRackShopSku } from "../rooms/rooms.showcase.js";
+import { handleShowcaseRackCatalogPurchase } from "../rooms/rooms.showcasePurchase.js";
 import { OFFER_EVENT_PURCHASE_MAX_QUANTITY } from "./offer-events.config.js";
 import { OFFER_EVENTS_ERROR } from "./offer-events.errors.js";
 import * as svc from "./offer-events.service.js";
@@ -285,6 +287,11 @@ export async function purchaseFanOffer(req: import("express").Request, res: impo
 }
 
 export async function purchaseRackOffer(req: import("express").Request, res: import("express").Response): Promise<void> {
+  const sku = typeof req.body?.sku === "string" ? req.body.sku.trim() : "";
+  if (isShowcaseRackShopSku(sku)) {
+    await handleShowcaseRackCatalogPurchase(req, res, "offer");
+    return;
+  }
   return executeGearPurchase(req, res, {
     invalidSkuCode: "RACK_INVALID_SKU",
     getMaxBulk: readRackMaxBulkQuantity,

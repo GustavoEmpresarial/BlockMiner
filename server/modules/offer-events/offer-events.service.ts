@@ -30,6 +30,7 @@ import {
 import { buildActiveRoomOffersPayload } from "../rooms/rooms.offers.js";
 import { buildActiveFanOffersPayload } from "../fans/index.js";
 import { buildActiveRackOffersPayload } from "../racks/index.js";
+import { SHOWCASE_RACKS_PER_ROOM, showcaseRackListingForUser } from "../rooms/rooms.showcase.js";
 import { countUnlockedRoomsForUser } from "../rooms/rooms.service.js";
 import { OFFER_EVENT_DELIVERY_BATCH, OFFER_EVENT_PURCHASE_MAX_QUANTITY } from "./offer-events.config.js";
 import * as repo from "./offer-events.repository.js";
@@ -198,6 +199,30 @@ async function recordEventPurchases(
   }
 }
 
+function withShowcaseRackOffer(
+  payload: ReturnType<typeof buildActiveRackOffersPayload>,
+  userId: number | undefined,
+) {
+  if (userId == null) return payload;
+  const extra = showcaseRackListingForUser(userId, "offer");
+  if (!extra) return payload;
+  if (payload == null) {
+    return {
+      title: "Rack 3D",
+      description: "",
+      startsAt: new Date(0).toISOString(),
+      endsAt: "2099-12-31T23:59:59.999Z",
+      salesAvailableAt: new Date(0).toISOString(),
+      isLive: true,
+      isPurchaseLive: true,
+      currency: "BLK" as const,
+      maxBulkQuantity: SHOWCASE_RACKS_PER_ROOM,
+      items: [extra],
+    };
+  }
+  return { ...payload, items: [...payload.items, extra] };
+}
+
 export async function listActiveOfferEventsForUser(userId?: number) {
   const now = new Date();
   const events = await repo.listActiveOfferEvents({
@@ -228,7 +253,7 @@ export async function listActiveOfferEventsForUser(userId?: number) {
     events: events.map((e) => serializeEventPublic(e, now, claimMap, pendingDeliveryAt)),
     roomOffers: buildActiveRoomOffersPayload(now, { unlockedRoomCount }),
     fanOffers: buildActiveFanOffersPayload(now),
-    rackOffers: buildActiveRackOffersPayload(now),
+    rackOffers: withShowcaseRackOffer(buildActiveRackOffersPayload(now), userId),
     serverTime: now.toISOString(),
   };
 }

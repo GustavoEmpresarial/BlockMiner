@@ -37,8 +37,6 @@ export type Inventory2RoomContentProps = {
   rackActionBusy: boolean;
   buyingRoom: boolean;
   onBuyRoom: (roomNumber: number) => void;
-  buyingShowcaseRack?: boolean;
-  onBuyShowcaseRack?: (floorSlot: number) => void;
   placements: VisualRackPlacement[];
   onPlaceRack: (
     visualIndex: number,
@@ -183,8 +181,6 @@ export function Inventory2RoomContent({
   rackActionBusy,
   buyingRoom,
   onBuyRoom,
-  buyingShowcaseRack = false,
-  onBuyShowcaseRack,
   placements,
   onPlaceRack,
   mountedFans,
@@ -340,6 +336,16 @@ export function Inventory2RoomContent({
           const rackPending = pendingPlacement?.type === 'rack';
           const highlighted = dragOverPad === floorSlot || rackPending;
 
+          if (isShowcase) {
+            return (
+              <div
+                key={`empty-${floorSlot}`}
+                aria-label={t('inventory.showcase_pad_empty')}
+                className="flex min-h-24 cursor-default items-center justify-center self-start rounded-3xl border-2 border-dashed border-slate-800 bg-slate-950/40 px-4 py-4 text-slate-600"
+              />
+            );
+          }
+
           return (
             <div
               key={`empty-${floorSlot}`}
@@ -353,7 +359,6 @@ export function Inventory2RoomContent({
               onDrop={(e) => {
                 e.preventDefault();
                 setDragOverPad(null);
-                if (isShowcase) return;
                 const idx = parseVisualRackIndex(e.dataTransfer);
                 if (idx != null) {
                   void onPlaceRack(idx, floorSlot);
@@ -362,32 +367,20 @@ export function Inventory2RoomContent({
                 if (parseVisualFanDrag(e.dataTransfer)) onFanNeedsRack();
               }}
               onClick={() => {
-                if (isShowcase) {
-                  if (!buyingShowcaseRack) onBuyShowcaseRack?.(floorSlot);
-                  return;
-                }
                 handleEmptyPadClick(floorSlot);
               }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
-                  if (isShowcase) {
-                    if (!buyingShowcaseRack) onBuyShowcaseRack?.(floorSlot);
-                    return;
-                  }
                   handleEmptyPadClick(floorSlot);
                 }
               }}
               aria-label={
-                isShowcase && typeof currentRoom.showcaseRackPrice === 'number'
-                  ? t('inventory.showcase_buy_rack', { price: currentRoom.showcaseRackPrice })
-                  : rackPending
-                    ? t('inventory2.rack_pad_empty_selected')
-                    : t('inventory2.rack_pad_empty')
+                rackPending
+                  ? t('inventory2.rack_pad_empty_selected')
+                  : t('inventory2.rack_pad_empty')
               }
-              className={`flex cursor-pointer items-center justify-center self-start rounded-3xl border-2 border-dashed px-4 transition-colors ${
-                isShowcase ? 'min-h-24 py-4' : 'min-h-28 py-8'
-              } ${
+              className={`flex min-h-28 cursor-pointer items-center justify-center self-start rounded-3xl border-2 border-dashed px-4 py-8 transition-colors ${
                 highlighted
                   ? 'border-primary bg-primary/10 text-primary'
                   : 'border-slate-800 bg-slate-950/40 text-slate-500 hover:border-slate-600 hover:text-slate-300'
@@ -418,12 +411,15 @@ export function Inventory2RoomContent({
       {(occupiedSlots.length > 0 || isShowcase) && (
         <div className="flex flex-wrap items-center justify-between gap-3">
           {isShowcase ? (
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              {t('inventory.showcase_rack_count', {
-                count: visualRacksOfCurrent.length,
-                max: SHOWCASE_RACKS_PER_ROOM,
-              })}
-            </p>
+            <div className="space-y-1">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                {t('inventory.showcase_rack_count', {
+                  count: visualRacksOfCurrent.length,
+                  max: SHOWCASE_RACKS_PER_ROOM,
+                })}
+              </p>
+              <p className="text-xs font-medium text-slate-500">{t('inventory.showcase_pad_empty')}</p>
+            </div>
           ) : (
             <span />
           )}

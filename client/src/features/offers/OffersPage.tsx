@@ -172,8 +172,9 @@ export default function OffersPage() {
     const offerDateLocale = OFFER_DATE_LOCALE;
     const authHydrated = useAuthStore((s) => s.authHydrated);
     const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+    const userId = useAuthStore((s) => s.user?.id);
     const { fetchAll } = useGameStore();
-    const cached = readActiveOffersCache();
+    const cached = readActiveOffersCache(userId);
     const [events, setEvents] = useState<OfferEventDTO[]>(() => cached?.events ?? []);
     const [roomOffers, setRoomOffers] = useState<RoomOffersDTO | null>(() => cached?.roomOffers ?? null);
     const [fanOffers, setFanOffers] = useState<FanOffersDTO | null>(() => cached?.fanOffers ?? null);
@@ -193,7 +194,7 @@ export default function OffersPage() {
     const load = useCallback(async (opts?: { replaceRooms?: boolean }) => {
         if (!authHydrated || !isAuthenticated) return;
         const requestId = ++requestIdRef.current;
-        const firstPaint = !hasLoadedRef.current && readActiveOffersCache() == null;
+        const firstPaint = !hasLoadedRef.current && readActiveOffersCache(userId) == null;
         try {
             if (firstPaint) setLoading(true);
             const res = await getActiveOfferEvents();
@@ -207,14 +208,14 @@ export default function OffersPage() {
             const nextRacks = body.rackOffers ?? null;
             // Soft refresh must not wipe live room cards on a flaky null; buy/unlock uses replaceRooms.
             if (!opts?.replaceRooms && nextRooms == null) {
-                const prevRooms = readActiveOffersCache()?.roomOffers ?? null;
+                const prevRooms = readActiveOffersCache(userId)?.roomOffers ?? null;
                 if (hasLiveRoomOffers(prevRooms)) nextRooms = prevRooms;
             }
             setEvents(nextEvents);
             setRoomOffers(nextRooms);
             setFanOffers(nextFans);
             setRackOffers(nextRacks);
-            writeActiveOffersCache({ events: nextEvents, roomOffers: nextRooms, fanOffers: nextFans, rackOffers: nextRacks });
+            writeActiveOffersCache({ events: nextEvents, roomOffers: nextRooms, fanOffers: nextFans, rackOffers: nextRacks }, userId);
             hasLoadedRef.current = true;
         } catch (e) {
             if (requestId !== requestIdRef.current) return;
@@ -225,7 +226,7 @@ export default function OffersPage() {
         }
         // Intentionally omit `t` — i18n identity churn must not refetch and flash the page.
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [authHydrated, isAuthenticated]);
+    }, [authHydrated, isAuthenticated, userId]);
 
     const handleBuyRoom = async () => {
         if (buyingRoom) return;
@@ -319,9 +320,14 @@ export default function OffersPage() {
     };
 
     const GearArt = gearModal ? GEAR[gearModal.kind].Art : FanOfferArt;
-    const gearMaxQty = gearModal
+    const sectionMaxQty = gearModal
         ? readGearMaxBulkQuantity(gearModal.kind === 'fan' ? fanOffers : rackOffers)
         : OFFER_PURCHASE_MAX_QUANTITY;
+    const itemMaxQty = gearModal?.item.maxQuantity;
+    const gearMaxQty =
+        itemMaxQty != null && Number.isInteger(itemMaxQty) && itemMaxQty >= 1
+            ? Math.min(sectionMaxQty, itemMaxQty)
+            : sectionMaxQty;
 
     const pageHeader = (
         <div className="space-y-2">
