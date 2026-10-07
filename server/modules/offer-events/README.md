@@ -18,13 +18,20 @@ Client owners:
 |---|---|---|---|
 | Event miners | `listActiveOfferEventsForUser` → `serializeEventPublic` | `POST /offer-events/purchase` | Prisma `offerEvent` |
 | Fans | `buildActiveFanOffersPayload` | `POST /offer-events/purchase-fan` → `purchaseFansForUser(..., "offer")` | `fans/` SKU `cooling_fan_system` |
-| Racks | `buildActiveRackOffersPayload` | `POST /offer-events/purchase-rack` → `purchaseRacksForUser(..., "offer")` | `racks/` SKU `mining_rack_shelf` |
+| Racks | `buildActiveRackOffersPayload`, plus `showcaseRackListingForUser` when the 3D room allowlist allows the caller | `POST /offer-events/purchase-rack` → `purchaseRacksForUser` for `mining_rack_shelf`, or `purchaseShowcaseRacksForChannel(..., "offer")` for `showcase_3d_rack` | shelf credits, or one installed 3D rack at `0.95` BLK |
 | Next room | `buildActiveRoomOffersPayload` | `POST /rooms/buy` (not this router) | `rooms/` |
 
 A fan SKU posted to `/purchase-rack` (or the reverse) fails catalog
 normalization. The client maps `GearKind` → the matching wrapper
 (`postOfferFanPurchase` / `postOfferRackPurchase`); the server does not
 trust the UI.
+
+`showcase_3d_rack` is not a rack credit. The same POST installs racks in
+room 101 and debits `SHOWCASE_RACK_OFFER_PRICE_BLK` (`0.95`). The shop
+twin is `POST /shop/purchase-rack` at `1.5` BLK. Both refuse callers who
+fail `isShowcaseRoomEnabledForUser`. The in-room `POST /rooms/showcase-rack/buy`
+stays for cached clients and still uses `SHOWCASE_RACK_PRICE` (default 1).
+The room UI no longer sends it. Quantity cannot pass 24 racks in that room.
 
 ## User endpoints (`offerEventsRouter`, mounted at `/api/offer-events`)
 

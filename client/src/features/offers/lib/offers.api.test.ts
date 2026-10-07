@@ -67,6 +67,12 @@ describe('cache de ofertas ativas', () => {
     expect(cached?.roomOffers).toBeNull();
   });
 
+  it('não devolve o cache de outro usuário', () => {
+    writeActiveOffersCache(payload(), 11);
+    expect(readActiveOffersCache(11)?.rackOffers).toBeNull();
+    expect(readActiveOffersCache(22)).toBeNull();
+  });
+
   it('clear zera — é o caminho do logout, que não pode deixar oferta de outra sessão na tela', () => {
     writeActiveOffersCache(payload());
     clearActiveOffersCache();

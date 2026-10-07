@@ -495,3 +495,23 @@ describe('Inventory2RoomContent — room dismantle modal', () => {
     expect(screen.getByLabelText('Desmontar a sala inteira e enviar todas as máquinas para o inventário')).toBeDisabled();
   });
 });
+
+describe('Inventory2RoomContent — showcase room does not sell the rack', () => {
+  it('empty pads are not buy buttons', () => {
+    render(
+      withProviders(
+        <Inventory2RoomContent
+          {...baseProps({
+            currentRoom: { roomNumber: 101, unlocked: true, racks: [], kind: 'showcase_3d' },
+          })}
+        />,
+      ),
+    );
+    expect(screen.queryByRole('button', { name: /comprar rack/i })).not.toBeInTheDocument();
+    const pads = screen.getAllByLabelText(/espaço livre/i);
+    expect(pads.length).toBeGreaterThan(0);
+    for (const pad of pads) {
+      expect(pad.getAttribute('role')).not.toBe('button');
+    }
+  });
+});

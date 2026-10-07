@@ -58,6 +58,7 @@ export interface FanOfferItemDTO {
   creditsPerUnit?: number;
   salesAvailableAt?: string;
   isPurchaseLive?: boolean;
+  maxQuantity?: number;
 }
 
 export type FanOffersDTO = {
@@ -110,17 +111,23 @@ export type ActiveOffersCache = {
   roomOffers: RoomOffersDTO | null;
   fanOffers: FanOffersDTO | null;
   rackOffers: RackOffersDTO | null;
+  userId?: number;
   fetchedAtMs: number;
 };
 
 let activeOffersCache: ActiveOffersCache | null = null;
 
-export function readActiveOffersCache(): ActiveOffersCache | null {
+export function readActiveOffersCache(expectedUserId?: number): ActiveOffersCache | null {
+  if (!activeOffersCache) return null;
+  if (expectedUserId != null && activeOffersCache.userId !== expectedUserId) return null;
   return activeOffersCache;
 }
 
-export function writeActiveOffersCache(next: Omit<ActiveOffersCache, 'fetchedAtMs'>): ActiveOffersCache {
-  activeOffersCache = { ...next, fetchedAtMs: Date.now() };
+export function writeActiveOffersCache(
+  next: Omit<ActiveOffersCache, 'fetchedAtMs' | 'userId'>,
+  userId?: number,
+): ActiveOffersCache {
+  activeOffersCache = { ...next, userId, fetchedAtMs: Date.now() };
   return activeOffersCache;
 }
 

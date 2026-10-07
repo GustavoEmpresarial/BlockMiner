@@ -60,7 +60,12 @@ export function useShopPurchase() {
   const confirmPurchase = async () => {
     if (!modal || buying) return;
 
-    const qty = Math.min(MAX_SHOP_QTY, Math.max(1, Number(quantity) || 1));
+    const catalogMax = modal.kind === 'miner' ? undefined : modal.item.maxQuantity;
+    const qtyCap =
+      catalogMax != null && Number.isInteger(catalogMax) && catalogMax >= 1
+        ? Math.min(MAX_SHOP_QTY, catalogMax)
+        : MAX_SHOP_QTY;
+    const qty = Math.min(qtyCap, Math.max(1, Number(quantity) || 1));
     if (!Number.isInteger(qty)) {
       toast.error(t('shop.invalid_quantity', { defaultValue: 'Quantidade inválida.' }));
       return;
@@ -158,7 +163,10 @@ export function useShopPurchase() {
     modal,
     buying,
     quantity,
-    maxQty: MAX_SHOP_QTY,
+    maxQty:
+      modal && modal.kind !== 'miner' && modal.item.maxQuantity != null && Number.isInteger(modal.item.maxQuantity) && modal.item.maxQuantity >= 1
+        ? Math.min(MAX_SHOP_QTY, modal.item.maxQuantity)
+        : MAX_SHOP_QTY,
     setQuantity,
     openMinerModal,
     openFanModal,
