@@ -2,12 +2,43 @@
  * Multiwall Ads PTC HTTP handlers.
  */
 import type { Request, Response } from "express";
+import { reportError } from "../../core/errors/index.js";
 import { requireSessionUser } from "../../shared/errors/httpStatusError.js";
+import { classifyInfrastructureError } from "../../shared/errors/prismaHttpErrors.js";
 import { logger } from "../../core/logger/index.js";
 import { consumeOfferwallPass, extractPassToken } from "../bm-captcha/index.js";
+import { MULTIWALL_ERROR } from "./multiwall.errors.js";
 import * as multiwallService from "./multiwall.service.js";
 
 const log = logger.child("multiwall.controller");
+
+function userIdOf(req: Request): number | undefined {
+  const id = req.user?.id;
+  return typeof id === "number" ? id : undefined;
+}
+
+function reportCaught(
+  req: Request,
+  code: string,
+  operation: string,
+  error: unknown,
+  context: Record<string, unknown>,
+  impact: "MEDIUM" | "HIGH",
+): string {
+  const infra = classifyInfrastructureError(error);
+  const report = reportError({
+    code,
+    category: infra ? "DATABASE" : "UNKNOWN",
+    severity: "ERROR",
+    impact,
+    module: "multiwall",
+    operation,
+    error,
+    context,
+    req,
+  });
+  return report.errorId;
+}
 
 function getClientIp(req: Request): string {
   const cfIp = req.headers["cf-connecting-ip"];
@@ -54,7 +85,7 @@ export async function multiwallPostback(req: Request, res: Response): Promise<vo
         return;
     }
   } catch (error: unknown) {
-    log.error("postback.unhandled", { error: String(error) });
+    reportCaught(req, MULTIWALL_ERROR.POSTBACK_FAILED, "multiwallPostback", error, {}, "HIGH");
     res.status(500).send("er");
   }
 }
@@ -67,8 +98,8 @@ export async function getMultiwallHistory(req: Request, res: Response): Promise<
     const payload = await multiwallService.getHistoryForUser(user.id, page);
     res.json({ ok: true, ...payload });
   } catch (error: unknown) {
-    log.error("history failed", { error: String(error) });
-    res.status(500).json({ ok: false, message: "Error loading history." });
+    const errorId = reportCaught(req, MULTIWALL_ERROR.HISTORY_FAILED, "getMultiwallHistory", error, { userId: userIdOf(req) }, "MEDIUM");
+    res.status(500).json({ ok: false, message: "Error loading history.", errorId });
   }
 }
 
@@ -79,8 +110,8 @@ export async function getMultiwallStats(req: Request, res: Response): Promise<vo
     const payload = await multiwallService.getStatsForUser(user.id);
     res.json({ ok: true, ...payload });
   } catch (error: unknown) {
-    log.error("stats failed", { error: String(error) });
-    res.status(500).json({ ok: false, message: "Error loading stats." });
+    const errorId = reportCaught(req, MULTIWALL_ERROR.STATS_FAILED, "getMultiwallStats", error, { userId: userIdOf(req) }, "MEDIUM");
+    res.status(500).json({ ok: false, message: "Error loading stats.", errorId });
   }
 }
 
@@ -105,7 +136,7 @@ export async function getMultiwallEmbed(req: Request, res: Response): Promise<vo
     }
     res.json({ ok: true, url });
   } catch (error: unknown) {
-    log.error("embed failed", { error: String(error) });
-    res.status(500).json({ ok: false, message: "Error loading embed." });
+    const errorId = reportCaught(req, MULTIWALL_ERROR.EMBED_FAILED, "getMultiwallEmbed", error, { userId: userIdOf(req) }, "MEDIUM");
+    res.status(500).json({ ok: false, message: "Error loading embed.", errorId });
   }
 }

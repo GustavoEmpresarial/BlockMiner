@@ -1,9 +1,36 @@
 import type { Request, Response } from "express";
+import { reportError } from "../../core/errors/index.js";
 import { requireSessionUser } from "../../shared/errors/httpStatusError.js";
-import { logger } from "../../core/logger/index.js";
+import { classifyInfrastructureError } from "../../shared/errors/prismaHttpErrors.js";
+import { BM_CAPTCHA_ERROR } from "./bm-captcha.errors.js";
 import * as bmCaptcha from "./bm-captcha.service.js";
 
-const log = logger.child("bm-captcha.controller");
+function userIdOf(req: Request): number | undefined {
+  const id = req.user?.id;
+  return typeof id === "number" ? id : undefined;
+}
+
+function failed(
+  res: Response,
+  req: Request,
+  code: string,
+  operation: string,
+  error: unknown,
+): void {
+  const infra = classifyInfrastructureError(error);
+  const report = reportError({
+    code,
+    category: infra ? "DATABASE" : "UNKNOWN",
+    severity: "ERROR",
+    impact: "MEDIUM",
+    module: "bm-captcha",
+    operation,
+    error,
+    context: { userId: userIdOf(req) },
+    req,
+  });
+  res.status(500).json({ ok: false, code: "INTERNAL", errorId: report.errorId });
+}
 
 /** POST /api/bm-captcha/challenge */
 export async function postChallenge(req: Request, res: Response): Promise<void> {
@@ -19,8 +46,7 @@ export async function postChallenge(req: Request, res: Response): Promise<void> 
     }
     res.json({ ok: true, challenge: result.challenge });
   } catch (err: unknown) {
-    log.error("bm_captcha.challenge_failed", { error: String(err) });
-    res.status(500).json({ ok: false, code: "INTERNAL" });
+    failed(res, req, BM_CAPTCHA_ERROR.CHALLENGE_FAILED, "postChallenge", err);
   }
 }
 
@@ -44,7 +70,6 @@ export async function postVerify(req: Request, res: Response): Promise<void> {
     }
     res.json({ ok: true, passToken: result.passToken, expiresAt: result.expiresAt });
   } catch (err: unknown) {
-    log.error("bm_captcha.verify_failed", { error: String(err) });
-    res.status(500).json({ ok: false, code: "INTERNAL" });
+    failed(res, req, BM_CAPTCHA_ERROR.VERIFY_FAILED, "postVerify", err);
   }
 }

@@ -127,6 +127,11 @@ TARGET_DEFAULTS = {
 
 
 def _docker_stack(compose_file: str, health_port: int) -> str:
+    # Staging's DATABASE_URL is the compose service `db`. Prod must not start that
+    # service: it is behind profile local-db and would boot an empty Postgres.
+    staging_db = ""
+    if compose_file == "docker-compose.staging.yml":
+        staging_db = "compose up -d db\n"
     return f'''
 export APP_ROOT
 export BLOCKMINER_DOCKER_BUILD_NO_CACHE="${{BLOCKMINER_DOCKER_BUILD_NO_CACHE:-0}}"
@@ -146,10 +151,24 @@ fi
 compose up -d --remove-orphans redis kafka phd nginx stats-materializer
 # `db` is profile local-db. Naming it on the command line starts an empty local Postgres.
 docker rm -f blockminer-current-db >/dev/null 2>&1 || true
+{staging_db}
+# Migrate BEFORE recreating the app. The previous container keeps the published port
+# and keeps serving. compose run does not publish ports unless --service-ports, and it
+# does not replace container_name. --entrypoint npx skips docker-entrypoint.sh, which
+# swallows a failed migrate and then starts the server. --no-deps must not name `db`
+# on prod (see the comment above). A non-zero exit aborts this script: set -euo pipefail
+# is already on, and the if below exits 1. `prisma migrate deploy` exits 0 when there
+# is nothing to apply ("No pending migrations to apply."), so a normal deploy still
+# reaches the recreate. A real failure (unreachable database, failed SQL, a recorded
+# failed migration) exits 1 and must not be swallowed.
+echo "[vm] prisma migrate deploy, antes de recriar o app"
+if ! compose run --rm --no-deps --entrypoint npx app prisma migrate deploy --schema=prisma/schema.prisma; then
+  echo "ALERTA: prisma migrate deploy falhou. O app que atende trafego NAO foi recriado. O site anterior continua no ar." >&2
+  exit 1
+fi
 # Force-recreate app so bind mounts (client/dist, dist/) pick up fresh directory inodes
 # after git pull / SPA rebuild — otherwise Docker can keep an empty stale mount.
 compose up -d --force-recreate --no-deps app
-compose exec -T app npx prisma migrate deploy --schema=prisma/schema.prisma || true
 curl -sS -o /dev/null -w "health:%{{http_code}}\\n" http://127.0.0.1:{health_port}/health || true
 echo "[vm] docker steps finished"
 '''

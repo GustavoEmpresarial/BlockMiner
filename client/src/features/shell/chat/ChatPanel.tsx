@@ -37,6 +37,8 @@ export default function ChatPanel() {
   const unreadPms = useGameStore((s) => s.unreadPms);
   const fetchMessages = useGameStore((s) => s.fetchMessages);
   const fetchConversations = useGameStore((s) => s.fetchConversations);
+  const searchChatUsers = useGameStore((s) => s.searchChatUsers);
+  const chatUserHits = useGameStore((s) => s.chatUserHits);
   const fetchPrivateMessages = useGameStore((s) => s.fetchPrivateMessages);
   const sendMessage = useGameStore((s) => s.sendMessage);
   const sendPrivateMessage = useGameStore((s) => s.sendPrivateMessage);
@@ -52,6 +54,7 @@ export default function ChatPanel() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activePeer, setActivePeer] = useState<{ userId: number; username: string | null } | null>(null);
+  const [userQuery, setUserQuery] = useState('');
 
   useEffect(() => {
     if (!isChatOpen) return;
@@ -217,26 +220,57 @@ export default function ChatPanel() {
               ),
             )
           )
-        ) : conversationRows.length === 0 ? (
-          <p className="py-8 text-center text-[10px] font-bold uppercase tracking-widest text-slate-400">{t('chat.empty_private')}</p>
         ) : (
           <div className="space-y-3">
-            <div className="flex flex-wrap gap-2">
-              {conversationRows.map((row) => (
-                <button
-                  key={row.userId}
-                  type="button"
-                  onClick={() => openConversation(row)}
-                  className={`rounded-xl border-2 px-3 py-2 text-xs font-bold ${
-                    activePeer?.userId === row.userId
-                      ? 'border-primary/25 bg-primary/10 text-primary'
-                      : 'border-slate-800 text-slate-300 hover:border-slate-600 hover:text-white'
-                  }`}
-                >
-                  {row.username ?? t('chat.unknown_user')}
-                </button>
-              ))}
-            </div>
+            <input
+              value={userQuery}
+              onChange={(event) => {
+                const value = event.target.value;
+                setUserQuery(value);
+                searchChatUsers(value);
+              }}
+              placeholder={t('chat.search_users')}
+              aria-label={t('chat.search_users')}
+              className="w-full rounded-xl border-2 border-slate-800 bg-slate-900/60 px-3 py-2 text-sm text-slate-200 outline-none focus:border-primary/50"
+            />
+            {chatUserHits.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {chatUserHits.map((hit) => (
+                  <button
+                    key={hit.id}
+                    type="button"
+                    onClick={() => {
+                      openConversation({ userId: hit.id, username: hit.username });
+                      setUserQuery('');
+                      searchChatUsers('');
+                    }}
+                    className="rounded-xl border-2 border-slate-800 px-3 py-2 text-xs font-bold text-slate-300 hover:border-slate-600 hover:text-white"
+                  >
+                    {hit.username}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+            {conversationRows.length === 0 ? (
+              <p className="py-8 text-center text-[10px] font-bold uppercase tracking-widest text-slate-400">{t('chat.empty_private')}</p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {conversationRows.map((row) => (
+                  <button
+                    key={row.userId}
+                    type="button"
+                    onClick={() => openConversation(row)}
+                    className={`rounded-xl border-2 px-3 py-2 text-xs font-bold ${
+                      activePeer?.userId === row.userId
+                        ? 'border-primary/25 bg-primary/10 text-primary'
+                        : 'border-slate-800 text-slate-300 hover:border-slate-600 hover:text-white'
+                    }`}
+                  >
+                    {row.username ?? t('chat.unknown_user')}
+                  </button>
+                ))}
+              </div>
+            )}
             {activePeer ? (
               privateTimeline.length === 0 ? null : (
                 privateTimeline.map((item) =>
@@ -256,9 +290,9 @@ export default function ChatPanel() {
                   ),
                 )
               )
-            ) : (
+            ) : conversationRows.length > 0 ? (
               <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{t('chat.pick_conversation')}</p>
-            )}
+            ) : null}
           </div>
         )}
         <div ref={endRef} />

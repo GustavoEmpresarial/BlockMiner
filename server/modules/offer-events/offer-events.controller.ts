@@ -3,14 +3,51 @@ import {
   finalizeCriticalMutationSuccess,
   resolveCriticalMutation,
 } from "../../core/http/middleware/idempotency.js";
-import { logger } from "../../core/logger/index.js";
+import { reportError } from "../../core/errors/index.js";
 import { readErrorCode, requireSessionUser } from "../../shared/errors/httpStatusError.js";
+import { classifyInfrastructureError } from "../../shared/errors/prismaHttpErrors.js";
 import { purchaseFansForUser, FAN_ERROR_MESSAGE, readFanMaxBulkQuantity } from "../fans/index.js";
 import { purchaseRacksForUser, RACK_ERROR_MESSAGE, readRackMaxBulkQuantity } from "../racks/index.js";
 import { OFFER_EVENT_PURCHASE_MAX_QUANTITY } from "./offer-events.config.js";
+import { OFFER_EVENTS_ERROR } from "./offer-events.errors.js";
 import * as svc from "./offer-events.service.js";
 
-const log = logger.child("offer-events.controller");
+type OfferReq = import("express").Request;
+type OfferRes = import("express").Response;
+
+function userIdOf(req: OfferReq): number | undefined {
+  const id = req.user?.id;
+  return typeof id === "number" ? id : undefined;
+}
+
+/**
+ * Reports the failure and answers with the occurrence id.
+ * Status and the existing JSON keys stay. `errorId` is the only new field.
+ * A database failure is labeled DATABASE in the report; the HTTP status stays 500.
+ */
+function failed(
+  res: OfferRes,
+  req: OfferReq,
+  code: string,
+  operation: string,
+  error: unknown,
+  context: Record<string, unknown>,
+  body: Record<string, unknown>,
+): void {
+  const infra = classifyInfrastructureError(error);
+  const report = reportError({
+    code,
+    category: infra ? "DATABASE" : "UNKNOWN",
+    severity: "ERROR",
+    impact: operation === "listActiveOfferEvents" ? "MEDIUM" : "HIGH",
+    module: "offer-events",
+    operation,
+    error,
+    context,
+    req,
+  });
+  res.status(500).json({ ...body, errorId: report.errorId });
+}
 
 export async function listActiveOfferEvents(req: import("express").Request, res: import("express").Response): Promise<void> {
   try {
@@ -19,8 +56,10 @@ export async function listActiveOfferEvents(req: import("express").Request, res:
     const data = await svc.listActiveOfferEventsForUser(user.id);
     res.json({ ok: true, ...data });
   } catch (e) {
-    log.error("listActiveOfferEvents", { error: String(e) });
-    res.status(500).json({ ok: false, message: "Unable to load offer events." });
+    failed(res, req, OFFER_EVENTS_ERROR.LIST_FAILED, "listActiveOfferEvents", e, { userId: userIdOf(req) }, {
+      ok: false,
+      message: "Unable to load offer events.",
+    });
   }
 }
 
@@ -67,8 +106,10 @@ export async function purchaseOfferMiner(req: import("express").Request, res: im
       throw inner;
     }
   } catch (e) {
-    log.error("purchaseOfferMiner", { error: String(e) });
-    res.status(500).json({ ok: false, message: "Purchase failed." });
+    failed(res, req, OFFER_EVENTS_ERROR.PURCHASE_FAILED, "purchaseOfferMiner", e, { userId: userIdOf(req) }, {
+      ok: false,
+      message: "Purchase failed.",
+    });
   }
 }
 
@@ -172,6 +213,7 @@ async function executeGearPurchase(
     successMessage: (qty: number) => string;
     creditField: "fanCredits" | "rackCredits";
     logName: string;
+    failedCode: string;
   },
 ): Promise<void> {
   try {
@@ -221,8 +263,10 @@ async function executeGearPurchase(
       throw inner;
     }
   } catch (e) {
-    log.error(config.logName, { error: String(e) });
-    res.status(500).json({ ok: false, message: "Purchase failed." });
+    failed(res, req, config.failedCode, config.logName, e, { userId: userIdOf(req) }, {
+      ok: false,
+      message: "Purchase failed.",
+    });
   }
 }
 
@@ -236,6 +280,7 @@ export async function purchaseFanOffer(req: import("express").Request, res: impo
     successMessage: (qty: number) => `${qty} fan unit(s) added to your inventory!`,
     creditField: "fanCredits",
     logName: "purchaseFanOffer",
+    failedCode: OFFER_EVENTS_ERROR.FAN_PURCHASE_FAILED,
   });
 }
 
@@ -249,5 +294,6 @@ export async function purchaseRackOffer(req: import("express").Request, res: imp
     successMessage: (qty: number) => `${qty} rack(s) added to your inventory!`,
     creditField: "rackCredits",
     logName: "purchaseRackOffer",
+    failedCode: OFFER_EVENTS_ERROR.RACK_PURCHASE_FAILED,
   });
 }

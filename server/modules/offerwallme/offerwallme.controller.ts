@@ -2,12 +2,43 @@
  * Ported from dist offerwallme.controller.js + captcha-gated embed URL.
  */
 import type { Request, Response } from "express";
+import { reportError } from "../../core/errors/index.js";
 import { requireSessionUser } from "../../shared/errors/httpStatusError.js";
+import { classifyInfrastructureError } from "../../shared/errors/prismaHttpErrors.js";
 import { logger } from "../../core/logger/index.js";
 import { consumeOfferwallPass, extractPassToken } from "../bm-captcha/index.js";
+import { OFFERWALLME_ERROR } from "./offerwallme.errors.js";
 import * as offerwallmeService from "./offerwallme.service.js";
 
 const log = logger.child("offerwallme.controller");
+
+function userIdOf(req: Request): number | undefined {
+  const id = req.user?.id;
+  return typeof id === "number" ? id : undefined;
+}
+
+function reportCaught(
+  req: Request,
+  code: string,
+  operation: string,
+  error: unknown,
+  context: Record<string, unknown>,
+  impact: "MEDIUM" | "HIGH",
+): string {
+  const infra = classifyInfrastructureError(error);
+  const report = reportError({
+    code,
+    category: infra ? "DATABASE" : "UNKNOWN",
+    severity: "ERROR",
+    impact,
+    module: "offerwallme",
+    operation,
+    error,
+    context,
+    req,
+  });
+  return report.errorId;
+}
 
 function getClientIp(req: Request): string {
   const cfIp = req.headers["cf-connecting-ip"];
@@ -58,7 +89,7 @@ export async function offerwallMePostback(req: Request, res: Response): Promise<
         return;
     }
   } catch (error: unknown) {
-    log.error("postback.unhandled", { error: String(error) });
+    reportCaught(req, OFFERWALLME_ERROR.POSTBACK_FAILED, "offerwallMePostback", error, {}, "HIGH");
     res.status(500).send("ERROR: Internal");
   }
 }
@@ -71,8 +102,8 @@ export async function getOfferwallMeHistory(req: Request, res: Response): Promis
     const payload = await offerwallmeService.getHistoryForUser(user.id, page);
     res.json({ ok: true, ...payload });
   } catch (error: unknown) {
-    log.error("history failed", { error: String(error) });
-    res.status(500).json({ ok: false, message: "Error loading history." });
+    const errorId = reportCaught(req, OFFERWALLME_ERROR.HISTORY_FAILED, "getOfferwallMeHistory", error, { userId: userIdOf(req) }, "MEDIUM");
+    res.status(500).json({ ok: false, message: "Error loading history.", errorId });
   }
 }
 
@@ -87,8 +118,8 @@ export async function getOfferwallMeStats(req: Request, res: Response): Promise<
       ...payload,
     });
   } catch (error: unknown) {
-    log.error("stats failed", { error: String(error) });
-    res.status(500).json({ ok: false, message: "Error loading stats." });
+    const errorId = reportCaught(req, OFFERWALLME_ERROR.STATS_FAILED, "getOfferwallMeStats", error, { userId: userIdOf(req) }, "MEDIUM");
+    res.status(500).json({ ok: false, message: "Error loading stats.", errorId });
   }
 }
 
@@ -136,8 +167,8 @@ export async function getOfferwallMeEmbed(req: Request, res: Response): Promise<
     const url = offerwallmeService.buildOfferwallMeUrl(user.id);
     res.json({ ok: true, url });
   } catch (error: unknown) {
-    log.error("embed failed", { error: String(error) });
-    res.status(500).json({ ok: false, message: "Error loading embed." });
+    const errorId = reportCaught(req, OFFERWALLME_ERROR.EMBED_FAILED, "getOfferwallMeEmbed", error, { userId: userIdOf(req) }, "MEDIUM");
+    res.status(500).json({ ok: false, message: "Error loading embed.", errorId });
   }
 }
 
@@ -173,7 +204,7 @@ export async function getOfferwallMeLink(req: Request, res: Response): Promise<v
     const url = offerwallmeService.buildOfferwallMeUrl(user.id);
     res.json({ ok: true, url });
   } catch (error: unknown) {
-    log.error("link failed", { error: String(error) });
-    res.status(500).json({ ok: false, message: "Error loading link." });
+    const errorId = reportCaught(req, OFFERWALLME_ERROR.LINK_FAILED, "getOfferwallMeLink", error, { userId: userIdOf(req) }, "MEDIUM");
+    res.status(500).json({ ok: false, message: "Error loading link.", errorId });
   }
 }
