@@ -4,14 +4,19 @@ const OFFER_MODEL_VIEWER_SCRIPT =
   'https://cdn.jsdelivr.net/npm/@google/model-viewer@3.5.0/dist/model-viewer.min.js';
 
 /** Closer than the default frame so the GPU fills the offer stage. Radius is % of the model bounds. */
-const OFFER_MODEL_FEATURE_ORBIT = '16deg 72deg 68%';
-const OFFER_MODEL_FEATURE_FOV = '16deg';
+export const OFFER_MODEL_FEATURE_ORBIT = '16deg 72deg 68%';
+export const OFFER_MODEL_FEATURE_FOV = '16deg';
 const OFFER_MODEL_FEATURE_SPIN = '8deg';
-const OFFER_MODEL_THUMB_ORBIT = '18deg 74deg 88%';
-const OFFER_MODEL_THUMB_FOV = '20deg';
-/** Close enough that the GPU fills the wide bay instead of floating in the middle. */
-const RACK_MODEL_ORBIT = '12deg 75deg 38%';
-const RACK_MODEL_FOV = '16deg';
+export const OFFER_MODEL_THUMB_ORBIT = '18deg 74deg 88%';
+export const OFFER_MODEL_THUMB_FOV = '20deg';
+/**
+ * model-viewer turns a percent radius into a fraction of idealCameraDistance,
+ * which is boundingSphere.radius / sin(fov/2). 100% fits that sphere in the
+ * framed field of view, so every yaw stays inside it. 105% is the library's
+ * own margin (its default orbit). The offer stage keeps a closer orbit on purpose.
+ */
+export const RACK_MODEL_ORBIT = '12deg 75deg 105%';
+export const RACK_MODEL_FOV = '16deg';
 
 let modelViewerScriptPromise: Promise<void> | null = null;
 
