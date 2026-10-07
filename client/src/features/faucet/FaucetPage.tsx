@@ -204,9 +204,9 @@ export default function FaucetPage() {
     pageName: 'Faucet',
   });
 
-  const startPartner = async () => {
+  const startPartner = async (source: 'click' | 'blur') => {
     try {
-      const res = await api.post<{ ok?: boolean; waitMs?: number }>('/faucet/partner/start');
+      const res = await api.post<{ ok?: boolean; waitMs?: number }>('/faucet/partner/start', { source });
       if (res.data?.ok) {
         const wait = res.data.waitMs || 10_000;
         partnerActiveRef.current = true;
@@ -235,7 +235,7 @@ export default function FaucetPage() {
     visitStartedRef.current = true;
     setVisitStarted(true);
     window.open(FAUCET_ZERADS_BANNER_URL, '_blank', 'noopener,noreferrer');
-    void startPartner();
+    void startPartner('click');
   };
 
   useEffect(() => {
@@ -246,7 +246,7 @@ export default function FaucetPage() {
       skipRemotePartnerApply.current = true;
       visitStartedRef.current = true;
       setVisitStarted(true);
-      void startPartner();
+      void startPartner('blur');
     };
     window.addEventListener('blur', onBlur);
     return () => window.removeEventListener('blur', onBlur);
