@@ -4,6 +4,8 @@ import {
   computeSlotOverlayStyle,
   parseVisualFanDrag,
   parseVisualFanFromDrag,
+  RACK_MACHINE_VISUAL_SCALE,
+  RACK_MODEL_VISUAL_SCALE,
   RACK_SLOT_COLUMNS,
   RACK_SLOT_RECTS,
   RACK_SLOT_ROWS,
@@ -44,6 +46,8 @@ describe('showcase 2-bay overlay', () => {
     expect(computeShowcaseSlotOverlayStyle(0)?.height).toBe('38%');
     expect(computeShowcaseSlotOverlayStyle(1)?.top).toBe('56%');
     expect(computeShowcaseSlotOverlayStyle(2)).toBeNull();
+    expect(RACK_MACHINE_VISUAL_SCALE).toBe(1.04);
+    expect(RACK_MODEL_VISUAL_SCALE).toBe(1);
   });
 
   it('groups two showcase slots into a single rack', () => {

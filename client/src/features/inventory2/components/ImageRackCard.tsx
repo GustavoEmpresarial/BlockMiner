@@ -19,6 +19,7 @@ import type { MachineTipState, SelectedSlotPayload, UserRackSlot } from '../../m
 import {
   DEFAULT_RACK_IMAGE_URL,
   RACK_MACHINE_VISUAL_SCALE,
+  RACK_MODEL_VISUAL_SCALE,
   SHOWCASE_RACK_IMAGE_URL,
   computeShowcaseSlotOverlayStyle,
   VISUAL_FAN_DRAG,
@@ -371,7 +372,7 @@ export const ImageRackCard = memo(function ImageRackCard({
                     >
                       <div
                         className="flex h-full w-full origin-bottom items-end justify-center"
-                        style={{ transform: `scale(${RACK_MACHINE_VISUAL_SCALE})` }}
+                        style={{ transform: `scale(${modelUrl ? RACK_MODEL_VISUAL_SCALE : RACK_MACHINE_VISUAL_SCALE})` }}
                       >
                         {modelUrl ? (
                           <div className="h-full w-full">
