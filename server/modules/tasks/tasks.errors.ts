@@ -16,4 +16,6 @@ export const TASKS_ERROR = {
   ALREADY_CLAIMED: "already_claimed",
   FORBIDDEN: "forbidden",
   INVALID_TASK: "invalid_task",
+  LIST_FAILED: "TASKS_LIST_FAILED",
+  CLAIM_FAILED: "TASKS_CLAIM_FAILED",
 } as const;
