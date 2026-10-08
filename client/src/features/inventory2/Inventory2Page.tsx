@@ -39,7 +39,7 @@ import {
 } from '../machines/lib/machines.optimistic';
 import { Inventory2RoomContent, type PendingPlacement } from './components/Inventory2RoomContent';
 import { Inventory2Distributor } from './components/Inventory2Distributor';
-import { DEFAULT_RACK_IMAGE_URL, SHOWCASE_RACK_BAYS } from './lib/inventory2.rackLayout';
+import { DEFAULT_RACK_IMAGE_URL, SHOWCASE_RACK_BAYS, SHOWCASE_RACK_IMAGE_URL } from './lib/inventory2.rackLayout';
 import { rackMinerModelUrl } from '../machines/lib/rackMinerModel';
 import { logInventory2Error } from './lib/inventory2.errors';
 
@@ -664,7 +664,7 @@ export default function Inventory2Page() {
             pendingPlacement={pendingPlacement}
             onConsumePendingPlacement={() => setPendingPlacement(null)}
             storedRacks={storedRacks}
-            rackShelfImageUrl={DEFAULT_RACK_IMAGE_URL}
+            rackShelfImageUrl={currentRoom?.kind === 'showcase_3d' ? SHOWCASE_RACK_IMAGE_URL : DEFAULT_RACK_IMAGE_URL}
           />
           )}
         </div>

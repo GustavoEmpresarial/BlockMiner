@@ -353,8 +353,11 @@ async function installPaidShowcaseRacks(input: {
       select: { floorSlot: true },
     });
     const takenSlots = taken.flatMap((row) => (row.floorSlot == null ? [] : [row.floorSlot]));
-    const floors: number[] = [];
-    if (floorSlot != null) {
+    const asCredit = channel !== "room" && floorSlot == null;
+    const floors: Array<number | null> = [];
+    if (asCredit) {
+      for (let i = 0; i < layouts.length; i += 1) floors.push(null);
+    } else if (floorSlot != null) {
       if (quantity !== 1) {
         throw new HttpStatusError(400, "Posição inválida.", { code: "RACK_INVALID_PLACEMENT" });
       }

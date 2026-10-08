@@ -514,4 +514,49 @@ describe('Inventory2RoomContent — showcase room does not sell the rack', () =>
       expect(pad.getAttribute('role')).not.toBe('button');
     }
   });
+
+  it('an empty pad with a stored rack installs that rack and is not a buy button', () => {
+    const onPlaceRack = vi.fn();
+    render(
+      withProviders(
+        <Inventory2RoomContent
+          {...baseProps({
+            currentRoom: { roomNumber: 101, unlocked: true, racks: [], kind: 'showcase_3d' },
+            storedRacks: [{ visualIndex: 0, rackNumber: 1 }],
+            onPlaceRack,
+          })}
+        />,
+      ),
+    );
+    expect(screen.queryByRole('button', { name: /comprar rack/i })).not.toBeInTheDocument();
+    expect(screen.getByText('1 rack(s) para instalar')).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Instalar rack' })[0]);
+    expect(onPlaceRack).toHaveBeenCalledWith(0, 0);
+  });
+
+  it('buy-hint header only when there is no installed rack and no credit', () => {
+    const { rerender } = render(
+      withProviders(
+        <Inventory2RoomContent
+          {...baseProps({
+            currentRoom: { roomNumber: 101, unlocked: true, racks: [], kind: 'showcase_3d' },
+          })}
+        />,
+      ),
+    );
+    expect(screen.getByText(/se compra na Loja ou nas Ofertas/i)).toBeInTheDocument();
+
+    rerender(
+      withProviders(
+        <Inventory2RoomContent
+          {...baseProps({
+            currentRoom: { roomNumber: 101, unlocked: true, racks: [], kind: 'showcase_3d' },
+            visualRacksOfCurrent: [{ rackNumber: 1, slots: [] }],
+            placements: [{ visualIndex: 0, floorSlot: 0 }],
+          })}
+        />,
+      ),
+    );
+    expect(screen.queryByText(/se compra na Loja ou nas Ofertas/i)).not.toBeInTheDocument();
+  });
 });

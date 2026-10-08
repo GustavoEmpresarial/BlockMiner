@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { formatHashrate } from '../../machines/lib/machines.shared';
 import { formatPrice } from '../../../shared/utils/formatPrice';
 import { MachineImage } from '../../machines/components/MachineImage';
+import { ShowcaseRoomOnlyNotice } from '../../machines/components/ShowcaseRoomOnlyNotice';
 import type { ShopCatalogMiner } from '../lib/shop.types';
 
 interface ShopMinerCardProps {
@@ -33,6 +34,7 @@ export function ShopMinerCard({ miner, shopCurrency, onSelect }: ShopMinerCardPr
         </div>
         <div className="space-y-1">
           <h3 className="truncate text-lg sm:text-xl font-black text-white">{miner.name}</h3>
+          <ShowcaseRoomOnlyNotice machine={miner} />
           <div className="flex items-center gap-1.5 font-bold text-primary">
             <Zap className="h-4 w-4" />
             <span className="text-sm font-black font-mono">{formatHashrate(Number(miner.baseHashRate) || 0)}</span>
