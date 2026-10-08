@@ -527,7 +527,7 @@ export const ImageRackCard = memo(function ImageRackCard({
         onConfirm={async () => {
           try {
             await onDismantleRack(slots);
-            if (rackVariant !== 'showcase' && visualIndex != null && onUnplaceRack) {
+            if (visualIndex != null && onUnplaceRack) {
               await onUnplaceRack(visualIndex, { silent: true });
             }
             setConfirmingDismantle(false);

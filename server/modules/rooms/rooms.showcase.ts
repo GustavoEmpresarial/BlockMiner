@@ -180,7 +180,9 @@ export function decideShowcaseInstall(machine: ShowcaseMinerRef | null | undefin
 }
 
 /**
- * Shop and offer SKU for the showcase rack. Not a rack credit.
+ * Shop and offer SKU for the showcase rack.
+ * The purchase does not increment users.rack_credits. It stores an unplaced rack
+ * in the 3D room. That unplaced rack is the credit the player installs on a pad.
  * Price is BLK, written as a decimal string the same way offer miners use priceBlk.
  */
 export const SHOWCASE_RACK_SHOP_SKU = "showcase_3d_rack" as const;

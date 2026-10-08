@@ -313,7 +313,7 @@ export function Inventory2RoomContent({
                   onSlotClick={onSelectSlot}
                   onSlotDrop={onInstall}
                   onDismantleRack={onDismantleRack}
-                  onUnplaceRack={isShowcase ? undefined : (visualIndex, opts) => void onPlaceRack(visualIndex, null, opts)}
+                  onUnplaceRack={(visualIndex, opts) => void onPlaceRack(visualIndex, null, opts)}
                   fanMounted={isShowcase ? false : mountedFans.includes(placement.visualIndex)}
                   onMountFan={isShowcase ? undefined : (from) => void onMountFan(placement.visualIndex, from)}
                   onUnmountFan={isShowcase ? undefined : () => void onUnmountFan(placement.visualIndex)}
@@ -337,12 +337,33 @@ export function Inventory2RoomContent({
           const highlighted = dragOverPad === floorSlot || rackPending;
 
           if (isShowcase) {
+            if (storedRacks.length === 0) {
+              return (
+                <div
+                  key={`empty-${floorSlot}`}
+                  aria-label={t('inventory.showcase_pad_empty')}
+                  className="flex min-h-24 cursor-default items-center justify-center self-start rounded-3xl border-2 border-dashed border-slate-800 bg-slate-950/40 px-4 py-4 text-slate-600"
+                />
+              );
+            }
             return (
-              <div
+              <button
                 key={`empty-${floorSlot}`}
-                aria-label={t('inventory.showcase_pad_empty')}
-                className="flex min-h-24 cursor-default items-center justify-center self-start rounded-3xl border-2 border-dashed border-slate-800 bg-slate-950/40 px-4 py-4 text-slate-600"
-              />
+                type="button"
+                disabled={rackActionBusy || rackDismantleLoading}
+                onClick={() => {
+                  if (storedRacks.length === 1) {
+                    void onPlaceRack(storedRacks[0].visualIndex, floorSlot);
+                    return;
+                  }
+                  setPickerFloorSlot(floorSlot);
+                }}
+                aria-label={t('inventory.showcase_install')}
+                className="flex min-h-24 items-center justify-center self-start rounded-3xl border-2 border-dashed border-primary/50 bg-primary/10 px-4 py-4 text-xs font-black uppercase tracking-wider text-primary shadow-[2px_2px_0px_#000000] transition-colors hover:bg-primary/20 disabled:pointer-events-none disabled:opacity-40"
+              >
+                <Plus className="mr-2 h-5 w-5" aria-hidden />
+                {t('inventory.showcase_install')}
+              </button>
             );
           }
 
@@ -418,7 +439,11 @@ export function Inventory2RoomContent({
                   max: SHOWCASE_RACKS_PER_ROOM,
                 })}
               </p>
-              <p className="text-xs font-medium text-slate-500">{t('inventory.showcase_pad_empty')}</p>
+              <p className="text-xs font-medium text-slate-500">
+                {storedRacks.length > 0
+                  ? t('inventory.showcase_credits', { count: storedRacks.length })
+                  : t('inventory.showcase_pad_empty')}
+              </p>
             </div>
           ) : (
             <span />
