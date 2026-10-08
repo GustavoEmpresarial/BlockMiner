@@ -24,21 +24,9 @@ import { miningEngine } from "../mining/index.js";
 import { createNotification } from "../notifications/index.js";
 import { getRoomPriceQuote } from "./rooms.config.js";
 import {
-  decideShowcaseInstall,
   isShowcase3dMiner,
   isShowcaseRoom,
-  isShowcaseRoomEnabledForUser,
   nextStandardRoomNumber,
-  readShowcaseRackPrice,
-  SHOWCASE_3D_ROOM_KIND,
-  SHOWCASE_3D_ROOM_NUMBER,
-  SHOWCASE_RACK_BAYS,
-  SHOWCASE_RACK_OFFER_PRICE_BLK,
-  SHOWCASE_RACK_SHOP_PRICE_BLK,
-  SHOWCASE_RACKS_PER_ROOM,
-  nextShowcaseRackLayout,
-  resolveShowcaseFloorSlot,
-  type ShowcaseMinerRef,
 } from "./rooms.showcase.js";
 import {
   minerRefFromInstalled,
@@ -63,7 +51,7 @@ function isUniqueViolation(err: unknown): boolean {
   return err instanceof PrismaNs.PrismaClientKnownRequestError && err.code === "P2002";
 }
 
-async function moveRackMinerBackToInventoryTx(
+export async function moveRackMinerBackToInventoryTx(
   tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
   rack: RackMoveBackRow,
   miner: MinerWithMinerRel,
@@ -148,7 +136,6 @@ export async function listRoomsForUser(userId: number) {
   if (cached) return cached;
 
   const now = new Date();
-  if (isShowcaseRoomEnabledForUser(userId)) await ensureShowcaseRoomForUser(userId);
   const rooms = await roomsRepo.findRoomsWithRacksForUser(userId);
   const result = buildListedRoomsPayload(rooms, undefined, now, userId);
   const { totalRacks, occupiedRacks, freeRacks } = countRackTotals(rooms);
@@ -162,29 +149,8 @@ export async function countUnlockedRoomsForUser(userId: number): Promise<number>
   return nextStandardRoomNumber(existing.map((room) => room.roomNumber)) - 1;
 }
 
-export async function ensureShowcaseRoomForUser(userId: number): Promise<{ id: number } | null> {
-  const found = await prisma.userRoom.findFirst({
-    where: { userId, roomNumber: SHOWCASE_3D_ROOM_NUMBER },
-    select: { id: true },
-  });
-  if (found) return found;
-  try {
-    return await prisma.userRoom.create({
-      data: {
-        userId,
-        roomNumber: SHOWCASE_3D_ROOM_NUMBER,
-        pricePaid: 0,
-        kind: SHOWCASE_3D_ROOM_KIND,
-      },
-      select: { id: true },
-    });
-  } catch (err) {
-    if (!isUniqueViolation(err)) throw err;
-    return prisma.userRoom.findFirst({
-      where: { userId, roomNumber: SHOWCASE_3D_ROOM_NUMBER },
-      select: { id: true },
-    });
-  }
+export async function ensureShowcaseRoomForUser(_userId: number): Promise<{ id: number } | null> {
+  return null;
 }
 
 export type BuyRoomResult =
@@ -302,179 +268,11 @@ type InstalledShowcaseRacks = {
  * One transaction: room lock, capacity, balance, debit, then rack rows.
  * Shop and offers pay the channel price. The in-room endpoint keeps readShowcaseRackPrice().
  */
-async function installPaidShowcaseRacks(input: {
-  userId: number;
-  quantity: number;
-  channel: ShowcasePayChannel;
-  floorSlot: number | null;
-}): Promise<InstalledShowcaseRacks> {
-  const { userId, channel, floorSlot } = input;
-  if (!isShowcaseRoomEnabledForUser(userId)) {
-    throw new HttpStatusError(403, "A Sala 3D está indisponível.", { code: "SHOWCASE_ROOM_DISABLED" });
-  }
-  const quantity = input.quantity;
-  if (!Number.isInteger(quantity) || quantity < 1 || quantity > SHOWCASE_RACKS_PER_ROOM) {
-    throw new HttpStatusError(400, "Quantidade inválida.", { code: "SHOWCASE_RACK_INVALID_QUANTITY" });
-  }
-  const unitPrice = showcaseUnitPrice(channel);
-  const totalPrice = unitPrice.mul(quantity);
-  if (totalPrice.lt(0) || (totalPrice.lte(0) && channel !== "room")) {
-    throw new HttpStatusError(400, "Quantidade inválida.", { code: "SHOWCASE_RACK_INVALID_QUANTITY" });
-  }
-  log.info("buyShowcaseRack attempt", { userId, channel, quantity });
-
-  const installed = await prisma.$transaction(async (tx) => {
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(${userId}::int, ${SHOWCASE_3D_ROOM_NUMBER}::int)`;
-
-    let room = await tx.userRoom.findFirst({
-      where: { userId, roomNumber: SHOWCASE_3D_ROOM_NUMBER },
-      select: { id: true },
-    });
-    if (!room) {
-      room = await tx.userRoom.create({
-        data: {
-          userId,
-          roomNumber: SHOWCASE_3D_ROOM_NUMBER,
-          pricePaid: 0,
-          kind: SHOWCASE_3D_ROOM_KIND,
-        },
-        select: { id: true },
-      });
-    }
-
-    const rackRowCount = await tx.userRack.count({ where: { roomId: room.id } });
-    let rows = rackRowCount;
-    const layouts: Array<{ visualIndex: number; positions: number[] }> = [];
-    for (let i = 0; i < quantity; i += 1) {
-      const nextRack = nextShowcaseRackLayout(rows);
-      if (!nextRack) {
-        throw new HttpStatusError(400, "Esta sala já tem 24 racks.", { code: "SHOWCASE_RACK_FULL" });
-      }
-      layouts.push(nextRack);
-      rows += SHOWCASE_RACK_BAYS;
-    }
-
-    const taken = await tx.userVisualRackPlacement.findMany({
-      where: { roomId: room.id },
-      select: { floorSlot: true },
-    });
-    const takenSlots = taken.flatMap((row) => (row.floorSlot == null ? [] : [row.floorSlot]));
-    const asCredit = channel !== "room" && floorSlot == null;
-    const floors: Array<number | null> = [];
-    if (asCredit) {
-      for (let i = 0; i < layouts.length; i += 1) floors.push(null);
-    } else if (floorSlot != null) {
-      if (quantity !== 1) {
-        throw new HttpStatusError(400, "Posição inválida.", { code: "RACK_INVALID_PLACEMENT" });
-      }
-      const floor = resolveShowcaseFloorSlot(floorSlot, takenSlots);
-      if (!floor.ok) {
-        const message =
-          floor.code === "SHOWCASE_RACK_OCCUPIED"
-            ? "Posição ocupada."
-            : floor.code === "RACK_INVALID_PLACEMENT"
-              ? "Posição inválida."
-              : "Esta sala já tem 24 racks.";
-        throw new HttpStatusError(400, message, { code: floor.code });
-      }
-      floors.push(floor.floorSlot);
-    } else {
-      const takenSet = new Set(takenSlots);
-      for (let slot = 0; slot < SHOWCASE_RACKS_PER_ROOM && floors.length < quantity; slot += 1) {
-        if (!takenSet.has(slot)) floors.push(slot);
-      }
-      if (floors.length < quantity) {
-        throw new HttpStatusError(400, "Esta sala já tem 24 racks.", { code: "SHOWCASE_RACK_FULL" });
-      }
-    }
-
-    const balanceUser = await roomsRepo.findUserBlkBalanceTx(tx, userId);
-    if (!balanceUser) {
-      throw new HttpStatusError(404, "Usuário não encontrado.");
-    }
-    const balance = new PrismaNs.Decimal(balanceUser.blkBalance.toString());
-    if (balance.lt(totalPrice)) {
-      throw new HttpStatusError(400, "Saldo BLK insuficiente para comprar este rack.", {
-        code: "INSUFFICIENT_BALANCE",
-      });
-    }
-    if (totalPrice.gt(0)) {
-      await roomsRepo.decrementUserBalanceTx(tx, userId, totalPrice);
-    }
-
-    const now = new Date();
-    await roomsRepo.createRacksBatchTx(
-      tx,
-      layouts.flatMap((layout) =>
-        layout.positions.map((position) => ({
-          userId,
-          roomId: room.id,
-          position,
-          installedAt: now,
-        })),
-      ),
-    );
-    for (let i = 0; i < layouts.length; i += 1) {
-      await tx.userVisualRackPlacement.create({
-        data: {
-          userId,
-          roomId: room.id,
-          visualIndex: layouts[i].visualIndex,
-          floorSlot: floors[i],
-          purchased: false,
-        },
-      });
-    }
-
-    const updated = await tx.user.findUnique({
-      where: { id: userId },
-      select: { blkBalance: true, rackCredits: true },
-    });
-    if (!updated) {
-      throw new HttpStatusError(404, "Usuário não encontrado.");
-    }
-    return {
-      roomId: room.id,
-      quantity,
-      unitPrice,
-      totalPrice,
-      newBalance: new PrismaNs.Decimal(updated.blkBalance.toString()),
-      rackCredits: Math.max(0, Number(updated.rackCredits ?? 0)),
-    };
-  });
-
-  invalidateMachinesListCache(userId);
-  try {
-    await miningEngine.reloadMinerProfile(userId, { forceBalanceSync: true });
-  } catch {
-    /* best-effort */
-  }
-  return installed;
-}
-
 export async function buyShowcaseRackForUser(
-  userId: number,
-  floorSlot: number | null = null,
+  _userId: number,
+  _floorSlot: number | null = null,
 ): Promise<BuyShowcaseRackResult> {
-  try {
-    const installed = await installPaidShowcaseRacks({
-      userId,
-      quantity: 1,
-      channel: "room",
-      floorSlot,
-    });
-    return {
-      ok: true,
-      price: installed.unitPrice.toNumber(),
-      roomId: installed.roomId,
-      message: "Rack 3D instalado.",
-    };
-  } catch (err) {
-    if (err instanceof HttpStatusError) {
-      return { ok: false, status: err.http, code: err.code, message: err.message };
-    }
-    throw err;
-  }
+  return { ok: false, status: 403, code: "SHOWCASE_ROOM_DISABLED", message: "A Sala 3D foi descontinuada." };
 }
 
 export type ShowcaseChannelPurchaseResult =
@@ -490,39 +288,17 @@ export type ShowcaseChannelPurchaseResult =
   | { ok: false; status: number; code: string; messageKey: string; message: string };
 
 export async function purchaseShowcaseRacksForChannel(
-  userId: number,
-  quantity: number,
-  channel: "shop" | "offer",
+  _userId: number,
+  _quantity: number,
+  _channel: "shop" | "offer",
 ): Promise<ShowcaseChannelPurchaseResult> {
-  try {
-    const installed = await installPaidShowcaseRacks({
-      userId,
-      quantity,
-      channel,
-      floorSlot: null,
-    });
-    return {
-      ok: true,
-      quantity: installed.quantity,
-      unitPrice: installed.unitPrice.toFixed(8),
-      totalPrice: installed.totalPrice.toFixed(8),
-      newBalance: installed.newBalance.toFixed(8),
-      rackCredits: installed.rackCredits,
-      roomId: installed.roomId,
-    };
-  } catch (err) {
-    if (err instanceof HttpStatusError) {
-      const code = err.code ?? "SHOWCASE_RACK_PURCHASE_ERROR";
-      return {
-        ok: false,
-        status: err.http,
-        code,
-        messageKey: SHOWCASE_CHANNEL_MESSAGE_KEY[code] ?? "racks.errors.purchase_error",
-        message: err.message,
-      };
-    }
-    throw err;
-  }
+  return {
+    ok: false,
+    status: 403,
+    code: "SHOWCASE_ROOM_DISABLED",
+    messageKey: "racks.errors.showcase_forbidden",
+    message: "A Sala 3D foi descontinuada.",
+  };
 }
 
 function showcaseMinerFromInventory(item: {
@@ -572,9 +348,7 @@ async function resolveInstallMinerContext(
     return { status: 400, code: "RACK_OCCUPIED", message: "Este rack já está ocupado." };
   }
 
-  const showcase = isShowcaseRoom(rack.room);
-
-  if (!showcase && rack.position > 0) {
+  if (rack.position > 0) {
     const prevRack = await roomsRepo.findRackByRoomAndPosition(rack.roomId, rack.position - 1);
     if (prevRack?.userMinerId != null) {
       const prevMinerRow = await roomsRepo.findUserMinerSlotSize(prevRack.userMinerId);
@@ -586,32 +360,6 @@ async function resolveInstallMinerContext(
 
   const inventoryItem = await roomsRepo.findInventoryItemForUser(inventoryId, userId);
   if (!inventoryItem) return { status: 404, message: "Item não encontrado no inventário." };
-
-  if (showcase) {
-    if (!isShowcaseRoomEnabledForUser(userId)) {
-      return { status: 403, code: "SHOWCASE_ROOM_DISABLED", message: "A Sala 3D está indisponível." };
-    }
-    const decision = decideShowcaseInstall(showcaseMinerFromInventory(inventoryItem));
-    if (!decision.ok) {
-      return {
-        status: 400,
-        code: decision.code,
-        message: "Esta sala só aceita máquinas 3D.",
-      };
-    }
-    return {
-      rack,
-      inventoryItem,
-      adjacentRack: null,
-      slotIndex: rackSlotIndex(rack.room.roomNumber, rack.position),
-    };
-  } else if (isShowcase3dMiner(showcaseMinerFromInventory(inventoryItem))) {
-    return {
-      status: 400,
-      code: ROOMS_ERROR.SHOWCASE_3D_FITS_ONLY,
-      message: "Esta máquina só pode ser instalada na Sala 3D.",
-    };
-  }
 
   const slotSize = inventoryItem.slotSize || 1;
   let adjacentRack: Awaited<ReturnType<typeof roomsRepo.findRackByRoomAndPosition>> = null;

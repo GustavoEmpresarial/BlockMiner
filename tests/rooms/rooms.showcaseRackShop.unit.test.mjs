@@ -50,27 +50,17 @@ test("credit rack purchase rejects the showcase sku before granting credits", as
   );
 });
 
-test("shop catalog hides the showcase rack unless the room allowlist allows the user", async () => {
+test("shop catalog never includes the showcase rack now that it is discontinued", async () => {
   const orig = shopService.shopRepoRef.listActiveMiners;
-  const prevEnabled = process.env.SHOWCASE_3D_ROOM_ENABLED;
-  const prevIds = process.env.SHOWCASE_3D_ROOM_USER_IDS;
   shopService.shopRepoRef.listActiveMiners = async () => ({ total: 0, miners: [] });
-  process.env.SHOWCASE_3D_ROOM_ENABLED = "0";
-  process.env.SHOWCASE_3D_ROOM_USER_IDS = "4242";
   try {
-    const hidden = await shopService.listMinersForShop(1, 10, 7);
-    const shown = await shopService.listMinersForShop(1, 10, 4242);
+    const res1 = await shopService.listMinersForShop(1, 10, 7);
+    const res2 = await shopService.listMinersForShop(1, 10, 4242);
     const anon = await shopService.listMinersForShop(1, 10);
-    assert.equal(hidden.racks.some((row) => row.sku === showcase.SHOWCASE_RACK_SHOP_SKU), false);
+    assert.equal(res1.racks.some((row) => row.sku === showcase.SHOWCASE_RACK_SHOP_SKU), false);
+    assert.equal(res2.racks.some((row) => row.sku === showcase.SHOWCASE_RACK_SHOP_SKU), false);
     assert.equal(anon.racks.some((row) => row.sku === showcase.SHOWCASE_RACK_SHOP_SKU), false);
-    const item = shown.racks.find((row) => row.sku === showcase.SHOWCASE_RACK_SHOP_SKU);
-    assert.equal(item.priceBlk, "1.5");
-    assert.equal(item.creditsPerUnit, 0);
   } finally {
     shopService.shopRepoRef.listActiveMiners = orig;
-    if (prevEnabled === undefined) delete process.env.SHOWCASE_3D_ROOM_ENABLED;
-    else process.env.SHOWCASE_3D_ROOM_ENABLED = prevEnabled;
-    if (prevIds === undefined) delete process.env.SHOWCASE_3D_ROOM_USER_IDS;
-    else process.env.SHOWCASE_3D_ROOM_USER_IDS = prevIds;
   }
 });

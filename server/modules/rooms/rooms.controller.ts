@@ -55,33 +55,6 @@ export async function buyRoom(req, res) {
         res.status(500).json({ ok: false, message: "Erro ao comprar sala." });
     }
 }
-export async function buyShowcaseRack(req, res) {
-    try {
-        const user = requireSessionUser(req, res);
-        if (!user)
-            return;
-        const rawFloor = req.body?.floorSlot;
-        const floorSlot = rawFloor == null || rawFloor === "" ? null : Number(rawFloor);
-        const result = await roomsService.buyShowcaseRackForUser(user.id, floorSlot);
-        if (!result.ok) {
-            const body = { ok: false, message: result.message };
-            if (result.code)
-                body.code = result.code;
-            res.status(result.status).json(body);
-            return;
-        }
-        res.json({
-            ok: true,
-            price: result.price,
-            roomId: result.roomId,
-            message: result.message,
-        });
-    }
-    catch (err) {
-        reportError({ code: "ROOMS_SHOWCASE_RACK_BUY_FAILED", category: "BUSINESS", severity: "ERROR", module: "rooms.showcaseRack", error: err, req });
-        res.status(500).json({ ok: false, message: "Erro ao comprar o rack 3D." });
-    }
-}
 export async function installMiner(req, res) {
     try {
         const user = requireSessionUser(req, res);
