@@ -80,16 +80,28 @@ test("PNG miners are refused and MCX9 is accepted without blocking the other bay
   const byModel = decideShowcaseInstall({ modelUrl: "/media/models/minercore-mcx9.glb", minerName: "Other" });
   assert.equal(byModel.ok, true);
   if (byModel.ok) assert.equal(byModel.blockAdjacent, false);
+
+  assert.equal(isShowcase3dMiner({ minerName: "MinerCore MCX9", imageUrl: null, modelUrl: null }), true);
+  assert.equal(isShowcase3dMiner({ minerName: "Other", imageUrl: "/media/offers/minercore-mcx9.webp", modelUrl: null }), true);
 });
 
-test("showcase room stays hidden unless SHOWCASE_3D_ROOM_ENABLED is on", () => {
-  assert.equal(isShowcaseRoomEnabled(undefined), false);
-  assert.equal(isShowcaseRoomEnabled(""), false);
+test("ROOMS_ERROR exposes SHOWCASE_3D_FITS_ONLY for the common-room reverse block", async () => {
+  const { ROOMS_ERROR } = await import("../../server/modules/rooms/rooms.errors.ts");
+  assert.equal(ROOMS_ERROR.SHOWCASE_3D_FITS_ONLY, "SHOWCASE_3D_FITS_ONLY");
+  assert.equal(ROOMS_ERROR.SHOWCASE_3D_ONLY, "SHOWCASE_3D_ONLY");
+});
+
+test("showcase room is enabled by default for everyone and can be disabled via SHOWCASE_3D_ROOM_ENABLED=0", () => {
+  assert.equal(isShowcaseRoomEnabled(undefined), true);
+  assert.equal(isShowcaseRoomEnabled(""), true);
   assert.equal(isShowcaseRoomEnabled("0"), false);
+  assert.equal(isShowcaseRoomEnabled("false"), false);
+  assert.equal(isShowcaseRoomEnabled("off"), false);
   assert.equal(isShowcaseRoomEnabled("1"), true);
+  assert.equal(isShowcaseRoomEnabled("true"), true);
 
   const previous = process.env.SHOWCASE_3D_ROOM_ENABLED;
-  delete process.env.SHOWCASE_3D_ROOM_ENABLED;
+  process.env.SHOWCASE_3D_ROOM_ENABLED = "0";
   try {
     const hidden = buildListedRoomsPayload([
       {
@@ -103,6 +115,19 @@ test("showcase room stays hidden unless SHOWCASE_3D_ROOM_ENABLED is on", () => {
     ]);
     assert.equal(hidden.length, ROOM_MAX);
     assert.equal(hidden.some((room) => room.roomNumber === SHOWCASE_3D_ROOM_NUMBER), false);
+  } finally {
+    if (previous === undefined) delete process.env.SHOWCASE_3D_ROOM_ENABLED;
+    else process.env.SHOWCASE_3D_ROOM_ENABLED = previous;
+  }
+});
+
+test("showcase room is listed by default for everyone when unset", () => {
+  const previous = process.env.SHOWCASE_3D_ROOM_ENABLED;
+  delete process.env.SHOWCASE_3D_ROOM_ENABLED;
+  try {
+    const listed = buildListedRoomsPayload([showcaseRoomRow()], undefined, new Date("2026-10-06T00:00:00.000Z"), 999);
+    assert.equal(listed.length, ROOM_MAX + 1);
+    assert.equal(listed.some((room) => room.roomNumber === SHOWCASE_3D_ROOM_NUMBER), true);
   } finally {
     if (previous === undefined) delete process.env.SHOWCASE_3D_ROOM_ENABLED;
     else process.env.SHOWCASE_3D_ROOM_ENABLED = previous;
@@ -142,7 +167,7 @@ test("allowlist adds users while the global flag stays the path for everyone", (
 test("allowlisted user sees the room and its rack price; a user outside the list does not", () => {
   const previousEnabled = process.env.SHOWCASE_3D_ROOM_ENABLED;
   const previousIds = process.env.SHOWCASE_3D_ROOM_USER_IDS;
-  delete process.env.SHOWCASE_3D_ROOM_ENABLED;
+  process.env.SHOWCASE_3D_ROOM_ENABLED = "0";
   process.env.SHOWCASE_3D_ROOM_USER_IDS = "7, foo, -1";
   try {
     const allowed = buildListedRoomsPayload([showcaseRoomRow()], undefined, new Date("2026-10-06T00:00:00.000Z"), 7);

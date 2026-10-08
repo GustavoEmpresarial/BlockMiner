@@ -272,6 +272,9 @@ export default function Inventory2Page() {
           toast.error(t('inventory.showcase_3d_only'));
           return;
         }
+      } else if (inventoryItem && rackMinerModelUrl(inventoryItem)) {
+        toast.error(t('inventory.showcase_3d_fits_only'));
+        return;
       } else if (inventoryItem && !canMachineFitVisualSlot(targetRack, inventoryItem)) {
         toast.error(t('inventory.double_slot_row_edge'));
         return;
@@ -289,11 +292,26 @@ export default function Inventory2Page() {
           void fetchData({ background: true });
           return;
         }
-        toast.error(resolveApiPayloadMessage(res.data, t('common.error')));
+        const code =
+          res.data && typeof res.data === 'object'
+            ? (res.data as { code?: string }).code
+            : undefined;
+        toast.error(
+          code === 'SHOWCASE_3D_FITS_ONLY'
+            ? t('inventory.showcase_3d_fits_only')
+            : resolveApiPayloadMessage(res.data, t('common.error')),
+        );
         await fetchData({ background: true });
       } catch (err) {
         logInventory2Error('INVENTORY_INSTALL_FAILED', err);
-        toast.error(apiErrorMessage(err, t('common.error')));
+        const code = isAxiosError(err)
+          ? (err.response?.data as { code?: string } | undefined)?.code
+          : undefined;
+        toast.error(
+          code === 'SHOWCASE_3D_FITS_ONLY'
+            ? t('inventory.showcase_3d_fits_only')
+            : apiErrorMessage(err, t('common.error')),
+        );
         await fetchData({ background: true }).catch(() => {});
       } finally {
         rackMutationLock.current = false;

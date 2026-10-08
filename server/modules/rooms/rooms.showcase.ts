@@ -16,7 +16,7 @@ export const SHOWCASE_RACKS_PER_ROOM = 24;
 export const SHOWCASE_RACK_PRICE_ENV_KEY = "SHOWCASE_RACK_PRICE";
 export const DEFAULT_SHOWCASE_RACK_PRICE = 1;
 
-/** Global switch. SHOWCASE_3D_ROOM_ENABLED=1 lists the room for every user. */
+/** Global switch. Defaults to enabled (true) so the 3D room is available for everyone. Set SHOWCASE_3D_ROOM_ENABLED=0 to disable. */
 export const SHOWCASE_3D_ROOM_ENABLED_ENV_KEY = "SHOWCASE_3D_ROOM_ENABLED";
 
 /**
@@ -43,8 +43,9 @@ export type ShowcaseMinerRef = {
 export function isShowcaseRoomEnabled(
   raw: string | undefined | null = process.env[SHOWCASE_3D_ROOM_ENABLED_ENV_KEY],
 ): boolean {
-  const value = String(raw ?? "").trim().toLowerCase();
-  return value === "1" || value === "true" || value === "yes" || value === "on";
+  if (raw == null || String(raw).trim() === "") return true;
+  const value = String(raw).trim().toLowerCase();
+  return value !== "0" && value !== "false" && value !== "no" && value !== "off";
 }
 
 /** Positive integer ids. Invalid tokens are skipped and never throw. */
