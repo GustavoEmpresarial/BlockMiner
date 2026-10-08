@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MINERCORE_MCX9_MODEL_URL, SHOWCASE_3D_DRAG_TYPE, dragCarriesShowcase3d, markShowcase3dDrag, rackMinerModelUrl } from './rackMinerModel';
+import { MINERCORE_MCX9_MODEL_URL, SHOWCASE_3D_DRAG_TYPE, dragCarriesShowcase3d, isShowcase3dCatalogMachine, markShowcase3dDrag, rackMinerModelUrl } from './rackMinerModel';
 
 describe('rackMinerModelUrl', () => {
   it('uses a safe model url from the API', () => {
@@ -11,6 +11,12 @@ describe('rackMinerModelUrl', () => {
   it('recognizes the MCX9 by name or image when the API has no model url', () => {
     expect(rackMinerModelUrl({ minerName: '[Event] MinerCore MCX9' })).toBe(MINERCORE_MCX9_MODEL_URL);
     expect(rackMinerModelUrl({ imageUrl: '/media/offers/minercore-mcx9.webp' })).toBe(MINERCORE_MCX9_MODEL_URL);
+  });
+
+  it('flags a catalog card when the miner is the 3D one', () => {
+    expect(isShowcase3dCatalogMachine({ name: 'MinerCore MCX9' })).toBe(true);
+    expect(isShowcase3dCatalogMachine({ modelUrl: '/media/models/other.glb' })).toBe(true);
+    expect(isShowcase3dCatalogMachine({ name: 'Antminer S19 Pro' })).toBe(false);
   });
 
   it('leaves ordinary miners as images', () => {

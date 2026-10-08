@@ -146,4 +146,29 @@ describe('ShopPurchaseModal', () => {
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(onClose).toHaveBeenCalledTimes(1);
   });
+
+  it('shows the 3D room warning in the buy modal', () => {
+    renderWithI18n(
+      <ShopPurchaseModal
+        modal={{
+          kind: 'miner',
+          item: {
+            id: 9,
+            name: 'MinerCore MCX9',
+            modelUrl: '/media/models/minercore-mcx9.glb',
+            baseHashRate: 1,
+            price: 1,
+            currency: 'BLK',
+          },
+        }}
+        shopCurrency="BLK"
+        buying={false}
+        quantity={1}
+        onClose={vi.fn()}
+        onSetQuantity={vi.fn()}
+        onConfirm={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole('note')).toHaveTextContent('Só pode ser instalada na Sala 3D.');
+  });
 });

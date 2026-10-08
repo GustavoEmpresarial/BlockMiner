@@ -2,6 +2,7 @@ export interface ShopCatalogMiner {
   id: number;
   slotSize?: number;
   imageUrl?: string | null;
+  modelUrl?: string | null;
   name?: string;
   baseHashRate?: number;
   price?: number | string;

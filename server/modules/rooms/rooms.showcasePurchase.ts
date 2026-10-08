@@ -55,7 +55,7 @@ export async function handleShowcaseRackCatalogPurchase(
       ok: true,
       messageKey: "racks.showcase_3d_purchase_success",
       messageParams: { count: result.quantity },
-      message: "3D rack installed.",
+      message: "3D rack added. Install it on an empty pad.",
       newBalance: result.newBalance,
       rackCredits: result.rackCredits,
       currency: "BLK",
