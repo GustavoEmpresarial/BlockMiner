@@ -12,6 +12,7 @@ import {
   X,
 } from 'lucide-react';
 import { formatHashrate } from '../../machines/lib/machines.shared';
+import { ShowcaseRoomOnlyNotice } from '../../machines/components/ShowcaseRoomOnlyNotice';
 import type { PurchaseModalState } from '../lib/shop.types';
 
 interface ShopPurchaseModalProps {
@@ -114,6 +115,11 @@ export function ShopPurchaseModal({
               <p className="mt-1 text-sm font-bold text-primary font-mono">
                 {formatHashrate(Number(modal.item.baseHashRate) || 0)}
               </p>
+            )}
+            {modal.kind === 'miner' && (
+              <div className="mt-2 flex justify-center">
+                <ShowcaseRoomOnlyNotice machine={modal.item} />
+              </div>
             )}
           </div>
 

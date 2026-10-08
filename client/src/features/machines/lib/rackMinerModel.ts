@@ -20,6 +20,17 @@ export function rackMinerModelUrl(
   return null;
 }
 
+export function isShowcase3dCatalogMachine(
+  machine: { name?: string | null; minerName?: string | null; imageUrl?: string | null; modelUrl?: string | null } | null | undefined,
+): boolean {
+  if (!machine) return false;
+  return rackMinerModelUrl({
+    minerName: machine.minerName ?? machine.name,
+    imageUrl: machine.imageUrl,
+    modelUrl: machine.modelUrl,
+  }) != null;
+}
+
 export function dragCarriesShowcase3d(dt: DataTransfer): boolean {
   return Array.from(dt.types ?? []).includes(SHOWCASE_3D_DRAG_TYPE);
 }

@@ -7,6 +7,7 @@ import { IconBadge, StatusPill } from '../../shared/components';
 import { getActiveOfferEvents, postOfferEventPurchase, postOfferFanPurchase, postOfferRackPurchase, readActiveOffersCache, writeActiveOffersCache, clearActiveOffersCache, hasLiveRoomOffers, hasLiveGearOffers, OFFER_PURCHASE_MAX_QUANTITY, readGearMaxBulkQuantity, readOfferPurchaseError } from './lib/offers.api';
 import type { OfferEventDTO, OfferEventMinerDTO, RoomOffersDTO, FanOffersDTO, FanOfferItemDTO, RackOffersDTO } from './lib/offers.api';
 import { OfferMinerModel } from './components/OfferMinerModel';
+import { ShowcaseRoomOnlyNotice } from '../machines/components/ShowcaseRoomOnlyNotice';
 import { CoolingFanUnit } from '../inventory2/components/CoolingFanUnit';
 import { RackCatalogArt } from '../inventory2/components/RackCatalogArt';
 import { MiningRackShelf } from '../inventory2/components/MiningRackShelf';
@@ -600,6 +601,7 @@ export default function OffersPage() {
 
                                         <div className="space-y-1">
                                             <h3 className="text-lg font-black text-white truncate">{m.name}</h3>
+                                            <ShowcaseRoomOnlyNotice machine={m} />
                                             <div className="flex items-center gap-2 text-primary font-bold">
                                                 <Zap className="w-4 h-4" />
                                                 <span className="text-sm font-mono">{formatHashrate(Number(m.hashRate) || 0)}</span>
@@ -710,6 +712,7 @@ export default function OffersPage() {
                                     </div>
                                     <div>
                                         <h4 className="font-bold text-white leading-none text-base">{modal.miner.name}</h4>
+                                        <ShowcaseRoomOnlyNotice machine={modal.miner} />
                                         <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mt-2 block font-mono">
                                             {formatHashrate(Number(modal.miner.hashRate) || 0)}
                                         </span>
