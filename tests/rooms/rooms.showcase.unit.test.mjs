@@ -80,6 +80,15 @@ test("PNG miners are refused and MCX9 is accepted without blocking the other bay
   const byModel = decideShowcaseInstall({ modelUrl: "/media/models/minercore-mcx9.glb", minerName: "Other" });
   assert.equal(byModel.ok, true);
   if (byModel.ok) assert.equal(byModel.blockAdjacent, false);
+
+  assert.equal(isShowcase3dMiner({ minerName: "MinerCore MCX9", imageUrl: null, modelUrl: null }), true);
+  assert.equal(isShowcase3dMiner({ minerName: "Other", imageUrl: "/media/offers/minercore-mcx9.webp", modelUrl: null }), true);
+});
+
+test("ROOMS_ERROR exposes SHOWCASE_3D_FITS_ONLY for the common-room reverse block", async () => {
+  const { ROOMS_ERROR } = await import("../../server/modules/rooms/rooms.errors.ts");
+  assert.equal(ROOMS_ERROR.SHOWCASE_3D_FITS_ONLY, "SHOWCASE_3D_FITS_ONLY");
+  assert.equal(ROOMS_ERROR.SHOWCASE_3D_ONLY, "SHOWCASE_3D_ONLY");
 });
 
 test("showcase room stays hidden unless SHOWCASE_3D_ROOM_ENABLED is on", () => {

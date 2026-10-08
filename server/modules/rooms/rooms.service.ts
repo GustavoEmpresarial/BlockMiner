@@ -25,6 +25,7 @@ import { createNotification } from "../notifications/index.js";
 import { getRoomPriceQuote } from "./rooms.config.js";
 import {
   decideShowcaseInstall,
+  isShowcase3dMiner,
   isShowcaseRoom,
   isShowcaseRoomEnabledForUser,
   nextStandardRoomNumber,
@@ -39,6 +40,7 @@ import {
   resolveShowcaseFloorSlot,
   type ShowcaseMinerRef,
 } from "./rooms.showcase.js";
+import { ROOMS_ERROR } from "./rooms.errors.js";
 import { buildListedRoomsPayload, countRackTotals } from "./rooms.dto.js";
 import {
   isRackSlotOccupied,
@@ -598,6 +600,12 @@ async function resolveInstallMinerContext(
       inventoryItem,
       adjacentRack: null,
       slotIndex: rackSlotIndex(rack.room.roomNumber, rack.position),
+    };
+  } else if (isShowcase3dMiner(showcaseMinerFromInventory(inventoryItem))) {
+    return {
+      status: 400,
+      code: ROOMS_ERROR.SHOWCASE_3D_FITS_ONLY,
+      message: "Esta máquina só pode ser instalada na Sala 3D.",
     };
   }
 

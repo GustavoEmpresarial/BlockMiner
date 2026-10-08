@@ -15,7 +15,9 @@
       "CAPTCHA_FAILED": "A verificação humana falhou. Tente novamente.",
       "INVALID_REQUEST_SIGNATURE": "A chave de idempotência não corresponde a esta solicitação. Use uma chave nova para uma ação diferente.",
       "HTTPS_REQUIRED": "Este servidor exige HTTPS. Atualize o URL para https:// e tente novamente."
-    }
+    },
+    "SHOWCASE_3D_FITS_ONLY": "Esta máquina só pode ser instalada na Sala 3D.",
+    "SHOWCASE_3D_ONLY": "Esta sala só aceita máquinas 3D."
   },
   "landing": {
     "meta": {

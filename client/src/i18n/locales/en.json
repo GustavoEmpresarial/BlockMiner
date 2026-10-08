@@ -15,7 +15,9 @@
       "CAPTCHA_FAILED": "Human verification failed. Please try again.",
       "INVALID_REQUEST_SIGNATURE": "The idempotency key does not match this request. Use a new key for a different action.",
       "HTTPS_REQUIRED": "This server requires HTTPS. Update the URL to use https:// and try again."
-    }
+    },
+    "SHOWCASE_3D_FITS_ONLY": "This machine can only be installed in the 3D room.",
+    "SHOWCASE_3D_ONLY": "This room only accepts 3D machines."
   },
   "landing": {
     "meta": {
