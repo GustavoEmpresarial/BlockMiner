@@ -21,8 +21,6 @@ import {
 } from "./shop.schemas.js";
 import { purchaseFansForUser, FAN_ERROR_MESSAGE, readFanMaxBulkQuantity } from "../fans/index.js";
 import { purchaseRacksForUser, RACK_ERROR_MESSAGE, readRackMaxBulkQuantity } from "../racks/index.js";
-import { isShowcaseRackShopSku } from "../rooms/rooms.showcase.js";
-import { handleShowcaseRackCatalogPurchase } from "../rooms/rooms.showcasePurchase.js";
 
 export { readShopMaxBulkQuantity };
 
@@ -488,11 +486,6 @@ export async function purchaseRack(req: Request, res: Response): Promise<void> {
     }
 
     const { sku, quantity } = parsed.data;
-
-    if (isShowcaseRackShopSku(sku)) {
-      await handleShowcaseRackCatalogPurchase(req, res, "shop");
-      return;
-    }
 
     const idem = await resolveCriticalMutation(req, res);
     if (!idem) return;

@@ -22,6 +22,9 @@ export type { RoomOffersPublic, RoomOfferItemPublic } from "./rooms.offers.js";
 export { ROOMS_ERROR } from "./rooms.errors.js";
 export { provisionFirstRoomTx } from "./rooms.service.js";
 export {
+  runShowcase3dPurgeAndRefundMigration,
+} from "./rooms.showcasePurge.js";
+export {
   runShowcase3dCommonRoomMigration,
   listShowcase3dInCommonRooms,
   summarizeShowcase3dCommonHits,

@@ -70,12 +70,7 @@ describe('ShopMinerCard', () => {
     expect(onSelect).not.toHaveBeenCalled();
   });
 
-  it('warns that a glb miner only fits the 3D room and stays quiet for a png miner', () => {
-    renderWithI18n(
-      <ShopMinerCard miner={sampleMiner} shopCurrency="BLK" onSelect={vi.fn()} />,
-    );
-    expect(screen.queryByRole('note')).not.toBeInTheDocument();
-    cleanup();
+  it('does not restrict glb miners since they can enter any normal room slot', () => {
     renderWithI18n(
       <ShopMinerCard
         miner={{ ...sampleMiner, name: 'MinerCore MCX9', modelUrl: '/media/models/minercore-mcx9.glb' }}
@@ -83,6 +78,6 @@ describe('ShopMinerCard', () => {
         onSelect={vi.fn()}
       />,
     );
-    expect(screen.getByRole('note')).toHaveTextContent('Só pode ser instalada na Sala 3D.');
+    expect(screen.queryByRole('note')).not.toBeInTheDocument();
   });
 });

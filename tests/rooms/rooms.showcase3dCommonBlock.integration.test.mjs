@@ -78,7 +78,7 @@ describe("showcase 3D miner blocked from common rooms", { skip: !hasDb && "local
     return item.id;
   }
 
-  test("refuses MinerCore MCX9 in room 1 with SHOWCASE_3D_FITS_ONLY and keeps inventory", async () => {
+  test("accepts MinerCore MCX9 in room 1 standard slot", async () => {
     const userId = await makeUser();
     const inventoryId = await makeMcx9Inventory(userId);
     const rack = await prisma.userRack.findFirst({
@@ -88,34 +88,11 @@ describe("showcase 3D miner blocked from common rooms", { skip: !hasDb && "local
     assert.ok(rack);
 
     const result = await roomsService.installMinerForUser(userId, rack.id, inventoryId);
-    assert.equal(result.status, 400);
-    assert.equal(result.code, "SHOWCASE_3D_FITS_ONLY");
-
-    const stillThere = await prisma.userInventory.findUnique({ where: { id: inventoryId } });
-    assert.ok(stillThere, "rejected install must not consume the inventory row");
-    const stillEmpty = await prisma.userRack.findUnique({ where: { id: rack.id } });
-    assert.equal(stillEmpty.userMinerId, null);
-  });
-
-  test("accepts the same MinerCore MCX9 in the showcase room", async () => {
-    const userId = await makeUser();
-    const bought = await roomsService.purchaseShowcaseRacksForChannel(userId, 1, "shop");
-    assert.equal(bought.ok, true);
-    const placed = await placements.setVisualPlacementForUser(userId, 101, 0, 0, false);
-    assert.equal(placed.ok, true);
-
-    const inventoryId = await makeMcx9Inventory(userId);
-    const rack = await prisma.userRack.findFirst({
-      where: { userId, userMinerId: null, room: { roomNumber: 101 } },
-      orderBy: { position: "asc" },
-    });
-    assert.ok(rack);
-
-    const result = await roomsService.installMinerForUser(userId, rack.id, inventoryId);
     assert.equal("inventoryItem" in result, true);
     if ("inventoryItem" in result) {
       assert.equal(result.inventoryItem.minerName, "MinerCore MCX9");
     }
+
     const occupied = await prisma.userRack.findUnique({ where: { id: rack.id } });
     assert.ok(occupied.userMinerId);
   });

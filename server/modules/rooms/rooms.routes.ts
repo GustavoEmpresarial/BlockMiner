@@ -5,7 +5,6 @@ import { requireCriticalIdempotency } from "../../core/http/middleware/idempoten
 import {
   listRooms,
   buyRoom,
-  buyShowcaseRack,
   installMiner,
   uninstallMiner,
   uninstallMinerBatch,
@@ -24,7 +23,6 @@ const roomsWriteLimiter = createDistributedRateLimiter({ windowMs: 60_000, max: 
 
 roomsRouter.get("/", listRooms);
 roomsRouter.post("/buy", roomsWriteLimiter, buyRoom);
-roomsRouter.post("/showcase-rack/buy", roomsWriteLimiter, buyShowcaseRack);
 roomsRouter.post(
   "/rack/install",
   roomsWriteLimiter,
