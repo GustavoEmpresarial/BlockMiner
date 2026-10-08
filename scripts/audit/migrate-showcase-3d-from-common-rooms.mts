@@ -21,9 +21,12 @@ import {
 } from "../../server/modules/rooms/rooms.showcaseCommonMigration.ts";
 import prisma from "../../server/core/database/prisma.ts";
 
+const args = new Set(process.argv.slice(2));
+if (args.has("--allow-production")) {
+  process.env.ALLOW_PRODUCTION_SHOWCASE_MIGRATION = "1";
+}
 assertSafeDatabaseUrl(process.env.DATABASE_URL);
 
-const args = new Set(process.argv.slice(2));
 const execute = args.has("--execute");
 const failAfterRaw = [...args].find((a) => a.startsWith("--fail-after="));
 const failAfter = failAfterRaw ? Number(failAfterRaw.split("=")[1]) : null;

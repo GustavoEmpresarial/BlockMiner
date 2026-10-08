@@ -39,8 +39,11 @@ export function assertSafeDatabaseUrl(raw: string | undefined | null): void {
     raw.includes("161.97.176.125") ||
     !["127.0.0.1", "localhost"].includes(host);
   if (refused) {
+    if (process.env.ALLOW_PRODUCTION_SHOWCASE_MIGRATION === "1") {
+      return;
+    }
     throw new Error(
-      `DATABASE_URL refused (host=${host} db=${db}). Use localhost or a local dump only.`,
+      `DATABASE_URL refused (host=${host} db=${db}). Use localhost or a local dump only, or set ALLOW_PRODUCTION_SHOWCASE_MIGRATION=1.`,
     );
   }
 }
