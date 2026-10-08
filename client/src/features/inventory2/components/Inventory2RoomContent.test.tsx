@@ -533,4 +533,30 @@ describe('Inventory2RoomContent — showcase room does not sell the rack', () =>
     fireEvent.click(screen.getAllByRole('button', { name: 'Instalar rack' })[0]);
     expect(onPlaceRack).toHaveBeenCalledWith(0, 0);
   });
+
+  it('buy-hint header only when there is no installed rack and no credit', () => {
+    const { rerender } = render(
+      withProviders(
+        <Inventory2RoomContent
+          {...baseProps({
+            currentRoom: { roomNumber: 101, unlocked: true, racks: [], kind: 'showcase_3d' },
+          })}
+        />,
+      ),
+    );
+    expect(screen.getByText(/se compra na Loja ou nas Ofertas/i)).toBeInTheDocument();
+
+    rerender(
+      withProviders(
+        <Inventory2RoomContent
+          {...baseProps({
+            currentRoom: { roomNumber: 101, unlocked: true, racks: [], kind: 'showcase_3d' },
+            visualRacksOfCurrent: [{ rackNumber: 1, slots: [] }],
+            placements: [{ visualIndex: 0, floorSlot: 0 }],
+          })}
+        />,
+      ),
+    );
+    expect(screen.queryByText(/se compra na Loja ou nas Ofertas/i)).not.toBeInTheDocument();
+  });
 });

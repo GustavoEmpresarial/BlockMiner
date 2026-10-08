@@ -439,11 +439,15 @@ export function Inventory2RoomContent({
                   max: SHOWCASE_RACKS_PER_ROOM,
                 })}
               </p>
-              <p className="text-xs font-medium text-slate-500">
-                {storedRacks.length > 0
-                  ? t('inventory.showcase_credits', { count: storedRacks.length })
-                  : t('inventory.showcase_pad_empty')}
-              </p>
+              {storedRacks.length > 0 ? (
+                <p className="text-xs font-medium text-slate-500">
+                  {t('inventory.showcase_credits', { count: storedRacks.length })}
+                </p>
+              ) : visualRacksOfCurrent.length === 0 ? (
+                <p className="text-xs font-medium text-slate-500">
+                  {t('inventory.showcase_pad_empty')}
+                </p>
+              ) : null}
             </div>
           ) : (
             <span />

@@ -206,9 +206,10 @@ export const ImageRackCard = memo(function ImageRackCard({
             disabled={rackDismantleLoading || rackActionBusy}
             title={hasMachines ? t('inventory.dismantle_rack_tooltip') : t('inventory2.unplace')}
             aria-label={hasMachines ? t('inventory.dismantle_rack_aria') : t('inventory2.unplace_aria')}
-            className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl border border-sky-500/30 bg-sky-500/15 text-sky-300 shadow-[2px_2px_0px_#000000] transition-all hover:bg-sky-500/25 active:translate-y-0.5 disabled:pointer-events-none disabled:opacity-40"
+            className="inline-flex min-h-9 sm:min-h-10 shrink-0 items-center gap-1.5 rounded-xl border border-sky-500/30 bg-sky-500/15 px-2.5 py-1.5 text-[10px] sm:text-xs font-black uppercase tracking-wider text-sky-300 shadow-[2px_2px_0px_#000000] transition-all hover:bg-sky-500/25 active:translate-y-0.5 disabled:pointer-events-none disabled:opacity-40"
           >
-            <PackageMinus className="h-4 w-4" strokeWidth={2.5} aria-hidden />
+            <PackageMinus className="h-4 w-4 shrink-0" strokeWidth={2.5} aria-hidden />
+            <span>{t('inventory2.unplace')}</span>
           </button>
         )}
         {rackHashRate > 0 && (

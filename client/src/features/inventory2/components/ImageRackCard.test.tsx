@@ -292,7 +292,9 @@ describe('ImageRackCard — visual placement (drag handle, unplace)', () => {
   it('unplace button calls onUnplaceRack directly when the rack has no machines', () => {
     const onUnplaceRack = vi.fn();
     render(withProviders(<ImageRackCard {...baseProps({ visualIndex: 2, onUnplaceRack })} />));
-    fireEvent.click(screen.getByLabelText('Tirar o rack da sala'));
+    const btn = screen.getByRole('button', { name: 'Tirar o rack da sala' });
+    expect(btn).toHaveTextContent(/guardar rack/i);
+    fireEvent.click(btn);
     expect(onUnplaceRack).toHaveBeenCalledWith(2);
   });
 
