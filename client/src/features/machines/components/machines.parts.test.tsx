@@ -103,18 +103,19 @@ describe('MachinesRoomTabs', () => {
     expect(tabs[1]).toHaveAttribute('aria-selected', 'false');
   });
 
-  it('shows the 3D room tab when that room is listed', () => {
+  it('renders tabs for all standard rooms', () => {
     render(
       withProviders(
         <MachinesRoomTabs
           t={t}
-          rooms={[room({ roomNumber: 1 }), room({ roomNumber: 101, kind: 'showcase_3d' })]}
+          rooms={[room({ roomNumber: 1 }), room({ roomNumber: 2 })]}
           activeRoom={1}
           onSelectRoom={vi.fn()}
         />,
       ),
     );
-    expect(screen.getByRole('tab', { name: 'Sala 3D' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Sala 1' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Sala 2' })).toBeInTheDocument();
   });
 
   it('renders no extra tab when none is given', () => {

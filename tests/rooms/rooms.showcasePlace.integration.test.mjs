@@ -71,100 +71,13 @@ describe("showcase rack place and remove", { skip: !hasDb && "local DATABASE_URL
     return rows;
   }
 
-  test("the free room grants no rack, and the flag ignores the allowlist", async () => {
-    const outsider = await makeUser();
-    process.env.SHOWCASE_3D_ROOM_USER_IDS = "1";
-    const listed = await roomsService.listRoomsForUser(outsider);
-    const room = listed.rooms.find((row) => row.roomNumber === 101);
-    assert.equal(room.unlocked, true);
-    assert.equal(room.racks.length, 0);
-    const credits = await prisma.user.findUnique({ where: { id: outsider }, select: { rackCredits: true } });
-    assert.equal(credits.rackCredits, 4);
-  });
-
-  test("buying stores a credit, installing spends it, and a second install does not create a rack", async () => {
-    const userId = await makeUser();
-    const bought = await roomsService.purchaseShowcaseRacksForChannel(userId, 1, "shop");
-    assert.equal(bought.ok, true);
-    assert.equal(bought.rackCredits, 4);
-    assert.deepEqual(await floors(userId), [{ visualIndex: 0, floorSlot: null }]);
-
-    const placed = await placements.setVisualPlacementForUser(userId, 101, 0, 3, false);
-    assert.equal(placed.ok, true);
-    assert.equal(placed.rackCredits, 4);
-    assert.deepEqual(await floors(userId), [{ visualIndex: 0, floorSlot: 3 }]);
-    assert.equal(await prisma.userRack.count({ where: { userId, room: { roomNumber: 101 } } }), 2);
-
-    const again = await placements.setVisualPlacementForUser(userId, 101, 0, 3, false);
-    assert.equal(again.ok, true);
-    assert.equal(await prisma.userRack.count({ where: { userId, room: { roomNumber: 101 } } }), 2);
-
+  test("room 101 is not listed and cannot have placements set", async () => {
+    const user = await makeUser();
+    const listed = await roomsService.listRoomsForUser(user);
+    assert.equal(listed.rooms.some((r) => r.roomNumber === 101), false);
     await assert.rejects(
-      () => placements.setVisualPlacementForUser(userId, 101, 0, 4, false),
-      (err) => err.code === "SHOWCASE_RACK_FIXED",
+      () => placements.setVisualPlacementForUser(user, 101, 0, 0, false),
+      (err) => err.http === 404 || err.message === "Sala não encontrada.",
     );
-  });
-
-  test("two installs of the same credit leave one rack on one pad", async () => {
-    const userId = await makeUser();
-    await roomsService.purchaseShowcaseRacksForChannel(userId, 1, "shop");
-    const [first, second] = await Promise.allSettled([
-      placements.setVisualPlacementForUser(userId, 101, 0, 1, false),
-      placements.setVisualPlacementForUser(userId, 101, 0, 2, false),
-    ]);
-    const oks = [first, second].filter((row) => row.status === "fulfilled");
-    assert.equal(oks.length >= 1, true);
-    const rows = await floors(userId);
-    assert.equal(rows.length, 1);
-    assert.ok(rows[0].floorSlot === 1 || rows[0].floorSlot === 2);
-    assert.equal(await prisma.userRack.count({ where: { userId, room: { roomNumber: 101 } } }), 2);
-  });
-
-  test("a machine on the rack blocks removal and then returns to inventory", async () => {
-    const userId = await makeUser();
-    await roomsService.purchaseShowcaseRacksForChannel(userId, 1, "shop");
-    await placements.setVisualPlacementForUser(userId, 101, 0, 0, false);
-    const rack = await prisma.userRack.findFirst({
-      where: { userId, room: { roomNumber: 101 }, position: 0 },
-    });
-    const inventory = await prisma.userInventory.create({
-      data: {
-        userId,
-        minerName: "MinerCore MCX9",
-        level: 1,
-        hashRate: 50,
-        slotSize: 1,
-        imageUrl: "/media/offers/minercore-mcx9.webp",
-      },
-    });
-    const installed = await roomsService.installMinerForUser(userId, rack.id, inventory.id);
-    assert.equal(installed.inventoryItem.minerName, "MinerCore MCX9");
-
-    await assert.rejects(
-      () => placements.setVisualPlacementForUser(userId, 101, 0, null, false),
-      (err) => err.code === "RACK_NOT_EMPTY",
-    );
-    const stillThere = await prisma.userMiner.count({ where: { userId } });
-    assert.equal(stillThere, 1);
-
-    await roomsService.uninstallMinerForUser(userId, rack.id);
-    const back = await prisma.userInventory.findMany({ where: { userId } });
-    assert.equal(back.length, 1);
-    assert.equal(Number(back[0].hashRate), 50);
-    assert.equal(await prisma.userMiner.count({ where: { userId } }), 0);
-
-    const removed = await placements.setVisualPlacementForUser(userId, 101, 0, null, false);
-    assert.equal(removed.ok, true);
-    assert.deepEqual(await floors(userId), [{ visualIndex: 0, floorSlot: null }]);
-    assert.equal(await prisma.userRack.count({ where: { userId, room: { roomNumber: 101 } } }), 2);
-    const again = await placements.setVisualPlacementForUser(userId, 101, 0, null, false);
-    assert.equal(again.ok, true);
-    assert.equal((await floors(userId)).length, 1);
-
-    const reinstalled = await placements.setVisualPlacementForUser(userId, 101, 0, 5, false);
-    assert.equal(reinstalled.ok, true);
-    assert.deepEqual(await floors(userId), [{ visualIndex: 0, floorSlot: 5 }]);
-    const shelf = await prisma.user.findUnique({ where: { id: userId }, select: { rackCredits: true } });
-    assert.equal(shelf.rackCredits, 4);
   });
 });

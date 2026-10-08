@@ -202,8 +202,7 @@ export function Inventory2RoomContent({
     [currentRoom],
   );
 
-  const isShowcaseRoom = currentRoom?.kind === 'showcase_3d';
-  const padCount = isShowcaseRoom ? SHOWCASE_RACKS_PER_ROOM : visualRacksOfCurrent.length;
+  const padCount = visualRacksOfCurrent.length;
   const placementByFloor = useMemo(() => {
     const map = new Map<number, VisualRackPlacement>();
     for (const p of placements) {
@@ -244,7 +243,7 @@ export function Inventory2RoomContent({
     );
   }
 
-  const isShowcase = currentRoom.kind === 'showcase_3d';
+  const isShowcase = false;
 
   if (!currentRoom.unlocked) {
     return (
@@ -420,38 +419,11 @@ export function Inventory2RoomContent({
           );
   };
 
-  const showcaseFloorSlots = isShowcase ? Array.from({ length: padCount }, (_, floorSlot) => floorSlot) : [];
-  const showcaseOccupied = showcaseFloorSlots.filter((floorSlot) => {
-    const placement = placementByFloor.get(floorSlot);
-    return Boolean(placement && visualRacksOfCurrent[placement.visualIndex]);
-  });
-  const showcaseEmpty = showcaseFloorSlots.filter((floorSlot) => !showcaseOccupied.includes(floorSlot));
-
   return (
     <div role="tabpanel" className="space-y-4">
-      {(occupiedSlots.length > 0 || isShowcase) && (
+      {occupiedSlots.length > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-3">
-          {isShowcase ? (
-            <div className="space-y-1">
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                {t('inventory.showcase_rack_count', {
-                  count: visualRacksOfCurrent.length,
-                  max: SHOWCASE_RACKS_PER_ROOM,
-                })}
-              </p>
-              {storedRacks.length > 0 ? (
-                <p className="text-xs font-medium text-slate-500">
-                  {t('inventory.showcase_credits', { count: storedRacks.length })}
-                </p>
-              ) : visualRacksOfCurrent.length === 0 ? (
-                <p className="text-xs font-medium text-slate-500">
-                  {t('inventory.showcase_pad_empty')}
-                </p>
-              ) : null}
-            </div>
-          ) : (
-            <span />
-          )}
+          <span />
           <div className="flex flex-wrap justify-end gap-2">
           {occupiedSlots.length > 0 && (
           <button
@@ -470,38 +442,9 @@ export function Inventory2RoomContent({
         </div>
       )}
 
-      {isShowcase ? (
-        <div
-          className={
-            showcaseOccupied.length > 0 && showcaseEmpty.length > 0
-              ? 'grid items-start gap-4 lg:grid-cols-[minmax(22rem,46rem)_minmax(0,1fr)]'
-              : showcaseOccupied.length > 0
-                ? 'flex flex-wrap items-start gap-4'
-                : 'grid grid-cols-2 items-start gap-3 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6'
-          }
-        >
-          {showcaseOccupied.length > 0 && (
-            <div className={showcaseEmpty.length > 0 ? 'flex min-w-0 flex-col gap-4' : 'contents'}>
-              {showcaseOccupied.map((floorSlot) => renderShowcaseFloor(floorSlot))}
-            </div>
-          )}
-          {showcaseEmpty.length > 0 && (
-            <div
-              className={
-                showcaseOccupied.length > 0
-                  ? 'grid grid-cols-2 items-start gap-3 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5'
-                  : 'contents'
-              }
-            >
-              {showcaseEmpty.map((floorSlot) => renderShowcaseFloor(floorSlot))}
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-          {Array.from({ length: padCount }, (_, floorSlot) => renderShowcaseFloor(floorSlot))}
-        </div>
-      )}
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+        {Array.from({ length: padCount }, (_, floorSlot) => renderShowcaseFloor(floorSlot))}
+      </div>
 
       <RoomDismantleModal
         open={dismantleOpen}

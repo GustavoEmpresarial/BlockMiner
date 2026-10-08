@@ -147,7 +147,7 @@ describe('ShopPurchaseModal', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it('shows the 3D room warning in the buy modal', () => {
+  it('does not show any restrictive 3D room warning in the buy modal', () => {
     renderWithI18n(
       <ShopPurchaseModal
         modal={{
@@ -169,6 +169,6 @@ describe('ShopPurchaseModal', () => {
         onConfirm={vi.fn()}
       />,
     );
-    expect(screen.getByRole('note')).toHaveTextContent('Só pode ser instalada na Sala 3D.');
+    expect(screen.queryByRole('note')).not.toBeInTheDocument();
   });
 });

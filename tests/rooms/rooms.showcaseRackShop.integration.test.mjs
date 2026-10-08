@@ -94,116 +94,27 @@ describe("showcase rack shop and offer purchase", { skip: !hasDb && "local DATAB
     };
   }
 
-  test("outsider is refused and is not charged", async () => {
-    const insider = await makeUser("10");
-    const outsider = await makeUser("10");
-    allow(insider);
-    const shop = await roomsService.purchaseShowcaseRacksForChannel(outsider, 1, "shop");
-    const offer = await roomsService.purchaseShowcaseRacksForChannel(outsider, 1, "offer");
+  test("showcase rack purchases are completely disabled and do not debit balance", async () => {
+    const user = await makeUser("10");
+    const shop = await roomsService.purchaseShowcaseRacksForChannel(user, 1, "shop");
+    const offer = await roomsService.purchaseShowcaseRacksForChannel(user, 1, "offer");
+    const room = await roomsService.buyShowcaseRackForUser(user, null);
+
     assert.equal(shop.ok, false);
     assert.equal(shop.status, 403);
     assert.equal(shop.code, "SHOWCASE_ROOM_DISABLED");
+
     assert.equal(offer.ok, false);
     assert.equal(offer.status, 403);
-    const row = await balanceOf(outsider);
+    assert.equal(offer.code, "SHOWCASE_ROOM_DISABLED");
+
+    assert.equal(room.ok, false);
+    assert.equal(room.status, 403);
+    assert.equal(room.code, "SHOWCASE_ROOM_DISABLED");
+
+    const row = await balanceOf(user);
     assert.ok(new Prisma.Decimal(row.blkBalance).equals(new Prisma.Decimal("10")));
     assert.equal(row.rackCredits, 4);
-    assert.deepEqual(await rackState(outsider), { rows: 0, placements: 0, stored: 0 });
-    const hidden = await offerService.listActiveOfferEventsForUser(outsider);
-    const items = hidden.rackOffers?.items ?? [];
-    assert.equal(items.some((item) => item.sku === "showcase_3d_rack"), false);
-  });
-
-  test("shop debits 1.5 BLK and installs one rack without rack credits", async () => {
-    const userId = await makeUser("10");
-    allow(userId);
-    const result = await roomsService.purchaseShowcaseRacksForChannel(userId, 1, "shop");
-    assert.equal(result.ok, true);
-    assert.equal(result.unitPrice, "1.50000000");
-    assert.equal(result.totalPrice, "1.50000000");
-    assert.equal(result.rackCredits, 4);
-    const row = await balanceOf(userId);
-    assert.ok(new Prisma.Decimal(row.blkBalance).equals(new Prisma.Decimal("8.5")));
-    assert.equal(row.rackCredits, 4);
-    assert.deepEqual(await rackState(userId), { rows: 2, placements: 1, stored: 1 });
-    const offers = await offerService.listActiveOfferEventsForUser(userId);
-    const item = (offers.rackOffers?.items ?? []).find((row) => row.sku === "showcase_3d_rack");
-    assert.equal(item.priceBlk, "0.95");
-    assert.equal(item.listPriceBlk, "1.5");
-  });
-
-  test("offer debits 0.95 BLK on top of the shop price", async () => {
-    const userId = await makeUser("8.5");
-    allow(userId);
-    const result = await roomsService.purchaseShowcaseRacksForChannel(userId, 1, "offer");
-    assert.equal(result.ok, true);
-    assert.equal(result.totalPrice, "0.95000000");
-    const row = await balanceOf(userId);
-    assert.ok(new Prisma.Decimal(row.blkBalance).equals(new Prisma.Decimal("7.55")));
-    assert.equal(row.rackCredits, 4);
-    assert.deepEqual(await rackState(userId), { rows: 2, placements: 1, stored: 1 });
-  });
-
-  test("in-room endpoint still debits the legacy price of 1 BLK", async () => {
-    const userId = await makeUser("5");
-    allow(userId);
-    const result = await roomsService.buyShowcaseRackForUser(userId, null);
-    assert.equal(result.ok, true);
-    assert.equal(result.price, 1);
-    const row = await balanceOf(userId);
-    assert.ok(new Prisma.Decimal(row.blkBalance).equals(new Prisma.Decimal("4")));
-    assert.deepEqual(await rackState(userId), { rows: 2, placements: 1, stored: 0 });
-  });
-
-  test("quantity above 24 is refused without a debit", async () => {
-    const userId = await makeUser("100");
-    allow(userId);
-    const result = await roomsService.purchaseShowcaseRacksForChannel(userId, 25, "shop");
-    assert.equal(result.ok, false);
-    assert.equal(result.code, "SHOWCASE_RACK_INVALID_QUANTITY");
-    const row = await balanceOf(userId);
-    assert.ok(new Prisma.Decimal(row.blkBalance).equals(new Prisma.Decimal("100")));
-    assert.deepEqual(await rackState(userId), { rows: 0, placements: 0, stored: 0 });
-  });
-
-  test("the 24th rack is the last one that can be bought", async () => {
-    const userId = await makeUser("36");
-    allow(userId);
-    const filled = await roomsService.purchaseShowcaseRacksForChannel(userId, 24, "shop");
-    assert.equal(filled.ok, true);
-    assert.equal(filled.totalPrice, "36.00000000");
-    const extra = await roomsService.purchaseShowcaseRacksForChannel(userId, 1, "offer");
-    assert.equal(extra.ok, false);
-    assert.equal(extra.code, "SHOWCASE_RACK_FULL");
-    const row = await balanceOf(userId);
-    assert.ok(new Prisma.Decimal(row.blkBalance).equals(new Prisma.Decimal("0")));
-    assert.equal(row.rackCredits, 4);
-    assert.deepEqual(await rackState(userId), { rows: 48, placements: 24, stored: 24 });
-  });
-
-  test("insufficient balance installs nothing and does not debit", async () => {
-    const userId = await makeUser("1");
-    allow(userId);
-    const result = await roomsService.purchaseShowcaseRacksForChannel(userId, 1, "shop");
-    assert.equal(result.ok, false);
-    assert.equal(result.code, "INSUFFICIENT_BALANCE");
-    const row = await balanceOf(userId);
-    assert.ok(new Prisma.Decimal(row.blkBalance).equals(new Prisma.Decimal("1")));
-    assert.deepEqual(await rackState(userId), { rows: 0, placements: 0, stored: 0 });
-  });
-
-  test("two concurrent buys of the last affordable rack debit once", async () => {
-    const userId = await makeUser("1.5");
-    allow(userId);
-    const [first, second] = await Promise.all([
-      roomsService.purchaseShowcaseRacksForChannel(userId, 1, "shop"),
-      roomsService.purchaseShowcaseRacksForChannel(userId, 1, "shop"),
-    ]);
-    const oks = [first, second].filter((row) => row.ok);
-    assert.equal(oks.length, 1);
-    const row = await balanceOf(userId);
-    assert.ok(new Prisma.Decimal(row.blkBalance).equals(new Prisma.Decimal("0")));
-    assert.equal(row.rackCredits, 4);
-    assert.deepEqual(await rackState(userId), { rows: 2, placements: 1, stored: 1 });
+    assert.deepEqual(await rackState(user), { rows: 0, placements: 0, stored: 0 });
   });
 });

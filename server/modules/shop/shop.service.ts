@@ -32,7 +32,6 @@ import { SHOP_ERROR_MESSAGE } from "./shop.errors.js";
 import { SHOP_CURRENCY } from "./shop.config.js";
 import { listFanCatalogForShop, readFanSalesAvailableAt } from "../fans/index.js";
 import { listRackCatalogForShop, readRackSalesAvailableAt } from "../racks/index.js";
-import { showcaseRackListingForUser } from "../rooms/rooms.showcase.js";
 
 export type MinerPurchaseResult = {
   newBalance: number;
@@ -56,14 +55,13 @@ export async function listMinersForShop(page: number, pageSize: number, userId?:
   const now = new Date();
   const { miners, total } = await shopRepoRef.listActiveMiners(page, pageSize);
   const shelfRacks = listRackCatalogForShop(now);
-  const showcaseRack = userId == null ? null : showcaseRackListingForUser(userId, "shop");
   return {
     total,
     currency: SHOP_CURRENCY,
     fanSalesAvailableAt: readFanSalesAvailableAt().toISOString(),
     rackSalesAvailableAt: readRackSalesAvailableAt().toISOString(),
     fans: listFanCatalogForShop(now),
-    racks: showcaseRack ? [...shelfRacks, showcaseRack] : shelfRacks,
+    racks: shelfRacks,
     items: miners.map((miner) => ({
       id: miner.id,
       name: miner.name,

@@ -2,11 +2,9 @@ import prisma from "../../core/database/prisma.js";
 import { HttpStatusError } from "../../shared/errors/httpStatusError.js";
 import { isFansFeatureEnabled } from "../fans/fans.config.js";
 import { getFanCreditsForUser } from "../fans/fans.service.js";
-import { isShowcaseRoom, showcaseVisualCount } from "./rooms.showcase.js";
 import { SLOTS_PER_VISUAL_RACK } from "./rooms.types.js";
 
-function visualCountFromSlots(slotCount: number, roomNumber?: number | null): number {
-  if (isShowcaseRoom({ roomNumber })) return showcaseVisualCount(slotCount);
+function visualCountFromSlots(slotCount: number, _roomNumber?: number | null): number {
   return Math.max(0, Math.ceil(slotCount / SLOTS_PER_VISUAL_RACK));
 }
 
@@ -88,9 +86,6 @@ export async function setFanPlacementForUser(
     select: { id: true, roomNumber: true, kind: true, _count: { select: { racks: true } } },
   });
   if (!room) throw new HttpStatusError(404, "Sala não encontrada.");
-  if (isShowcaseRoom(room)) {
-    throw new HttpStatusError(400, "Esta sala não usa ventilador.", { code: "SHOWCASE_NO_FAN" });
-  }
 
   const visualCount = visualCountFromSlots(room._count.racks, room.roomNumber);
   if (visualIndex >= visualCount) throw new HttpStatusError(400, "Rack visual inválido.");

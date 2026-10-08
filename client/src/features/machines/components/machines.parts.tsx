@@ -101,7 +101,7 @@ export function MachinesRoomTabs({ t, rooms, activeRoom, onSelectRoom, extraTab 
                   : "border-slate-800 bg-slate-950/40 text-slate-600 opacity-60"
             }`}>
             {!isUnlocked && <Lock className="w-3 h-3" />}
-            {room.kind === "showcase_3d" ? t("inventory.showcase_room_label") : `${t("inventory.room_label")} ${room.roomNumber}`}
+            {`${t("inventory.room_label")} ${room.roomNumber}`}
             {isUnlocked && !isActive && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
           </button>
         );
