@@ -22,6 +22,11 @@ export type { RoomOffersPublic, RoomOfferItemPublic } from "./rooms.offers.js";
 export { ROOMS_ERROR } from "./rooms.errors.js";
 export { provisionFirstRoomTx } from "./rooms.service.js";
 export {
+  runShowcase3dCommonRoomMigration,
+  listShowcase3dInCommonRooms,
+  summarizeShowcase3dCommonHits,
+} from "./rooms.showcaseCommonMigration.js";
+export {
   RACKS_PER_ROOM,
   SLOTS_PER_VISUAL_RACK,
   STARTER_VISUAL_RACKS_ENV_KEY,

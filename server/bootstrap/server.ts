@@ -54,7 +54,7 @@ import { internalOfferwallRouter, internalOfferwallAdminRouter, applyInternalOff
 import { zeradsRouter, zeradsCallbackHandler } from "../modules/zerads/index.js";
 import { supportRouter, supportPublicRouter, supportAdminRouter } from "../modules/support/index.js";
 import { socialRouter, socialAdminRouter } from "../modules/social/index.js";
-import { roomsRouter } from "../modules/rooms/index.js";
+import { roomsRouter, runShowcase3dCommonRoomMigration } from "../modules/rooms/index.js";
 import { notificationsRouter, broadcastRouter, broadcastAdminRouter, rewardInboxRouter, telegramAdminRouter, } from "../modules/notifications/index.js";
 import { chatRouter } from "../modules/chat/index.js";
 import { tournamentsRouter, tournamentsAdminRouter, rankingRouter, startTournamentsCron, } from "../modules/tournaments/index.js";
@@ -299,6 +299,7 @@ async function main() {
     await bootstrapAdminUsers().catch((err) => log.error("Admin bootstrap failed", { error: String(err) }));
     await bootstrapEngine().catch((err) => log.error("Mining engine bootstrap failed", { error: String(err) }));
     await applyInternalOfferwallStandardBlkReward().catch((err) => log.warn("Internal offerwall BLK reward sync failed", { error: String(err) }));
+    await runShowcase3dCommonRoomMigration({ execute: true }).catch((err) => log.error("Showcase 3D common room migration failed", { error: String(err) }));
     const app = createApp();
     const httpServer = http.createServer(app);
     // Socket.IO core + miner/support/tournament/games realtime handlers (12c, 12i, 12j —
