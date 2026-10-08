@@ -10,15 +10,21 @@ Base: `b423ad1`. Branch: `feature/showcase-3d-common-block`. Worktree: `/home/gu
 4. **Client** pré-checa com `rackMinerModelUrl` antes do POST.
 5. **Etapa A** script somente leitura: `scripts/audit/count-showcase-3d-in-common-rooms.mts`.
 
-## Etapa B — plano (NÃO implementada)
+## Etapa B — implementada (autorizada com números de produção)
 
-Só depois que o dono autorizar com o número na mão.
+Números reais (Deployador, agregados): 30 máquinas, 3 usuários, 360k GH/s, pior conta 20 (240k), salas 1–2.
 
-- **Caminho:** reutilizar `moveRackMinerBackToInventoryTx` (o mesmo uninstall das salas 1–4). Se algum caso (ex.: ownedMachine/event sem linha esperada) fizer essa função falhar, **parar e perguntar** — máquina nenhuma pode sumir.
-- **Granularidade:** transação **por máquina** (um `$transaction` por rack afetado), em loop por usuário. Falha numa máquina não deixa as outras pela metade sem registro; já desfeitas ficam no inventário.
-- **Idempotência:** só age em racks com `userMiner` 3D ainda nas salas 1–`ROOM_MAX`. Segunda execução encontra zero alvos. Não cria inventário duplicado porque o rack fica vazio após a primeira.
-- **Auditoria:** gravar `audit_logs` (ou equivalente já usado no módulo) com `userId`, `rackId`, `userMinerId`/hashRate, código da migração, timestamp. Lista JSON de IDs processados no stdout.
-- **Reversão:** não automática. Reverter = o usuário reinstala na Sala 3D (ou admin reinstala manualmente a partir do inventário). O script da Etapa B **não** apaga a máquina; só move rack → inventário. Snapshot pré-migração (saída da Etapa A + log da B) permite conferência.
+Script: `scripts/audit/migrate-showcase-3d-from-common-rooms.mts`
+
+- **Dry-run padrão.** Só escreve com `--execute`.
+- **Conta no momento** via `listShowcase3dInCommonRooms` (não usa constante 30 como cota).
+- **Abort** se live count > `SHOWCASE_3D_COMMON_MIGRATE_SURVEY_COUNT` (30) × 2.
+- **Por máquina:** `migrateShowcase3dCommonRackToInventory` → `moveRackMinerBackToInventoryTx` + `audit_logs` na mesma tx.
+- **Idempotente:** segunda execução planned=0; sem duplicar inventário.
+- **Falha no meio:** tx da máquina reverte; demais intactas; resume move o restante.
+- **Recusa** `blockminer-db` / IPs de produção (mesmo guard da Etapa A).
+
+Teste localhost (`rooms.showcase3dCommonMigrate.integration.test.mjs`): dry-run sem escrita; execute 30→inventário certo; re-run 0; failAfter=10 sem perda + resume; abort >2× survey.
 
 ## Contagem Etapa A (localhost)
 

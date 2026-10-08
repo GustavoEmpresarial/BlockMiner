@@ -6,147 +6,17 @@
  *
  * Local:
  *   npx tsx --import ./tests/_env-test-overrides.mjs scripts/audit/count-showcase-3d-in-common-rooms.mts
- *
- * Against a read-only dump (human only; never point this at live production from an agent):
- *   DATABASE_URL='postgresql://…@127.0.0.1:…/dump_name' \
- *     npx tsx --import ./tests/_env-test-overrides.mjs scripts/audit/count-showcase-3d-in-common-rooms.mts
  */
 import prisma from "../../server/core/database/prisma.ts";
-import { isShowcase3dMiner, isShowcaseRoom } from "../../server/modules/rooms/rooms.showcase.ts";
-import { ROOM_MAX } from "../../server/modules/rooms/rooms.types.ts";
-
-function assertSafeDatabaseUrl(raw: string | undefined): void {
-  if (!raw?.trim()) throw new Error("DATABASE_URL missing");
-  let parsed: URL;
-  try {
-    parsed = new URL(raw);
-  } catch {
-    throw new Error("DATABASE_URL unparseable");
-  }
-  const host = parsed.hostname;
-  const db = parsed.pathname.replace(/^\//, "");
-  const refused =
-    raw.includes("blockminer-db") ||
-    raw.includes("blockminer.space") ||
-    raw.includes("89.167.119.164") ||
-    raw.includes("169.58.45.155") ||
-    raw.includes("161.97.176.125") ||
-    !["127.0.0.1", "localhost"].includes(host);
-  if (refused) {
-    throw new Error(
-      `DATABASE_URL refused (host=${host} db=${db}). Count only against localhost / a local dump.`,
-    );
-  }
-}
-
-function minerRefFromInstalled(row: {
-  imageUrl: string | null;
-  miner: { name: string | null; imageUrl: string | null } | null;
-  ownedMachine: {
-    minerName: string | null;
-    imageUrl: string | null;
-    eventMiner: { name: string | null; imageUrl: string | null; modelUrl: string | null } | null;
-  } | null;
-}) {
-  const eventMiner = row.ownedMachine?.eventMiner;
-  return {
-    modelUrl: eventMiner?.modelUrl ?? null,
-    minerName: eventMiner?.name ?? row.ownedMachine?.minerName ?? row.miner?.name ?? null,
-    imageUrl:
-      row.imageUrl ??
-      row.ownedMachine?.imageUrl ??
-      eventMiner?.imageUrl ??
-      row.miner?.imageUrl ??
-      null,
-  };
-}
+import {
+  assertSafeDatabaseUrl,
+  listShowcase3dInCommonRooms,
+  summarizeShowcase3dCommonHits,
+} from "../../server/modules/rooms/rooms.showcaseCommonMigration.ts";
 
 assertSafeDatabaseUrl(process.env.DATABASE_URL);
 
-const racks = await prisma.userRack.findMany({
-  where: {
-    userMinerId: { not: null },
-    room: {
-      roomNumber: { gte: 1, lte: ROOM_MAX },
-    },
-  },
-  select: {
-    id: true,
-    userId: true,
-    position: true,
-    room: { select: { roomNumber: true, kind: true } },
-    userMiner: {
-      select: {
-        id: true,
-        hashRate: true,
-        imageUrl: true,
-        miner: { select: { name: true, imageUrl: true } },
-        ownedMachine: {
-          select: {
-            minerName: true,
-            imageUrl: true,
-            eventMiner: { select: { name: true, imageUrl: true, modelUrl: true } },
-          },
-        },
-      },
-    },
-  },
-});
-
-const hits: Array<{
-  userId: number;
-  roomNumber: number;
-  rackId: number;
-  minerId: number;
-  hashRate: number;
-  label: string;
-}> = [];
-
-for (const rack of racks) {
-  if (!rack.userMiner) continue;
-  if (isShowcaseRoom(rack.room)) continue;
-  const ref = minerRefFromInstalled(rack.userMiner);
-  if (!isShowcase3dMiner(ref)) continue;
-  hits.push({
-    userId: rack.userId,
-    roomNumber: rack.room.roomNumber,
-    rackId: rack.id,
-    minerId: rack.userMiner.id,
-    hashRate: Number(rack.userMiner.hashRate) || 0,
-    label: String(ref.minerName ?? ref.imageUrl ?? "3d"),
-  });
-}
-
-const byUser = new Map<number, { count: number; hashRate: number }>();
-for (const hit of hits) {
-  const cur = byUser.get(hit.userId) ?? { count: 0, hashRate: 0 };
-  cur.count += 1;
-  cur.hashRate += hit.hashRate;
-  byUser.set(hit.userId, cur);
-}
-
-const userStats = [...byUser.entries()]
-  .map(([userId, stats]) => ({ userId, ...stats }))
-  .sort((a, b) => b.count - a.count || b.hashRate - a.hashRate);
-
-const totalHashRate = hits.reduce((sum, h) => sum + h.hashRate, 0);
-const worst = userStats[0] ?? null;
-
-const report = {
-  readOnly: true,
-  roomMax: ROOM_MAX,
-  machines3dInCommonRooms: hits.length,
-  distinctUsers: byUser.size,
-  totalHashRate,
-  worstUser: worst
-    ? {
-        userId: worst.userId,
-        machines: worst.count,
-        hashRate: worst.hashRate,
-      }
-    : null,
-  distributionTop10: userStats.slice(0, 10),
-};
-
+const hits = await listShowcase3dInCommonRooms();
+const report = { readOnly: true, ...summarizeShowcase3dCommonHits(hits) };
 console.log(JSON.stringify(report, null, 2));
 await prisma.$disconnect();

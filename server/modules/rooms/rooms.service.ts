@@ -40,6 +40,10 @@ import {
   resolveShowcaseFloorSlot,
   type ShowcaseMinerRef,
 } from "./rooms.showcase.js";
+import {
+  minerRefFromInstalled,
+  SHOWCASE_3D_COMMON_MIGRATE_AUDIT_ACTION,
+} from "./rooms.showcaseCommonMigration.js";
 import { ROOMS_ERROR } from "./rooms.errors.js";
 import { buildListedRoomsPayload, countRackTotals } from "./rooms.dto.js";
 import {
@@ -780,6 +784,100 @@ export async function uninstallMinerForUser(userId: number, rackId: number): Pro
   }
 
   invalidateMachinesListCache(userId);
+}
+
+/**
+ * Etapa B helper: one common-room 3D miner → inventory via {@link moveRackMinerBackToInventoryTx}.
+ * Idempotent when the rack is already empty or no longer a 3D target (no-op skip).
+ * Audit row is written in the same transaction as the move.
+ */
+export async function migrateShowcase3dCommonRackToInventory(args: {
+  userId: number;
+  rackId: number;
+}): Promise<{ minerName: string; hashRate: number; userMinerId: number; skipped?: boolean }> {
+  const { userId, rackId } = args;
+  const rack = await prisma.userRack.findFirst({
+    where: { id: rackId, userId },
+    include: {
+      room: { select: { roomNumber: true, kind: true } },
+      userMiner: {
+        include: {
+          miner: { select: { name: true, imageUrl: true } },
+          ownedMachine: {
+            select: {
+              minerName: true,
+              imageUrl: true,
+              eventMiner: { select: { name: true, imageUrl: true, modelUrl: true } },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!rack?.userMiner) {
+    return { minerName: "", hashRate: 0, userMinerId: 0, skipped: true };
+  }
+  if (isShowcaseRoom(rack.room) || rack.room.roomNumber < 1 || rack.room.roomNumber > ROOM_MAX) {
+    throw new HttpStatusError(400, "Rack is not in a common room.", {
+      code: "SHOWCASE_3D_MIGRATE_WRONG_ROOM",
+    });
+  }
+  const ref = minerRefFromInstalled(rack.userMiner);
+  if (!isShowcase3dMiner(ref)) {
+    return { minerName: "", hashRate: 0, userMinerId: 0, skipped: true };
+  }
+
+  const miner = rack.userMiner as MinerWithMinerRel;
+  const hashRate = Number(miner.hashRate) || 0;
+  const userMinerId = miner.id;
+  let minerName = "";
+
+  await prisma.$transaction(async (tx) => {
+    const still = await tx.userRack.findFirst({
+      where: { id: rackId, userId, userMinerId },
+      select: { id: true, roomId: true, userId: true, userMinerId: true },
+    });
+    if (!still?.userMinerId) {
+      return;
+    }
+    const moved = await moveRackMinerBackToInventoryTx(
+      tx,
+      { id: rack.id, roomId: rack.roomId, userId: rack.userId },
+      miner,
+      new Date(),
+    );
+    minerName = moved.minerName;
+    await tx.auditLog.create({
+      data: {
+        userId,
+        action: SHOWCASE_3D_COMMON_MIGRATE_AUDIT_ACTION,
+        source: "system",
+        severity: "info",
+        relatedEntityType: "user_rack",
+        relatedEntityId: String(rackId),
+        detailsJson: JSON.stringify({
+          rackId,
+          userMinerId,
+          hashRate,
+          roomNumber: rack.room.roomNumber,
+          minerName: moved.minerName,
+        }),
+      },
+    });
+  });
+
+  if (!minerName) {
+    return { minerName: "", hashRate: 0, userMinerId: 0, skipped: true };
+  }
+
+  try {
+    await miningEngine.reloadMinerProfile(userId);
+  } catch {
+    /* best-effort */
+  }
+  invalidateMachinesListCache(userId);
+  return { minerName, hashRate, userMinerId };
 }
 
 export async function uninstallMinerBatchForUser(userId: number, rackIds: number[]): Promise<void> {
