@@ -298,6 +298,25 @@ export const TOURNAMENT_PRESETS: TournamentPreset[] = [
       blk(41, 50, '0.005'),
     ],
   },
+  {
+    id: 'monthly-all-activities',
+    labelKey: 'adminTournaments.preset_monthly_all_activities',
+    hintKey: 'adminTournaments.preset_monthly_all_activities_hint',
+    name: 'Monthly All Activities Tournament',
+    description: 'Monthly ranking by all activities (faucet, links, auto-mining, games, offers, check-ins, tasks).',
+    type: 'MONTHLY',
+    metric: 'ALL_ACTIVITIES',
+    recurring: true,
+    prizes: [
+      machine(1, 1, MINER.hyperDrill),
+      machine(2, 2, MINER.blackNova),
+      machine(3, 3, MINER.ironPulse),
+      machine(4, 10, MINER.cryptoDrill),
+      boost(11, 25, '500', '168'),
+      boost(26, 40, '250', '24'),
+      blk(41, 50, '0.003'),
+    ],
+  },
 ];
 
 export function applyPresetToForm(
