@@ -100,4 +100,28 @@ describe('useYoutubeBlurPause', () => {
 
     expect(pauseWatching).not.toHaveBeenCalled();
   });
+
+  it('does NOT pause on unmount when Power Boost is active (page change / route navigation)', () => {
+    const pauseWatching = vi.fn();
+    const playerStateRef = { current: 'playing' as const };
+
+    const { unmount } = renderHook(() =>
+      useYoutubeBlurPause({ isPaused: false, pauseWatching, powerBoostActive: true, playerStateRef }),
+    );
+
+    unmount();
+    expect(pauseWatching).not.toHaveBeenCalled();
+  });
+
+  it('DOES pause on unmount when Power Boost is inactive and user leaves without beforeunload', () => {
+    const pauseWatching = vi.fn();
+    const playerStateRef = { current: 'playing' as const };
+
+    const { unmount } = renderHook(() =>
+      useYoutubeBlurPause({ isPaused: false, pauseWatching, powerBoostActive: false, playerStateRef }),
+    );
+
+    unmount();
+    expect(pauseWatching).toHaveBeenCalledTimes(1);
+  });
 });

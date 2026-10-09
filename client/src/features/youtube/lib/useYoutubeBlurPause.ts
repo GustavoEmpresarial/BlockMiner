@@ -23,6 +23,7 @@ export function useYoutubeBlurPause({
   playerStateRef: { current: PlayerUiState };
 }): void {
   const powerBoostRef = useRef(powerBoostActive);
+  powerBoostRef.current = powerBoostActive;
   useEffect(() => {
     powerBoostRef.current = powerBoostActive;
   }, [powerBoostActive]);
@@ -35,7 +36,7 @@ export function useYoutubeBlurPause({
       leaving = true;
     };
     const pauseIfStillHere = () => {
-      if (!leaving) pauseWatching();
+      if (!leaving && !powerBoostRef.current) pauseWatching();
     };
     const onVisibility = () => {
       if (!powerBoostRef.current && document.hidden) pauseIfStillHere();
@@ -78,7 +79,9 @@ export function useYoutubeBlurPause({
       document.removeEventListener('visibilitychange', onVisibility);
       window.removeEventListener('blur', onBlur);
       window.removeEventListener('focus', onFocus);
-      pauseIfStillHere();
+      if (!powerBoostRef.current) {
+        pauseIfStillHere();
+      }
     };
   }, [isPaused, pauseWatching, playerStateRef]);
 }

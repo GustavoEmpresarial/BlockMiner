@@ -92,11 +92,22 @@ export default function YouTubeWatchPage() {
   // `wasPaused` latch) on every single video switch, not just on real blur/leave.
   const switchingVideoRef = useRef(false);
 
-  const [isPaused, setIsPaused] = useState(() => readPausedFlag(YT_PAUSED_KEY));
+  const [isPaused, setIsPaused] = useState(() => (powerBoostActive ? false : readPausedFlag(YT_PAUSED_KEY)));
   const activelyWatchingRef = useRef(false);
   const isActivelyWatching =
     !isPaused && (playerState === 'playing' || playerState === 'buffering');
   activelyWatchingRef.current = isActivelyWatching;
+
+  useEffect(() => {
+    if (powerBoostActive) {
+      try {
+        sessionStorage.removeItem(YT_PAUSED_KEY);
+      } catch {
+        /* ignore */
+      }
+      setIsPaused(false);
+    }
+  }, [powerBoostActive]);
 
   const [claimCycleRunning, setClaimCycleRunning] = useState(false);
   // Bumped by resetClaimCycle so useResumableCountdown's "reset to totalSeconds" effect
@@ -108,6 +119,7 @@ export default function YouTubeWatchPage() {
   const [claimCycleId, setClaimCycleId] = useState(0);
 
   const pauseWatching = useCallback(() => {
+    if (powerBoostActive) return;
     if (activelyWatchingRef.current) {
       try {
         sessionStorage.setItem(YT_PAUSED_KEY, '1');
@@ -121,7 +133,7 @@ export default function YouTubeWatchPage() {
       }
       setIsPaused(true);
     }
-  }, []);
+  }, [powerBoostActive]);
 
   const resumeWatching = useCallback(() => {
     try {

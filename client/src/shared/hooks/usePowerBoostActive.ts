@@ -8,8 +8,44 @@ interface PowerBoostStatusResponse {
 
 /** Broadcast when the banner activates today's boost so every consumer flips immediately. */
 export const POWER_BOOST_CHANGED_EVENT = "blockminer:power-boost-changed";
+const POWER_BOOST_STORAGE_KEY = "blockminer:power-boost-active-date";
+
+function getTodayUtcKey(): string {
+  const d = new Date();
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
+}
+
+function readStoredBoostActive(): boolean {
+  try {
+    const raw = sessionStorage.getItem(POWER_BOOST_STORAGE_KEY);
+    return raw === getTodayUtcKey();
+  } catch {
+    return false;
+  }
+}
+
+function writeStoredBoostActive(active: boolean): void {
+  try {
+    if (active) {
+      sessionStorage.setItem(POWER_BOOST_STORAGE_KEY, getTodayUtcKey());
+    } else {
+      sessionStorage.removeItem(POWER_BOOST_STORAGE_KEY);
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+let cachedActive = readStoredBoostActive();
+let inFlight: Promise<void> | null = null;
+let lastFetchedAt = 0;
+const listeners = new Set<Listener>();
+const CACHE_TTL_MS = 30_000;
 
 export function notifyPowerBoostChanged(active: boolean): void {
+  writeStoredBoostActive(active);
+  cachedActive = active;
+  emit();
   try {
     window.dispatchEvent(new CustomEvent(POWER_BOOST_CHANGED_EVENT, { detail: { active } }));
   } catch {
@@ -18,12 +54,6 @@ export function notifyPowerBoostChanged(active: boolean): void {
 }
 
 type Listener = () => void;
-
-let cachedActive = false;
-let inFlight: Promise<void> | null = null;
-let lastFetchedAt = 0;
-const listeners = new Set<Listener>();
-const CACHE_TTL_MS = 30_000;
 
 function emit(): void {
   for (const l of listeners) l();
@@ -49,6 +79,7 @@ async function refreshFromServer(force = false): Promise<void> {
     try {
       const res = await api.get<PowerBoostStatusResponse>("/power-boost/status");
       const next = res.data?.active === true;
+      writeStoredBoostActive(next);
       if (next !== cachedActive) {
         cachedActive = next;
         emit();

@@ -49,19 +49,37 @@ export function useResumableCountdown({
 
   useEffect(() => {
     if (!running || paused) return;
-    const id = window.setInterval(() => {
+    let lastTickAt = Date.now();
+    const tick = () => {
+      const now = Date.now();
+      const elapsedSec = Math.max(1, Math.floor((now - lastTickAt) / 1000));
+      lastTickAt = now;
       setRemaining((prev) => {
-        const next = Math.max(0, prev - 1);
+        const next = Math.max(0, prev - elapsedSec);
         writeTimer(storageKey, {
           remaining: next,
           totalSeconds,
-          savedAt: Date.now(),
+          savedAt: now,
           signature,
         });
         return next;
       });
-    }, 1000);
-    return () => window.clearInterval(id);
+    };
+
+    const id = window.setInterval(tick, 1000);
+    const onVisibilityOrFocus = () => {
+      if (!document.hidden) {
+        tick();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityOrFocus);
+    window.addEventListener('focus', onVisibilityOrFocus);
+
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener('visibilitychange', onVisibilityOrFocus);
+      window.removeEventListener('focus', onVisibilityOrFocus);
+    };
   }, [running, paused, storageKey, totalSeconds, signature]);
 
   const [wasPaused, setWasPaused] = useState(false);
