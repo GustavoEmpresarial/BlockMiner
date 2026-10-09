@@ -2760,6 +2760,7 @@ enum TournamentMetric {
   FAUCET
   SHORTLINK
   AUTO_MINING
+  ALL_ACTIVITIES
 }
 
 enum TournamentStatus {
