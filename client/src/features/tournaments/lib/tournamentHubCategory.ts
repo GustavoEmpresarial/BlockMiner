@@ -28,6 +28,7 @@ const METRIC_TO_HUB: Record<string, TournamentHubCategoryId> = {
   SHORTLINK: 'engagement',
   AUTO_MINING: 'engagement',
   MINIGAME_WINS: 'games',
+  ALL_ACTIVITIES: 'activity',
 };
 
 /** Display order of hub cards (unknown metrics fall into `other`). */
