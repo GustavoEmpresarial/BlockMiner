@@ -6441,6 +6441,8 @@
     "preset_daily_all_activities_hint": "Diario · ALL_ACTIVITIES",
     "preset_weekly_all_activities": "Torneo General Semanal",
     "preset_weekly_all_activities_hint": "Semanal · ALL_ACTIVITIES",
+    "preset_monthly_all_activities": "Torneo General Mensual",
+    "preset_monthly_all_activities_hint": "Mensual · ALL_ACTIVITIES",
     "series_title": "Active recurring series",
     "series_hint": "Current cycle of each series that clones on finalize.",
     "edit_series": "Edit series",

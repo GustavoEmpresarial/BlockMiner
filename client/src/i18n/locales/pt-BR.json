@@ -6474,6 +6474,8 @@
     "preset_daily_all_activities_hint": "Diário · ALL_ACTIVITIES",
     "preset_weekly_all_activities": "Torneio Geral Semanal",
     "preset_weekly_all_activities_hint": "Semanal · ALL_ACTIVITIES",
+    "preset_monthly_all_activities": "Torneio Geral Mensal",
+    "preset_monthly_all_activities_hint": "Mensal · ALL_ACTIVITIES",
     "series_title": "Séries recorrentes ativas",
     "series_hint": "Ciclo atual de cada série que se clona ao finalizar.",
     "edit_series": "Editar série",
