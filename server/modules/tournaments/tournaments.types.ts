@@ -15,7 +15,8 @@ export type TournamentMetric =
   | "MINIGAME_WINS"
   | "FAUCET"
   | "SHORTLINK"
-  | "AUTO_MINING";
+  | "AUTO_MINING"
+  | "ALL_ACTIVITIES";
 
 export type TournamentRecord = {
   id: number;

@@ -13,6 +13,7 @@ export const TOURNAMENT_VALID_METRICS = [
   "FAUCET",
   "SHORTLINK",
   "AUTO_MINING",
+  "ALL_ACTIVITIES",
 ] as const;
 
 export type TournamentValidMetric = (typeof TOURNAMENT_VALID_METRICS)[number];

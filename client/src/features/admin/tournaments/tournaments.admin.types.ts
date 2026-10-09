@@ -13,7 +13,8 @@ export type TournamentMetric =
   | 'MINIGAME_WINS'
   | 'FAUCET'
   | 'SHORTLINK'
-  | 'AUTO_MINING';
+  | 'AUTO_MINING'
+  | 'ALL_ACTIVITIES';
 
 export type TournamentStatus = 'SCHEDULED' | 'ACTIVE' | 'ENDED' | 'CANCELLED';
 
@@ -106,6 +107,7 @@ export const TOURNAMENT_METRICS: TournamentMetric[] = [
   'FAUCET',
   'SHORTLINK',
   'AUTO_MINING',
+  'ALL_ACTIVITIES',
 ];
 
 export const PRIZE_TYPES: PrizeType[] = ['POL', 'BLK', 'MINING_BOOST', 'MACHINE'];
