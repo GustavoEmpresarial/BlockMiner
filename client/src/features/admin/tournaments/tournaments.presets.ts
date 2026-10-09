@@ -27,6 +27,7 @@ const MINER = {
   cryptoDrill: 30,
   ironPulse: 212,
   blackNova: 213,
+  quantumMineZX: 32,
   hyperDrill: 214,
 } as const;
 
@@ -176,7 +177,7 @@ export const TOURNAMENT_PRESETS: TournamentPreset[] = [
     metric: 'MINIGAME_WINS',
     recurring: true,
     prizes: [
-      machine(1, 1, MINER.blackNova),
+      machine(1, 1, MINER.quantumMineZX),
       machine(2, 2, MINER.ironPulse, 2),
       machine(3, 3, MINER.ironPulse),
       machine(4, 10, MINER.neonHash),
