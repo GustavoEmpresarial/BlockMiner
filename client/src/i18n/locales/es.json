@@ -4488,7 +4488,8 @@
       "MINIGAME_WINS": "Minigame wins",
       "FAUCET": "Claims del Faucet",
       "SHORTLINK": "Shortlinks completados",
-      "AUTO_MINING": "Sesiones Auto-Mining"
+      "AUTO_MINING": "Sesiones Auto-Mining",
+      "ALL_ACTIVITIES": "Todas las Actividades (General)"
     },
     "scores_live_hint": "Auditable totals · only events inside the UTC period below",
     "period_utc": "UTC period: {{start}} → {{end}}",
@@ -6436,6 +6437,10 @@
     "preset_monthly_deposit_hint": "Monthly · DEPOSITS_USD",
     "preset_monthly_offerwall": "Monthly Offerwall",
     "preset_monthly_offerwall_hint": "Monthly · OFFERS_EXTERNAL",
+    "preset_daily_all_activities": "Torneo General Diario",
+    "preset_daily_all_activities_hint": "Diario · ALL_ACTIVITIES",
+    "preset_weekly_all_activities": "Torneo General Semanal",
+    "preset_weekly_all_activities_hint": "Semanal · ALL_ACTIVITIES",
     "series_title": "Active recurring series",
     "series_hint": "Current cycle of each series that clones on finalize.",
     "edit_series": "Edit series",

@@ -214,6 +214,30 @@ export async function computeScoresForTournament(tournament: Tournament): Promis
     return;
   }
 
+  if (metric === "ALL_ACTIVITIES") {
+    registerTournamentMetricScorers();
+    const scorer = getMetricScorer("ALL_ACTIVITIES");
+    if (!scorer) throw new Error("ALL_ACTIVITIES scorer not registered");
+    const scores = await scorer.reconcile(
+      {
+        id: tournament.id,
+        name: tournament.name,
+        metric,
+        startsAt,
+        endsAt: tournament.endsAt,
+        status: tournament.status as "ACTIVE",
+      },
+      { startsAt, endsAt: upperBound },
+    );
+    await batchUpsertEntries(
+      tournament.id,
+      Array.from(scores.entries())
+        .map(([userId, b]) => ({ userId, score: b.total }))
+        .filter((r) => r.score > 0),
+    );
+    return;
+  }
+
   if (metric === "OFFERS_INTERNAL" || metric === "OFFERS_EXTERNAL" || metric === "OFFERS_ALL") {
     const { computeOfferwallScores } = await import("./tournaments.scoring-config.js");
     const scores = await computeOfferwallScores(startsAt, upperBound, { metric });

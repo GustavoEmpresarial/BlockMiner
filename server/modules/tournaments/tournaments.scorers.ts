@@ -272,12 +272,99 @@ export function createMinigameScorers(): MetricScorer[] {
   return [new MinigameWinsScorer()];
 }
 
+export class AllActivitiesMetricScorer implements MetricScorer {
+  metric = "ALL_ACTIVITIES" as const;
+
+  onTournamentAction(event: TournamentActionPayload, tournament: TournamentRecord): ContributionDelta | null {
+    if (!event.tournamentEligible || event.actionCount <= 0) return null;
+    if (tournament.metric !== this.metric) return null;
+    if (!providerAllowedForMetric(event.provider, this.metric)) return null;
+    const eventAt = new Date(event.executedAtUTC);
+    if (!windowContains(tournament, eventAt, upperBound(tournament))) return null;
+    return {
+      userId: event.userId,
+      sourceType: "action",
+      sourceId: contributionSourceId(event.provider, event.sourceId),
+      metricValue: event.actionCount,
+      eventAt,
+      metadata: { provider: event.provider, actionId: event.actionId },
+    };
+  }
+
+  async reconcile(
+    tournament: TournamentRecord,
+    window: { startsAt: Date; endsAt: Date },
+    opts?: { userId?: number },
+  ): Promise<Map<number, MetricScoreBreakdown>> {
+    const { default: prisma } = await import("../../core/database/prisma.js");
+    const upper = upperBound(tournament);
+    const endAt = window.endsAt < upper ? window.endsAt : upper;
+    const userFilter = opts?.userId != null ? { userId: opts.userId } : {};
+
+    const [actions, checkins, tasks] = await Promise.all([
+      prisma.tournamentAction.groupBy({
+        by: ["userId"],
+        where: {
+          tournamentEligible: true,
+          executedAtUTC: { gte: window.startsAt, lte: endAt },
+          ...userFilter,
+        },
+        _sum: { actionCount: true },
+      }),
+      prisma.dailyCheckin.groupBy({
+        by: ["userId"],
+        where: {
+          OR: [
+            { confirmedAt: { gte: window.startsAt, lte: endAt } },
+            { createdAt: { gte: window.startsAt, lte: endAt }, status: "confirmed" },
+          ],
+          ...userFilter,
+        },
+        _count: { id: true },
+      }),
+      prisma.userDailyTaskProgress.groupBy({
+        by: ["userId"],
+        where: {
+          completedAt: { gte: window.startsAt, lte: endAt },
+          ...userFilter,
+        },
+        _count: { id: true },
+      }),
+    ]);
+
+    const map = new Map<number, MetricScoreBreakdown>();
+
+    for (const r of actions) {
+      const total = Number(r._sum.actionCount ?? 0);
+      if (total <= 0) continue;
+      map.set(r.userId, { total, txCount: total });
+    }
+
+    for (const c of checkins) {
+      const count = Number(c._count.id ?? 0);
+      if (count <= 0) continue;
+      const prev = map.get(c.userId) ?? { total: 0, txCount: 0 };
+      map.set(c.userId, { total: prev.total + count, txCount: prev.txCount + count });
+    }
+
+    for (const t of tasks) {
+      const count = Number(t._count.id ?? 0);
+      if (count <= 0) continue;
+      const prev = map.get(t.userId) ?? { total: 0, txCount: 0 };
+      map.set(t.userId, { total: prev.total + count, txCount: prev.txCount + count });
+    }
+
+    return map;
+  }
+}
+
 let registered = false;
 
 export function registerTournamentMetricScorers(): void {
   if (registered) return;
   registerMetricScorer(new DepositUsdScorer());
   registerMetricScorer(new DepositPolScorer());
+  registerMetricScorer(new AllActivitiesMetricScorer());
   for (const scorer of createOffersScorers()) registerMetricScorer(scorer);
   for (const scorer of createMinigameScorers()) registerMetricScorer(scorer);
   for (const scorer of createClaimCountScorers()) registerMetricScorer(scorer);
