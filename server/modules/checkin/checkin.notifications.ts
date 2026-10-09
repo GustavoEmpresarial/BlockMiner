@@ -15,6 +15,7 @@ import { logger } from "../../core/logger/index.js";
 import { applyStreakMilestoneRewards } from "./checkin.milestones.js";
 import { notifyDailyTaskLoginDay } from "../tasks/index.js";
 import { notifyMiniPassLoginDay } from "../mini-pass/index.js";
+import { recordTournamentAction, TOURNAMENT_ACTION_PROVIDER } from "../tournaments/index.js";
 
 const log = logger.child("checkin.notifications");
 
@@ -39,5 +40,14 @@ export async function fireCheckinSideEffects(userId: number, periodKey: string):
   await notifyMiniPassLoginDay(userId, periodKey).catch((e: unknown) =>
     logCheckinSideEffectFailure("notifyMiniPassLoginDay after checkin", e),
   );
-  log.debug("tournament-score generic hook skipped (not ported yet)", { userId, periodKey });
+  void recordTournamentAction({
+    userId,
+    provider: TOURNAMENT_ACTION_PROVIDER.CHECKIN,
+    actionCount: 1,
+    executedAtUTC: new Date(),
+    providerEventId: `checkin:${userId}:${periodKey}`,
+    metadata: { periodKey },
+  }).catch((e: unknown) =>
+    logCheckinSideEffectFailure("recordTournamentAction after checkin", e),
+  );
 }

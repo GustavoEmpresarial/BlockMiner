@@ -15,6 +15,7 @@ import prisma from "../../core/database/prisma.js";
 import { logger } from "../../core/logger/index.js";
 import { syncUserBaseHashRate } from "../mining/index.js";
 import { notifyDailyTaskYoutubeWatch } from "../tasks/index.js";
+import { recordTournamentAction, TOURNAMENT_ACTION_PROVIDER } from "../tournaments/index.js";
 import { resolveRewardExpiresAtForGrant, formatRewardDurationPt, getRewardDurationMs } from "../boosts/index.js";
 import { utcDayDailyResetMeta, startOfUtcCalendarDay, endOfUtcCalendarDay } from "./youtube.domain.js";
 import {
@@ -136,6 +137,17 @@ export async function claimForUser(userId: number, videoId: string): Promise<You
   if (watchHistoryId != null) {
     await notifyDailyTaskYoutubeWatch(userId, watchHistoryId).catch((err) => {
       log.warn("youtube.claim.daily_task_hook_failed", { userId, error: String(err) });
+    });
+
+    void recordTournamentAction({
+      userId,
+      provider: TOURNAMENT_ACTION_PROVIDER.YOUTUBE,
+      actionCount: 1,
+      executedAtUTC: now,
+      providerEventId: `yt:${watchHistoryId}`,
+      metadata: { videoId, watchHistoryId, hashRate: REWARD_PER_CLAIM },
+    }).catch((err) => {
+      log.warn("youtube.claim.tournament_action_failed", { userId, error: String(err) });
     });
   }
 

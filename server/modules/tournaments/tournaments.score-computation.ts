@@ -190,7 +190,7 @@ export async function computeScoresForTournament(tournament: Tournament): Promis
     return;
   }
 
-  if (metric === "FAUCET" || metric === "SHORTLINK" || metric === "AUTO_MINING") {
+  if (metric === "FAUCET" || metric === "SHORTLINK" || metric === "AUTO_MINING" || metric === "YOUTUBE") {
     registerTournamentMetricScorers();
     const scorer = getMetricScorer(metric);
     if (!scorer) throw new Error(`${metric} scorer not registered`);

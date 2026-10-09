@@ -2761,6 +2761,7 @@ enum TournamentMetric {
   SHORTLINK
   AUTO_MINING
   ALL_ACTIVITIES
+  YOUTUBE
 }
 
 enum TournamentStatus {

@@ -20,6 +20,10 @@ export function isOffersMetric(metric: string): boolean {
   return metric === 'OFFERS_ALL' || metric === 'OFFERS_EXTERNAL' || metric === 'OFFERS_INTERNAL';
 }
 
+export function isAllActivitiesMetric(metric: string): boolean {
+  return metric === 'ALL_ACTIVITIES';
+}
+
 export function scoreColumnI18nKey(metric: string): string {
   if (isMinigameMetric(metric)) return 'tournaments.minigame_wins_column';
   if (metric === 'DEPOSITS_USD') return 'tournaments.deposit_rank_column';

@@ -6,6 +6,7 @@ import { windowContains, type TournamentRecord } from "./tournaments.types.js";
 import {
   contributionSourceId,
   providerAllowedForMetric,
+  TOURNAMENT_ACTION_PROVIDER,
 } from "./tournaments.providers.js";
 import { createClaimCountScorers } from "./tournaments.claim-scorers.js";
 import {
@@ -301,12 +302,13 @@ export class AllActivitiesMetricScorer implements MetricScorer {
     const endAt = window.endsAt < upper ? window.endsAt : upper;
     const userFilter = opts?.userId != null ? { userId: opts.userId } : {};
 
-    const [actions, checkins, tasks] = await Promise.all([
+    const [actions, checkins, tasks, youtubeClaims] = await Promise.all([
       prisma.tournamentAction.groupBy({
         by: ["userId"],
         where: {
           tournamentEligible: true,
           executedAtUTC: { gte: window.startsAt, lte: endAt },
+          provider: { notIn: [TOURNAMENT_ACTION_PROVIDER.CHECKIN, TOURNAMENT_ACTION_PROVIDER.YOUTUBE] },
           ...userFilter,
         },
         _sum: { actionCount: true },
@@ -326,6 +328,15 @@ export class AllActivitiesMetricScorer implements MetricScorer {
         by: ["userId"],
         where: {
           completedAt: { gte: window.startsAt, lte: endAt },
+          ...userFilter,
+        },
+        _count: { id: true },
+      }),
+      prisma.youtubeWatchHistory.groupBy({
+        by: ["userId"],
+        where: {
+          claimedAt: { gte: window.startsAt, lte: endAt },
+          status: "granted",
           ...userFilter,
         },
         _count: { id: true },
@@ -352,6 +363,13 @@ export class AllActivitiesMetricScorer implements MetricScorer {
       if (count <= 0) continue;
       const prev = map.get(t.userId) ?? { total: 0, txCount: 0 };
       map.set(t.userId, { total: prev.total + count, txCount: prev.txCount + count });
+    }
+
+    for (const y of youtubeClaims) {
+      const count = Number(y._count.id ?? 0);
+      if (count <= 0) continue;
+      const prev = map.get(y.userId) ?? { total: 0, txCount: 0 };
+      map.set(y.userId, { total: prev.total + count, txCount: prev.txCount + count });
     }
 
     return map;

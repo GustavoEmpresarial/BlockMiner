@@ -1,9 +1,25 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { CheckCircle, Radio, Wallet, Users, Zap } from 'lucide-react';
+import {
+  CalendarCheck,
+  CheckCircle,
+  CheckSquare,
+  Cpu,
+  Droplets,
+  Gamepad2,
+  Layers,
+  Link2,
+  Radio,
+  Sparkles,
+  Users,
+  Wallet,
+  Youtube,
+  Zap,
+} from 'lucide-react';
 import type { TournamentDetail } from '../lib/tournaments.types';
 import {
   formatMyScoreTotal,
+  isAllActivitiesMetric,
   isDepositMetric,
   isMinigameMetric,
   scoreTotalI18nKey,
@@ -104,6 +120,84 @@ export function TournamentDetailHeader({
                 {t('tournaments.minigame_scoring_hint')}
               </p>
               <p className="mt-2 text-[10px] text-emerald-200/70 font-mono">
+                {t('tournaments.scores_live_hint')}
+              </p>
+            </div>
+          ) : null}
+
+          {isAllActivitiesMetric(tournament.metric) ? (
+            <div className="mt-3 rounded-2xl border-2 border-sky-500/30 bg-sky-950/20 p-4 max-w-2xl space-y-3 shadow-[2px_2px_0px_#000000]">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <p className="text-[11px] font-black uppercase tracking-wider text-sky-300 flex items-center gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5 text-amber-400" />
+                  {t('tournaments.all_activities_scoring_title')}
+                </p>
+                <span className="text-[10px] text-sky-300 font-mono font-bold bg-sky-500/20 border border-sky-500/30 px-2 py-0.5 rounded-md">
+                  {t('tournaments.all_activities_each_point')}
+                </span>
+              </div>
+              <p className="text-xs text-sky-100/90 leading-relaxed">
+                {t('tournaments.all_activities_scoring_desc')}
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                <div className="flex items-center gap-2 rounded-xl bg-slate-900/60 border border-white/5 p-2 text-slate-300">
+                  <Droplets className="h-3.5 w-3.5 text-sky-400 shrink-0" />
+                  <div>
+                    <p className="font-bold text-white text-[10px] leading-tight">{t('tournaments.activity_faucet')}</p>
+                    <p className="text-[9px] text-sky-400 font-mono">+1 pt / claim</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 rounded-xl bg-slate-900/60 border border-white/5 p-2 text-slate-300">
+                  <Link2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                  <div>
+                    <p className="font-bold text-white text-[10px] leading-tight">{t('tournaments.activity_shortlinks')}</p>
+                    <p className="text-[9px] text-emerald-400 font-mono">+1 pt / link</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 rounded-xl bg-slate-900/60 border border-white/5 p-2 text-slate-300">
+                  <Cpu className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+                  <div>
+                    <p className="font-bold text-white text-[10px] leading-tight">{t('tournaments.activity_auto_mining')}</p>
+                    <p className="text-[9px] text-amber-400 font-mono">+1 pt / claim</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 rounded-xl bg-slate-900/60 border border-white/5 p-2 text-slate-300">
+                  <Gamepad2 className="h-3.5 w-3.5 text-purple-400 shrink-0" />
+                  <div>
+                    <p className="font-bold text-white text-[10px] leading-tight">{t('tournaments.activity_minigames')}</p>
+                    <p className="text-[9px] text-purple-400 font-mono">+1 pt / vitória</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 rounded-xl bg-slate-900/60 border border-white/5 p-2 text-slate-300">
+                  <Youtube className="h-3.5 w-3.5 text-red-400 shrink-0" />
+                  <div>
+                    <p className="font-bold text-white text-[10px] leading-tight">{t('tournaments.activity_youtube')}</p>
+                    <p className="text-[9px] text-red-400 font-mono">+1 pt / claim</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 rounded-xl bg-slate-900/60 border border-white/5 p-2 text-slate-300">
+                  <CalendarCheck className="h-3.5 w-3.5 text-teal-400 shrink-0" />
+                  <div>
+                    <p className="font-bold text-white text-[10px] leading-tight">{t('tournaments.activity_checkin')}</p>
+                    <p className="text-[9px] text-teal-400 font-mono">+1 pt / dia</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 rounded-xl bg-slate-900/60 border border-white/5 p-2 text-slate-300">
+                  <CheckSquare className="h-3.5 w-3.5 text-indigo-400 shrink-0" />
+                  <div>
+                    <p className="font-bold text-white text-[10px] leading-tight">{t('tournaments.activity_tasks')}</p>
+                    <p className="text-[9px] text-indigo-400 font-mono">+1 pt / task</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 rounded-xl bg-slate-900/60 border border-white/5 p-2 text-slate-300">
+                  <Layers className="h-3.5 w-3.5 text-orange-400 shrink-0" />
+                  <div>
+                    <p className="font-bold text-white text-[10px] leading-tight">{t('tournaments.activity_offers_ptc')}</p>
+                    <p className="text-[9px] text-orange-400 font-mono">+1 pt / ação</p>
+                  </div>
+                </div>
+              </div>
+              <p className="text-[10px] text-sky-200/70 font-mono">
                 {t('tournaments.scores_live_hint')}
               </p>
             </div>

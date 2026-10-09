@@ -16,7 +16,8 @@ export type TournamentMetric =
   | "FAUCET"
   | "SHORTLINK"
   | "AUTO_MINING"
-  | "ALL_ACTIVITIES";
+  | "ALL_ACTIVITIES"
+  | "YOUTUBE";
 
 export type TournamentRecord = {
   id: number;

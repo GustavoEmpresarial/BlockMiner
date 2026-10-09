@@ -11,15 +11,17 @@ import {
 } from "../../server/modules/tournaments/tournaments.providers.ts";
 
 describe("tournament valid metrics", () => {
-  it("includes FAUCET, SHORTLINK, AUTO_MINING, ALL_ACTIVITIES", () => {
+  it("includes FAUCET, SHORTLINK, AUTO_MINING, ALL_ACTIVITIES, YOUTUBE", () => {
     assert.ok(TOURNAMENT_VALID_METRICS.includes("FAUCET"));
     assert.ok(TOURNAMENT_VALID_METRICS.includes("SHORTLINK"));
     assert.ok(TOURNAMENT_VALID_METRICS.includes("AUTO_MINING"));
     assert.ok(TOURNAMENT_VALID_METRICS.includes("ALL_ACTIVITIES"));
+    assert.ok(TOURNAMENT_VALID_METRICS.includes("YOUTUBE"));
     assert.equal(isTournamentValidMetric("FAUCET"), true);
     assert.equal(isTournamentValidMetric("SHORTLINK"), true);
     assert.equal(isTournamentValidMetric("AUTO_MINING"), true);
     assert.equal(isTournamentValidMetric("ALL_ACTIVITIES"), true);
+    assert.equal(isTournamentValidMetric("YOUTUBE"), true);
     assert.equal(isTournamentValidMetric("NOT_A_METRIC"), false);
   });
 });
@@ -60,10 +62,14 @@ describe("claim-count scorers", () => {
     assert.equal(providerAllowedForMetric(TOURNAMENT_ACTION_PROVIDER.MINIGAME, "FAUCET"), false);
     assert.equal(providerAllowedForMetric(TOURNAMENT_ACTION_PROVIDER.SHORTLINK, "SHORTLINK"), true);
     assert.equal(providerAllowedForMetric(TOURNAMENT_ACTION_PROVIDER.AUTO_MINING, "AUTO_MINING"), true);
+    assert.equal(providerAllowedForMetric(TOURNAMENT_ACTION_PROVIDER.YOUTUBE, "YOUTUBE"), true);
+    assert.equal(providerAllowedForMetric(TOURNAMENT_ACTION_PROVIDER.CHECKIN, "CHECKINS"), true);
     assert.equal(providerAllowedForMetric(TOURNAMENT_ACTION_PROVIDER.FAUCET, "ALL_ACTIVITIES"), true);
     assert.equal(providerAllowedForMetric(TOURNAMENT_ACTION_PROVIDER.MINIGAME, "ALL_ACTIVITIES"), true);
     assert.equal(providerAllowedForMetric(TOURNAMENT_ACTION_PROVIDER.SHORTLINK, "ALL_ACTIVITIES"), true);
     assert.equal(providerAllowedForMetric(TOURNAMENT_ACTION_PROVIDER.AUTO_MINING, "ALL_ACTIVITIES"), true);
+    assert.equal(providerAllowedForMetric(TOURNAMENT_ACTION_PROVIDER.YOUTUBE, "ALL_ACTIVITIES"), true);
+    assert.equal(providerAllowedForMetric(TOURNAMENT_ACTION_PROVIDER.CHECKIN, "ALL_ACTIVITIES"), true);
   });
 });
 
@@ -97,5 +103,39 @@ describe("all-activities scorer", () => {
     assert.ok(delta);
     assert.equal(delta.userId, 10);
     assert.equal(delta.metricValue, 2);
+
+    const deltaYt = scorer.onTournamentAction(
+      {
+        actionId: "124",
+        userId: 10,
+        provider: TOURNAMENT_ACTION_PROVIDER.YOUTUBE,
+        actionCount: 1,
+        executedAtUTC: "2026-10-05T12:05:00.000Z",
+        sourceId: "yt:10:x",
+        tournamentEligible: true,
+        metadata: null,
+      },
+      tournament,
+    );
+    assert.ok(deltaYt);
+    assert.equal(deltaYt.userId, 10);
+    assert.equal(deltaYt.metricValue, 1);
+
+    const deltaCheckin = scorer.onTournamentAction(
+      {
+        actionId: "125",
+        userId: 10,
+        provider: TOURNAMENT_ACTION_PROVIDER.CHECKIN,
+        actionCount: 1,
+        executedAtUTC: "2026-10-05T12:10:00.000Z",
+        sourceId: "checkin:10:x",
+        tournamentEligible: true,
+        metadata: null,
+      },
+      tournament,
+    );
+    assert.ok(deltaCheckin);
+    assert.equal(deltaCheckin.userId, 10);
+    assert.equal(deltaCheckin.metricValue, 1);
   });
 });
