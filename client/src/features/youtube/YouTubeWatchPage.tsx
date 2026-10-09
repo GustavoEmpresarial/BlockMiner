@@ -395,9 +395,13 @@ export default function YouTubeWatchPage() {
         { videoId },
       );
       if (res.data.ok) {
-        toast.success(
-          t('youtube.claim_applied', { reward: formatHashrate(Number(res.data.rewardGh) || 0) }),
-        );
+        if (res.data.rewardGh && res.data.rewardGh > 0) {
+          toast.success(
+            t('youtube.claim_applied', { reward: formatHashrate(Number(res.data.rewardGh) || 0) }),
+          );
+        } else {
+          toast.success(res.data.message || '+1 ponto de torneio registrado!');
+        }
         await loadStatus();
         await loadStats();
         resetClaimCycle();

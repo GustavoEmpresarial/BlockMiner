@@ -101,9 +101,11 @@ export async function claimForUser(userId: number, videoId: string): Promise<You
   const currentDailyHash = claimsToday.reduce((sum, c) => sum + (c.hashRate || 0), 0);
   const claimsCountToday = claimsToday.length;
 
-  if (claimsCountToday >= MAX_DAILY_CLAIM_MINUTES || currentDailyHash + REWARD_PER_CLAIM > DAILY_LIMIT_HASH) {
-    return { ok: false, status: 400, message: "Limite diário atingido. Tente novamente após a meia-noite (UTC)." };
-  }
+  // MODELO 4: O limite de hashrate diário continua travado em 1.000 H/s (proteção econômica).
+  // Porém, acima do teto o usuário continua assistindo e recebendo +1 ponto no torneio (+1 pt/claim),
+  // com hashrate concedido = 0.
+  const isHashrateCapped = currentDailyHash >= DAILY_LIMIT_HASH;
+  const hashRateToGrant = isHashrateCapped ? 0 : REWARD_PER_CLAIM;
 
   let claimTtlMs = 0;
   let watchHistoryId: number | null = null;
@@ -112,7 +114,7 @@ export async function claimForUser(userId: number, videoId: string): Promise<You
       async (tx) => {
         const { expiresAt, durationMs } = await resolveRewardExpiresAtForGrant(tx, userId, now, "youtube");
         claimTtlMs = durationMs;
-        return claimRewardTx(tx, userId, videoId, now, expiresAt);
+        return claimRewardTx(tx, userId, videoId, now, expiresAt, hashRateToGrant);
       },
       { maxWait: 10_000, timeout: 20_000 },
     );
@@ -130,9 +132,11 @@ export async function claimForUser(userId: number, videoId: string): Promise<You
     return { ok: false, status: 500, message: "Erro interno ao processar recompensa." };
   }
 
-  await syncUserBaseHashRate(userId).catch((err) => {
-    log.warn("youtube.claim.sync_hashrate_failed", { userId, error: String(err) });
-  });
+  if (hashRateToGrant > 0) {
+    await syncUserBaseHashRate(userId).catch((err) => {
+      log.warn("youtube.claim.sync_hashrate_failed", { userId, error: String(err) });
+    });
+  }
 
   if (watchHistoryId != null) {
     await notifyDailyTaskYoutubeWatch(userId, watchHistoryId).catch((err) => {
@@ -145,10 +149,18 @@ export async function claimForUser(userId: number, videoId: string): Promise<You
       actionCount: 1,
       executedAtUTC: now,
       providerEventId: `yt:${watchHistoryId}`,
-      metadata: { videoId, watchHistoryId, hashRate: REWARD_PER_CLAIM },
+      metadata: { videoId, watchHistoryId, hashRate: hashRateToGrant, tournamentOnly: isHashrateCapped },
     }).catch((err) => {
       log.warn("youtube.claim.tournament_action_failed", { userId, error: String(err) });
     });
+  }
+
+  if (isHashrateCapped) {
+    return {
+      ok: true,
+      rewardGh: 0,
+      message: "+1 ponto de torneio registrado! (Limite diário de 1.000 H/s atingido)",
+    };
   }
 
   return {

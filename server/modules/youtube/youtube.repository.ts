@@ -51,10 +51,13 @@ export async function claimRewardTx(
   videoId: string,
   now: Date,
   expiresAt: Date,
+  hashRate: number = REWARD_PER_CLAIM,
 ) {
-  await tx.youtubeWatchPower.create({
-    data: { userId, sourceVideoId: videoId, hashRate: REWARD_PER_CLAIM, claimedAt: now, expiresAt },
-  });
+  if (hashRate > 0) {
+    await tx.youtubeWatchPower.create({
+      data: { userId, sourceVideoId: videoId, hashRate, claimedAt: now, expiresAt },
+    });
+  }
 
   const debited = await tx.user.updateMany({
     where: { id: userId, ytSecondsBalance: { gte: SECONDS_DEBITED_PER_CLAIM } },
@@ -68,7 +71,7 @@ export async function claimRewardTx(
     data: {
       userId,
       sourceVideoId: videoId,
-      hashRate: REWARD_PER_CLAIM,
+      hashRate,
       claimedAt: now,
       expiresAt,
       status: "granted",
@@ -79,7 +82,7 @@ export async function claimRewardTx(
     data: {
       userId,
       action: "youtube_claim",
-      detailsJson: JSON.stringify({ videoId, hashRate: REWARD_PER_CLAIM, expiresAt }),
+      detailsJson: JSON.stringify({ videoId, hashRate, expiresAt, tournamentOnly: hashRate === 0 }),
     },
   });
 

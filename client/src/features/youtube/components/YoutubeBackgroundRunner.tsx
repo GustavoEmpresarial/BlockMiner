@@ -137,11 +137,15 @@ export default function YoutubeBackgroundRunner() {
           } catch {
             /* ignore */
           }
-          toast.success(
-            t('youtube.claim_applied', {
-              reward: formatHashrate(Number(res.data.rewardGh) || 10),
-            }),
-          );
+          if (res.data.rewardGh && res.data.rewardGh > 0) {
+            toast.success(
+              t('youtube.claim_applied', {
+                reward: formatHashrate(Number(res.data.rewardGh) || 10),
+              }),
+            );
+          } else {
+            toast.success(res.data.message || '+1 ponto de torneio registrado!');
+          }
         }
       } catch (err: unknown) {
         if (isAxiosError(err)) {
