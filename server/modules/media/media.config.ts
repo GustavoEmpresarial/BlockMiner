@@ -28,6 +28,7 @@ export const MEDIA_CATEGORIES = [
   "sala",
   "racks",
   "fans",
+  "parts",
   "icons",
   "brand",
   /** 3D / binary scene assets (e.g. Antminer GLB for transparency hardware). */

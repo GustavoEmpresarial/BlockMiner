@@ -21,6 +21,7 @@ import TransparencyErrorBoundary from '../shared/components/TransparencyErrorBou
 import { DashboardPage } from '../features/dashboard/index';
 import { VaultPage } from '../features/machines/index';
 import { Inventory2Page } from '../features/inventory2/index';
+import { PartsPage } from '../features/parts/index';
 import { StatsPage } from '../features/stats/index';
 import { InventarioPage } from '../features/inventario/index';
 import { ShopPage } from '../features/shop/index';
@@ -110,6 +111,7 @@ export default function App() {
           {/* Principal */}
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/inventory" element={<Inventory2Page />} />
+          <Route path="/parts" element={<PartsPage />} />
           <Route path="/vault" element={<VaultPage />} />
           <Route path="/power-stats" element={<StatsPage />} />
           <Route path="/inventario" element={<InventarioPage />} />

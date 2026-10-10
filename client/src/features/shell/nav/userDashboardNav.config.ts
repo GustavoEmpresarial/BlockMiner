@@ -12,6 +12,7 @@ export const USER_DASHBOARD_NAV_FALLBACK: PublicNavCategory[] = [
       { itemId: 'dashboard', labelKey: 'sidebar.dashboard', icon: 'LayoutDashboard', path: '/dashboard' },
       { itemId: 'power_stats', labelKey: 'sidebar.power_stats', icon: 'BarChart3', path: '/power-stats' },
       { itemId: 'machines', labelKey: 'sidebar.machines', icon: 'Cpu', path: '/inventory' },
+      { itemId: 'parts', labelKey: 'sidebar.parts', icon: 'Puzzle', path: '/parts' },
       { itemId: 'inventario', labelKey: 'sidebar.inventario', icon: 'Package', path: '/inventario' },
       { itemId: 'shop', labelKey: 'sidebar.shop', icon: 'ShoppingCart', path: '/shop' },
       { itemId: 'offers', labelKey: 'sidebar.offers', icon: 'Tag', path: '/offers' },
@@ -89,6 +90,13 @@ export const USER_DASHBOARD_SCREEN_MATRIX = [
     frontendPath: '/inventory',
     backendPrefixes: ['/api/inventory', '/api/rooms', '/api/vault', '/api/machines', '/api/racks'],
     notes: 'Inventário + racks + cofre; ações POST com Idempotency-Key no axios.',
+  },
+  {
+    screen: 'Peças',
+    module: 'parts',
+    frontendPath: '/parts',
+    backendPrefixes: ['/api/parts'],
+    notes: 'Inventário de peças e preço só leitura das máquinas da loja. Drop no offerwall.',
   },
   {
     screen: 'Loja',

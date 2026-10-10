@@ -21,11 +21,14 @@
  * called it either, it computed `playedAt + days` directly. Inventory/miner rewards are not supported
  * by this offer's rewardKind discriminator (BLK | POL | HASHRATE_TEMP only) — legacy never granted
  * inventory items from this module, so inventory/index.ts's `grantPurchasedInventoryItems` isn't used.
+ * A common part is granted in the same transaction as the BLK credit (offerwall-only drop).
  */
 import { Prisma } from "@prisma/client";
 import type { PrismaClient, InternalOfferwallOffer } from "@prisma/client";
 import prisma, { type TxClient } from "../../core/database/prisma.js";
 import { getUtcDayKey, getUtcPeriodResetAt } from "../../shared/calendar/utcCalendar.js";
+import { grantOfferwallPartInTx } from "../parts/parts.grant.js";
+import { PART_GRANT_SOURCE } from "../parts/parts.drop.js";
 import { logger } from "../../core/logger/index.js";
 import {
   ATTEMPT_STATUS_PENDING_REVIEW,
@@ -345,6 +348,7 @@ async function grantInternalOfferwallRewardInTx(
   tx: TxClient,
   args: {
     userId: number;
+    attemptId: number;
     rewardKind?: string | null;
     rewardBlkAmount?: Prisma.Decimal | number | string | null;
     rewardPolAmount?: Prisma.Decimal | number | string | null;
@@ -354,6 +358,18 @@ async function grantInternalOfferwallRewardInTx(
 ): Promise<{ kind: string; polDelta: number }> {
   const { userId, rewardKind } = args;
   const kind = String(rewardKind || "").toUpperCase();
+
+  const creditBlkAndPart = async (amt: Prisma.Decimal) => {
+    await tx.user.update({
+      where: { id: userId },
+      data: { blkBalance: { increment: amt } },
+    });
+    await grantOfferwallPartInTx(tx, {
+      userId,
+      source: PART_GRANT_SOURCE.internal,
+      sourceRef: String(args.attemptId),
+    });
+  };
 
   if (kind === REWARD_BLK || kind === REWARD_POL) {
     // Platform policy: internal offerwall pays BLK only. Legacy POL rows are
@@ -369,20 +385,14 @@ async function grantInternalOfferwallRewardInTx(
       throw new InternalOfferwallRewardConfigError("REWARD_BLK_INVALID");
     }
 
-    await tx.user.update({
-      where: { id: userId },
-      data: { blkBalance: { increment: new Prisma.Decimal(amt.toString()) } },
-    });
+    await creditBlkAndPart(new Prisma.Decimal(amt.toString()));
     return { kind: REWARD_BLK, polDelta: 0 };
   }
 
   if (kind === REWARD_HASHRATE_TEMP) {
     // Hashrate rewards disabled — settle as standard BLK instead.
     const fallback = new Prisma.Decimal(String(internalOfferwallDefaultBlkReward()));
-    await tx.user.update({
-      where: { id: userId },
-      data: { blkBalance: { increment: fallback } },
-    });
+    await creditBlkAndPart(fallback);
     return { kind: REWARD_BLK, polDelta: 0 };
   }
 
@@ -661,6 +671,7 @@ export async function userSubmitAttempt(
       if (!fresh) throw new InternalOfferwallConflictError();
       await grantInternalOfferwallRewardInTx(tx, {
         userId,
+        attemptId,
         rewardKind: attempt.offer.rewardKind,
         rewardBlkAmount: attempt.offer.rewardBlkAmount,
         rewardPolAmount: attempt.offer.rewardPolAmount,
@@ -990,6 +1001,7 @@ export async function adminApproveAttempt(attemptId: number): Promise<AdminOpera
       if (!row) throw new InternalOfferwallConflictError("gone");
       await grantInternalOfferwallRewardInTx(tx, {
         userId: attempt.userId,
+        attemptId,
         rewardKind: attempt.offer.rewardKind,
         rewardBlkAmount: attempt.offer.rewardBlkAmount,
         rewardPolAmount: attempt.offer.rewardPolAmount,

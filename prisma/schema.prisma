@@ -190,6 +190,8 @@ model User {
   moneyRainCallbacks            MoneyRainCallback[]
   multiwallCallbacks            MultiwallCallback[]
   offerwallGgCallbacks          OfferwallGgCallback[]
+  partStacks                    UserPartStack[]
+  partGrants                    PartGrant[]
   youtuberProfile               YoutuberProfile?
   videoSubmissions              YoutubeVideoSubmission[]
   videoVotes                    YoutubeVideoVote[]
@@ -3380,6 +3382,39 @@ model UserStatsEarningsDaily {
   @@unique([userId, dayUtc, source])
   @@index([userId, dayUtc])
   @@map("user_stats_earnings_daily")
+}
+
+/// Stacked common parts. Granted by offerwall credits; not spent yet.
+model UserPartStack {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  partSlug  String   @map("part_slug")
+  quantity  Int      @default(0)
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, partSlug])
+  @@index([userId])
+  @@map("user_part_stacks")
+}
+
+/// One row per offerwall credit that dropped a part. Unique so replays do not double-grant.
+model PartGrant {
+  id         Int       @id @default(autoincrement())
+  userId     Int       @map("user_id")
+  partSlug   String    @map("part_slug")
+  quantity   Int
+  source     String
+  sourceRef  String    @map("source_ref")
+  reversedAt DateTime? @map("reversed_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([source, sourceRef])
+  @@index([userId])
+  @@map("part_grants")
 }
 
 /// All-time POL earnings rollup by source — fed by Kafka consumer.

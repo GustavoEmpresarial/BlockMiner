@@ -850,6 +850,7 @@
   "sidebar": {
     "dashboard": "Dashboard Central",
     "machines": "Minhas Máquinas",
+    "parts": "Peças",
     "vault": "Cofre",
     "shop": "Loja",
     "offers": "Ofertas",
@@ -6678,6 +6679,32 @@
     "active": "Ativo",
     "actions": "Ações",
     "toggle": "On/Off"
+  },
+  "parts": {
+    "title": "Peças",
+    "subtitle": "Peças comuns que caem no offerwall. A montagem das máquinas ainda não está liberada.",
+    "inventory_title": "Seu inventário",
+    "prices_title": "Preço das máquinas",
+    "prices_hint": "O custo aparece aqui para você acompanhar. Ainda não dá para montar nem comprar com peças.",
+    "empty_machines": "Nenhuma máquina da loja para precificar agora.",
+    "load_error": "Não foi possível carregar as peças.",
+    "loading": "Carregando peças...",
+    "quantity": "Quantidade",
+    "cost_count": "{{owned}} / {{required}}",
+    "band": {
+      "starter": "Inicial",
+      "mid": "Intermediária",
+      "high": "Avançada",
+      "elite": "Elite"
+    },
+    "items": {
+      "power_cable": "Cabo de força",
+      "asic_chip": "Chip",
+      "cooling_fan": "Ventoinha",
+      "hashboard": "Placa",
+      "power_supply": "Fonte",
+      "thermal_pad": "Pasta térmica"
+    }
   },
   "cookieConsent": {
     "message": "Usamos cookies essenciais para manter sua sessão segura, e cookies opcionais de analytics/publicidade só com sua permissão.",

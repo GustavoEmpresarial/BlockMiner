@@ -31,6 +31,7 @@ import {
   Star,
   UserPlus,
   Flame,
+  Puzzle,
 } from 'lucide-react';
 import type { PublicNavCategory, PublicNavItem } from './sidebarNavPublicSchema';
 
@@ -67,6 +68,7 @@ export const SIDEBAR_ICON_MAP: Record<string, LucideIcon> = {
   Star,
   UserPlus,
   Flame,
+  Puzzle,
 };
 
 /** Temporary promo: full-tab alert on Ofertas in the user sidebar. */

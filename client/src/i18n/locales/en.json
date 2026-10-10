@@ -850,6 +850,7 @@
   "sidebar": {
     "dashboard": "Dashboard",
     "machines": "My Machines",
+    "parts": "Parts",
     "vault": "Vault",
     "shop": "Shop",
     "offers": "Popular Offers",
@@ -6668,6 +6669,32 @@
     "active": "Active",
     "actions": "Actions",
     "toggle": "On/Off"
+  },
+  "parts": {
+    "title": "Parts",
+    "subtitle": "Common parts dropped by the offerwall. Machine assembly is not available yet.",
+    "inventory_title": "Your inventory",
+    "prices_title": "Machine prices",
+    "prices_hint": "Costs are shown so you can track them. You cannot assemble or buy with parts yet.",
+    "empty_machines": "No shop machines to price right now.",
+    "load_error": "Could not load parts.",
+    "loading": "Loading parts...",
+    "quantity": "Quantity",
+    "cost_count": "{{owned}} / {{required}}",
+    "band": {
+      "starter": "Starter",
+      "mid": "Mid",
+      "high": "Advanced",
+      "elite": "Elite"
+    },
+    "items": {
+      "power_cable": "Power cable",
+      "asic_chip": "Chip",
+      "cooling_fan": "Cooling fan",
+      "hashboard": "Hashboard",
+      "power_supply": "Power supply",
+      "thermal_pad": "Thermal paste"
+    }
   },
   "cookieConsent": {
     "message": "We use essential cookies to keep your session secure, and optional analytics/advertising cookies only with your permission.",

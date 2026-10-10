@@ -4,6 +4,8 @@
 // Reconstructed verbatim from the last known-good compiled output on 2026-09-11.
 // TODO: remove @ts-nocheck once someone re-adds proper types for this file.
 import prisma from "../../core/database/prisma.js";
+import { grantOfferwallPartInTx } from "../parts/parts.grant.js";
+import { PART_GRANT_SOURCE } from "../parts/parts.drop.js";
 export async function findUserForCallback(userId) {
     return prisma.user.findUnique({
         where: { id: userId },
@@ -13,12 +15,12 @@ export async function findUserForCallback(userId) {
 /**
  * Single transaction: create the MoneyRainCallback row (unique on `viewId` — the DB
  * constraint is the idempotency guard, caller catches the P2002/unique-violation to
- * treat a replayed callback as a no-op) and credit the user's POL balance. Per-view
+ * treat a replayed callback as a no-op), credit the user's BLK balance, and drop one part. Per-view
  * crediting, not a shared pot — no advisory locks needed here (see module header).
  */
 export async function createCallbackAndCreditBalance(data) {
-    await prisma.$transaction([
-        prisma.moneyRainCallback.create({
+    await prisma.$transaction(async (tx) => {
+        await tx.moneyRainCallback.create({
             data: {
                 userId: data.userId,
                 viewId: data.viewId,
@@ -32,12 +34,17 @@ export async function createCallbackAndCreditBalance(data) {
                 nonce: data.nonce,
                 requestIp: data.clientIp,
             },
-        }),
-        prisma.user.update({
+        });
+        await tx.user.update({
             where: { id: data.userId },
             data: { blkBalance: { increment: data.blkToCredit } },
-        }),
-    ]);
+        });
+        await grantOfferwallPartInTx(tx, {
+            userId: data.userId,
+            source: PART_GRANT_SOURCE.moneyrain,
+            sourceRef: String(data.viewId ?? ""),
+        });
+    });
 }
 export async function listCallbackHistory(userId, skip, take) {
     const [entries, total] = await Promise.all([

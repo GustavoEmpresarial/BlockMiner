@@ -9,6 +9,8 @@
  */
 import type { Prisma } from "@prisma/client";
 import prisma from "../../core/database/prisma.js";
+import { grantOfferwallPartInTx } from "../parts/parts.grant.js";
+import { PART_GRANT_SOURCE } from "../parts/parts.drop.js";
 
 export async function findUserByUsernameForCallback(username: string) {
   return prisma.user.findUnique({
@@ -61,6 +63,12 @@ export async function createCallbackAndCreditBalance(data: {
     await tx.user.update({
       where: { id: data.userId },
       data: { blkBalance: { increment: data.blkToCredit } },
+    });
+    // One part per S2S batch, not per click row. The parent hash is the idempotency key.
+    await grantOfferwallPartInTx(tx, {
+      userId: data.userId,
+      source: PART_GRANT_SOURCE.zerads,
+      sourceRef: data.callbackHash,
     });
   });
 }

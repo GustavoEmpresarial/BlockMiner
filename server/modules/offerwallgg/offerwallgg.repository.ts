@@ -1,6 +1,8 @@
 /** Offerwall.GG — Prisma access for S2S credits. */
 import { Prisma } from "@prisma/client";
 import prisma from "../../core/database/prisma.js";
+import { grantOfferwallPartInTx, reverseOfferwallPartInTx } from "../parts/parts.grant.js";
+import { PART_GRANT_SOURCE } from "../parts/parts.drop.js";
 
 export async function findUserForPostback(userId: number) {
   return prisma.user.findUnique({
@@ -46,6 +48,10 @@ export async function createChargebackCallback(params: {
     if (after && after.blkBalance.lessThan(0)) {
       await tx.user.update({ where: { id: params.userId }, data: { blkBalance: new Prisma.Decimal(0) } });
     }
+    await reverseOfferwallPartInTx(tx, {
+      source: PART_GRANT_SOURCE.offerwallgg,
+      sourceRef: String(params.transId ?? ""),
+    });
   });
 }
 
@@ -77,6 +83,11 @@ export async function createCreditCallback(params: {
     await tx.user.update({
       where: { id: params.userId },
       data: { blkBalance: { increment: params.polDecimal } },
+    });
+    await grantOfferwallPartInTx(tx, {
+      userId: params.userId,
+      source: PART_GRANT_SOURCE.offerwallgg,
+      sourceRef: String(params.transId ?? ""),
     });
     return created;
   });

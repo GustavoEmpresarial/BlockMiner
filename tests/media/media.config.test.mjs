@@ -19,6 +19,7 @@ test("MEDIA_CATEGORIES includes legacy set plus models", () => {
     "sala",
     "racks",
     "fans",
+    "parts",
     "icons",
     "brand",
     "models",
