@@ -105,15 +105,12 @@ export async function setFanPlacementForUser(
       where: { roomId_visualIndex: { roomId: room.id, visualIndex } },
     });
 
+    if (mounted && existingAtDest) {
+      if (fromVisualIndex != null && fromVisualIndex === visualIndex) return;
+      throw new HttpStatusError(400, "Este rack já possui ventilador instalado.", { code: "FAN_OCCUPIED" });
+    }
+
     if (mounted && fromVisualIndex != null && fromVisualIndex !== visualIndex) {
-      if (existingAtDest) {
-        await tx.userVisualFanPlacement
-          .delete({
-            where: { roomId_visualIndex: { roomId: room.id, visualIndex: fromVisualIndex } },
-          })
-          .catch(() => undefined);
-        return;
-      }
       await tx.userVisualFanPlacement
         .delete({
           where: { roomId_visualIndex: { roomId: room.id, visualIndex: fromVisualIndex } },

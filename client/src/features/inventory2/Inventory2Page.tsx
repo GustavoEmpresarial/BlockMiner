@@ -483,12 +483,6 @@ export default function Inventory2Page() {
         const res = await postVisualPlacement({ roomNumber: currentRoom.roomNumber, visualIndex, floorSlot });
         if (res.data?.ok && Array.isArray(res.data.placements)) {
           setPlacementsByRoom((prev) => ({ ...prev, [currentRoom.roomNumber]: res.data.placements }));
-          if (floorSlot == null) {
-            setFansByRoom((prev) => ({
-              ...prev,
-              [currentRoom.roomNumber]: (prev[currentRoom.roomNumber] ?? []).filter((i) => i !== visualIndex),
-            }));
-          }
           if (!opts?.silent) {
             toast.success(floorSlot == null ? t('inventory2.stored') : t('inventory2.placed'));
           }

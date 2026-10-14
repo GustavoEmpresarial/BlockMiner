@@ -326,9 +326,7 @@ export async function setVisualPlacementForUser(
       });
     }
 
-    if (floorSlot == null) {
-      await tx.userVisualFanPlacement.deleteMany({ where: { roomId: room.id, visualIndex } });
-    }
+    // The fan stays attached to the rack while it is stored and comes back with it.
   });
 
   const rows = await prisma.userVisualRackPlacement.findMany({
