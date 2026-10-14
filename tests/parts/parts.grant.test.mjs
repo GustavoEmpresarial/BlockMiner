@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-const { grantOfferwallPartInTx, reverseOfferwallPartInTx } = await import(
+const { grantActivityPartInTx, grantOfferwallPartInTx, partDropPayload, reverseOfferwallPartInTx } = await import(
   "../../server/modules/parts/parts.grant.ts"
 );
 
@@ -31,12 +31,12 @@ function createFakeTx() {
     },
     userPartStack: {
       async findUnique({ where }) {
-        const key = where.userId_partSlug;
-        return stacks.find((row) => row.userId === key.userId && row.partSlug === key.partSlug) ?? null;
+        const key = where.userId_partSlug_rarity;
+        return stacks.find((row) => row.userId === key.userId && row.partSlug === key.partSlug && row.rarity === key.rarity) ?? null;
       },
       async upsert({ where, create, update }) {
-        const key = where.userId_partSlug;
-        const existing = stacks.find((row) => row.userId === key.userId && row.partSlug === key.partSlug);
+        const key = where.userId_partSlug_rarity;
+        const existing = stacks.find((row) => row.userId === key.userId && row.partSlug === key.partSlug && row.rarity === key.rarity);
         if (!existing) {
           const row = { id: nextStackId, ...create };
           nextStackId += 1;
@@ -146,6 +146,42 @@ test("chargeback of a credit that never granted a part is a no-op", async () => 
   });
   assert.equal(result.reversed, false);
   assert.equal(stacks.length, 0);
+});
+
+test("activity grant writes one common part on a hit and nothing on a miss", async () => {
+  const { tx, grants, stacks } = createFakeTx();
+  const hit = await grantActivityPartInTx(tx, {
+    userId: 9,
+    source: "faucet",
+    sourceRef: "faucet:9:1",
+    baseBps: 10000,
+  });
+  const again = await grantActivityPartInTx(tx, {
+    userId: 9,
+    source: "faucet",
+    sourceRef: "faucet:9:1",
+    baseBps: 10000,
+  });
+  const miss = await grantActivityPartInTx(tx, {
+    userId: 9,
+    source: "youtube",
+    sourceRef: "youtube:2",
+    baseBps: 0,
+  });
+
+  assert.equal(hit.granted, true);
+  assert.equal(hit.quantity, 1);
+  assert.equal(hit.rarity, "common");
+  assert.deepEqual(partDropPayload(hit), { partSlug: hit.partSlug, rarity: "common", quantity: 1 });
+  assert.equal(again.granted, false);
+  assert.equal(again.quantity, 1);
+  assert.equal(partDropPayload(again), null);
+  assert.equal(miss.granted, false);
+  assert.equal(partDropPayload(miss), null);
+  assert.equal(grants.length, 1);
+  assert.equal(stacks.length, 1);
+  assert.equal(stacks[0].quantity, 1);
+  assert.equal(stacks[0].rarity, "common");
 });
 
 test("blank sourceRef and zero quantity do not write", async () => {

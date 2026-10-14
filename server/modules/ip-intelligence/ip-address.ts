@@ -194,6 +194,23 @@ export function getClientIpFromResolver(req: RequestLike): string {
   return resolved.ip;
 }
 
+/**
+ * Source IP for partner S2S callbacks (IP allowlists). CF-Connecting-IP is honoured only when the
+ * request reached the app through a trusted proxy hop (TRUST_PROXY + TRUSTED_PROXY_CIDRS / Docker
+ * bridge); a header sent straight to the app is ignored. That the proxy hop itself only forwards
+ * Cloudflare traffic is enforced at the edge (ORIGIN_AUTH_SECRET middleware, Caddy, firewall).
+ */
+export function getCallbackSourceIp(req: RequestLike): string {
+  const remote = normalizeIp(req?.socket?.remoteAddress ?? req?.connection?.remoteAddress ?? req?.ip);
+  const viaTrustedProxy =
+    envBool("TRUST_PROXY") && Boolean(remote && (isTrustedProxyAddress(remote) || isInfrastructureIp(remote)));
+  if (viaTrustedProxy) {
+    const cf = readHeaderIp(req, "cf-connecting-ip");
+    if (cf) return cf;
+  }
+  return getClientIpFromResolver(req);
+}
+
 export function deriveDefaultNetworkCidr(ip: unknown): string | null {
   const normalized = normalizeIp(ip);
   if (!normalized || net.isIP(normalized) !== 6 || isInfrastructureIp(normalized)) return null;

@@ -4,10 +4,11 @@ import {
   resolveCriticalMutation,
 } from "../../core/http/middleware/idempotency.js";
 import { reportError } from "../../core/errors/index.js";
-import { readErrorCode, requireSessionUser } from "../../shared/errors/httpStatusError.js";
+import { readErrorCode, readHttpStatus, readErrorMessage, requireSessionUser } from "../../shared/errors/httpStatusError.js";
 import { classifyInfrastructureError } from "../../shared/errors/prismaHttpErrors.js";
 import { purchaseFansForUser, FAN_ERROR_MESSAGE, readFanMaxBulkQuantity } from "../fans/index.js";
 import { purchaseRacksForUser, RACK_ERROR_MESSAGE, readRackMaxBulkQuantity } from "../racks/index.js";
+import { purchasePartForUser, purchasePartPackForUser } from "../parts/index.js";
 import { OFFER_EVENT_PURCHASE_MAX_QUANTITY } from "./offer-events.config.js";
 import { OFFER_EVENTS_ERROR } from "./offer-events.errors.js";
 import * as svc from "./offer-events.service.js";
@@ -297,3 +298,76 @@ export async function purchaseRackOffer(req: import("express").Request, res: imp
     failedCode: OFFER_EVENTS_ERROR.RACK_PURCHASE_FAILED,
   });
 }
+
+export async function purchasePartOffer(req: import("express").Request, res: import("express").Response): Promise<void> {
+  const user = requireSessionUser(req, res);
+  if (!user) return;
+
+  const { slug, rarity, quantity } = req.body ?? {};
+  const idem = await resolveCriticalMutation(req, res);
+  if (!idem) return;
+  const { lease, ci } = idem;
+
+  try {
+    const result = await purchasePartForUser({
+      userId: user.id,
+      slug,
+      rarity,
+      quantity,
+      channel: "offer",
+    });
+
+    const payload = {
+      messageKey: "parts.purchase_success",
+      message: "Peça comprada com sucesso!",
+      ...result,
+    };
+
+    await finalizeCriticalMutationSuccess(lease, {
+      requestHash: ci.requestHash,
+      responseJson: payload,
+    });
+
+    res.json(payload);
+  } catch (error) {
+    await cancelCriticalMutation(lease);
+    const status = readHttpStatus(error) ?? 400;
+    const code = readErrorCode(error) ?? "PART_PURCHASE_FAILED";
+    const message = readErrorMessage(error) || "Erro ao comprar peça.";
+    res.status(status).json({ ok: false, code, message });
+  }
+}
+
+export async function purchasePartPackOffer(req: import("express").Request, res: import("express").Response): Promise<void> {
+  const user = requireSessionUser(req, res);
+  if (!user) return;
+
+  const { packId } = req.body ?? {};
+  const idem = await resolveCriticalMutation(req, res);
+  if (!idem) return;
+  const { lease, ci } = idem;
+
+  try {
+    const result = await purchasePartPackForUser(user.id, String(packId ?? ""));
+
+    const payload = {
+      messageKey: "parts.packs.purchase_success",
+      message: "Pacote de peças comprado com sucesso!",
+      ...result,
+    };
+
+    await finalizeCriticalMutationSuccess(lease, {
+      requestHash: ci.requestHash,
+      responseJson: payload,
+    });
+
+    res.json(payload);
+  } catch (error) {
+    await cancelCriticalMutation(lease);
+    const status = readHttpStatus(error) ?? 400;
+    const code = readErrorCode(error) ?? "PACK_PURCHASE_FAILED";
+    const message = readErrorMessage(error) || "Erro ao comprar pacote de peças.";
+    res.status(status).json({ ok: false, code, message });
+  }
+}
+

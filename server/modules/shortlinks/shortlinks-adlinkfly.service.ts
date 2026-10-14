@@ -17,6 +17,8 @@ import { logger } from "../../core/logger/index.js";
 import * as shortlinksRepo from "./shortlinks.repository.js";
 import { createAdlinkflyShrink, isAdlinkflyShortlinkApiEnabled } from "./adlinkfly-shortlink.api.js";
 import { recordTournamentAction, TOURNAMENT_ACTION_PROVIDER } from "../tournaments/index.js";
+import { grantActivityPartInTx, partDropPayload, type PartDropPayload } from "../parts/parts.grant.js";
+import { PART_GRANT_SOURCE } from "../parts/parts.drop.js";
 import {
   ADLINKFLY_PROVIDER,
   PASTEAD_REWARD_HS,
@@ -261,6 +263,7 @@ export async function claimAdlinkflyForUser(
   }
 
   const hashRate = session.hashRate || PASTEAD_REWARD_HS;
+  let part: PartDropPayload | null = null;
 
   try {
     await prisma.$transaction(async (tx) => {
@@ -302,6 +305,11 @@ export async function claimAdlinkflyForUser(
         ip: audit.ip,
         userAgent: audit.userAgent,
       });
+      part = partDropPayload(await grantActivityPartInTx(tx, {
+        userId,
+        source: PART_GRANT_SOURCE.shortlink,
+        sourceRef: `shortlink:adlinkfly:${session!.id}`,
+      }));
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -322,5 +330,5 @@ export async function claimAdlinkflyForUser(
     providerEventId: `shortlink:adlinkfly:${session!.id}`,
     metadata: { hashRate, source: ADLINKFLY_PROVIDER, sessionId: session!.id },
   }).catch((err) => log.warn("tournament.action.failed", { userId, error: String(err) }));
-  return { ok: true, rewardMessage, hashRate };
+  return { ok: true, rewardMessage, hashRate, part };
 }

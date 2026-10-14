@@ -22,7 +22,7 @@ import {
   tournamentHubCategory,
   type TournamentHubCategoryId,
 } from './lib/tournamentHubCategory';
-import { TOURNAMENT_TYPE_BADGE } from './lib/tournamentMetricDisplay';
+import { TOURNAMENT_TYPE_BADGE, tournamentDisplayName } from './lib/tournamentMetricDisplay';
 import type { TournamentDetail, TournamentSummary } from './lib/tournaments.types';
 import { useTournamentHubSocket } from './lib/useTournamentHubSocket';
 
@@ -202,7 +202,6 @@ export default function TournamentsPage() {
                   })
                 : t('tournaments.header.title')}
             </h1>
-            <p className="text-xs sm:text-sm text-slate-400 font-medium">{t('tournaments.header.subtitle')}</p>
           </div>
         </div>
         <button
@@ -263,6 +262,26 @@ export default function TournamentsPage() {
                     {t('tournaments.minigame_scoring_hint_short')}
                   </p>
                 ) : null}
+                {id === 'forge' ? (
+                  <p className="mt-3.5 text-[10px] text-amber-300 font-medium leading-snug border-t border-slate-800/80 pt-3">
+                    {t('tournaments.merge_scoring_hint_short')}
+                  </p>
+                ) : null}
+                {id === 'burn' ? (
+                  <p className="mt-3.5 text-[10px] text-orange-300 font-medium leading-snug border-t border-slate-800/80 pt-3">
+                    {t('tournaments.burn_scoring_hint_short')}
+                  </p>
+                ) : null}
+                {id === 'tasks' ? (
+                  <p className="mt-3.5 text-[10px] text-teal-300 font-medium leading-snug border-t border-slate-800/80 pt-3">
+                    {t('tournaments.tasks_scoring_hint_short')}
+                  </p>
+                ) : null}
+                {id === 'youtube' ? (
+                  <p className="mt-3.5 text-[10px] text-red-300 font-medium leading-snug border-t border-slate-800/80 pt-3">
+                    {t('tournaments.youtube_scoring_hint_short')}
+                  </p>
+                ) : null}
               </button>
             );
           })}
@@ -303,7 +322,7 @@ export default function TournamentsPage() {
                       : 'border-slate-800 bg-slate-900/40 text-slate-400 hover:border-slate-700 hover:text-white'
                   }`}
                 >
-                  {row.name}
+                  {tournamentDisplayName(row)}
                 </button>
               ))}
             </div>

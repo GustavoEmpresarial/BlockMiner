@@ -1,6 +1,7 @@
 import { formatUtcDayStartLabel } from './format';
 import type { UserPowerStatsPayload } from '../lib/stats.api';
 import type { UserEarningsPayload } from '../lib/stats.earnings.api';
+import type { UserActivityLogItem } from '../lib/stats.history.api';
 
 function formatUtcDateTime(iso: string | undefined | null): string {
   if (!iso) return '';
@@ -67,3 +68,20 @@ export function exportEarningsStatsCsv(earnings: UserEarningsPayload, basename: 
 }
 
 export const exportEarningsCsv = exportEarningsStatsCsv;
+
+export function exportUserActivityCsv(logs: UserActivityLogItem[], basename: string): void {
+  const rows: string[][] = [
+    ['id', 'data_utc', 'categoria', 'titulo', 'descricao', 'ip'],
+  ];
+  for (const log of logs) {
+    rows.push([
+      String(log.id),
+      formatUtcDateTime(log.createdAt),
+      log.categoryLabel || log.category,
+      log.title,
+      log.description,
+      log.ip || '',
+    ]);
+  }
+  downloadCsv(`${basename}.csv`, rows);
+}

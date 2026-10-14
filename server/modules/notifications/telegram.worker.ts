@@ -107,8 +107,8 @@ function formatTelegramDate(value: unknown): string {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
-    timeZone: process.env.TZ || "America/Sao_Paulo",
-  }).format(date);
+    timeZone: "UTC",
+  }).format(date) + " UTC";
 }
 
 function buildPolygonscanTxUrl(txHash: string | null, baseUrl = normalizePolygonscanBaseUrl()): string {

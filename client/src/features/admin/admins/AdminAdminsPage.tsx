@@ -30,6 +30,7 @@ import {
   revokeAdminSession,
 } from '../lib/admin.api';
 import type { AdminUserItem, AdminSessionItem } from '../lib/admin.types';
+import { formatUtcDateTime } from '../../../shared/utils/utcTime';
 
 // ---------------------------------------------------------------------------
 // Helpers, Role Defaults & Permission Definitions
@@ -104,13 +105,7 @@ const AVAILABLE_PERMISSIONS: PermissionMeta[] = [
 function formatDate(iso?: string | null): string {
   if (!iso) return '—';
   try {
-    return new Date(iso).toLocaleString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    return formatUtcDateTime(iso, { locale: 'pt-BR' });
   } catch {
     return iso;
   }

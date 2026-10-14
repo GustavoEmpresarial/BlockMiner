@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { adminBurnEventsApi } from './adminBurnEvents.api';
 import type { AdminBurnEventRow, AdminCreateBurnEventPayload, AdminUpdateBurnEventPayload, CatalogMiner } from './adminBurnEvents.types';
 import { readAxiosResponseMessage } from '../lib/admin.api';
+import { fromUtcInputValue, toUtcInputValue } from '../../../shared/utils/utcTime';
 
 interface BurnEventFormModalProps {
   isOpen: boolean;
@@ -38,8 +39,8 @@ export function BurnEventFormModal({ isOpen, onClose, onSaved, event, miners }: 
       setRewardMinerId(event.rewardMinerId || '');
       setClaimLimitPerUser(event.claimLimitPerUser ?? 10);
       setStockTotal(event.stockTotal != null ? String(event.stockTotal) : '');
-      setStartsAt(event.startsAt ? new Date(event.startsAt).toISOString().slice(0, 16) : '');
-      setEndsAt(event.endsAt ? new Date(event.endsAt).toISOString().slice(0, 16) : '');
+      setStartsAt(toUtcInputValue(event.startsAt));
+      setEndsAt(toUtcInputValue(event.endsAt));
       setIsActive(event.isActive !== false);
     } else {
       setTitle('');
@@ -91,8 +92,8 @@ export function BurnEventFormModal({ isOpen, onClose, onSaved, event, miners }: 
           rewardMinerId: Number(rewardMinerId),
           claimLimitPerUser: numClaimLimit,
           stockTotal: stockTotal.trim() === '' ? null : parseInt(stockTotal, 10),
-          startsAt: startsAt ? new Date(startsAt).toISOString() : null,
-          endsAt: endsAt ? new Date(endsAt).toISOString() : null,
+          startsAt: fromUtcInputValue(startsAt),
+          endsAt: fromUtcInputValue(endsAt),
           isActive,
         };
         const res = await adminBurnEventsApi.update(event.id, payload);
@@ -112,8 +113,8 @@ export function BurnEventFormModal({ isOpen, onClose, onSaved, event, miners }: 
           rewardMinerId: Number(rewardMinerId),
           claimLimitPerUser: numClaimLimit,
           stockTotal: stockTotal.trim() === '' ? null : parseInt(stockTotal, 10),
-          startsAt: startsAt ? new Date(startsAt).toISOString() : null,
-          endsAt: endsAt ? new Date(endsAt).toISOString() : null,
+          startsAt: fromUtcInputValue(startsAt),
+          endsAt: fromUtcInputValue(endsAt),
           isActive,
         };
         const res = await adminBurnEventsApi.create(payload);
@@ -287,7 +288,7 @@ export function BurnEventFormModal({ isOpen, onClose, onSaved, event, miners }: 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-slate-300 mb-1.5">
-                Data de Início <span className="text-slate-500 font-normal">(Opcional)</span>
+                Data de Início (UTC) <span className="text-slate-500 font-normal">(Opcional)</span>
               </label>
               <input
                 type="datetime-local"
@@ -299,7 +300,7 @@ export function BurnEventFormModal({ isOpen, onClose, onSaved, event, miners }: 
 
             <div>
               <label className="block text-xs font-bold text-slate-300 mb-1.5">
-                Data de Término <span className="text-slate-500 font-normal">(Opcional)</span>
+                Data de Término (UTC) <span className="text-slate-500 font-normal">(Opcional)</span>
               </label>
               <input
                 type="datetime-local"

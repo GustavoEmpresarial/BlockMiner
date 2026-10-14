@@ -153,7 +153,7 @@ function BalanceCurrencyPicker({
             ref={menuRef}
             role="listbox"
             style={{ top: menuPos.top, left: menuPos.left, width: MENU_W }}
-            className="fixed z-[200] rounded-3xl border-2 border-slate-800 bg-slate-900/60 shadow-[4px_4px_0px_#000000] overflow-hidden"
+            className="fixed z-[200] rounded-3xl border-2 border-slate-700 bg-slate-900 shadow-[4px_4px_0px_#000000] overflow-hidden"
           >
             <p className="px-5 sm:px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-800 bg-slate-950/40">
               {t('dashboard.balance_currency_pick')}

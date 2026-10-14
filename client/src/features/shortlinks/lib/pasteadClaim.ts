@@ -5,6 +5,7 @@ import {
   readApiErrorMessage,
   readResponseCode,
 } from './shortlinks.api';
+import { formatPartDropNotice } from '../../parts/lib/partDropNotice';
 
 /** Matches production bundle retry loop (`_qe=30`, `CF=2500`). */
 export const PASTEAD_CLAIM_MAX_ATTEMPTS = 30;
@@ -25,9 +26,11 @@ async function claimOnce(token: string): Promise<PasteadClaimOutcome> {
   try {
     const res = await claimPasteadShortlink(token);
     if (res.ok) {
+      const base = res.reward?.message || t('shortlinks.pastead_claim_success');
+      const notice = formatPartDropNotice(res.part, t);
       return {
         ok: true,
-        message: res.reward?.message || t('shortlinks.pastead_claim_success'),
+        message: notice ? `${base} ${notice}` : base,
         hashRate: res.reward?.hashRate,
       };
     }

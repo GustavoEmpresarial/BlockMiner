@@ -11,17 +11,10 @@ import type { Request, Response } from "express";
 import { requireSessionUser } from "../../shared/errors/httpStatusError.js";
 import { logger } from "../../core/logger/index.js";
 import { consumeOfferwallPass, extractPassToken } from "../bm-captcha/index.js";
+import { getCallbackSourceIp } from "../ip-intelligence/index.js";
 import * as zeradsService from "./zerads.service.js";
 
 const log = logger.child("zerads.controller");
-
-// Suporta ZERADS_ALLOWED_IPS (legado) ou ZERADS_SERVER_IP.
-function getClientIp(req: Request): string {
-  // Site sits behind Cloudflare; real origin IP is in CF-Connecting-IP.
-  const cfIp = req.headers["cf-connecting-ip"];
-  if (cfIp && typeof cfIp === "string") return cfIp.trim();
-  return String(req.ip ?? "").replace("::ffff:", "");
-}
 
 /**
  * GET /zeradsptc.php
@@ -30,7 +23,7 @@ function getClientIp(req: Request): string {
  * (see zerads.service.ts). Returns "1" on success, "0" on any failure (matches their PHP pattern).
  */
 export async function zeradsCallbackHandler(req: Request, res: Response): Promise<void> {
-  const clientIp = getClientIp(req);
+  const clientIp = getCallbackSourceIp(req);
 
   if (!zeradsService.isIpAllowed(clientIp)) {
     log.warn("zerads.callback.ip_rejected", { ip: clientIp, allowed: [...zeradsService.ZERADS_ALLOWED_IPS] });

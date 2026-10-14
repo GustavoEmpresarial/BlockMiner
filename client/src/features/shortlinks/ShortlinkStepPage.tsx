@@ -12,6 +12,7 @@ import { useResumableCountdown } from '../../shared/hooks/useResumableCountdown'
 import PausedTimerBanner from '../../shared/components/PausedTimerBanner';
 import { usePowerBoostActive } from '../../shared/hooks/usePowerBoostActive';
 import { t } from './lib/shortlinks.i18n';
+import { formatPartDropNotice } from '../parts/lib/partDropNotice';
 import { useShortlinkPageLease, SL_PAUSED_KEY } from './lib/shortlinkBackground';
 
 const STEP_DURATION_SEC = 10;
@@ -28,6 +29,7 @@ interface CompleteStepResponse {
   runCompleted?: boolean;
   reward?: { message?: string };
   sessionToken?: string;
+  part?: { partSlug?: string; quantity?: number } | null;
 }
 
 /** A reload starts the page over — nothing is counting, so coming back
@@ -242,7 +244,9 @@ export default function ShortlinkStepPage() {
             if (res.data.ok) {
                 if (res.data.runCompleted) {
                     sessionStorage.removeItem('sl_session');
-                    toast.success(res.data.reward?.message || t('shortlinks.step_reward_default'));
+                    const base = res.data.reward?.message || t('shortlinks.step_reward_default');
+                    const notice = formatPartDropNotice(res.data.part, t);
+                    toast.success(notice ? `${base} ${notice}` : base);
                     navigate('/shortlinks');
                 } else {
                     const nextStep = currentStepNum + 1;
@@ -312,9 +316,6 @@ export default function ShortlinkStepPage() {
                         <h1 className="text-xl sm:text-2xl font-black text-white italic uppercase tracking-tight">
                             {t('shortlinks.step_title', { step: currentStepNum, total: 3 })}
                         </h1>
-                        <p className="text-slate-400 font-bold mt-1 uppercase text-[10px] tracking-widest">
-                            {t('shortlinks.step_subtitle')}
-                        </p>
                     </div>
                 </div>
 

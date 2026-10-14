@@ -1,57 +1,13 @@
 /** Multiwall Ads PTC — Prisma access for S2S credits. */
 import { Prisma } from "@prisma/client";
 import prisma from "../../core/database/prisma.js";
-import { grantOfferwallPartInTx, reverseOfferwallPartInTx } from "../parts/parts.grant.js";
+import { grantOfferwallPartInTx } from "../parts/parts.grant.js";
 import { PART_GRANT_SOURCE } from "../parts/parts.drop.js";
 
 export async function findUserForPostback(userId: number) {
   return prisma.user.findUnique({
     where: { id: userId },
     select: { id: true, isBanned: true },
-  });
-}
-
-export async function createChargebackCallback(params: {
-  userId: number;
-  transId: string;
-  offerName: string | null;
-  offerType: string | null;
-  payoutUsd: number;
-  polPrice: number;
-  status: number;
-  clientIp: string;
-  polDebited: number;
-  polDebit: Prisma.Decimal;
-}) {
-  await prisma.$transaction(async (tx) => {
-    await tx.multiwallCallback.create({
-      data: {
-        userId: params.userId,
-        transId: params.transId,
-        offerName: params.offerName,
-        offerType: params.offerType,
-        payoutUsd: params.payoutUsd,
-        polCredited: params.polDebited,
-        polPrice: params.polPrice,
-        status: params.status,
-        requestIp: params.clientIp,
-      },
-    });
-    await tx.user.update({
-      where: { id: params.userId },
-      data: { blkBalance: { decrement: params.polDebit } },
-    });
-    const after = await tx.user.findUnique({
-      where: { id: params.userId },
-      select: { blkBalance: true },
-    });
-    if (after && after.blkBalance.lessThan(0)) {
-      await tx.user.update({ where: { id: params.userId }, data: { blkBalance: new Prisma.Decimal(0) } });
-    }
-    await reverseOfferwallPartInTx(tx, {
-      source: PART_GRANT_SOURCE.multiwall,
-      sourceRef: String(params.transId ?? ""),
-    });
   });
 }
 
@@ -88,6 +44,7 @@ export async function createCreditCallback(params: {
       userId: params.userId,
       source: PART_GRANT_SOURCE.multiwall,
       sourceRef: String(params.transId ?? ""),
+      usdAmount: params.polDecimal,
     });
     return created;
   });

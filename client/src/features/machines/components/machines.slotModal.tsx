@@ -14,6 +14,8 @@ import {
 import { getMachineDisplayImageUrl } from '../lib/machineDisplayImage';
 import { rackMinerModelUrl } from '../lib/rackMinerModel';
 import { MachineImage } from './MachineImage';
+import { MachineRarityBadge } from './MachineRarityBadge';
+import { machineRarityStyle, stripRaritySuffix } from '../lib/machineRarity';
 import { OfferMinerModel } from '../../offers/components/OfferMinerModel';
 import type { InventoryStackGroup, SelectedSlotPayload } from '../lib/machines.types';
 
@@ -52,7 +54,7 @@ export const SlotModal = memo(function SlotModal({ slot, groupedInventory, onIns
   const descriptor = machine ? getMachineDescriptor(machine) : null;
   const modalImageUrl = machine ? getMachineDisplayImageUrl({ imageUrl: machine.imageUrl, imageSource: machine.imageSource }) : null;
   const modalModelUrl = rackMinerModelUrl(machine);
-  const displayNameSafe = machine ? safeDisplayLabel(machine.minerName || descriptor?.name || '') : '';
+  const displayNameSafe = machine ? stripRaritySuffix(safeDisplayLabel(machine.minerName || descriptor?.name || '')) : '';
 
   return createPortal(
     <div role="dialog" aria-modal="true" className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/80 backdrop-blur-md animate-in fade-in duration-200">
@@ -89,6 +91,7 @@ export const SlotModal = memo(function SlotModal({ slot, groupedInventory, onIns
                 </div>
                 <div className="min-w-0 flex-1 text-center sm:text-left">
                   <h4 className="text-lg font-bold leading-snug text-white break-words">{displayNameSafe || safeDisplayLabel(descriptor?.name || '')}</h4>
+                  <MachineRarityBadge level={machine.level} className="mt-1.5" />
                   <div className="mt-2 flex flex-wrap items-start justify-center gap-4 sm:justify-start">
                     <div className="flex flex-col items-center sm:items-start">
                       <span className="text-[10px] font-bold uppercase text-gray-600">{t('inventory.modal.level')}</span>
@@ -202,7 +205,8 @@ export const SlotModal = memo(function SlotModal({ slot, groupedInventory, onIns
               ) : (
                 <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
                   {visibleInventoryGroups.map((group) => {
-                    const rowAlt = safeDisplayLabel(group.minerName);
+                    const rowAlt = stripRaritySuffix(safeDisplayLabel(group.minerName));
+                    const rarity = machineRarityStyle(group.level);
                     const rowImageUrl = getMachineDisplayImageUrl({ imageUrl: group.imageUrl, imageSource: group.imageSource });
                     return (
                       <button
@@ -232,7 +236,8 @@ export const SlotModal = memo(function SlotModal({ slot, groupedInventory, onIns
                             setBusy(false);
                           }
                         }}
-                        className="flex min-h-11 w-full items-center justify-between gap-3 rounded-2xl border border-gray-800 bg-gray-800/30 p-4 text-left transition-all hover:border-primary/30 hover:bg-primary/10 disabled:pointer-events-none disabled:opacity-50"
+                        data-rarity={rarity.rarity}
+                        className={`flex min-h-11 w-full items-center justify-between gap-3 rounded-2xl border bg-gray-800/30 p-4 text-left transition-all hover:border-primary/30 hover:bg-primary/10 disabled:pointer-events-none disabled:opacity-50 ${rarity.level > 1 ? rarity.border : 'border-gray-800'}`}
                       >
                         <div className="flex items-center gap-3 text-left">
                           <div className="w-10 h-10 bg-gray-900 rounded-lg p-2 shrink-0 relative">
@@ -241,7 +246,10 @@ export const SlotModal = memo(function SlotModal({ slot, groupedInventory, onIns
                           </div>
                           <div>
                             <div className="text-sm font-bold text-white">{rowAlt}</div>
-                            <div className="text-[10px] font-bold text-gray-500 uppercase">{formatHashrate(group.hashRate)}</div>
+                            <div className="mt-0.5 flex items-center gap-2">
+                              <MachineRarityBadge level={group.level} size="xs" />
+                              <span className="text-[10px] font-bold text-gray-500 uppercase">{formatHashrate(group.hashRate)}</span>
+                            </div>
                           </div>
                         </div>
                         <Plus className="w-5 h-5 text-gray-600" />

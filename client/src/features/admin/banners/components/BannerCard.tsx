@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Pencil, Trash2, ToggleLeft, ToggleRight, ExternalLink } from 'lucide-react';
 import type { AdminBannerRow } from '../banners.types';
 import { TypeBadge, isVideoMediaUrl, resolveBannerMediaUrl } from '../banners.shared';
+import { formatUtcDateTime } from '../../../../shared/utils/utcTime';
 
 export interface BannerCardProps {
   banner: AdminBannerRow;
@@ -84,9 +85,9 @@ export function BannerCard({ banner, onEdit, onToggle, onDelete }: BannerCardPro
 
           {banner.startsAt || banner.endsAt ? (
             <p className="text-[10px] text-slate-500">
-              {banner.startsAt ? `De: ${new Date(banner.startsAt).toLocaleString('pt-BR')}` : ''}
+              {banner.startsAt ? `De: ${formatUtcDateTime(banner.startsAt, { locale: 'pt-BR', seconds: true })}` : ''}
               {banner.startsAt && banner.endsAt ? ' · ' : ''}
-              {banner.endsAt ? `Até: ${new Date(banner.endsAt).toLocaleString('pt-BR')}` : ''}
+              {banner.endsAt ? `Até: ${formatUtcDateTime(banner.endsAt, { locale: 'pt-BR', seconds: true })}` : ''}
             </p>
           ) : null}
         </div>

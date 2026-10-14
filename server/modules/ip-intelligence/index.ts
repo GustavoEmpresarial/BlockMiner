@@ -12,6 +12,7 @@ export {
   isTrustedProxyAddress,
   resolveClientIp,
   getClientIpFromResolver,
+  getCallbackSourceIp,
   deriveDefaultNetworkCidr,
 } from "./ip-address.js";
 export {

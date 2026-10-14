@@ -8,6 +8,7 @@ import Card from '../../shared/components/Card';
 import IconBadge from '../../shared/components/IconBadge';
 import SectionHeader from '../../shared/components/SectionHeader';
 import { t } from './lib/offerwall.i18n';
+import { formatUtcDateTime } from '../../shared/utils/utcTime';
 
 export type OfferwallTab = 'stats' | 'offers';
 
@@ -58,7 +59,6 @@ export type OfferwallHistoryColumn = {
 type Props = {
   onBack: () => void;
   title: string;
-  tagline: string;
   accent: OfferwallAccent;
   Icon: LucideIcon;
   backLabel: string;
@@ -82,7 +82,6 @@ type Props = {
 export function OfferwallProviderShell({
   onBack,
   title,
-  tagline,
   accent,
   Icon,
   backLabel,
@@ -109,7 +108,6 @@ export function OfferwallProviderShell({
           <IconBadge icon={Icon} variant="primary" size="lg" />
           <div className="min-w-0">
             <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">{title}</h1>
-            <p className="text-slate-400 text-xs sm:text-sm font-medium">{tagline}</p>
           </div>
         </div>
         <button
@@ -256,6 +254,5 @@ export function fmtBlk(n: unknown): string {
 
 export function fmtDate(raw: unknown): string {
   if (!raw) return '—';
-  const d = new Date(String(raw));
-  return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString();
+  return formatUtcDateTime(String(raw));
 }

@@ -26,7 +26,9 @@
 import crypto from "node:crypto";
 import { logger } from "../../core/logger/index.js";
 import { OFFERWALL_BLK_PER_CLICK, blkForOfferwallClicks } from "../../shared/offerwallBlkPayout.js";
+import { parseOfferwallSubId, signOfferwallSubId } from "../../shared/security/offerwallSubId.js";
 import { recordTournamentAction, TOURNAMENT_ACTION_PROVIDER } from "../tournaments/index.js";
+import { utcWeekStart } from "../tournaments/tournament-window.js";
 import * as moneyrainRepo from "./moneyrain.repository.js";
 import type { MoneyRainCallbackPayload } from "./moneyrain.types.js";
 
@@ -135,11 +137,12 @@ export async function processMoneyRainCallback(
   }
 
   const externalUid = String(payload.external_uid ?? "").trim();
-  const userId = parseInt(externalUid, 10);
-  if (!externalUid || !Number.isFinite(userId) || userId <= 0) {
-    log.warn("moneyrain.callback.invalid_external_uid", { externalUid });
+  const parsed = parseOfferwallSubId("moneyrain", externalUid);
+  if (!parsed.ok) {
+    log.warn("moneyrain.callback.invalid_external_uid", { externalUid, reason: parsed.reason });
     return { ok: false, status: 400, body: "invalid external_uid" };
   }
+  const userId = parsed.userId;
 
   const viewId = String(payload.view_id ?? "").trim();
   if (!viewId) {
@@ -221,7 +224,7 @@ export function getMoneyRainLinkForUser(userId: number): { ok: true; url: string
     log.error("moneyrain.link.no_publisher_id_configured");
     return { ok: false, status: 500, reason: "not_configured" };
   }
-  const params = new URLSearchParams({ pub: PUBLISHER_ID, uid: String(userId) });
+  const params = new URLSearchParams({ pub: PUBLISHER_ID, uid: signOfferwallSubId("moneyrain", userId) });
   if (SITE_KEY) params.set("site", SITE_KEY);
   return { ok: true, url: `${MONEYRAIN_WALL_BASE}?${params.toString()}` };
 }
@@ -243,8 +246,7 @@ export async function getHistoryForUser(userId: number, page: number) {
 export async function getStatsForUser(userId: number) {
   const startOfDay = new Date();
   startOfDay.setUTCHours(0, 0, 0, 0);
-  const startOfWeek = new Date(startOfDay);
-  startOfWeek.setUTCDate(startOfWeek.getUTCDate() - startOfWeek.getUTCDay());
+  const startOfWeek = utcWeekStart(startOfDay);
   const startOfMonth = new Date(Date.UTC(startOfDay.getUTCFullYear(), startOfDay.getUTCMonth(), 1));
 
   const { agg, offersToday, offersWeek, offersMonth } = await moneyrainRepo.getStatsAggregates(

@@ -368,6 +368,7 @@ async function grantInternalOfferwallRewardInTx(
       userId,
       source: PART_GRANT_SOURCE.internal,
       sourceRef: String(args.attemptId),
+      usdAmount: amt,
     });
   };
 

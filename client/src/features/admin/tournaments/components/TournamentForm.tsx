@@ -11,6 +11,7 @@ import {
   type TournamentType,
 } from '../tournaments.admin.types';
 import { TournamentPrizeEditor } from './TournamentPrizeEditor';
+import { fromUtcInputValue } from '../../../../shared/utils/utcTime';
 
 export interface TournamentFormProps {
   open: boolean;
@@ -50,8 +51,8 @@ export function TournamentForm({
       return;
     }
 
-    const start = new Date(form.startsAt);
-    const end = new Date(form.endsAt);
+    const start = new Date(fromUtcInputValue(form.startsAt) ?? NaN);
+    const end = new Date(fromUtcInputValue(form.endsAt) ?? NaN);
     if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
       toast.error('Datas de início e fim inválidas.');
       return;
@@ -175,7 +176,7 @@ export function TournamentForm({
             </label>
 
             <label className="space-y-1 text-[10px] font-black uppercase tracking-widest text-slate-400">
-              {t('adminTournaments.starts')} (Horário Local) *
+              {t('adminTournaments.starts')} (UTC) *
               <input
                 required
                 type="datetime-local"
@@ -186,7 +187,7 @@ export function TournamentForm({
             </label>
 
             <label className="space-y-1 text-[10px] font-black uppercase tracking-widest text-slate-400">
-              {t('adminTournaments.ends')} (Horário Local) *
+              {t('adminTournaments.ends')} (UTC) *
               <input
                 required
                 type="datetime-local"

@@ -7,6 +7,7 @@ import { requireSessionUser } from "../../shared/errors/httpStatusError.js";
 import { classifyInfrastructureError } from "../../shared/errors/prismaHttpErrors.js";
 import { logger } from "../../core/logger/index.js";
 import { consumeOfferwallPass, extractPassToken } from "../bm-captcha/index.js";
+import { getCallbackSourceIp } from "../ip-intelligence/index.js";
 import { MULTIWALL_ERROR } from "./multiwall.errors.js";
 import * as multiwallService from "./multiwall.service.js";
 
@@ -40,19 +41,8 @@ function reportCaught(
   return report.errorId;
 }
 
-function getClientIp(req: Request): string {
-  const cfIp = req.headers["cf-connecting-ip"];
-  if (cfIp && typeof cfIp === "string") return cfIp.trim();
-  const xff = req.headers["x-forwarded-for"];
-  if (typeof xff === "string" && xff.trim()) {
-    const parts = xff.split(",").map((s) => s.trim()).filter(Boolean);
-    if (parts.length) return parts[parts.length - 1]!.replace(/^::ffff:/, "");
-  }
-  return String(req.ip ?? "").replace(/^::ffff:/, "");
-}
-
 export async function multiwallPostback(req: Request, res: Response): Promise<void> {
-  const clientIp = getClientIp(req);
+  const clientIp = getCallbackSourceIp(req);
   if (!multiwallService.isIpAllowed(clientIp)) {
     log.warn("postback.ip_rejected", { ip: clientIp });
     // PTC Instruction sample: die('') on IP mismatch

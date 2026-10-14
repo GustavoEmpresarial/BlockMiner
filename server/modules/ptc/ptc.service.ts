@@ -50,6 +50,8 @@ import {
   TELEGRAM_EVENT_TYPES,
 } from "../notifications/index.js";
 import { runTelegramOutboxTick } from "../notifications/telegram.worker.js";
+import { grantActivityPartInTx, partDropPayload, type PartDropPayload } from "../parts/parts.grant.js";
+import { PART_GRANT_SOURCE } from "../parts/parts.drop.js";
 import {
 
   SESSION_STALE_MS,
@@ -435,8 +437,9 @@ export async function cancelSession(sessionId: string, userId: number, reason: s
   log.info("session_cancelled", { userId, sessionId, reason });
 }
 
-export async function claimSession(sessionId: string, userId: number) {
+export async function claimSession(sessionId: string, userId: number): Promise<PartDropPayload | null> {
   const now = new Date();
+  let part: PartDropPayload | null = null;
   await prisma.$transaction(async (tx) => {
     const session = await tx.ptpSession.findUnique({ where: { id: sessionId } });
     if (!session || session.userId !== userId) throw new Error(PTC_ERROR_MESSAGE.SESSION_NOT_FOUND);
@@ -486,9 +489,15 @@ export async function claimSession(sessionId: string, userId: number) {
     await tx.ptpEarning.create({ data: { userId, adId: session.adId, amountShib: currency === "SHIB" ? earned : 0 } });
     await tx.user.update({ where: { id: userId }, data: { [balanceField]: { increment: earned } } });
     await tx.ptpSession.update({ where: { id: sessionId }, data: { status: "claimed", claimedAt: now } });
+    part = partDropPayload(await grantActivityPartInTx(tx, {
+      userId,
+      source: PART_GRANT_SOURCE.ptc,
+      sourceRef: `ptc:${sessionId}`,
+    }));
 
     log.info("reward_claimed", { userId, sessionId, earned: earned.toString(), currency });
   });
+  return part;
 }
 
 export async function getActiveSession(userId: number) {

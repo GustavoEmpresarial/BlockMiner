@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { getAdminAuditLogs, getAdminAuditStats } from '../lib/admin.api';
 import type { AdminAuditLogRow, AdminAuditStats } from '../lib/admin.types';
+import { formatUtcDateTime, startOfUtcDay } from '../../../shared/utils/utcTime';
 
 // ---------------------------------------------------------------------------
 // Helpers & Formatters
@@ -30,15 +31,7 @@ import type { AdminAuditLogRow, AdminAuditStats } from '../lib/admin.types';
 
 function formatDate(iso: string): string {
   try {
-    const d = new Date(iso);
-    return d.toLocaleString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-    });
+    return formatUtcDateTime(iso, { locale: 'pt-BR', fallback: iso, seconds: true });
   } catch {
     return iso;
   }
@@ -205,9 +198,8 @@ export default function AdminAuditLogAdmin() {
   // Compute from/to date based on datePreset
   const dateRange = useMemo(() => {
     if (datePreset === 'today') {
-      const start = new Date();
-      start.setHours(0, 0, 0, 0);
-      return { from: start.toISOString() };
+      // "Hoje" = current UTC calendar day.
+      return { from: new Date(startOfUtcDay()).toISOString() };
     }
     if (datePreset === '7d') {
       const start = new Date(Date.now() - 7 * 86400 * 1000);

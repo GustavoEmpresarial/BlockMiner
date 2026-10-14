@@ -30,6 +30,7 @@ import {
 import { buildActiveRoomOffersPayload } from "../rooms/rooms.offers.js";
 import { buildActiveFanOffersPayload } from "../fans/index.js";
 import { buildActiveRackOffersPayload } from "../racks/index.js";
+import { buildActivePartOffersPayload } from "../parts/index.js";
 import { countUnlockedRoomsForUser } from "../rooms/rooms.service.js";
 import { OFFER_EVENT_DELIVERY_BATCH, OFFER_EVENT_PURCHASE_MAX_QUANTITY } from "./offer-events.config.js";
 import * as repo from "./offer-events.repository.js";
@@ -229,6 +230,7 @@ export async function listActiveOfferEventsForUser(userId?: number) {
     roomOffers: buildActiveRoomOffersPayload(now, { unlockedRoomCount }),
     fanOffers: buildActiveFanOffersPayload(now),
     rackOffers: buildActiveRackOffersPayload(now),
+    partOffers: buildActivePartOffersPayload(),
     serverTime: now.toISOString(),
   };
 }

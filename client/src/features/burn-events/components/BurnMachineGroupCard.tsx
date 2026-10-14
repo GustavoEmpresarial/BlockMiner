@@ -54,7 +54,7 @@ export function BurnMachineGroupCard({
       }`}
     >
       <div className="flex items-center gap-3 min-w-0">
-        <div className="relative flex h-14 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border-2 border-slate-800 bg-slate-950 p-1 shadow-[1px_1px_0px_#000000]">
+        <div className="relative flex h-14 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border-2 border-slate-800 bg-slate-950/90 p-1 shadow-[1px_1px_0px_#000000]">
           {img ? (
             <MachineImage
               imageUrl={img}

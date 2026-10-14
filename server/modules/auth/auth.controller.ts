@@ -189,6 +189,9 @@ export async function verifyEmailPost(req, res) {
         if (!user.emailVerifiedAt) {
             await prisma.user.update({ where: { id: userId }, data: { emailVerifiedAt: new Date() } });
             log.security("AUTH_EMAIL_VERIFIED", { userId }, req);
+            import("../referrals/referrals.qualification.js")
+              .then(({ checkAndQualifyReferral }) => checkAndQualifyReferral(userId))
+              .catch((err) => log.warn("referral.qualify_on_email_verify.failed", { error: String(err) }));
         }
         res.json({ ok: true, message: "E-mail confirmado com sucesso." });
     }

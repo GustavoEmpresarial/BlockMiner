@@ -4,6 +4,7 @@ import { BarChart3, CheckCircle2, History } from "lucide-react";
 import Card from "../../../shared/components/Card";
 import SectionHeader from "../../../shared/components/SectionHeader";
 import { useBrazilDailyResetCountdown } from "../../../shared/hooks/useBrazilDailyResetCountdown";
+import { formatUtcDateTime } from '../../../shared/utils/utcTime';
 
 export function AutoMiningDailyResetBanner({
   dailyReset,
@@ -89,7 +90,7 @@ export function AutoMiningSidebar({
           {nearest ? (
             <div className="flex items-center justify-between p-4 bg-slate-950 rounded-2xl border-2 border-slate-800">
               <span className="text-[10px] font-black text-emerald-400">+{nearest.hashRate} H/s</span>
-              <span className="text-[9px] text-slate-300 font-bold">{new Date(nearest.expiresAt).toLocaleString()}</span>
+              <span className="text-[9px] text-slate-300 font-bold">{formatUtcDateTime(nearest.expiresAt)}</span>
             </div>
           ) : (
             <p className="text-[10px] text-slate-400 font-bold uppercase">{t("autoMiningGpuPage.no_active_power")}</p>
@@ -109,7 +110,7 @@ export function AutoMiningSidebar({
                 className="flex items-center justify-between p-4 bg-slate-950 rounded-2xl border-2 border-slate-800"
               >
                 <div>
-                  <p className="text-[9px] font-black text-white italic">{new Date(g.earnedAt).toLocaleString()}</p>
+                  <p className="text-[9px] font-black text-white italic">{formatUtcDateTime(g.earnedAt)}</p>
                   <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">{g.mode}</p>
                 </div>
                 <div className="flex flex-col items-end">

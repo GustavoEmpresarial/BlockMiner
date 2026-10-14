@@ -19,6 +19,7 @@ import { Server, type Server as SocketIOServer } from "socket.io";
 import { logger } from "../logger/index.js";
 import { buildSocketIoCorsOptions } from "./socket.cors.js";
 import { attachSocketIoExplicitAuthMiddleware } from "./socket.auth.js";
+import { isOriginRequestAllowed } from "../http/middleware/originAuth.js";
 import { registerMiningSocketHandlers } from "../../modules/mining/mining.socket.js";
 import { registerSupportSocketHandlers } from "../../modules/support/support.socket.js";
 import { registerTournamentSocketHandlers } from "../../modules/tournaments/tournaments.socket.js";
@@ -38,6 +39,7 @@ let ioSingleton: SocketIOServer | null = null;
 export function attachSocketIO(httpServer: HttpServer): SocketIOServer {
   const io = new Server(httpServer, {
     cors: buildSocketIoCorsOptions(),
+    allowRequest: (req, callback) => callback(null, isOriginRequestAllowed(req.headers)),
   });
 
   attachSocketIoExplicitAuthMiddleware(io);

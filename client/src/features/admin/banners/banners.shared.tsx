@@ -1,4 +1,5 @@
 import { BANNER_TYPES, type AdminBannerRow, type BannerFormState, type BannerTypeValue } from './banners.types';
+import { toUtcInputValue } from '../../../shared/utils/utcTime';
 
 export function isVideoMediaUrl(url: string | null | undefined): boolean {
   if (!url || typeof url !== 'string') return false;
@@ -24,18 +25,9 @@ export function TypeBadge({ type }: { type: string }) {
 }
 
 export function mergeBannerInitial(row: AdminBannerRow): BannerFormState {
-  const starts =
-    row.startsAt != null
-      ? typeof row.startsAt === 'string'
-        ? row.startsAt.slice(0, 16)
-        : new Date(row.startsAt).toISOString().slice(0, 16)
-      : '';
-  const ends =
-    row.endsAt != null
-      ? typeof row.endsAt === 'string'
-        ? row.endsAt.slice(0, 16)
-        : new Date(row.endsAt).toISOString().slice(0, 16)
-      : '';
+  // datetime-local fields hold UTC wall-clock ("YYYY-MM-DDTHH:mm").
+  const starts = toUtcInputValue(row.startsAt);
+  const ends = toUtcInputValue(row.endsAt);
   const typeVal = BANNER_TYPES.some((t) => t.value === row.type)
     ? (row.type as BannerTypeValue)
     : 'promo';

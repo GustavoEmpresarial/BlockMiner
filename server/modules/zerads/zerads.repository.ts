@@ -69,6 +69,7 @@ export async function createCallbackAndCreditBalance(data: {
       userId: data.userId,
       source: PART_GRANT_SOURCE.zerads,
       sourceRef: data.callbackHash,
+      usdAmount: data.blkToCredit,
     });
   });
 }

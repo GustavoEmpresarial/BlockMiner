@@ -62,6 +62,7 @@ type MarkPasteadDoneResponse = {
 type ClaimPasteadResponse = {
   ok?: boolean;
   reward?: { message?: string; hashRate?: number };
+  part?: { partSlug?: string; quantity?: number } | null;
   message?: string;
   code?: string;
 };

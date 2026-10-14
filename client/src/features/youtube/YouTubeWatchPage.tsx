@@ -13,6 +13,7 @@ import { Shield, Youtube } from 'lucide-react';
 import IconBadge from '../../shared/components/IconBadge';
 import StatusPill from '../../shared/components/StatusPill';
 import { api } from '../../shared/auth/auth.store';
+import { formatPartDropNotice, type PartDropNotice } from '../parts/lib/partDropNotice';
 import PowerBoostBanner from '../../shared/components/PowerBoostBanner';
 import PausedTimerBanner from '../../shared/components/PausedTimerBanner';
 import { usePowerBoostActive } from '../../shared/hooks/usePowerBoostActive';
@@ -390,7 +391,7 @@ export default function YouTubeWatchPage() {
     let retryMs = 0;
 
     try {
-      const res = await api.post<{ ok?: boolean; rewardGh?: number; message?: string }>(
+      const res = await api.post<{ ok?: boolean; rewardGh?: number; message?: string; part?: PartDropNotice | null }>(
         '/youtube/claim',
         { videoId },
       );
@@ -402,6 +403,8 @@ export default function YouTubeWatchPage() {
         } else {
           toast.success(res.data.message || '+1 ponto de torneio registrado!');
         }
+        const notice = formatPartDropNotice(res.data.part, t);
+        if (notice) toast.success(notice);
         await loadStatus();
         await loadStats();
         resetClaimCycle();
@@ -537,14 +540,20 @@ export default function YouTubeWatchPage() {
           <IconBadge icon={Youtube} variant="red" size="lg" />
           <div>
             <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">{t('youtube.title')}</h1>
-            <p className="text-slate-400 text-xs sm:text-sm font-medium">{t('youtube.subtitle')}</p>
           </div>
         </div>
         <StatusPill variant="primary" icon={Shield} label={t('youtube.protocol_active')} />
       </div>
 
       {dailyReset?.localDate ? (
-        <YoutubeDailyResetBanner dailyReset={dailyReset} t={t} onResetElapsed={loadStats} />
+        <YoutubeDailyResetBanner
+          dailyReset={dailyReset}
+          t={t}
+          onResetElapsed={async () => {
+            claimBlockedUntilRef.current = 0;
+            await Promise.all([loadStats(), loadStatus()]);
+          }}
+        />
       ) : null}
 
       <PausedTimerBanner

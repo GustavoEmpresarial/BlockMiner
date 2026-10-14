@@ -2764,6 +2764,9 @@ enum TournamentMetric {
   AUTO_MINING
   ALL_ACTIVITIES
   YOUTUBE
+  REFERRALS
+  MERGES
+  BURNS
 }
 
 enum TournamentStatus {
@@ -3012,9 +3015,9 @@ model BurnClaim {
 model EnergyTaxCharge {
   id                Int      @id @default(autoincrement())
   userId            Int      @map("user_id")
-  /// 00:00 BRT (America/Sao_Paulo) do dia coberto por essa cobrança.
+  /// 00:00 UTC do dia coberto por essa cobrança.
   periodDayStartsAt DateTime @map("period_day_starts_at")
-  /// "daily" = pagamento manual (5%/7 = 0.7143%) | "auto" = cobrança do cron de segunda 21h BRT (15%/7 = 2.1429%)
+  /// "daily" = pagamento manual (5%/7 = 0.7143%) | "auto" = cobrança do cron de segunda-feira (UTC) (15%/7 = 2.1429%)
   mode              String
   rewardsBase       Decimal  @map("rewards_base") @db.Decimal(20, 8)
   ratePercent       Decimal  @map("rate_percent") @db.Decimal(6, 4)
@@ -3384,17 +3387,18 @@ model UserStatsEarningsDaily {
   @@map("user_stats_earnings_daily")
 }
 
-/// Stacked common parts. Granted by offerwall credits; not spent yet.
+/// Stacked parts. One row per user, slug, and rarity (common white, uncommon green).
 model UserPartStack {
   id        Int      @id @default(autoincrement())
   userId    Int      @map("user_id")
   partSlug  String   @map("part_slug")
+  rarity    String   @default("common")
   quantity  Int      @default(0)
   updatedAt DateTime @updatedAt @map("updated_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, partSlug])
+  @@unique([userId, partSlug, rarity])
   @@index([userId])
   @@map("user_part_stacks")
 }
@@ -3404,6 +3408,7 @@ model PartGrant {
   id         Int       @id @default(autoincrement())
   userId     Int       @map("user_id")
   partSlug   String    @map("part_slug")
+  rarity     String    @default("common")
   quantity   Int
   source     String
   sourceRef  String    @map("source_ref")

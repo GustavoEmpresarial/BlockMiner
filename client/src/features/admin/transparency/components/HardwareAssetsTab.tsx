@@ -20,6 +20,7 @@ import type {
   HardwareProfitLogRow,
   HardwareRoiSummary,
 } from './adminTransparency.types';
+import { formatUtcDate } from '../../../../shared/utils/utcTime';
 
 export default function HardwareAssetsTab() {
   const [assets, setAssets] = useState<HardwareAssetRow[]>([]);
@@ -446,7 +447,7 @@ export default function HardwareAssetsTab() {
                   {/* Data */}
                   <div>
                     <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
-                      Data do Recebimento
+                      Data do Recebimento (UTC)
                     </label>
                     <input
                       type="date"
@@ -533,7 +534,7 @@ export default function HardwareAssetsTab() {
                       profitLogs.map((log) => (
                         <tr key={log.id} className="hover:bg-white/[0.02] transition">
                           <td className="px-4 py-3 text-xs text-slate-300 whitespace-nowrap">
-                            {new Date(log.earnedAt).toLocaleDateString(undefined, {
+                            {formatUtcDate(log.earnedAt, {
                               day: '2-digit',
                               month: 'short',
                               year: 'numeric',

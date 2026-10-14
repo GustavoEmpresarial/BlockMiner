@@ -13,6 +13,7 @@ import {
   type TaxPayCurrency,
   type TaxPayQuotes,
 } from '../lib/taxPayCurrency';
+import { formatUtcDate, formatUtcDateTime } from '../../../shared/utils/utcTime';
 
 const LOCALE = 'pt-BR';
 
@@ -82,8 +83,6 @@ type EnergyTaxSummary = {
   history: Array<ChargeRow & { rewardsBase: number; periodDayStartsAt: string }>;
 };
 
-const DISPLAY_TZ = 'UTC';
-
 function fmtPol(n: number, decimals = 6): string {
   if (!Number.isFinite(n)) return '0';
   return n.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
@@ -99,8 +98,10 @@ function fmtPeriodEndKey(endKey: string): string {
 }
 
 function fmtUtcNow(locale: string): string {
-  return new Date().toLocaleString(locale, {
-    timeZone: DISPLAY_TZ,
+  // server_clock label already says "(UTC)" — no extra suffix.
+  return formatUtcDateTime(new Date(), {
+    locale,
+    showUtc: false,
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
@@ -145,8 +146,8 @@ export default function EnergyTaxSection() {
 
   const locale = LOCALE;
   const fmtDayLabel = (iso: string) =>
-    new Date(iso).toLocaleDateString(locale, {
-      timeZone: DISPLAY_TZ,
+    formatUtcDate(iso, {
+      locale,
       weekday: 'short',
       day: '2-digit',
       month: '2-digit',
@@ -218,7 +219,8 @@ export default function EnergyTaxSection() {
   const closedPeriodLabel = summary.lastClosedPeriodEndKey
     ? fmtPeriodEndKey(summary.lastClosedPeriodEndKey)
     : '';
-  const resetHour = summary.resetHour ?? 21;
+  // Server rolls the mining day over at 00:00 UTC (resetHour: 0).
+  const resetHour = String(summary.resetHour ?? 0).padStart(2, '0');
 
   const startsAtDate = new Date(summary.startsAt);
   const msUntilStart = startsAtDate.getTime() - Date.now();
@@ -229,9 +231,10 @@ export default function EnergyTaxSection() {
     startsInLabel = days >= 1 ? `${days}d ${hours}h` : `${hours}h`;
   }
 
-  const startsAtShort = startsAtDate.toLocaleDateString(locale, { day: '2-digit', month: 'long' });
-  const startsAtDatetime = startsAtDate.toLocaleString(locale, { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-  const startsAtNumeric = startsAtDate.toLocaleDateString(locale, { day: '2-digit', month: '2-digit' });
+  const startsAtShort = formatUtcDate(startsAtDate, { locale, day: '2-digit', month: 'long' });
+  // starts_in_body already says "(UTC)" — no extra suffix.
+  const startsAtDatetime = formatUtcDateTime(startsAtDate, { locale, showUtc: false, day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  const startsAtNumeric = formatUtcDate(startsAtDate, { locale, day: '2-digit', month: '2-digit' });
 
   return (
     <div className="w-full space-y-6">

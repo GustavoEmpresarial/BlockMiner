@@ -1,15 +1,17 @@
 import '@testing-library/jest-dom/vitest';
 import { describe, expect, it, vi, afterEach } from 'vitest';
-import { render, screen, cleanup, waitFor } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent, act, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { I18nextProvider } from 'react-i18next';
 import i18next from 'i18next';
 import ptBR from '../../i18n/locales/pt-BR.json';
 import PartsPage from './PartsPage';
-import { getPartsOverview } from './lib/parts.api';
-import type { PartsOverviewResponse } from './lib/parts.types';
+import { getPartsOverview, mergeMachine } from './lib/parts.api';
+import type { PartsOverviewResponse, PartMachinePriceDto, OwnedMergeCandidate } from './lib/parts.types';
 
 vi.mock('./lib/parts.api', () => ({
   getPartsOverview: vi.fn(),
+  mergeMachine: vi.fn(),
 }));
 
 const i18n = i18next.createInstance();
@@ -20,17 +22,50 @@ await i18n.init({
 });
 
 const mockedGet = vi.mocked(getPartsOverview);
+const mockedMerge = vi.mocked(mergeMachine);
 
 afterEach(() => {
+  vi.useRealTimers();
   cleanup();
   mockedGet.mockReset();
+  mockedMerge.mockReset();
 });
+
+const testCandidate: OwnedMergeCandidate = {
+  id: 4,
+  minerId: 4,
+  name: 'Quantum Forge',
+  slug: 'quantum-forge',
+  imageUrl: null,
+  baseHashRate: 10,
+  currentLevel: 1,
+  currentTier: 'common',
+  currentTierName: 'Comum',
+  currentTierColor: '#94A3B8',
+  currentHashRate: 10,
+  ownedCount: 2,
+  hasMachinePair: true,
+  isMaxLevel: false,
+  targetLevel: 2,
+  targetTier: 'uncommon',
+  targetTierName: 'Incomum',
+  targetTierColor: '#10B981',
+  targetHashRate: 26,
+  boostPercent: 30,
+  mergeFeeBlk: 0.05,
+  hasBlk: true,
+  hasParts: true,
+  canMerge: true,
+  partsRecipe: [],
+};
 
 function renderPage() {
   return render(
-    <I18nextProvider i18n={i18n}>
-      <PartsPage />
-    </I18nextProvider>,
+    <MemoryRouter>
+      <I18nextProvider i18n={i18n}>
+        <PartsPage />
+      </I18nextProvider>
+    </MemoryRouter>,
   );
 }
 
@@ -38,62 +73,103 @@ function resolvedOverview(data: PartsOverviewResponse) {
   return { data } as unknown as Awaited<ReturnType<typeof getPartsOverview>>;
 }
 
-describe('PartsPage', () => {
-  it('shows the inventory at zero and the price hint without a buy action', async () => {
+describe('PartsPage (Unified RollerCoin-style Merge)', () => {
+  it('renders workbench with candidate, parts, and rarity tree', async () => {
     mockedGet.mockResolvedValue(
       resolvedOverview({
         ok: true,
+        blkBalance: 1.0,
         parts: [
-          { slug: 'power_cable', imageUrl: '/media/parts/power_cable.jpg', quantity: 0 },
-          { slug: 'asic_chip', imageUrl: '/media/parts/asic_chip.jpg', quantity: 0 },
+          { slug: 'power_cable', rarity: 'common', imageUrl: '/media/parts/power_cable.png', quantity: 4 },
         ],
         machines: [],
+        ownedMergeCandidates: [testCandidate],
       }),
     );
 
     renderPage();
 
-    expect(screen.getByRole('status')).toHaveTextContent('Carregando peças...');
-    expect(await screen.findByText('Cabo de força')).toBeInTheDocument();
-    expect(screen.getByText('Nenhuma máquina da loja para precificar agora.')).toBeInTheDocument();
-    expect(screen.getByText(/Ainda não dá para montar nem comprar com peças/)).toBeInTheDocument();
-    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Merge' })).toBeInTheDocument();
+    expect(screen.getByText('Bancada de Fusão')).toBeInTheDocument();
+    expect(screen.getByText('Suas Peças')).toBeInTheDocument();
+    expect(screen.getByText('1 pronta para fundir')).toBeInTheDocument();
+    expect(screen.getAllByText(/Quantum Forge/i)[0]).toBeInTheDocument();
+    expect(screen.getByText('Tabela de Raridades & Bônus')).toBeInTheDocument();
   });
 
-  it('shows owned parts against a machine cost and still has no purchase control', async () => {
+  it('handles empty owned machines gracefully', async () => {
     mockedGet.mockResolvedValue(
       resolvedOverview({
         ok: true,
-        parts: [{ slug: 'power_cable', imageUrl: '/media/parts/power_cable.jpg', quantity: 1 }],
-        machines: [
-          {
-            id: 4,
-            slug: 'quantum-forge',
-            name: 'Quantum Forge',
-            imageUrl: null,
-            baseHashRate: 10,
-            band: 'starter',
-            costs: [{ slug: 'power_cable', required: 2, owned: 1 }],
-          },
-        ],
+        blkBalance: 0.5,
+        parts: [],
+        machines: [],
+        ownedMergeCandidates: [],
       }),
     );
 
     renderPage();
 
-    expect(await screen.findByText('Quantum Forge')).toBeInTheDocument();
-    expect(screen.getByText('1 / 2')).toBeInTheDocument();
-    expect(screen.getByRole('meter')).toHaveAttribute('aria-valuenow', '1');
-    expect(screen.getByRole('meter')).toHaveAttribute('aria-valuemax', '2');
-    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Merge' })).toBeInTheDocument();
+    expect(screen.getByText('0 modelos')).toBeInTheDocument();
   });
 
-  it('shows the load error and no purchase control', async () => {
-    mockedGet.mockRejectedValue(new Error('down'));
-    renderPage();
-    expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível carregar as peças.');
-    await waitFor(() => {
-      expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  it('plays the forge overlay and reveals the merged machine only after the server confirms', async () => {
+    const overview = resolvedOverview({
+      ok: true,
+      blkBalance: 1,
+      parts: [],
+      machines: [],
+      ownedMergeCandidates: [testCandidate],
     });
+    mockedGet.mockResolvedValue(overview);
+    let resolveMerge: (v: unknown) => void = () => {};
+    mockedMerge.mockReturnValue(
+      new Promise((r) => {
+        resolveMerge = r;
+      }) as unknown as ReturnType<typeof mergeMachine>,
+    );
+
+    renderPage();
+    const forge = await screen.findByRole('button', { name: /Fundir pagando/ });
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    fireEvent.click(forge);
+
+    const overlay = await screen.findByTestId('merge-forge-overlay');
+    expect(overlay).toHaveAttribute('data-stage', 'charge');
+    expect(mockedMerge).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2500);
+    });
+    expect(screen.getByTestId('merge-forge-overlay')).toHaveAttribute('data-stage', 'charge');
+
+    await act(async () => {
+      resolveMerge({ data: { ok: true, name: 'Quantum Forge (Incomum)' } });
+      await vi.advanceTimersByTimeAsync(1000);
+    });
+    await waitFor(() => expect(screen.getByTestId('merge-forge-overlay')).toHaveAttribute('data-stage', 'reveal'));
+    expect(screen.getAllByText('Quantum Forge (Incomum)').length).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+    expect(screen.queryByTestId('merge-forge-overlay')).not.toBeInTheDocument();
+  });
+
+  it('closes the forge overlay and shows the error when the merge fails', async () => {
+    mockedGet.mockResolvedValue(
+      resolvedOverview({ ok: true, blkBalance: 1, parts: [], machines: [], ownedMergeCandidates: [testCandidate] }),
+    );
+    mockedMerge.mockRejectedValue(new Error('boom'));
+
+    renderPage();
+    const forge = await screen.findByRole('button', { name: /Fundir pagando/ });
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    fireEvent.click(forge);
+    expect(await screen.findByTestId('merge-forge-overlay')).toBeInTheDocument();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2000);
+    });
+    await waitFor(() => expect(screen.queryByTestId('merge-forge-overlay')).not.toBeInTheDocument());
   });
 });

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { X, Loader2, Users, History, Calendar, Zap, ChevronLeft, ChevronRight } from 'lucide-react';
 import { adminBurnEventsApi } from './adminBurnEvents.api';
 import type { AdminBurnClaimRow, AdminBurnEventRow } from './adminBurnEvents.types';
+import { formatUtcDateTime } from '../../../shared/utils/utcTime';
 
 interface BurnEventClaimsModalProps {
   isOpen: boolean;
@@ -98,7 +99,7 @@ export function BurnEventClaimsModal({ isOpen, onClose, event }: BurnEventClaims
                       <td className="px-4 py-3">
                         <span className="font-mono text-slate-400 block">#{c.id}</span>
                         <span className="text-[11px] text-slate-500 block">
-                          {c.claimedAt ? new Date(c.claimedAt).toLocaleString('pt-BR') : '—'}
+                          {c.claimedAt ? formatUtcDateTime(c.claimedAt, { locale: 'pt-BR', seconds: true }) : '—'}
                         </span>
                       </td>
                       <td className="px-4 py-3">

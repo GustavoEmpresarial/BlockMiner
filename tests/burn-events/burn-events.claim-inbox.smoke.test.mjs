@@ -39,7 +39,7 @@ describe("burn-events claim → reward inbox smoke (DB)", { skip: !hasDb }, () =
           email: `${tag}@example.test`,
           username: tag.slice(0, 24),
           passwordHash: "smoke-test-not-a-login",
-          shibBalance: 100,
+          shibBalance: 2000,
           polBalance: 1,
           blkBalance: 1,
         },
@@ -255,6 +255,6 @@ describe("burn-events claim → reward inbox smoke (DB)", { skip: !hasDb }, () =
       select: { shibBalance: true },
     });
     assert.ok(feeDebited);
-    assert.equal(Number(feeDebited.shibBalance), 100 - BURN_FEE_RATES.SHIB);
+    assert.equal(Number(feeDebited.shibBalance), 2000 - BURN_FEE_RATES.SHIB);
   });
 });

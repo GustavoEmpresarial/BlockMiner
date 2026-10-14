@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { AlertTriangle, ChevronLeft, ChevronRight, Cpu, Fingerprint, Loader2, Mail, Plus, RefreshCw, User, Wallet } from 'lucide-react';
 import type { AdminSupportDossierPaged, AdminSupportPlayerDossierBundle, AdminSupportPlayerDossierParams } from '../adminSupport.types';
+import { formatUtcDateTime } from '../../../../shared/utils/utcTime';
 
 type NumericPageKey = 'depositsPage' | 'ccpaymentPage' | 'withdrawalsPage' | 'payoutsPage' | 'minersPage';
 
@@ -275,7 +276,7 @@ export default function PlayerDossier({ bundle, loading, error, params, onParams
             <td className="px-2 py-2 font-mono">{String(row.id)}</td>
             <td className="px-2 py-2 font-mono">{String(row.amount ?? '—')}</td>
             <td className="px-2 py-2">{String(row.status ?? '—')}</td>
-            <td className="px-2 py-2 whitespace-nowrap">{row.createdAt ? new Date(String(row.createdAt)).toLocaleString() : '—'}</td>
+            <td className="px-2 py-2 whitespace-nowrap">{row.createdAt ? formatUtcDateTime(String(row.createdAt)) : '—'}</td>
           </tr>
         )}
       />
@@ -298,7 +299,7 @@ export default function PlayerDossier({ bundle, loading, error, params, onParams
             <td className="px-2 py-2 font-mono">{String(row.id)}</td>
             <td className="px-2 py-2 font-mono">{String(row.amountPol ?? '—')}</td>
             <td className="px-2 py-2">{String(row.credited)}</td>
-            <td className="px-2 py-2 whitespace-nowrap">{row.createdAt ? new Date(String(row.createdAt)).toLocaleString() : '—'}</td>
+            <td className="px-2 py-2 whitespace-nowrap">{row.createdAt ? formatUtcDateTime(String(row.createdAt)) : '—'}</td>
           </tr>
         )}
       />
@@ -325,7 +326,7 @@ export default function PlayerDossier({ bundle, loading, error, params, onParams
             <td className="max-w-[120px] truncate px-2 py-2 font-mono" title={row.address ? String(row.address) : undefined}>
               {row.address ? String(row.address) : '—'}
             </td>
-            <td className="px-2 py-2 whitespace-nowrap">{row.createdAt ? new Date(String(row.createdAt)).toLocaleString() : '—'}</td>
+            <td className="px-2 py-2 whitespace-nowrap">{row.createdAt ? formatUtcDateTime(String(row.createdAt)) : '—'}</td>
           </tr>
         )}
       />
@@ -348,7 +349,7 @@ export default function PlayerDossier({ bundle, loading, error, params, onParams
             <td className="px-2 py-2 font-mono">{String(row.id)}</td>
             <td className="px-2 py-2 font-mono">{String(row.amountPol ?? '—')}</td>
             <td className="px-2 py-2">{String(row.source ?? '—')}</td>
-            <td className="px-2 py-2 whitespace-nowrap">{row.createdAt ? new Date(String(row.createdAt)).toLocaleString() : '—'}</td>
+            <td className="px-2 py-2 whitespace-nowrap">{row.createdAt ? formatUtcDateTime(String(row.createdAt)) : '—'}</td>
           </tr>
         )}
       />

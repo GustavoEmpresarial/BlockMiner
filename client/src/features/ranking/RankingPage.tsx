@@ -224,7 +224,6 @@ export default function Ranking() {
           <IconBadge icon={Trophy} variant="amber" size="lg" />
           <div>
             <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">{t('ranking.title')}</h1>
-            <p className="text-slate-400 text-xs sm:text-sm font-medium">{t('ranking.subtitle')}</p>
           </div>
         </div>
         <button

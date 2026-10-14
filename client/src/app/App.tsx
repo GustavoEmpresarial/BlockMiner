@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-
 import { useAuthStore } from '../shared/auth/auth.store';
 import { startSiteIntegrityMonitoring } from '../features/antibot';
 import CookieConsentBanner from '../shared/components/CookieConsentBanner';
+import ScrollToTopOnNav from '../shared/components/ScrollToTopOnNav';
 import { LandingPage } from '../features/landing/index';
 import { LoginPage, RegisterPage } from '../features/auth';
 import { ForgotPasswordPage } from '../features/forgot-password';
@@ -21,7 +22,7 @@ import TransparencyErrorBoundary from '../shared/components/TransparencyErrorBou
 import { DashboardPage } from '../features/dashboard/index';
 import { VaultPage } from '../features/machines/index';
 import { Inventory2Page } from '../features/inventory2/index';
-import { PartsPage } from '../features/parts/index';
+import { MergePage } from '../features/parts/index';
 import { StatsPage } from '../features/stats/index';
 import { InventarioPage } from '../features/inventario/index';
 import { ShopPage } from '../features/shop/index';
@@ -83,6 +84,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <ScrollToTopOnNav />
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
@@ -111,7 +113,8 @@ export default function App() {
           {/* Principal */}
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/inventory" element={<Inventory2Page />} />
-          <Route path="/parts" element={<PartsPage />} />
+          <Route path="/merge" element={<MergePage />} />
+          <Route path="/parts" element={<Navigate to="/merge" replace />} />
           <Route path="/vault" element={<VaultPage />} />
           <Route path="/power-stats" element={<StatsPage />} />
           <Route path="/inventario" element={<InventarioPage />} />

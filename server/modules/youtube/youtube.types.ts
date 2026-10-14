@@ -41,6 +41,7 @@ export type YoutubeClaimSuccess = {
   ok: true;
   rewardGh: number;
   message: string;
+  part: { partSlug: string; rarity: string; quantity: number } | null;
 };
 
 export type YoutubeClaimFailure = {

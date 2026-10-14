@@ -23,16 +23,10 @@ import type {
   ReadEarnRewardSnapshot as ReadEarnReward,
   ReadEarnRedeemResponse,
 } from './read-earn.types';
+import { formatUtcDateTime } from '../../shared/utils/utcTime';
 
 function formatEndsAt(iso: string, locale: string | undefined) {
-  try {
-    return new Date(iso).toLocaleString(locale, {
-      dateStyle: 'medium',
-      timeStyle: 'short',
-    });
-  } catch {
-    return '—';
-  }
+  return formatUtcDateTime(iso, { locale, dateStyle: 'medium', timeStyle: 'short' });
 }
 
 function rewardSummary(reward: ReadEarnReward, t: TFunction) {
@@ -142,9 +136,6 @@ export default function ReadEarn() {
             <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">
               {t('readEarn.title')}
             </h1>
-            <p className="text-slate-400 text-xs sm:text-sm font-medium">
-              {t('readEarn.subtitle')}
-            </p>
           </div>
         </div>
       </div>

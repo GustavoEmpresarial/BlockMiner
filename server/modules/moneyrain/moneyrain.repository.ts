@@ -43,6 +43,7 @@ export async function createCallbackAndCreditBalance(data) {
             userId: data.userId,
             source: PART_GRANT_SOURCE.moneyrain,
             sourceRef: String(data.viewId ?? ""),
+            usdAmount: data.blkToCredit,
         });
     });
 }

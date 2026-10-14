@@ -56,12 +56,8 @@ function bucketDayKey(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-function formatBrtDay(d: Date): string {
-  try {
-    return d.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
-  } catch {
-    return bucketDayKey(d);
-  }
+function formatUtcDay(d: Date): string {
+  return d.toLocaleDateString("pt-BR", { timeZone: "UTC" });
 }
 
 function round4(val: number): number {
@@ -96,7 +92,7 @@ export async function getOfferwallAnalyticsReport(
     if (!bucket) {
       bucket = {
         day: key,
-        dayBrt: formatBrtDay(d),
+        dayUtc: formatUtcDay(d),
         internal: 0,
         internalPol: 0,
         offerwallMe: 0,
@@ -167,13 +163,13 @@ export async function getOfferwallAnalyticsReport(
   const daily = Array.from(buckets.values()).sort((a, b) => a.day.localeCompare(b.day));
 
   const serverNowDate = new Date(params.serverNow);
-  const serverNowBrt = serverNowDate.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
+  const serverNowUtc = serverNowDate.toLocaleString("pt-BR", { timeZone: "UTC" });
 
   return {
     from: params.from.toISOString(),
     to: params.to.toISOString(),
     serverNow: params.serverNow,
-    serverNowBrt,
+    serverNowUtc,
     userId: params.userId,
     scoringConfig: scoringConfigPayload(),
     totals: {

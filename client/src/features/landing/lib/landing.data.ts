@@ -119,7 +119,7 @@ export function getLandingCopy() {
       legalTermsOfUse: L('footer.link_terms'),
       legalPrivacyPolicy: L('footer.link_privacy'),
       legalDescription: L('footer.disclaimer'),
-      legalComplianceNote: L('footer.copyright', { year: new Date().getFullYear() }),
+      legalComplianceNote: L('footer.copyright', { year: new Date().getUTCFullYear() }),
     },
   };
 }

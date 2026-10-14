@@ -1,6 +1,6 @@
 /**
  * Read-only part cost of a shop machine, chosen by base hashrate.
- * Assembly and purchase are not wired.
+ * Merge itself spends two plates of the same rarity, charges 10% of Miner.price, and stores +30% hashrate.
  */
 import type { PartSlug } from "./parts.catalog.js";
 

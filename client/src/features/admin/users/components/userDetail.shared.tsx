@@ -1,5 +1,6 @@
 import type { AdminUserDetail, AdminUserMetrics } from '../adminUsers.types';
 import { Calendar, Globe, Hash, Mail, ShieldAlert, ShieldCheck, User, Wallet, Cpu, DollarSign } from 'lucide-react';
+import { formatUtcDate, formatUtcDateTime } from '../../../../shared/utils/utcTime';
 
 export function UserProfileGrid(props: {
   user?: AdminUserDetail | null;
@@ -65,7 +66,7 @@ export function UserProfileGrid(props: {
               Data de Cadastro
             </span>
             <p className="text-slate-300">
-              {u.createdAt ? new Date(u.createdAt).toLocaleDateString('pt-BR') : '—'}
+              {u.createdAt ? formatUtcDate(u.createdAt, { locale: 'pt-BR' }) : '—'}
             </p>
           </div>
 
@@ -75,7 +76,7 @@ export function UserProfileGrid(props: {
               Último Acesso
             </span>
             <p className="text-slate-300">
-              {u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString('pt-BR') : 'Nunca acessou'}
+              {u.lastLoginAt ? formatUtcDateTime(u.lastLoginAt, { locale: 'pt-BR', seconds: true }) : 'Nunca acessou'}
             </p>
           </div>
         </div>

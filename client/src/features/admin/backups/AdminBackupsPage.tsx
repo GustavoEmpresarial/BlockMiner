@@ -34,6 +34,7 @@ import type {
   AdminBackupRow,
   GoogleDriveStatus,
 } from "../lib/admin.types";
+import { formatUtcDateTime } from '../../../shared/utils/utcTime';
 
 function backupStatusKey(status: string): string {
   if (status === "success") return "adminBackups.status_success";
@@ -342,7 +343,7 @@ export default function AdminBackups() {
               </div>
               <p className="text-slate-500 text-xs mt-1">
                 {driveStatus?.isConnected
-                  ? `${t("adminBackups.gdrive_folder")} ${driveStatus.folderName || "BlockMiner-Backups"}${driveStatus.lastSyncAt ? ` · ${t("adminBackups.gdrive_last_sync")} ${new Date(driveStatus.lastSyncAt).toLocaleString()}` : ""}`
+                  ? `${t("adminBackups.gdrive_folder")} ${driveStatus.folderName || "BlockMiner-Backups"}${driveStatus.lastSyncAt ? ` · ${t("adminBackups.gdrive_last_sync")} ${formatUtcDateTime(driveStatus.lastSyncAt)}` : ""}`
                   : "Conecte sua conta do Google Drive para sincronização externa e recuperação automática de desastres."}
               </p>
               {driveStatus?.lastError ? (
@@ -412,7 +413,7 @@ export default function AdminBackups() {
                       </div>
                     </td>
                     <td className="px-8 py-5 font-mono text-xs">{formatBytes(b.size)}</td>
-                    <td className="px-8 py-5 text-xs text-slate-500">{new Date(b.created).toLocaleString()}</td>
+                    <td className="px-8 py-5 text-xs text-slate-500">{formatUtcDateTime(b.created)}</td>
                     <td className="px-8 py-5 text-xs">
                       <div className="space-y-1.5">
                         <div className="flex items-center gap-2">
@@ -421,7 +422,7 @@ export default function AdminBackups() {
                           {/* Integrity badge */}
                           {b.integrityStatus === "valid" ? (
                             <span
-                              title={b.lastVerifiedAt ? `Auditado em: ${new Date(b.lastVerifiedAt).toLocaleString()}` : "Íntegro"}
+                              title={b.lastVerifiedAt ? `Auditado em: ${formatUtcDateTime(b.lastVerifiedAt)}` : "Íntegro"}
                               className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
                             >
                               <ShieldCheck className="w-3 h-3" />

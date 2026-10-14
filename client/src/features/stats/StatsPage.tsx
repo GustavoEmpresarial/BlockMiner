@@ -94,7 +94,6 @@ export default function StatsPage() {
           <IconBadge icon={Activity} variant="primary" size="lg" />
           <div>
             <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">{t('powerStats.title')}</h1>
-            <p className="text-slate-400 text-xs sm:text-sm font-medium max-w-2xl">{t('powerStats.subtitle')}</p>
           </div>
         </div>
         <button

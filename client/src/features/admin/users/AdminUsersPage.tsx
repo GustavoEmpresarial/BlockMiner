@@ -18,6 +18,7 @@ import {
 import { toast } from 'sonner';
 import { adminUsersApi } from './adminUsers.api';
 import type { AdminUsersListRow, AdminUsersStats } from './adminUsers.types';
+import { formatUtcDate } from '../../../shared/utils/utcTime';
 
 export default function AdminUsersPage() {
   const [rows, setRows] = useState<AdminUsersListRow[]>([]);
@@ -298,7 +299,7 @@ export default function AdminUsersPage() {
                       )}
                     </td>
                     <td className="px-4 py-3.5 text-slate-400 whitespace-nowrap">
-                      {u.createdAt ? new Date(u.createdAt).toLocaleDateString('pt-BR') : '—'}
+                      {u.createdAt ? formatUtcDate(u.createdAt, { locale: 'pt-BR' }) : '—'}
                     </td>
                     <td className="px-4 py-3.5 text-right">
                       <Link

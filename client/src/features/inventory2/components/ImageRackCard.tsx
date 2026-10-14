@@ -1,9 +1,10 @@
 import { memo, useEffect, useState, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { GripVertical, PackageMinus, Plus, X, Zap } from 'lucide-react';
+import { GripVertical, PackageMinus, Plus, Wind, X, Zap } from 'lucide-react';
 import {
   formatHashrate,
   sumRackHashRate,
+  computeRackFanBonus,
   getMachineDescriptor,
   RACK_TOOLTIP_SHOW_MS,
   safeDisplayLabel,
@@ -12,6 +13,8 @@ import {
 import { getMachineDisplayImageUrl } from '../../machines/lib/machineDisplayImage';
 import { dragCarriesShowcase3d, rackMinerModelUrl } from '../../machines/lib/rackMinerModel';
 import { MachineImage } from '../../machines/components/MachineImage';
+import { MachineRarityBadge } from '../../machines/components/MachineRarityBadge';
+import { machineRarityStyle, stripRaritySuffix } from '../../machines/lib/machineRarity';
 import { OfferMinerModel } from '../../offers/components/OfferMinerModel';
 import { RackMachineTooltipPortal } from '../../machines/components/machines.tooltip';
 import { RackDismantleModal } from '../../machines/components/machines.dismantleModal';
@@ -166,8 +169,10 @@ export const ImageRackCard = memo(function ImageRackCard({
   }, [rackNumber]);
 
   const hasMachines = slots.some((s) => s?.miner);
-  const rackHashRate = sumRackHashRate(slots);
-  const rackPowerLabel = formatHashrate(rackHashRate);
+  const rackBaseHashRate = sumRackHashRate(slots);
+  const fanBonusHashRate = computeRackFanBonus(rackBaseHashRate, Boolean(fanMounted));
+  const totalRackHashRate = rackBaseHashRate + fanBonusHashRate;
+  const rackPowerLabel = formatHashrate(totalRackHashRate);
 
   return (
     <div className={`overflow-hidden rounded-3xl border-2 border-slate-800 bg-slate-900/60 shadow-[4px_4px_0px_#000000] ${hasMachines ? 'rack-live border-primary/40' : ''}`}>
@@ -212,14 +217,27 @@ export const ImageRackCard = memo(function ImageRackCard({
             <span>{t('inventory2.unplace')}</span>
           </button>
         )}
-        {rackHashRate > 0 && (
-          <span
-            aria-label={t('inventory.rack_total_power_aria', { power: rackPowerLabel })}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-primary/30 bg-primary/10 px-2.5 py-1 shadow-[2px_2px_0px_#000000]"
-          >
-            <Zap className="h-3.5 w-3.5 text-primary" aria-hidden />
-            <span className="text-[10px] font-black tabular-nums text-primary">{rackPowerLabel}</span>
-          </span>
+        {rackBaseHashRate > 0 && (
+          <div className="flex items-center gap-1.5 flex-wrap justify-end">
+            <span
+              aria-label={t('inventory.rack_total_power_aria', { power: rackPowerLabel })}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-primary/30 bg-primary/10 px-2.5 py-1 shadow-[2px_2px_0px_#000000]"
+            >
+              <Zap className="h-3.5 w-3.5 text-primary" aria-hidden />
+              <span className="text-[10px] font-black tabular-nums text-primary">{rackPowerLabel}</span>
+            </span>
+            {fanMounted && fanBonusHashRate > 0 && (
+              <span
+                title={t('inventory2.fan_bonus_tooltip', { bonus: formatHashrate(fanBonusHashRate) })}
+                className="inline-flex items-center gap-1 rounded-xl border border-cyan-400/40 bg-cyan-500/15 px-2 py-1 shadow-[2px_2px_0px_#000000]"
+              >
+                <Wind className="h-3 w-3 text-cyan-300" aria-hidden />
+                <span className="text-[10px] font-black text-cyan-300 tabular-nums">
+                  +1% (+{formatHashrate(fanBonusHashRate)})
+                </span>
+              </span>
+            )}
+          </div>
         )}
         {hasMachines && (
           <button
@@ -272,7 +290,8 @@ export const ImageRackCard = memo(function ImageRackCard({
                 continue;
               }
 
-              const displayName = machine ? safeDisplayLabel(machine.minerName || descriptor?.name || '') : '';
+              const displayName = machine ? stripRaritySuffix(safeDisplayLabel(machine.minerName || descriptor?.name || '')) : '';
+              const slotRarity = machineRarityStyle(machine?.level);
               const modelUrl = rackMinerModelUrl(machine);
               const hashrateStr = machine ? formatHashrate(machine.hashRate) : '';
               const slotSizeNum = machine ? Math.max(1, Number(machine.slotSize) || 1) : 1;
@@ -286,6 +305,7 @@ export const ImageRackCard = memo(function ImageRackCard({
                 displayName,
                 hashrateStr,
                 slotSize: slotSizeNum,
+                level: machine?.level ?? 1,
               };
 
               rendered.push(
@@ -366,6 +386,13 @@ export const ImageRackCard = memo(function ImageRackCard({
                         : 'bg-transparent hover:bg-white/5'
                   }`}
                 >
+                  {isOccupied && machine && slotRarity.level > 1 ? (
+                    <MachineRarityBadge
+                      level={machine.level}
+                      size="xs"
+                      className="pointer-events-none absolute left-1/2 top-1 z-[2] -translate-x-1/2 shadow-[1px_1px_0px_#000000]"
+                    />
+                  ) : null}
                   {isOccupied && machine ? (
                     <div
                       className="rack-machine-idle pointer-events-none flex h-full w-full items-end justify-center pb-1"
@@ -477,6 +504,17 @@ export const ImageRackCard = memo(function ImageRackCard({
                 className="block w-full cursor-grab rounded-2xl outline-none ring-sky-400/30 transition-shadow hover:ring-2 active:cursor-grabbing"
               >
                 <CoolingFanUnit spinning />
+                <div className="mt-2 flex items-center justify-between text-[10px] font-bold text-cyan-300 px-1">
+                  <span className="flex items-center gap-1.5">
+                    <Wind className="h-3 w-3 text-cyan-400" aria-hidden />
+                    {t('inventory2.fan_active_status')}
+                  </span>
+                  {fanBonusHashRate > 0 && (
+                    <span className="font-mono text-cyan-200 tabular-nums">
+                      +1% (+{formatHashrate(fanBonusHashRate)})
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           ) : (
@@ -519,6 +557,7 @@ export const ImageRackCard = memo(function ImageRackCard({
         displayName={machineTip?.displayName ?? ''}
         hashrateStr={machineTip?.hashrateStr ?? ''}
         slotSize={machineTip?.slotSize ?? 1}
+        level={machineTip?.level ?? 1}
       />
       <RackDismantleModal
         open={confirmingDismantle}

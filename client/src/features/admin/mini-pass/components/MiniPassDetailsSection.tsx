@@ -105,7 +105,7 @@ export function MiniPassDetailsSection({ form, isNew, setForm, t }: MiniPassDeta
         <div>
           <FieldLabel
             htmlFor="mp-start"
-            label={t("adminMiniPass.fields.starts_at")}
+            label={`${t("adminMiniPass.fields.starts_at")} (UTC)`}
             hint={t("adminMiniPass.fields.starts_hint")}
           />
           <input
@@ -120,7 +120,7 @@ export function MiniPassDetailsSection({ form, isNew, setForm, t }: MiniPassDeta
         <div>
           <FieldLabel
             htmlFor="mp-end"
-            label={t("adminMiniPass.fields.ends_at")}
+            label={`${t("adminMiniPass.fields.ends_at")} (UTC)`}
             hint={t("adminMiniPass.fields.ends_hint")}
           />
           <input

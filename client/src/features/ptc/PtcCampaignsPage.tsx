@@ -190,7 +190,6 @@ export default function PtcCampaignsPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b-2 border-slate-800">
             <div>
                 <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight uppercase italic">{t('ptc.campaigns_title')}</h1>
-                <p className="text-slate-400 text-xs sm:text-sm font-medium mt-1">{t('ptc.campaigns_subtitle')}</p>
             </div>
             <button
                 onClick={() => setShowCreate(!showCreate)}

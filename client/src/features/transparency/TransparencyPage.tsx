@@ -51,6 +51,7 @@ import { walletTreasuryUsd } from './components/transparency.base';
 import { WithdrawalsSection } from './components/transparency.withdrawals';
 import { MethodologyModal } from './components/transparency.methodology';
 import { useTranslation } from 'react-i18next';
+import { formatUtcDate, formatUtcDateTime } from '../../shared/utils/utcTime';
 
 export type TransparencyTab = 'all' | 'overview' | 'expenses' | 'treasury' | 'infrastructure' | 'withdrawals';
 
@@ -144,11 +145,11 @@ export default function Transparency() {
   const lastUpdatedMs = Math.max(entryUpdatedMs, snapshotUpdatedMs);
   const lastUpdated =
     lastUpdatedMs > 0
-      ? new Date(lastUpdatedMs).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' })
+      ? formatUtcDate(lastUpdatedMs, { locale: 'en-US', day: '2-digit', month: 'short', year: 'numeric' })
       : null;
   const lastOnChainSync =
     snapshotUpdatedMs > 0
-      ? new Date(snapshotUpdatedMs).toLocaleString(undefined, {
+      ? formatUtcDateTime(snapshotUpdatedMs, {
           day: '2-digit',
           month: 'short',
           year: 'numeric',
@@ -413,7 +414,6 @@ export default function Transparency() {
                 <h1 id="transparency-hero-title" className="text-2xl sm:text-3xl font-black text-white uppercase tracking-tight leading-none">
                   {t('transparency.page_title')}
                 </h1>
-                <p className="text-xs text-primary/80 font-bold uppercase tracking-wider mt-1">{t('transparency.page_subtitle')}</p>
               </div>
             </div>
             <p className="text-xs sm:text-sm text-slate-300 max-w-xl leading-relaxed">{t('transparency.page_description')}</p>

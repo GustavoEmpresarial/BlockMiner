@@ -20,6 +20,7 @@ import {
 import {
   dedupeOccupiedSlotsForDismantle,
   groupIntoRacks,
+  sumRackHashRate,
   canMachineFitVisualSlot,
   groupInventoryStacks,
   apiErrorMessage,
@@ -451,6 +452,28 @@ export default function Inventory2Page() {
     [rooms],
   );
 
+  const coolingFanBonusHashRate = useMemo(() => {
+    let bonus = 0;
+    for (const room of rooms) {
+      if (!room.unlocked || !('racks' in room)) continue;
+      const mountedFans = new Set(fansByRoom[room.roomNumber] ?? []);
+      if (mountedFans.size === 0) continue;
+      const visualRacks = groupIntoRacks(room.racks ?? []);
+      visualRacks.forEach((rackGroup, visualIndex) => {
+        if (mountedFans.has(visualIndex)) {
+          const rackPower = sumRackHashRate(rackGroup.slots);
+          bonus += rackPower * 0.01;
+        }
+      });
+    }
+    return bonus;
+  }, [rooms, fansByRoom]);
+
+  const totalFarmHashRate = useMemo(
+    () => activeMachinesHashRate + coolingFanBonusHashRate,
+    [activeMachinesHashRate, coolingFanBonusHashRate],
+  );
+
   const currentRoom = useMemo(() => rooms.find((room) => room.roomNumber === activeRoom) ?? null, [rooms, activeRoom]);
   const visualRacksOfCurrent = useMemo(() => {
     if (!currentRoom?.unlocked) return [];
@@ -483,11 +506,8 @@ export default function Inventory2Page() {
         const res = await postVisualPlacement({ roomNumber: currentRoom.roomNumber, visualIndex, floorSlot });
         if (res.data?.ok && Array.isArray(res.data.placements)) {
           setPlacementsByRoom((prev) => ({ ...prev, [currentRoom.roomNumber]: res.data.placements }));
-          if (floorSlot == null) {
-            setFansByRoom((prev) => ({
-              ...prev,
-              [currentRoom.roomNumber]: (prev[currentRoom.roomNumber] ?? []).filter((i) => i !== visualIndex),
-            }));
+          if (typeof res.data.fanCredits === 'number') {
+            setFanCredits(Math.max(0, res.data.fanCredits));
           }
           if (!opts?.silent) {
             toast.success(floorSlot == null ? t('inventory2.stored') : t('inventory2.placed'));
@@ -609,7 +629,8 @@ export default function Inventory2Page() {
 
       <MachinesHeader
         t={t}
-        activeMachinesHashRate={activeMachinesHashRate}
+        activeMachinesHashRate={totalFarmHashRate}
+        coolingBonusHashRate={coolingFanBonusHashRate}
         occupiedRacks={summary.occupiedRacks}
         inventoryCount={inventory.length + storedRacks.length + storedFanCount}
         onGoToVault={() => navigate('/vault')}

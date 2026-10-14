@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { CheckCircle, Cpu, Gamepad2, Gift, Trophy, Wallet, Zap } from 'lucide-react';
+import { CheckCircle, ClipboardList, Combine, Cpu, Flame, Gamepad2, Gift, Trophy, UserPlus, Wallet, Youtube, Zap } from 'lucide-react';
 
 /**
  * Player hub category for a tournament metric.
@@ -10,6 +10,11 @@ export type TournamentHubCategoryId =
   | 'deposit'
   | 'mining'
   | 'activity'
+  | 'youtube'
+  | 'referral'
+  | 'forge'
+  | 'burn'
+  | 'tasks'
   | 'engagement'
   | 'games'
   | 'other';
@@ -23,13 +28,16 @@ const METRIC_TO_HUB: Record<string, TournamentHubCategoryId> = {
   HASHRATE: 'mining',
   BLOCKS_MINED: 'mining',
   CHECKINS: 'activity',
-  TASKS_COMPLETED: 'activity',
+  TASKS_COMPLETED: 'tasks',
   FAUCET: 'engagement',
   SHORTLINK: 'engagement',
   AUTO_MINING: 'engagement',
   MINIGAME_WINS: 'games',
   ALL_ACTIVITIES: 'activity',
-  YOUTUBE: 'engagement',
+  YOUTUBE: 'youtube',
+  REFERRALS: 'referral',
+  MERGES: 'forge',
+  BURNS: 'burn',
 };
 
 /** Display order of hub cards (unknown metrics fall into `other`). */
@@ -38,6 +46,11 @@ export const TOURNAMENT_HUB_ORDER: TournamentHubCategoryId[] = [
   'deposit',
   'mining',
   'activity',
+  'youtube',
+  'referral',
+  'forge',
+  'burn',
+  'tasks',
   'engagement',
   'games',
   'other',
@@ -52,6 +65,11 @@ export const HUB_CATEGORY_META: Record<TournamentHubCategoryId, { icon: LucideIc
   deposit: { icon: Wallet },
   mining: { icon: Cpu },
   activity: { icon: CheckCircle },
+  youtube: { icon: Youtube },
+  referral: { icon: UserPlus },
+  forge: { icon: Combine },
+  burn: { icon: Flame },
+  tasks: { icon: ClipboardList },
   engagement: { icon: Zap },
   games: { icon: Gamepad2 },
   other: { icon: Trophy },
