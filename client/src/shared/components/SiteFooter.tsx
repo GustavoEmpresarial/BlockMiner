@@ -104,7 +104,7 @@ export default function SiteFooter() {
       </div>
 
       <div className="relative mx-auto mt-12 flex max-w-6xl flex-col-reverse items-center gap-4 border-t border-slate-800 pt-8 sm:flex-row sm:justify-between">
-        <p className="text-sm">{t('landing.footer.copyright', { year: new Date().getFullYear() })}</p>
+        <p className="text-sm">{t('landing.footer.copyright', { year: new Date().getUTCFullYear() })}</p>
         <button
           type="button"
           onClick={scrollToTop}

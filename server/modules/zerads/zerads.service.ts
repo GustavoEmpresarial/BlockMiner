@@ -31,6 +31,7 @@ import { logger } from "../../core/logger/index.js";
 import { OFFERWALL_BLK_PER_CLICK, blkForOfferwallClicks } from "../../shared/offerwallBlkPayout.js";
 import * as zeradsRepo from "./zerads.repository.js";
 import { recordTournamentAction, TOURNAMENT_ACTION_PROVIDER } from "../tournaments/index.js";
+import { utcWeekStart } from "../tournaments/tournament-window.js";
 import { ZERADS_MAX_CLICKS_PER_UTC_DAY, zeradsUtcDayBounds } from "./zerads.limits.js";
 import {
   loadAndEvaluateZeradsAntibotGate,
@@ -293,8 +294,7 @@ export async function getZeradsHistoryForUser(userId: number, page: number) {
 export async function getZeradsStatsForUser(userId: number) {
   const startOfDay = new Date();
   startOfDay.setUTCHours(0, 0, 0, 0);
-  const startOfWeek = new Date(startOfDay);
-  startOfWeek.setUTCDate(startOfWeek.getUTCDate() - startOfWeek.getUTCDay());
+  const startOfWeek = utcWeekStart(startOfDay);
   const startOfMonth = new Date(Date.UTC(startOfDay.getUTCFullYear(), startOfDay.getUTCMonth(), 1));
 
   const { agg, todayAgg, weekAgg, monthAgg } = await zeradsRepo.getStatsAggregates(userId, startOfDay, startOfWeek, startOfMonth);

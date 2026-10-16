@@ -38,3 +38,11 @@ shopRouter.post(
   requireCriticalIdempotency({ scope: "shop_purchase_rack" }),
   shopController.purchaseRack,
 );
+shopRouter.post(
+  "/purchase-part",
+  requireAuth,
+  shopLimiter,
+  requireCriticalIdempotency({ scope: "shop_purchase_part" }),
+  shopController.purchasePart,
+);
+

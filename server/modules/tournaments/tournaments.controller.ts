@@ -21,6 +21,12 @@ import {
   getUserTournamentHistory,
   getMyTournamentScoreBreakdown,
 } from "./tournaments.service.js";
+import {
+  enabledPreviewMetrics,
+  getPreviewTournamentWithLeaderboard,
+  isPreviewTournamentId,
+  listPreviewTournaments,
+} from "./tournaments.preview.js";
 
 type AuthedRequest = Request & { user?: { id: number } };
 
@@ -68,7 +74,8 @@ function parseTournamentId(raw: unknown): number | null {
 export async function listTournaments(req: Request, res: Response): Promise<void> {
   try {
     const tournaments = await listActiveTournaments();
-    res.json({ ok: true, tournaments });
+    const preview = enabledPreviewMetrics().size > 0 ? await listPreviewTournaments() : [];
+    res.json({ ok: true, tournaments: [...tournaments, ...preview] });
   } catch (err) {
     failed(
       res,
@@ -83,14 +90,17 @@ export async function listTournaments(req: Request, res: Response): Promise<void
 }
 
 export async function getTournament(req: Request, res: Response): Promise<void> {
-  const id = parseTournamentId(req.params.id);
+  const rawId = Number(String(req.params.id ?? "").trim());
+  const id = isPreviewTournamentId(rawId) ? rawId : parseTournamentId(req.params.id);
   if (id === null) {
     res.status(400).json({ ok: false, message: "Invalid id" });
     return;
   }
   const userId = (req as AuthedRequest).user?.id;
   try {
-    const data = await getTournamentWithLeaderboard(id, userId);
+    const data = isPreviewTournamentId(id)
+      ? await getPreviewTournamentWithLeaderboard(id, userId)
+      : await getTournamentWithLeaderboard(id, userId);
     if (!data) {
       res.status(404).json({ ok: false, message: "Not found" });
       return;

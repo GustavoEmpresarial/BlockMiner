@@ -55,6 +55,7 @@ import {
   type AdminSupportSubscribeAck,
 } from "./adminSupport.types";
 import { ADMIN_SUPPORT_REPLY_MAX_ATTACHMENTS } from "./support.constants";
+import { formatUtcDateTime, formatUtcDate } from '../../../shared/utils/utcTime';
 
 function defaultDossierParams(): AdminSupportPlayerDossierParams {
   return {
@@ -94,7 +95,7 @@ function formatRelativeTime(dateStr: string | Date | undefined): string {
   if (diffHours < 24) return `Há ${diffHours}h`;
   if (diffDays === 1) return "Ontem";
   if (diffDays < 7) return `Há ${diffDays}d`;
-  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+  return formatUtcDate(d, { locale: "pt-BR", day: "2-digit", month: "2-digit" });
 }
 
 export default function AdminSupportPage() {
@@ -775,7 +776,7 @@ export default function AdminSupportPage() {
                       )}
 
                       <span className="text-xs text-slate-500 ml-1">
-                        {new Date(selectedMessage.createdAt).toLocaleString("pt-BR")}
+                        {formatUtcDateTime(selectedMessage.createdAt, { locale: 'pt-BR', seconds: true })}
                       </span>
                     </div>
 
@@ -873,7 +874,7 @@ export default function AdminSupportPage() {
                     <div className="flex items-center gap-2 text-xs">
                       <span className="font-bold text-white">{selectedMessage.name}</span>
                       <span className="text-[10px] text-slate-500">
-                        {new Date(selectedMessage.createdAt).toLocaleString("pt-BR")}
+                        {formatUtcDateTime(selectedMessage.createdAt, { locale: 'pt-BR', seconds: true })}
                       </span>
                     </div>
 
@@ -902,7 +903,7 @@ export default function AdminSupportPage() {
                       <div className="flex items-center justify-end gap-2 text-xs">
                         <span className="text-[10px] text-slate-500">
                           {selectedMessage.repliedAt
-                            ? new Date(selectedMessage.repliedAt).toLocaleString("pt-BR")
+                            ? formatUtcDateTime(selectedMessage.repliedAt, { locale: 'pt-BR', seconds: true })
                             : "Resposta enviada"}
                         </span>
                         <span className="font-bold text-amber-400">Equipe BlockMiner</span>
@@ -943,7 +944,7 @@ export default function AdminSupportPage() {
                             <span className="font-bold text-white">{selectedMessage.name}</span>
                           )}
                           <span className="text-[10px] text-slate-500">
-                            {new Date(r.createdAt).toLocaleString("pt-BR")}
+                            {formatUtcDateTime(r.createdAt, { locale: 'pt-BR', seconds: true })}
                           </span>
                           {isAdmin && (
                             <span className="font-bold text-amber-400">Equipe BlockMiner</span>

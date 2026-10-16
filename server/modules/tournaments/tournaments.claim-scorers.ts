@@ -103,24 +103,6 @@ export class ClaimCountMetricScorer implements MetricScorer {
     }
 
     if (this.metric === "YOUTUBE") {
-      const actions = await prisma.tournamentAction.groupBy({
-        by: ["userId"],
-        where: {
-          provider: this.provider,
-          tournamentEligible: true,
-          executedAtUTC: { gte: window.startsAt, lte: endAt },
-          ...userFilter,
-        },
-        _sum: { actionCount: true },
-      });
-      const map = new Map<number, MetricScoreBreakdown>();
-      for (const r of actions) {
-        const total = Number(r._sum.actionCount ?? 0);
-        if (total <= 0) continue;
-        map.set(r.userId, { total, txCount: total });
-      }
-      if (map.size > 0) return map;
-
       const rows = await prisma.youtubeWatchHistory.groupBy({
         by: ["userId"],
         where: {
@@ -130,6 +112,7 @@ export class ClaimCountMetricScorer implements MetricScorer {
         },
         _count: { id: true },
       });
+      const map = new Map<number, MetricScoreBreakdown>();
       for (const r of rows) {
         const total = Number(r._count.id ?? 0);
         if (total <= 0) continue;

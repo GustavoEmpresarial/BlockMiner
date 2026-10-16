@@ -1,3 +1,4 @@
+import { formatUtcDateTime } from '../../../shared/utils/utcTime';
 export type RiskBand = 'trusted' | 'low' | 'suspicious' | 'high' | 'critical';
 
 export function bandForScore(score: number): RiskBand {
@@ -51,7 +52,7 @@ export const SEVERITY_STYLE: Record<string, string> = {
 export function fmtDateShort(iso: string | null | undefined): string {
   if (!iso) return '—';
   try {
-    return new Date(iso).toLocaleString('pt-BR', { hour12: false });
+    return formatUtcDateTime(iso, { locale: 'pt-BR', seconds: true });
   } catch {
     return iso;
   }

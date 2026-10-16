@@ -34,6 +34,7 @@ import { boostsRouter } from "../modules/boosts/index.js";
 import { autoMiningRouter, autoMiningAdminRouter } from "../modules/auto-mining/index.js";
 import { inventoryRouter } from "../modules/inventory/index.js";
 import { shopRouter } from "../modules/shop/index.js";
+import { partsRouter } from "../modules/parts/index.js";
 import { gamesRouter } from "../modules/games/index.js";
 import { checkinRouter, checkinAdminRouter } from "../modules/checkin/index.js";
 import { tasksRouter, tasksAdminRouter } from "../modules/tasks/index.js";
@@ -144,6 +145,7 @@ export function createApp() {
     // calls next("router") for non-digit ids.
     app.use("/api/inventory", inventoryRouter);
     app.use("/api/shop", shopRouter);
+    app.use("/api/parts", partsRouter);
     app.use("/api/games", gamesRouter);
     app.use("/api/checkin", checkinRouter);
     app.use("/api/admin", checkinAdminRouter);

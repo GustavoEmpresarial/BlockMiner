@@ -64,23 +64,14 @@ describe('YoutubeBackgroundRunner', () => {
     expect(mocks.api.post).not.toHaveBeenCalled();
   });
 
-  it('sends heartbeat and executes claim when boosted and off-page', async () => {
+  it('does not send heartbeats or claims off-page (ghost mining disabled)', async () => {
     mocks.mockPowerBoost.value = true;
     mocks.mockPageActive.value = false;
     localStorage.setItem(YT_LAST_VIDEO_KEY, 'dQw4w9WgXcQ');
 
     render(<YoutubeBackgroundRunner />);
 
-    // Initial heartbeat
-    await vi.advanceTimersByTimeAsync(100);
-    expect(mocks.api.post).toHaveBeenCalledWith('/session/heartbeat', expect.objectContaining({ type: 'youtube' }));
-
-    // Advance 65 seconds to trigger claim
-    mocks.api.post.mockClear();
     await vi.advanceTimersByTimeAsync(65_000);
-
-    const claimCalls = mocks.api.post.mock.calls.filter(([url]) => url === '/youtube/claim');
-    expect(claimCalls.length).toBeGreaterThanOrEqual(1);
-    expect(claimCalls[0]![1]).toEqual({ videoId: 'dQw4w9WgXcQ' });
+    expect(mocks.api.post).not.toHaveBeenCalled();
   });
 });

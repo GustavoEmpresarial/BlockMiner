@@ -148,7 +148,8 @@ test("CRITICAL INVARIANT: Postback CONTINUES crediting normally when OFFERWALLME
 
     const postbackReq = {
       method: "POST",
-      headers: { "cf-connecting-ip": "127.0.0.1" },
+      headers: {},
+      socket: { remoteAddress: "127.0.0.1" },
       body: {
         subId: String(testUser.id),
         transId: uniqueTransId,

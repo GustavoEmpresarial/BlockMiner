@@ -17,6 +17,8 @@ import { syncUserBaseHashRate } from "../mining/index.js";
 import { notifyDailyTaskYoutubeWatch } from "../tasks/index.js";
 import { recordTournamentAction, TOURNAMENT_ACTION_PROVIDER } from "../tournaments/index.js";
 import { resolveRewardExpiresAtForGrant, formatRewardDurationPt, getRewardDurationMs } from "../boosts/index.js";
+import { grantActivityPartInTx, partDropPayload, type PartDropPayload } from "../parts/parts.grant.js";
+import { PART_GRANT_SOURCE } from "../parts/parts.drop.js";
 import { utcDayDailyResetMeta, startOfUtcCalendarDay, endOfUtcCalendarDay } from "./youtube.domain.js";
 import {
   DAILY_LIMIT_HASH,
@@ -109,12 +111,23 @@ export async function claimForUser(userId: number, videoId: string): Promise<You
 
   let claimTtlMs = 0;
   let watchHistoryId: number | null = null;
+  let part: PartDropPayload | null = null;
   try {
     const hist = await prisma.$transaction(
       async (tx) => {
         const { expiresAt, durationMs } = await resolveRewardExpiresAtForGrant(tx, userId, now, "youtube");
         claimTtlMs = durationMs;
-        return claimRewardTx(tx, userId, videoId, now, expiresAt, hashRateToGrant);
+        const row = await claimRewardTx(tx, userId, videoId, now, expiresAt, hashRateToGrant);
+        // Past the daily hash cap the claim is tournament-only. Parts follow the rewarded
+        // claims so the 100/day reference stays the drop ceiling.
+        if (hashRateToGrant > 0) {
+          part = partDropPayload(await grantActivityPartInTx(tx, {
+            userId,
+            source: PART_GRANT_SOURCE.youtube,
+            sourceRef: `youtube:${row.id}`,
+          }));
+        }
+        return row;
       },
       { maxWait: 10_000, timeout: 20_000 },
     );
@@ -160,6 +173,7 @@ export async function claimForUser(userId: number, videoId: string): Promise<You
       ok: true,
       rewardGh: 0,
       message: "+1 ponto de torneio registrado! (Limite diário de 1.000 H/s atingido)",
+      part,
     };
   }
 
@@ -167,5 +181,6 @@ export async function claimForUser(userId: number, videoId: string): Promise<You
     ok: true,
     rewardGh: REWARD_PER_CLAIM,
     message: `+${REWARD_PER_CLAIM} H/s ativado por ${formatRewardDurationPt(claimTtlMs)}!`,
+    part,
   };
 }

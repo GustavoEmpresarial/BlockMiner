@@ -11,6 +11,7 @@ import type { Server } from "socket.io";
 import prisma from "../../core/database/prisma.js";
 import { logger as rootLogger } from "../../core/logger/index.js";
 import { getRedis, getRedisUrl } from "../../core/redis/index.js";
+import { LEADERBOARD_ORDER } from "./tournaments.prize-resolution.js";
 
 const logger = rootLogger.child("TournamentRealtime");
 
@@ -103,7 +104,7 @@ export async function buildLeaderboardSlice(
   const [top, participantCount] = await Promise.all([
     prisma.tournamentEntry.findMany({
       where: { tournamentId },
-      orderBy: [{ score: "desc" }, { firstContributionAt: "asc" }],
+      orderBy: [...LEADERBOARD_ORDER],
       take: LEADERBOARD_LIMIT,
       include: { user: { select: { id: true, username: true, name: true } } },
     }),

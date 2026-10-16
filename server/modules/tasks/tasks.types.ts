@@ -24,6 +24,8 @@ export type DailyTaskDashboard = {
   periodKey: string;
   serverTime: string;
   nextResetAt: string;
+  /** Dev preview catalog: claims are recorded but pay nothing. */
+  preview: boolean;
   tasks: DailyTaskDashboardTask[];
 };
 

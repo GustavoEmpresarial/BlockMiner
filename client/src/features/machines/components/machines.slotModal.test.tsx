@@ -275,3 +275,30 @@ describe('SlotModal — empty slot (install view)', () => {
     expect(screen.queryByText('Miner 25')).not.toBeInTheDocument();
   });
 });
+
+describe('SlotModal — machine rarity', () => {
+  it('labels each install row with the rarity of its merge level and drops the name suffix', () => {
+    render(
+      withProviders(
+        <SlotModal
+          {...baseProps({
+            groupedInventory: [
+              group({ id: 1, minerName: 'HashTitan X1 (Uncommon)', level: 2, hashRate: 65 }),
+              group({ id: 2, minerName: 'HashTitan X1', level: 1, hashRate: 25 }),
+            ],
+          })}
+        />,
+      ),
+    );
+    const rows = screen.getAllByRole('button').filter((b) => b.hasAttribute('data-rarity'));
+    expect(rows.map((r) => r.getAttribute('data-rarity'))).toEqual(['uncommon', 'common']);
+    expect(screen.getAllByText('HashTitan X1')).toHaveLength(2);
+    expect(screen.getByText('Incomum')).toBeInTheDocument();
+    expect(screen.getByText('Comum')).toBeInTheDocument();
+  });
+
+  it('shows the rarity of the machine in the details view', () => {
+    render(withProviders(<SlotModal {...baseProps({ slot: occupiedSlot() })} />));
+    expect(screen.getByText('Incomum')).toBeInTheDocument();
+  });
+});

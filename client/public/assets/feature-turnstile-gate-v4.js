@@ -5,6 +5,15 @@
  */
 (function () {
   "use strict";
+
+  // Follow the site language (i18next), not the browser's, so the widget never shows English to a pt-BR player.
+  function turnstileLanguage() {
+    var lang = String(localStorage.getItem("i18nextLng") || document.documentElement.lang || "pt-BR").toLowerCase();
+    if (lang.indexOf("pt") === 0) return "pt-br";
+    if (lang.indexOf("es") === 0) return "es";
+    if (lang.indexOf("en") === 0) return "en";
+    return "auto";
+  }
   if (window.__BM_FEATURE_TURNSTILE_GATE_V4__) return;
   window.__BM_FEATURE_TURNSTILE_GATE_V4__ = true;
 
@@ -174,6 +183,7 @@
           widgetId = window.turnstile.render(host, {
             sitekey: key,
             theme: "dark",
+            language: turnstileLanguage(),
             callback: function (t) {
               token = String(t || "");
               okBtn.disabled = !token;

@@ -282,11 +282,11 @@ export function PreviewPanel({
       <dl className="mt-4 grid grid-cols-2 gap-2 text-[11px]">
         <div className="rounded-lg bg-slate-950/80 px-2 py-2 border border-slate-800">
           <dt className="text-slate-500 uppercase tracking-wider">{t("adminMiniPass.preview.starts")}</dt>
-          <dd className="text-slate-200 font-mono truncate">{form.startsAt || "—"}</dd>
+          <dd className="text-slate-200 font-mono truncate">{form.startsAt ? `${form.startsAt.replace("T", " ")} UTC` : "—"}</dd>
         </div>
         <div className="rounded-lg bg-slate-950/80 px-2 py-2 border border-slate-800">
           <dt className="text-slate-500 uppercase tracking-wider">{t("adminMiniPass.preview.ends")}</dt>
-          <dd className="text-slate-200 font-mono truncate">{form.endsAt || "—"}</dd>
+          <dd className="text-slate-200 font-mono truncate">{form.endsAt ? `${form.endsAt.replace("T", " ")} UTC` : "—"}</dd>
         </div>
         <div className="rounded-lg bg-slate-950/80 px-2 py-2 border border-slate-800">
           <dt className="text-slate-500 uppercase tracking-wider">{t("adminMiniPass.preview.max_level")}</dt>

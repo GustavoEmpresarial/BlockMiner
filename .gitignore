@@ -10,6 +10,7 @@ dist/
 # (upload real de usuário, backup de banco) é ignorado, pasta por pasta.
 /storage/uploads/
 /storage/backups/
+/storage/assets/
 storage/scripts/deploy/vm_config_secret.py
 __pycache__/
 *.pyc

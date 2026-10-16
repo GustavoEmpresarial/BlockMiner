@@ -211,8 +211,10 @@ services:
     # termina é o proxy compartilhado/Cloudflare na frente). Se um dia migrar pra VM
     # dedicada com TLS próprio, sobrescreva as duas env vars E troque NGINX_CONF_FILE pra
     # um nginx.conf que escute 80/443 de verdade (ainda não existe nesta árvore).
+    # Loopback only: the shared host proxy (Caddy) reaches 127.0.0.1:5000; publishing on every
+    # interface let anyone hit nginx straight on <public-ip>:5000, bypassing Cloudflare.
     ports:
-      - "${NGINX_HTTP_PUBLISH:-5000:5100}"
+      - "${NGINX_HTTP_PUBLISH:-127.0.0.1:5000:5100}"
       - "${NGINX_HTTPS_PUBLISH:-127.0.0.1:5443:5443}"
     volumes:
       - ${NGINX_CONF_FILE:-./nginx/nginx.vm5000.conf}:/etc/nginx/nginx.conf:ro

@@ -26,7 +26,6 @@ export default function PowerBoostDocsPage() {
           <IconBadge icon={Rocket} variant="amber" size="lg" />
           <div>
             <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">{t('powerBoost.docs.title')}</h1>
-            <p className="text-slate-400 text-xs sm:text-sm font-medium">{t('powerBoost.docs.intro')}</p>
           </div>
         </div>
         <Link

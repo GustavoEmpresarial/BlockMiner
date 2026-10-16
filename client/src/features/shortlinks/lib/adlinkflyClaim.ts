@@ -10,6 +10,7 @@ import {
   PASTEAD_CLAIM_RETRY_WAIT_MS,
   type PasteadClaimOutcome,
 } from './pasteadClaim';
+import { formatPartDropNotice } from '../../parts/lib/partDropNotice';
 
 const ADLINKFLY_NOT_COMPLETED_EXTRA_RETRIES = 3;
 
@@ -23,9 +24,11 @@ async function claimOnce(token: string): Promise<PasteadClaimOutcome> {
   try {
     const res = await claimAdlinkflyShortlink(token);
     if (res.ok) {
+      const base = res.reward?.message || t('shortlinks.pastead_claim_success');
+      const notice = formatPartDropNotice(res.part, t);
       return {
         ok: true,
-        message: res.reward?.message || t('shortlinks.pastead_claim_success'),
+        message: notice ? `${base} ${notice}` : base,
         hashRate: res.reward?.hashRate,
       };
     }

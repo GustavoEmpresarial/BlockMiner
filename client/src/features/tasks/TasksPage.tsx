@@ -11,7 +11,7 @@ import {
 import { useDailyTasksDashboard } from './lib/useDailyTasksDashboard';
 
 export default function TasksPage() {
-  const { t, loading, loadFailed, tasks, tasksByCadence, nextResetLabel, claimingId, load, claim } =
+  const { t, loading, loadFailed, tasks, tasksByCadence, nextResetLabel, claimingId, load, claim, preview } =
     useDailyTasksDashboard();
 
   const pageHeader = (
@@ -20,7 +20,6 @@ export default function TasksPage() {
         <IconBadge icon={PlayCircle} variant="emerald" size="lg" />
         <div>
           <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">{t('dailyTasks.title')}</h1>
-          <p className="text-slate-400 text-xs sm:text-sm font-medium">{t('dailyTasks.subtitle')}</p>
         </div>
       </div>
       {tasks.length > 0 && nextResetLabel && (
@@ -48,6 +47,12 @@ export default function TasksPage() {
   return (
     <div className="space-y-8 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {pageHeader}
+
+      {preview ? (
+        <p className="rounded-xl border border-yellow-500/40 bg-yellow-500/10 px-4 py-2.5 text-xs font-bold text-yellow-200">
+          {t('dailyTasks.preview_notice')}
+        </p>
+      ) : null}
 
       <div className="flex flex-col gap-2">
         {!loadFailed && tasks.length > 0 ? (

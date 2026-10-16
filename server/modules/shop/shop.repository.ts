@@ -6,7 +6,7 @@ import type { TxClient } from "../../core/database/prisma.js";
 import prisma from "../../core/database/prisma.js";
 
 /** Miners eligible for shop listing: active catalog rows, store-sourced, not reserved for faucet/shortlink rewards. */
-const SHOP_ELIGIBLE_WHERE = {
+export const SHOP_ELIGIBLE_WHERE = {
   isActive: true,
   showInShop: true,
   isArchived: false,

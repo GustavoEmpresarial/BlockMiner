@@ -709,6 +709,7 @@ export class MiningEngine {
       tokenPrice: this.tokenPrice,
       blockReward: this.rewardBase,
       blockRewardShib: this.rewardBaseShib,
+      blockRewardBlk: 0.00347222,
       /** Minutes between POL block settlements (for calculator / UI). */
       blockIntervalMinutes: this.blockDurationMs / 60000,
       blockNumber: this.blockNumber,
@@ -735,6 +736,7 @@ export class MiningEngine {
             refCode: miner.refCode || null,
             referralCount: miner.referralCount || 0,
             miningAllocationPolBps: normalizeAllocationBps(miner.miningAllocationPolBps),
+            miningPayoutMode: miner.miningPayoutMode || "pol",
             lastShibReward: miner.lastShibReward ?? 0,
             lifetimeMinedShib: miner.lifetimeMinedShib ?? 0,
             shibBalance: miner.shibBalance ?? 0,

@@ -13,6 +13,12 @@ export function isTournamentIncrementalScoringEnabled(): boolean {
   return isTournamentEngineV2Enabled();
 }
 
+/** On unless explicitly disabled, so production keeps running with no env change. */
+export function isTournamentCronEnabled(): boolean {
+  const v = String(process.env.TOURNAMENT_CRON_ENABLED ?? "").trim().toLowerCase();
+  return !(v === "0" || v === "false" || v === "no");
+}
+
 /**
  * Lets the offerwall reconcile repair entry scores instead of only reporting drift.
  * Off by default: it rewrites the live ranking of tournaments that pay prizes.

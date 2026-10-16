@@ -286,9 +286,6 @@ export default function Roadmap() {
           <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">
             {t('roadmap.title_road')}<span className="text-sky-400">{t('roadmap.title_map')}</span>
           </h1>
-          <p className="text-slate-400 text-xs sm:text-sm font-medium">
-            {t('roadmap.subtitle')}
-          </p>
         </div>
       </div>
 

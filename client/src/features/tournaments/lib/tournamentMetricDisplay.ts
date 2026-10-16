@@ -24,8 +24,25 @@ export function isAllActivitiesMetric(metric: string): boolean {
   return metric === 'ALL_ACTIVITIES';
 }
 
+export function isYoutubeMetric(metric: string): boolean {
+  return metric === 'YOUTUBE';
+}
+
+export function isReferralMetric(metric: string): boolean {
+  return metric === 'REFERRALS';
+}
+
+export function isMergeMetric(metric: string): boolean {
+  return metric === 'MERGES';
+}
+
+export function isBurnMetric(metric: string): boolean {
+  return metric === 'BURNS';
+}
+
 export function scoreColumnI18nKey(metric: string): string {
   if (isMinigameMetric(metric)) return 'tournaments.minigame_wins_column';
+  if (isReferralMetric(metric)) return 'tournaments.referrals_column';
   if (metric === 'DEPOSITS_USD') return 'tournaments.deposit_rank_column';
   if (metric === 'DEPOSITS_POL') return 'tournaments.deposit_rank_column_pol';
   return `tournaments.metrics.${metric}`;
@@ -34,6 +51,7 @@ export function scoreColumnI18nKey(metric: string): string {
 export function scoreTotalI18nKey(metric: string): string {
   if (isOffersMetric(metric)) return 'tournaments.offers_total';
   if (isMinigameMetric(metric)) return 'tournaments.minigame_wins_total';
+  if (isReferralMetric(metric)) return 'tournaments.referrals_total';
   if (metric === 'DEPOSITS_USD') return 'tournaments.deposit_rank_total_label';
   if (metric === 'DEPOSITS_POL') return 'tournaments.deposit_rank_total_label_pol';
   return 'tournaments.score';
@@ -56,6 +74,7 @@ function formatPolAmount(value: number): string {
 }
 
 export function formatScoreValue(metric: string, score: number): string {
+  if (isBurnMetric(metric)) return formatHashrate(score);
   if (metric === 'DEPOSITS_USD') return formatUsd(score);
   if (metric === 'DEPOSITS_POL') return formatPolAmount(score);
   return String(score);
@@ -75,11 +94,12 @@ export function formatScoreWithPolHint(
   if (metric === 'DEPOSITS_POL') {
     return { primary: formatPolAmount(score) };
   }
+  if (isBurnMetric(metric)) return { primary: formatHashrate(score) };
   return { primary: String(score) };
 }
 
 export function formatMyScoreTotal(metric: string, score: number): string {
-  if (metric === 'HASHRATE') return formatHashrate(score);
+  if (metric === 'HASHRATE' || isBurnMetric(metric)) return formatHashrate(score);
   if (isDepositMetric(metric)) return formatScoreValue(metric, score);
   return score.toLocaleString();
 }
@@ -89,4 +109,31 @@ export function prizeRankBadgeClass(rankFrom: number): string {
   if (rankFrom === 2) return 'bg-slate-300 text-slate-950';
   if (rankFrom === 3) return 'bg-orange-700 text-white';
   return 'bg-slate-700 text-slate-300';
+}
+
+type NamedTournament = {
+  name: string;
+  description?: string | null;
+  metric: string;
+  type: string;
+};
+
+/**
+ * Daily / weekly / monthly series are named by the admin presets in English;
+ * players see the series name in their language instead. Custom tournaments
+ * keep the name the admin typed.
+ */
+export function tournamentDisplayName(t: NamedTournament): string {
+  if (t.type === 'CUSTOM') return t.name;
+  const key = `tournaments.series_name.${t.metric}`;
+  if (!i18n.exists(key)) return t.name;
+  return `${i18n.t(key)} · ${i18n.t(`tournaments.types.${t.type}`)}`;
+}
+
+export function tournamentDisplayDescription(t: NamedTournament): string | null {
+  if (t.type !== 'CUSTOM') {
+    const key = `tournaments.series_description.${t.metric}`;
+    if (i18n.exists(key)) return i18n.t(key);
+  }
+  return t.description ?? null;
 }

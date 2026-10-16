@@ -7,6 +7,7 @@ import { tournamentsAdminApi } from '../tournaments.admin.api';
 import type { AdminTournament, TournamentEntryRow } from '../tournaments.admin.types';
 import { formatTournamentTokenAmount } from '../../../tournaments/lib/formatTournamentPrize';
 import { TYPE_BADGE_STYLE, STATUS_BADGE_STYLE } from './TournamentCard';
+import { formatUtcDateTime } from '../../../../shared/utils/utcTime';
 
 function formatPrize(p: AdminTournament['prizes'][number]): string {
   const range = p.rankFrom === p.rankTo ? `#${p.rankFrom}` : `#${p.rankFrom}–${p.rankTo}`;
@@ -145,9 +146,9 @@ export function TournamentInspectPanel({
               {t('adminTournaments.window')}
             </p>
             <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-3 font-mono text-xs text-slate-300 flex items-center justify-between gap-2 flex-wrap">
-              <span>{new Date(tournament.startsAt).toLocaleString('pt-BR')}</span>
+              <span>{formatUtcDateTime(tournament.startsAt, { locale: 'pt-BR', seconds: true })}</span>
               <ArrowRight className="w-3.5 h-3.5 text-slate-600" />
-              <span>{new Date(tournament.endsAt).toLocaleString('pt-BR')}</span>
+              <span>{formatUtcDateTime(tournament.endsAt, { locale: 'pt-BR', seconds: true })}</span>
             </div>
           </div>
 

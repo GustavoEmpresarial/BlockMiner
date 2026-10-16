@@ -25,6 +25,7 @@ import {
   ADMIN_SUPPORT_ALLOWED_IMAGE_MIME,
   ADMIN_SUPPORT_UPLOAD_MAX_BYTES,
 } from './support.constants';
+import { formatUtcDateTime } from '../../../shared/utils/utcTime';
 
 const STATUS_FILTERS: AdminPublicSupportStatusFilter[] = ['all', 'open', 'closed'];
 
@@ -144,7 +145,7 @@ export default function AdminPublicSupportPage() {
   }
 
   function fmtDate(d: string) {
-    return new Date(d).toLocaleDateString(undefined, {
+    return formatUtcDateTime(d, {
       month: 'short',
       day: 'numeric',
       hour: '2-digit',

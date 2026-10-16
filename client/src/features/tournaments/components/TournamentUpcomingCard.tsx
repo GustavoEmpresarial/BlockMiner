@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { ChevronRight, Gift, Users, Zap } from 'lucide-react';
 import type { TournamentSummary } from '../lib/tournaments.types';
-import { isDepositMetric, isMinigameMetric, TOURNAMENT_TYPE_BADGE } from '../lib/tournamentMetricDisplay';
+import { isDepositMetric, isMinigameMetric, TOURNAMENT_TYPE_BADGE, tournamentDisplayName } from '../lib/tournamentMetricDisplay';
 import { formatTournamentPrizeLabel } from '../lib/formatTournamentPrize';
 import { TournamentCountdown } from './TournamentCountdown';
 
@@ -34,7 +34,7 @@ export function TournamentUpcomingCard({
           </span>
         ) : null}
       </div>
-      <h3 className="font-bold text-white mb-1 text-sm leading-snug">{tournament.name}</h3>
+      <h3 className="font-bold text-white mb-1 text-sm leading-snug">{tournamentDisplayName(tournament)}</h3>
       <div className="flex items-center gap-2 text-[10px] text-slate-500 font-mono mb-3 flex-wrap">
         {!isDepositMetric(tournament.metric) ? (
           <>

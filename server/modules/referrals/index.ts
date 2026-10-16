@@ -10,3 +10,15 @@ export {
   REFERRAL_STATS_SINCE,
   countsForDepositTournament,
 } from "./referrals.constants.js";
+export {
+  evaluateReferralLinkFraud,
+  type ReferralFraudCheckInput,
+  type ReferralFraudVerdict,
+} from "./referrals.anti-abuse.js";
+export {
+  checkAndQualifyReferral,
+  revokeReferralQualification,
+  reconcilePendingReferralsBatch,
+  countUserTotalActivities,
+  REFERRAL_QUALIFICATION_ACTIVITY_THRESHOLD,
+} from "./referrals.qualification.js";

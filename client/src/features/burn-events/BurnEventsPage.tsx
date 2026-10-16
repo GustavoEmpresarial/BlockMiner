@@ -8,6 +8,7 @@ import {
   Calendar,
   CheckCircle2,
   ChevronLeft,
+  ChevronRight,
   Clock,
   Cpu,
   Flame,
@@ -18,6 +19,7 @@ import {
   Sparkles,
   Timer,
   Trash2,
+  Zap,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { isAxiosError } from 'axios';
@@ -55,77 +57,6 @@ function tr(t: (key: string, opts?: Record<string, unknown>) => string, key: str
   return !v || v === key ? fallback : v;
 }
 
-function BurnPrizeImage({
-  src,
-  name,
-  hashRate,
-  variant = 'card',
-}: {
-  src: string | null;
-  name: string;
-  hashRate?: number;
-  variant?: 'card' | 'detail';
-}) {
-  const isDetail = variant === 'detail';
-
-  return (
-    <div
-      className={`relative mx-auto ${isDetail ? 'h-48 w-32 sm:h-52 sm:w-36' : 'h-40 w-28 sm:h-44 sm:w-[7.25rem]'}`}
-    >
-      <div className="pointer-events-none absolute inset-0 flex items-end justify-center pb-3">
-        <div className="h-16 w-16 animate-pulse rounded-full bg-orange-500/20 blur-xl" />
-      </div>
-      <div className="pointer-events-none absolute left-1/2 top-1/3 h-20 w-14 -translate-x-1/2 rounded-full bg-emerald-400/10 blur-xl" />
-      <div className="pointer-events-none absolute bottom-2 left-1/2 h-2 w-[65%] -translate-x-1/2 rounded-full bg-orange-500/15 blur-sm" />
-
-      <div className="relative flex h-full w-full flex-col items-center justify-end overflow-visible rounded-[1.5rem] border border-orange-400/25 bg-gradient-to-b from-slate-700/40 via-slate-900/90 to-slate-950 p-2 pt-4 shadow-[0_0_28px_rgba(249,115,22,0.18)] ring-1 ring-orange-300/15">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-1/3 rounded-t-[1.5rem] bg-gradient-to-b from-white/10 to-transparent" />
-
-        <div className="relative flex w-full flex-1 items-center justify-center pb-7">
-          {src ? (
-            <MachineImage
-              imageUrl={src}
-              name={name}
-              className="max-h-[82%] max-w-[90%] object-contain drop-shadow-[0_8px_16px_rgba(0,0,0,0.45)] transition-transform duration-500 group-hover:scale-105 group-hover:-translate-y-0.5"
-            />
-          ) : (
-            <Cpu className="h-10 w-10 text-slate-600" />
-          )}
-        </div>
-
-        {hashRate != null ? (
-          <div className="absolute inset-x-1.5 bottom-1.5 rounded-lg border border-emerald-500/20 bg-slate-950/85 px-1.5 py-1 backdrop-blur-sm">
-            <p className="text-center text-[9px] font-black tracking-wide text-emerald-300">
-              {formatHashRate(hashRate)}
-            </p>
-          </div>
-        ) : null}
-
-        <div className="absolute -bottom-2 -right-2 flex h-9 w-9 items-center justify-center rounded-full border-2 border-orange-300/35 bg-gradient-to-br from-orange-400 to-orange-600 shadow-lg shadow-orange-500/40">
-          <Flame className="h-4 w-4 text-white drop-shadow" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function BurnMachineThumb({ src, name }: { src: string | null; name: string }) {
-  return (
-    <div className="relative flex h-14 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-orange-500/15 bg-gradient-to-b from-slate-800 to-slate-950 p-1 shadow-sm shadow-orange-500/10">
-      <div className="pointer-events-none absolute inset-x-1 bottom-0 h-4 rounded-full bg-orange-500/15 blur-sm" />
-      {src ? (
-        <MachineImage
-          imageUrl={src}
-          name={name}
-          className="relative max-h-full max-w-full object-contain drop-shadow-md"
-        />
-      ) : (
-        <Cpu className="h-5 w-5 text-slate-600" />
-      )}
-    </div>
-  );
-}
-
 interface RewardMiner {
   id: number;
   name: string;
@@ -155,21 +86,12 @@ interface BurnEvent {
   stockClaimed: number;
   startsAt: string | null;
   endsAt: string | null;
-  /** Seconds the burn process must run before claim (from BURN_PROCESS_DURATION_SECONDS). */
   burnDurationSeconds?: number;
   rewardMiner: RewardMiner;
   userClaimsCount: number;
   userCanClaim: boolean;
   isOpen?: boolean;
-  /** Server-side burn clock still running / ready to collect. */
   pendingSession?: BurnPendingSession | null;
-}
-
-function formatDurationClock(totalSeconds: number): string {
-  const s = Math.max(0, Math.floor(totalSeconds));
-  const m = Math.floor(s / 60);
-  const r = s % 60;
-  return `${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`;
 }
 
 interface BurnableMachine {
@@ -193,6 +115,13 @@ function resolveAssetUrl(url: unknown): string | null {
 
 function formatHashRate(v: number): string {
   return `${Number(v).toLocaleString(undefined, { maximumFractionDigits: 2 })} H/s`;
+}
+
+function formatDurationClock(totalSeconds: number): string {
+  const s = Math.max(0, Math.floor(totalSeconds));
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return `${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`;
 }
 
 function formatShortUtcDay(iso: string | null | undefined, locale: string): string | null {
@@ -225,33 +154,82 @@ function StatusBadge({ status }: { status: EventStatus }) {
   const { t } = useTranslation();
   if (status === 'live') {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full border border-orange-500/25 bg-orange-500/15 px-3 py-1 text-[9px] font-black uppercase tracking-widest text-orange-300">
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-orange-500/30 bg-orange-500/15 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-orange-300">
         <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-orange-400" />
-        {t('burnEvents.status_live')}
+        {t('burnEvents.status_live', { defaultValue: 'Ao vivo' })}
       </span>
     );
   }
   if (status === 'upcoming') {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-500/30 bg-sky-500/10 px-3 py-1 text-[9px] font-black uppercase tracking-widest text-sky-300">
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-500/30 bg-sky-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-sky-300">
         <Clock className="h-3 w-3" />
-        {t('burnEvents.status_upcoming')}
+        {t('burnEvents.status_upcoming', { defaultValue: 'Em breve' })}
       </span>
     );
   }
   if (status === 'limit') {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-500/10 px-3 py-1 text-[9px] font-black uppercase tracking-widest text-amber-300">
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-amber-300">
         <Lock className="h-3 w-3" />
-        {t('burnEvents.status_limit')}
+        {t('burnEvents.status_limit', { defaultValue: 'Limite atingido' })}
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-500/30 bg-slate-500/10 px-3 py-1 text-[9px] font-black uppercase tracking-widest text-slate-400">
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-700 bg-slate-800 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-slate-400">
       <Clock className="h-3 w-3" />
-      {t('burnEvents.status_closed')}
+      {t('burnEvents.status_closed', { defaultValue: 'Encerrado' })}
     </span>
+  );
+}
+
+/** Showcase horizontal panorâmico para a placa de vídeo do minerador */
+function BurnPrizeShowcase({
+  src,
+  name,
+  hashRate,
+}: {
+  src: string | null;
+  name: string;
+  hashRate?: number;
+}) {
+  return (
+    <div className="group/showcase relative flex h-40 w-full items-center justify-center overflow-hidden rounded-2xl border-2 border-slate-800 bg-gradient-to-b from-slate-900/90 via-slate-950 to-slate-950 p-3 shadow-[inset_0_2px_12px_rgba(0,0,0,0.6)] sm:h-48">
+      {/* Brilho âmbar de fundo */}
+      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+        <div className="h-28 w-64 rounded-full bg-orange-500/15 blur-2xl transition-all duration-500 group-hover/showcase:bg-orange-500/25" />
+      </div>
+
+      {/* Imagem do minerador horizontal */}
+      <div className="relative z-10 flex h-full w-full items-center justify-center px-4">
+        {src ? (
+          <MachineImage
+            imageUrl={src}
+            name={name}
+            className="max-h-[88%] max-w-[94%] object-contain drop-shadow-[0_12px_24px_rgba(0,0,0,0.7)] transition-transform duration-300 group-hover/showcase:scale-105"
+          />
+        ) : (
+          <Cpu className="h-12 w-12 text-slate-700" />
+        )}
+      </div>
+
+      {/* Badge de Hashrate no canto superior direito */}
+      {hashRate != null ? (
+        <div className="absolute right-3 top-3 rounded-xl border border-emerald-500/30 bg-slate-950/90 px-2.5 py-1 backdrop-blur-md shadow-md">
+          <p className="font-mono text-xs font-black tracking-wide text-emerald-400">
+            +{formatHashRate(hashRate)}
+          </p>
+        </div>
+      ) : null}
+
+      {/* Nome da máquina no canto inferior esquerdo */}
+      <div className="absolute bottom-3 left-3 rounded-lg border border-slate-800 bg-slate-950/80 px-2.5 py-0.5 backdrop-blur-sm">
+        <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+          {name}
+        </p>
+      </div>
+    </div>
   );
 }
 
@@ -260,141 +238,156 @@ function EventCard({ event, onOpen }: { event: BurnEvent; onOpen: () => void }) 
   const status = getEventStatus(event);
   const pending = event.pendingSession ?? null;
   const [nowMs, setNowMs] = useState(() => Date.now());
+
   useEffect(() => {
     if (!pending || pending.ready) return;
     const id = window.setInterval(() => setNowMs(Date.now()), 1000);
     return () => window.clearInterval(id);
   }, [pending]);
+
   const pendingRemainingMs = pending
     ? Math.max(0, new Date(pending.completesAt).getTime() - nowMs)
     : 0;
   const pendingReady = Boolean(pending && (pending.ready || pendingRemainingMs <= 0));
+
   const stockLabel =
     event.stockTotal == null
-      ? t('burnEvents.stock_unlimited')
+      ? t('burnEvents.stock_unlimited', { defaultValue: 'Sem limite' })
       : t('burnEvents.stock_left', {
           count: Math.max((event.stockTotal ?? 0) - (event.stockClaimed ?? 0), 0),
+          defaultValue: `${Math.max((event.stockTotal ?? 0) - (event.stockClaimed ?? 0), 0)} restantes`,
         });
+
+  const isUnlimitedClaims = event.claimLimitPerUser >= 99999;
+  const claimLimitLabel = isUnlimitedClaims
+    ? t('burnEvents.stock_unlimited', { defaultValue: 'Sem limite' })
+    : `${event.userClaimsCount} / ${event.claimLimitPerUser}`;
+
   const img = resolveAssetUrl(event.rewardMiner.imageUrl || event.imageUrl);
   const range = formatDateRange(event.startsAt, event.endsAt, i18n.language || 'pt-BR');
-  const canOpen = true;
   const burnMinutes =
     event.burnDurationSeconds != null && event.burnDurationSeconds > 0
       ? Math.max(1, Math.round(event.burnDurationSeconds / 60))
-      : null;
+      : 15;
 
   return (
-    <Card
-      as="button"
-      type="button"
-      onClick={onOpen}
-      disabled={!canOpen}
-      overflowHidden
-      className={`group relative w-full text-left transition-all p-5 sm:p-6 active:translate-x-0.5 active:translate-y-0.5 outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${
-        canOpen
-          ? 'hover:border-slate-700 cursor-pointer'
-          : 'cursor-not-allowed opacity-60'
-      }`}
-    >
-      <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-orange-500/15 blur-3xl transition-opacity duration-500" />
-      <div className="pointer-events-none absolute -bottom-20 -left-10 h-40 w-40 rounded-full bg-amber-500/10 blur-3xl" />
-
-      <div className="relative z-10 flex flex-col gap-5">
-        <div className="flex justify-center py-1">
-          <BurnPrizeImage
-            src={img}
-            name={event.rewardMiner.name}
-            hashRate={event.rewardMiner.baseHashRate}
-          />
-        </div>
-
-        <div className="min-w-0 flex-1 space-y-3">
+    <div className="group relative flex flex-col justify-between rounded-3xl border-2 border-slate-800 bg-slate-900/60 p-5 sm:p-6 shadow-[4px_4px_0px_#000000] transition-all hover:border-slate-700">
+      <div className="space-y-4">
+        {/* Topo: Badges de status e período */}
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-2">
             <StatusBadge status={status} />
-            {pending ? (
-              <span
-                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[9px] font-black uppercase tracking-widest ${
-                  pendingReady
-                    ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-300'
-                    : 'border-orange-400/30 bg-orange-500/10 text-orange-300'
-                }`}
-              >
-                <Flame className="h-3 w-3" />
-                {pendingReady
-                  ? t('burnEvents.ready_title', { defaultValue: 'Queima pronta' })
-                  : `${t('burnEvents.burning_title')} ${formatDurationClock(pendingRemainingMs / 1000)}`}
+            {isUnlimitedClaims && status === 'live' && (
+              <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-widest text-emerald-300">
+                Ilimitado
               </span>
-            ) : null}
-            {range ? (
-              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-400">
-                <Calendar className="h-3.5 w-3.5 text-slate-500" />
-                {range}
-                <span className="text-[9px] uppercase tracking-wider text-slate-600">UTC</span>
-              </span>
-            ) : null}
+            )}
           </div>
-
-          <div>
-            <h2 className="text-lg font-black tracking-tight text-white sm:text-xl">{event.title}</h2>
-            {event.description ? (
-              <p className="mt-1 line-clamp-2 text-xs text-slate-400">{event.description}</p>
-            ) : null}
-          </div>
-
-          <div className="rounded-2xl border border-emerald-500/15 bg-emerald-500/5 px-3.5 py-3">
-            <p className="text-[9px] font-black uppercase tracking-widest text-emerald-500/70">
-              {t('burnEvents.prize')}
-            </p>
-            <p className="mt-0.5 truncate text-sm font-black text-white">{event.rewardMiner.name}</p>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-xl border border-orange-500/20 bg-orange-500/10 px-2.5 py-1.5 text-[10px] font-bold text-orange-300">
-              <Flame className="h-3 w-3" />
-              {t('burnEvents.burn_at_least')} {formatHashRate(event.requiredHashRate)}
+          {range ? (
+            <span className="inline-flex items-center gap-1.5 font-mono text-[11px] text-slate-400">
+              <Calendar className="h-3.5 w-3.5 text-slate-500" />
+              {range} UTC
             </span>
-            <span className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-slate-900/70 px-2.5 py-1.5 text-[10px] font-bold text-slate-300">
-              <Gift className="h-3 w-3 text-slate-400" />
-              {stockLabel}
-            </span>
-            {burnMinutes != null ? (
-              <span className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-slate-900/70 px-2.5 py-1.5 text-[10px] font-bold text-slate-300">
-                <Timer className="h-3 w-3 text-slate-400" />
-                {t('burnEvents.burn_duration', { minutes: burnMinutes ?? '—' })}
-              </span>
-            ) : null}
-          </div>
-
-          {pending ? (
-            <p className="text-[11px] font-black uppercase tracking-widest text-orange-400">
-              {pendingReady
-                ? t('burnEvents.enter_to_collect', { defaultValue: 'Entrar para coletar →' })
-                : t('burnEvents.enter_pending', { defaultValue: 'Queima no servidor — entrar →' })}
-            </p>
-          ) : status === 'limit' ? (
-            <p className="flex items-center gap-1.5 text-[11px] font-bold text-amber-300/90">
-              <Lock className="h-3.5 w-3.5" />
-              {t('burnEvents.limit_reached', { limit: event.claimLimitPerUser ?? '—' })}
-            </p>
-          ) : status === 'upcoming' && event.startsAt ? (
-            <p className="text-[11px] font-bold text-sky-300">
-              {tr(t, 'burnEvents.opens_at', 'Abre em {{date}} UTC').replace(
-                '{{date}}',
-                new Date(event.startsAt).toLocaleString(undefined, {
-                  timeZone: 'UTC',
-                  dateStyle: 'medium',
-                  timeStyle: 'short',
-                }),
-              )}
-            </p>
           ) : (
-            <p className="text-[11px] font-black uppercase tracking-widest text-orange-400 transition-colors text-orange-400">
-              {t('burnEvents.enter_event')} →
-            </p>
+            <span className="font-mono text-[10px] uppercase tracking-wider text-slate-500">
+              Sem prazo de término
+            </span>
           )}
         </div>
+
+        {/* Título e descrição do evento */}
+        <div>
+          <h2 className="text-xl font-black uppercase tracking-tight text-white sm:text-2xl">
+            {event.title}
+          </h2>
+          {event.description ? (
+            <p className="mt-1 line-clamp-2 text-xs font-medium leading-relaxed text-slate-400">
+              {event.description}
+            </p>
+          ) : null}
+        </div>
+
+        {/* Showcase panorâmico da GPU premiada */}
+        <BurnPrizeShowcase
+          src={img}
+          name={event.rewardMiner.name}
+          hashRate={event.rewardMiner.baseHashRate}
+        />
+
+        {/* Painel de Métricas em Grid 3 Colunas Neobrutalista */}
+        <div className="grid grid-cols-3 gap-2 pt-1">
+          <div className="rounded-2xl border-2 border-slate-800 bg-slate-950/80 p-3 shadow-[1px_1px_0px_#000000]">
+            <div className="flex items-center gap-1.5 text-orange-400">
+              <Flame className="h-3.5 w-3.5" />
+              <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">
+                {t('burnEvents.required_label', { defaultValue: 'Queima mínima' })}
+              </span>
+            </div>
+            <p className="mt-1 font-mono text-xs font-black text-white sm:text-sm">
+              ≥ {formatHashRate(event.requiredHashRate)}
+            </p>
+          </div>
+
+          <div className="rounded-2xl border-2 border-slate-800 bg-slate-950/80 p-3 shadow-[1px_1px_0px_#000000]">
+            <div className="flex items-center gap-1.5 text-emerald-400">
+              <Zap className="h-3.5 w-3.5" />
+              <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">
+                {t('burnEvents.prize', { defaultValue: 'Prêmio' })}
+              </span>
+            </div>
+            <p className="mt-1 truncate font-mono text-xs font-black text-emerald-400 sm:text-sm">
+              +{formatHashRate(event.rewardMiner.baseHashRate)}
+            </p>
+          </div>
+
+          <div className="rounded-2xl border-2 border-slate-800 bg-slate-950/80 p-3 shadow-[1px_1px_0px_#000000]">
+            <div className="flex items-center gap-1.5 text-sky-400">
+              <Gift className="h-3.5 w-3.5" />
+              <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">
+                {t('burnEvents.your_claims', { defaultValue: 'Limite' })}
+              </span>
+            </div>
+            <p className="mt-1 font-mono text-xs font-black text-white sm:text-sm">
+              {claimLimitLabel}
+            </p>
+          </div>
+        </div>
       </div>
-    </Card>
+
+      {/* Botão de Ação / Rodapé */}
+      <div className="mt-5 border-t-2 border-slate-800 pt-4">
+        {pending ? (
+          <button
+            type="button"
+            onClick={onOpen}
+            className={`flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-xs font-black uppercase tracking-wider text-slate-950 shadow-[2px_2px_0px_#000000] transition-all active:translate-x-0.5 active:translate-y-0.5 ${
+              pendingReady
+                ? 'border-2 border-emerald-400/80 bg-emerald-500 hover:bg-emerald-400'
+                : 'border-2 border-orange-400/80 bg-orange-500 hover:bg-orange-400'
+            }`}
+          >
+            <Flame className="h-4 w-4" />
+            {pendingReady
+              ? t('burnEvents.enter_to_collect', { defaultValue: 'Queima Pronta — Coletar Prêmio →' })
+              : `${t('burnEvents.burning_title', { defaultValue: 'Queima em andamento' })} (${formatDurationClock(pendingRemainingMs / 1000)}) →`}
+          </button>
+        ) : status === 'limit' ? (
+          <div className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-slate-800 bg-slate-950/80 py-3.5 text-xs font-bold text-amber-300">
+            <Lock className="h-4 w-4" />
+            {t('burnEvents.limit_reached', { limit: event.claimLimitPerUser })}
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={onOpen}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-amber-400/80 bg-amber-500 py-3.5 text-xs font-black uppercase tracking-wider text-slate-950 shadow-[2px_2px_0px_#000000] transition-all hover:bg-amber-400 active:translate-x-0.5 active:translate-y-0.5 outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+          >
+            <Flame className="h-4 w-4" />
+            {t('burnEvents.enter_event', { defaultValue: 'Participar da Queima' })} →
+          </button>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -475,7 +468,7 @@ function EventDetail({
         durationSeconds: Math.max(0, s.burnDurationSeconds),
       });
     } catch {
-      // Non-fatal — user can still start a new burn if none pending
+      // Non-fatal
     } finally {
       setSessionLoading(false);
     }
@@ -562,9 +555,11 @@ function EventDetail({
   const progress = Math.min(100, (totalSelectedHashRate / event.requiredHashRate) * 100);
   const prizeImg = resolveAssetUrl(event.rewardMiner.imageUrl || event.imageUrl);
   const range = formatDateRange(event.startsAt, event.endsAt, i18n.language || 'pt-BR');
+
+  const isUnlimitedClaims = event.claimLimitPerUser >= 99999;
   const stockLabel =
     event.stockTotal == null
-      ? t('burnEvents.stock_unlimited')
+      ? t('burnEvents.stock_unlimited', { defaultValue: 'Sem limite' })
       : t('burnEvents.stock_left', {
           count: Math.max((event.stockTotal ?? 0) - (event.stockClaimed ?? 0), 0),
         });
@@ -659,106 +654,125 @@ function EventDetail({
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
+      {/* Botão de navegação voltar */}
       <button
         type="button"
         onClick={onClose}
-        className="inline-flex items-center gap-2 rounded-xl border-2 border-slate-700 bg-slate-900 px-4 py-2 text-xs font-black uppercase tracking-wider text-slate-300 transition-all hover:border-slate-600 hover:text-white active:translate-x-0.5 active:translate-y-0.5 shadow-[2px_2px_0px_#000000]"
+        className="inline-flex items-center gap-2 rounded-xl border-2 border-slate-800 bg-slate-900/60 px-4 py-2 text-xs font-black uppercase tracking-wider text-slate-300 transition-all hover:border-slate-700 hover:text-white active:translate-x-0.5 active:translate-y-0.5 shadow-[2px_2px_0px_#000000]"
       >
-        <ChevronLeft className="h-4 w-4" /> {t('burnEvents.back')}
+        <ChevronLeft className="h-4 w-4" /> {t('burnEvents.back', { defaultValue: 'Voltar aos eventos' })}
       </button>
 
-      <Card overflowHidden className="relative p-5 sm:p-6 border-orange-500/30">
-        <div className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-orange-500/20 blur-3xl" />
-        <div className="relative z-10 flex flex-col items-center gap-5 text-center sm:items-start sm:text-left">
-          <BurnPrizeImage
-            src={prizeImg}
-            name={event.rewardMiner.name}
-            hashRate={event.rewardMiner.baseHashRate}
-            variant="detail"
-          />
-          <div className="min-w-0 flex-1 space-y-2">
-            <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+      {/* Hero do Evento com visual panorâmico */}
+      <div className="rounded-3xl border-2 border-slate-800 bg-slate-900/60 p-6 sm:p-8 shadow-[4px_4px_0px_#000000]">
+        <div className="grid grid-cols-1 items-center gap-6 lg:grid-cols-12">
+          {/* Showcase horizontal à esquerda */}
+          <div className="lg:col-span-5">
+            <BurnPrizeShowcase
+              src={prizeImg}
+              name={event.rewardMiner.name}
+              hashRate={event.rewardMiner.baseHashRate}
+            />
+          </div>
+
+          {/* Dados do Evento à direita */}
+          <div className="space-y-4 lg:col-span-7">
+            <div className="flex flex-wrap items-center gap-2">
               <StatusBadge status={getEventStatus(event)} />
               {range ? (
-                <span className="inline-flex items-center gap-1.5 text-[11px] text-slate-400 font-mono">
-                  <Calendar className="h-3.5 w-3.5" />
+                <span className="inline-flex items-center gap-1.5 font-mono text-xs text-slate-400">
+                  <Calendar className="h-3.5 w-3.5 text-slate-500" />
                   {range} UTC
                 </span>
-              ) : null}
+              ) : (
+                <span className="font-mono text-xs text-slate-500">Sem prazo de término</span>
+              )}
             </div>
-            <p className="font-mono text-[10px] uppercase tracking-widest text-orange-400 font-bold">
-              {t('burnEvents.prize')}
-            </p>
-            <h2 className="text-2xl font-black tracking-tight text-white">{event.rewardMiner.name}</h2>
-            <p className="text-sm font-black text-emerald-400 font-mono">
-              {formatHashRate(event.rewardMiner.baseHashRate)}
-            </p>
-            <p className="text-sm font-black text-white/90">{event.title}</p>
-            {event.description ? <p className="text-xs text-slate-400 font-medium">{event.description}</p> : null}
+
+            <div>
+              <p className="font-mono text-[10px] font-black uppercase tracking-widest text-orange-400">
+                {t('burnEvents.prize', { defaultValue: 'Prêmio de Recompensa' })}
+              </p>
+              <h1 className="text-2xl font-black uppercase tracking-tight text-white sm:text-3xl">
+                {event.rewardMiner.name}
+              </h1>
+              <p className="mt-1 text-sm font-medium leading-relaxed text-slate-400">
+                {event.description || event.title}
+              </p>
+            </div>
+
+            {/* Estatísticas em 3 blocos */}
+            <div className="grid grid-cols-3 gap-2.5 pt-1">
+              <div className="rounded-2xl border-2 border-slate-800 bg-slate-950/80 p-3 shadow-[1px_1px_0px_#000000]">
+                <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">
+                  {t('burnEvents.required_label', { defaultValue: 'Queima mínima' })}
+                </p>
+                <p className="mt-1 font-mono text-xs font-black text-orange-400 sm:text-sm">
+                  ≥ {formatHashRate(event.requiredHashRate)}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border-2 border-slate-800 bg-slate-950/80 p-3 shadow-[1px_1px_0px_#000000]">
+                <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">
+                  {t('burnEvents.stock_label', { defaultValue: 'Estoque' })}
+                </p>
+                <p className="mt-1 font-mono text-xs font-black text-white sm:text-sm">
+                  {stockLabel}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border-2 border-slate-800 bg-slate-950/80 p-3 shadow-[1px_1px_0px_#000000]">
+                <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">
+                  {t('burnEvents.your_claims', { defaultValue: 'Suas queimas' })}
+                </p>
+                <p className="mt-1 font-mono text-xs font-black text-white sm:text-sm">
+                  {isUnlimitedClaims ? 'Ilimitado' : `${event.userClaimsCount} / ${event.claimLimitPerUser}`}
+                </p>
+              </div>
+            </div>
           </div>
         </div>
+      </div>
 
-        <div className="relative z-10 mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3">
-          <div className="rounded-2xl border-2 border-slate-800 bg-slate-950/80 px-3.5 py-2.5 shadow-[1px_1px_0px_#000000]">
-            <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">
-              {t('burnEvents.required_label')}
-            </p>
-            <p className="mt-1 text-sm font-black text-orange-300 font-mono">
-              {formatHashRate(event.requiredHashRate)}
-            </p>
-          </div>
-          <div className="rounded-2xl border-2 border-slate-800 bg-slate-950/80 px-3.5 py-2.5 shadow-[1px_1px_0px_#000000]">
-            <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">
-              {t('burnEvents.stock_label')}
-            </p>
-            <p className="mt-1 text-sm font-black text-white font-mono">{stockLabel}</p>
-          </div>
-          <div className="col-span-2 rounded-2xl border-2 border-slate-800 bg-slate-950/80 px-3.5 py-2.5 sm:col-span-1 shadow-[1px_1px_0px_#000000]">
-            <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">
-              {t('burnEvents.your_claims')}
-            </p>
-            <p className="mt-1 text-sm font-black text-white font-mono">
-              {event.userClaimsCount} / {event.claimLimitPerUser}
-            </p>
-          </div>
-        </div>
-      </Card>
-
+      {/* Card de queima ativa no servidor */}
       {burning ? (
-        <Card className="p-5 border-amber-500/30 bg-amber-950/20 shadow-[2px_2px_0px_#000000]">
-          <div className="flex items-start gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-500/20 border-2 border-amber-500/30 shadow-[1px_1px_0px_#000000]">
-              <Flame className={`h-5 w-5 text-amber-400 ${burnReady ? '' : 'animate-pulse'}`} />
+        <div className="rounded-3xl border-2 border-amber-500/40 bg-amber-950/20 p-6 shadow-[4px_4px_0px_#000000]">
+          <div className="flex items-start gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border-2 border-amber-500/40 bg-amber-500/20 shadow-[1px_1px_0px_#000000]">
+              <Flame className={`h-6 w-6 text-amber-400 ${burnReady ? '' : 'animate-pulse'}`} />
             </div>
-            <div className="min-w-0 flex-1 space-y-2">
-              <p className="text-sm font-black text-white uppercase tracking-tight">
-                {burnReady
-                  ? t('burnEvents.ready_title', { defaultValue: 'Queima pronta' })
-                  : t('burnEvents.burning_title')}
-              </p>
-              <p className="text-xs text-slate-400 font-medium">
-                {burnReady
-                  ? t('burnEvents.ready_body', {
-                      defaultValue:
-                        'O processo no servidor terminou. Colete o prêmio — ele vai para a caixa de entrada.',
-                    })
-                  : t('burnEvents.burning_body_server', {
-                      defaultValue:
-                        'As máquinas já foram destruídas. A queima roda no servidor — pode sair e voltar depois para coletar.',
-                    })}
-              </p>
+            <div className="min-w-0 flex-1 space-y-3">
+              <div>
+                <p className="text-base font-black uppercase tracking-tight text-white">
+                  {burnReady
+                    ? t('burnEvents.ready_title', { defaultValue: 'Queima Concluída!' })
+                    : t('burnEvents.burning_title', { defaultValue: 'Queima em andamento no servidor' })}
+                </p>
+                <p className="mt-0.5 text-xs font-medium text-slate-300">
+                  {burnReady
+                    ? t('burnEvents.ready_body', {
+                        defaultValue: 'O processo terminou com sucesso. Resgate seu minerador agora.',
+                      })
+                    : t('burnEvents.burning_body_server', {
+                        defaultValue: 'As máquinas foram destruídas. O processo roda no servidor — você pode fechar ou navegar normalmente.',
+                      })}
+                </p>
+              </div>
+
               {!burnReady ? (
                 <div className="space-y-2 pt-1">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-slate-400 font-medium">{t('burnEvents.burning_wait')}</span>
-                    <span className="font-mono font-black text-orange-300">
+                  <div className="flex items-center justify-between text-xs font-mono">
+                    <span className="font-bold text-slate-400">
+                      {t('burnEvents.burning_wait', { defaultValue: 'Tempo restante' })}:
+                    </span>
+                    <span className="text-sm font-black text-orange-400">
                       {formatDurationClock(burnRemainingMs / 1000)}
                     </span>
                   </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-slate-800">
+                  <div className="h-3 overflow-hidden rounded-full border border-slate-800 bg-slate-950">
                     <div
-                      className="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-400 transition-all"
+                      className="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-400 transition-all duration-1000 shadow-[0_0_12px_rgba(249,115,22,0.5)]"
                       style={{ width: `${burnProgressPct}%` }}
                     />
                   </div>
@@ -768,147 +782,169 @@ function EventDetail({
                   type="button"
                   disabled={submitting}
                   onClick={() => void finishClaim(burning.sessionId)}
-                  className="mt-1 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 active:translate-x-0.5 active:translate-y-0.5 py-3.5 text-xs font-black uppercase tracking-wider text-slate-950 shadow-[2px_2px_0px_#000000] transition-all disabled:opacity-50"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-emerald-400/80 bg-emerald-500 py-3.5 text-xs font-black uppercase tracking-wider text-slate-950 shadow-[2px_2px_0px_#000000] transition-all hover:bg-emerald-400 active:translate-x-0.5 active:translate-y-0.5 disabled:opacity-50"
                 >
                   {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Gift className="h-4 w-4" />}
-                  {t('burnEvents.collect_reward', { defaultValue: 'Coletar prêmio na caixa de entrada' })}
+                  {t('burnEvents.collect_reward', { defaultValue: 'Coletar Recompensa na Caixa de Entrada' })}
                 </button>
               )}
             </div>
           </div>
-        </Card>
+        </div>
       ) : null}
 
+      {/* Painel Sticky de Progresso e Ação */}
       {!burning ? (
-      <Card className="sticky top-0 z-10 space-y-3.5 p-4 sm:p-5 shadow-[4px_4px_0px_#000000] backdrop-blur-md">
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-            {t('burnEvents.progress')}
-          </span>
-          <span
-            className={`text-xs font-black font-mono ${
-              totalSelectedHashRate >= event.requiredHashRate ? 'text-emerald-400' : 'text-orange-300'
-            }`}
-          >
-            {formatHashRate(totalSelectedHashRate)} / {formatHashRate(event.requiredHashRate)}
-          </span>
-        </div>
-        <div className="h-2.5 overflow-hidden rounded-full bg-slate-950 border border-slate-800">
-          <div
-            className={`h-full rounded-full transition-all duration-300 ${
-              totalSelectedHashRate >= event.requiredHashRate
-                ? 'bg-emerald-500'
-                : 'bg-amber-500'
-            }`}
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-
-        <div className="border-t-2 border-slate-800 pt-3">
-          <BurnFeeSelector
-            selectedCurrency={feeCurrency}
-            onSelectCurrency={setFeeCurrency}
-            balances={balances}
-            loadingBalances={loadingBalances}
-            disabled={submitting}
-          />
-        </div>
-
-        <button
-          type="button"
-          onClick={() => setConfirming(true)}
-          disabled={!canClaim || submitting || sessionLoading}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 hover:bg-amber-400 active:translate-x-0.5 active:translate-y-0.5 py-3.5 text-xs font-black uppercase tracking-wider text-slate-950 shadow-[2px_2px_0px_#000000] transition-all disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          <Flame className="h-4 w-4" />
-          {t('burnEvents.burn_and_claim', { count: selected.size })}
-        </button>
-      </Card>
-      ) : null}
-
-      {!burning ? (
-      <div>
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="font-mono text-[10px] uppercase tracking-widest text-slate-400 font-bold">
-              {t('burnEvents.your_machines')}
-            </p>
-            <span className="inline-flex items-center gap-1 rounded-full border border-orange-500/20 bg-orange-500/10 px-2 py-0.5 text-[9px] font-bold text-orange-300">
-              <ArrowDownUp className="h-3 w-3" />
-              {t('burnEvents.sorted_lowest_to_highest_hint')}
-            </span>
+        <div className="sticky top-20 z-20 space-y-4 rounded-3xl border-2 border-slate-800 bg-slate-900/90 p-5 backdrop-blur-md shadow-[4px_4px_0px_#000000]">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                {t('burnEvents.progress', { defaultValue: 'Progresso da Queima' })}
+              </span>
+              <p className="text-xs font-medium text-slate-400">
+                Selecione máquinas da sua lista abaixo até atingir a meta
+              </p>
+            </div>
+            <div className="text-right">
+              <span
+                className={`font-mono text-sm font-black ${
+                  totalSelectedHashRate >= event.requiredHashRate
+                    ? 'text-emerald-400'
+                    : 'text-orange-400'
+                }`}
+              >
+                {formatHashRate(totalSelectedHashRate)}
+              </span>
+              <span className="font-mono text-xs text-slate-500"> / {formatHashRate(event.requiredHashRate)}</span>
+            </div>
           </div>
 
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={handleAutoSelectLowest}
-              disabled={machines.length === 0}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-orange-500/30 bg-orange-500/10 px-2.5 py-1 text-xs font-bold text-orange-300 transition-colors hover:bg-orange-500/20 disabled:cursor-not-allowed disabled:opacity-40"
-              title={t('burnEvents.auto_select_lowest')}
-            >
-              <Sparkles className="h-3.5 w-3.5 text-orange-400" />
-              <span className="hidden sm:inline">{t('burnEvents.auto_select_lowest')}</span>
-            </button>
+          <div className="h-3 overflow-hidden rounded-full border border-slate-800 bg-slate-950">
+            <div
+              className={`h-full rounded-full transition-all duration-300 ${
+                totalSelectedHashRate >= event.requiredHashRate
+                  ? 'bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.5)]'
+                  : 'bg-amber-500'
+              }`}
+              style={{ width: `${progress}%` }}
+            />
+          </div>
 
-            {selected.size > 0 && (
+          <div className="border-t-2 border-slate-800 pt-3">
+            <BurnFeeSelector
+              selectedCurrency={feeCurrency}
+              onSelectCurrency={setFeeCurrency}
+              balances={balances}
+              loadingBalances={loadingBalances}
+              disabled={submitting}
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setConfirming(true)}
+            disabled={!canClaim || submitting || sessionLoading}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-amber-400/80 bg-amber-500 py-3.5 text-xs font-black uppercase tracking-wider text-slate-950 shadow-[2px_2px_0px_#000000] transition-all hover:bg-amber-400 active:translate-x-0.5 active:translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-40 outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+          >
+            <Flame className="h-4 w-4" />
+            {t('burnEvents.burn_and_claim', {
+              count: selected.size,
+              defaultValue: `Queimar ${selected.size} máquina(s) selecionada(s)`,
+            })}
+          </button>
+        </div>
+      ) : null}
+
+      {/* Lista de Máquinas Disponíveis */}
+      {!burning ? (
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-slate-800 pb-3">
+            <div className="flex items-center gap-2">
+              <h3 className="text-base font-black uppercase tracking-tight text-white">
+                {t('burnEvents.your_machines', { defaultValue: 'Suas Máquinas Disponíveis' })}
+              </h3>
+              <span className="rounded-full border border-slate-700 bg-slate-800 px-2.5 py-0.5 font-mono text-[10px] font-bold text-slate-300">
+                {machines.length}
+              </span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
-                onClick={handleClearSelection}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-slate-900/60 px-2.5 py-1 text-xs font-bold text-slate-400 transition-colors hover:bg-white/5 hover:text-white"
-                title={t('burnEvents.clear_selection')}
+                onClick={handleAutoSelectLowest}
+                disabled={machines.length === 0}
+                className="inline-flex items-center gap-1.5 rounded-xl border-2 border-orange-500/40 bg-orange-500/10 px-3 py-1.5 text-xs font-black uppercase tracking-wider text-orange-300 shadow-[2px_2px_0px_#000000] transition-all hover:bg-orange-500/20 active:translate-x-0.5 active:translate-y-0.5 disabled:opacity-40"
               >
-                <Trash2 className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">{t('burnEvents.clear_selection')}</span>
+                <Sparkles className="h-3.5 w-3.5 text-orange-400" />
+                <span>{t('burnEvents.auto_select_lowest', { defaultValue: 'Menor poder primeiro' })}</span>
               </button>
-            )}
 
-            <button
-              type="button"
-              onClick={() => {
-                void load();
-                void loadBalances();
-              }}
-              className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-white/5 hover:text-white"
-              title="Atualizar"
-            >
-              <RefreshCw className="h-3.5 w-3.5" />
-            </button>
+              {selected.size > 0 && (
+                <button
+                  type="button"
+                  onClick={handleClearSelection}
+                  className="inline-flex items-center gap-1.5 rounded-xl border-2 border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-black uppercase tracking-wider text-slate-300 shadow-[2px_2px_0px_#000000] transition-all hover:bg-slate-700 active:translate-x-0.5 active:translate-y-0.5"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  <span>{t('burnEvents.clear_selection', { defaultValue: 'Limpar seleção' })}</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => {
+                  void load();
+                  void loadBalances();
+                }}
+                className="rounded-xl border-2 border-slate-800 bg-slate-900/60 p-2 text-slate-400 shadow-[2px_2px_0px_#000000] transition-all hover:text-white active:translate-x-0.5 active:translate-y-0.5"
+                title="Atualizar lista"
+              >
+                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
           </div>
+
+          {loading ? (
+            <div className="flex flex-col items-center justify-center gap-3 rounded-3xl border-2 border-slate-800 bg-slate-900/40 py-16">
+              <Loader2 className="h-8 w-8 animate-spin text-orange-400" />
+              <p className="text-xs font-extrabold uppercase tracking-widest text-slate-400">
+                {t('common.loading', { defaultValue: 'Carregando máquinas...' })}
+              </p>
+            </div>
+          ) : machineGroups.length === 0 ? (
+            <div className="flex flex-col items-center justify-center rounded-3xl border-2 border-dashed border-slate-800 bg-slate-900/40 py-16 text-center text-slate-400">
+              <Cpu className="mb-3 h-12 w-12 text-slate-600 opacity-40" />
+              <p className="text-sm font-black uppercase tracking-tight text-white">
+                {t('burnEvents.no_machines', { defaultValue: 'Nenhuma máquina disponível para queima' })}
+              </p>
+              <p className="mt-1 text-xs font-medium text-slate-400">
+                Máquinas instaladas em salas devem ser guardadas no inventário ou cofre para queimar.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {machineGroups.map((group) => {
+                const otherHash = hashRateOutsideGroup(group, machines, selected);
+                const needed = countToMeetRequirement(group, event.requiredHashRate, otherHash);
+                const isFilledToRequirement =
+                  group.selectedCount > 0 && group.selectedCount >= needed;
+                return (
+                  <BurnMachineGroupCard
+                    key={group.groupKey}
+                    group={group}
+                    isFilledToRequirement={isFilledToRequirement}
+                    onAdd={() => handleAdd(group)}
+                    onRemove={() => handleRemove(group)}
+                    onToggleMax={() => handleToggleMax(group)}
+                  />
+                );
+              })}
+            </div>
+          )}
         </div>
-
-        {loading ? (
-          <div className="flex justify-center py-12">
-            <Loader2 className="h-6 w-6 animate-spin text-slate-500" />
-          </div>
-        ) : machineGroups.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-[1.75rem] border border-dashed border-white/10 bg-slate-950/40 py-14 text-center text-slate-500">
-            <Cpu className="mb-2 h-10 w-10 opacity-30" />
-            <p className="text-sm">{t('burnEvents.no_machines')}</p>
-          </div>
-        ) : (
-          <div className="space-y-2.5">
-            {machineGroups.map((group) => {
-              const otherHash = hashRateOutsideGroup(group, machines, selected);
-              const needed = countToMeetRequirement(group, event.requiredHashRate, otherHash);
-              const isFilledToRequirement =
-                group.selectedCount > 0 && group.selectedCount >= needed;
-              return (
-              <BurnMachineGroupCard
-                key={group.groupKey}
-                group={group}
-                isFilledToRequirement={isFilledToRequirement}
-                onAdd={() => handleAdd(group)}
-                onRemove={() => handleRemove(group)}
-                onToggleMax={() => handleToggleMax(group)}
-              />
-              );
-            })}
-          </div>
-        )}
-      </div>
       ) : null}
 
+      {/* Modal de Confirmação */}
       {confirming && !burning && typeof document !== 'undefined'
         ? createPortal(
             <div
@@ -920,19 +956,22 @@ function EventDetail({
                 aria-modal="true"
                 aria-labelledby="burn-confirm-title"
                 onClick={(e) => e.stopPropagation()}
-                className="w-full max-w-lg space-y-4 rounded-3xl border-2 border-slate-800 bg-slate-900 p-6 sm:p-7 shadow-[4px_4px_0px_#000000] max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200"
+                className="max-h-[90vh] w-full max-w-lg space-y-4 overflow-y-auto rounded-3xl border-2 border-slate-800 bg-slate-900 p-6 sm:p-7 shadow-[4px_4px_0px_#000000] animate-in zoom-in-95 duration-200"
               >
-                <div className="flex items-center gap-3 pb-2 border-b-2 border-slate-800">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-red-500/20 border-2 border-red-500/40 shadow-[1px_1px_0px_#000000]">
+                <div className="flex items-center gap-3 border-b-2 border-slate-800 pb-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl border-2 border-red-500/40 bg-red-500/20 shadow-[1px_1px_0px_#000000]">
                     <Flame className="h-6 w-6 text-red-400" />
                   </div>
                   <div>
-                    <h3 id="burn-confirm-title" className="text-lg font-black uppercase tracking-tight text-white">{t('burnEvents.confirm_title')}</h3>
-                    <p className="text-xs text-slate-400 font-medium">{t('burnEvents.confirm_body')}</p>
+                    <h3 id="burn-confirm-title" className="text-lg font-black uppercase tracking-tight text-white">
+                      {t('burnEvents.confirm_title', { defaultValue: 'Confirmar Destruição das Máquinas' })}
+                    </h3>
+                    <p className="text-xs font-medium text-slate-400">
+                      {t('burnEvents.confirm_body', { defaultValue: 'Esta ação destruirá permanentemente as máquinas selecionadas.' })}
+                    </p>
                   </div>
                 </div>
 
-                {/* Selector de taxa com exibição de saldos */}
                 <div className="rounded-2xl border-2 border-slate-800 bg-slate-950/60 p-3.5 shadow-[2px_2px_0px_#000000]">
                   <BurnFeeSelector
                     selectedCurrency={feeCurrency}
@@ -943,11 +982,10 @@ function EventDetail({
                   />
                 </div>
 
-                {/* Máquinas selecionadas consolidadas por grupo */}
                 <div className="space-y-1.5">
-                  <div className="flex items-center justify-between text-xs text-slate-400">
-                    <span className="font-bold">Máquinas a queimar ({selected.size} total):</span>
-                    <span className="font-bold text-orange-400 font-mono">
+                  <div className="flex items-center justify-between text-xs text-slate-400 font-bold">
+                    <span>Máquinas a queimar ({selected.size} selecionadas):</span>
+                    <span className="font-mono text-orange-400">
                       {formatHashRate(totalSelectedHashRate)}
                     </span>
                   </div>
@@ -956,7 +994,7 @@ function EventDetail({
                       <div key={g.groupKey} className="flex items-center justify-between text-xs">
                         <span className="mr-2 truncate text-slate-300">
                           <strong className="text-white">{g.selectedCount}x</strong> {g.minerName}{' '}
-                          <span className="text-[10px] text-slate-400 font-medium">
+                          <span className="text-[10px] font-medium text-slate-400">
                             ({burnLocationLabel(g.location, t)})
                           </span>
                         </span>
@@ -968,11 +1006,16 @@ function EventDetail({
                   </div>
                 </div>
 
-                {/* Recompensa a receber */}
                 <div className="rounded-2xl border-2 border-emerald-500/30 bg-emerald-950/20 p-3.5 text-xs shadow-[1px_1px_0px_#000000]">
-                  <p className="font-black text-emerald-400 uppercase tracking-wider">{t('burnEvents.you_receive')}</p>
-                  <p className="mt-1 font-black text-white text-sm">{event.rewardMiner.name}</p>
-                  <p className="mt-0.5 text-slate-400 font-medium">{t('burnEvents.goes_to_inbox')}</p>
+                  <p className="font-black uppercase tracking-wider text-emerald-400">
+                    {t('burnEvents.you_receive', { defaultValue: 'Você vai receber:' })}
+                  </p>
+                  <p className="mt-1 font-mono text-sm font-black text-white">
+                    {event.rewardMiner.name} (+{formatHashRate(event.rewardMiner.baseHashRate)})
+                  </p>
+                  <p className="mt-0.5 font-medium text-slate-400">
+                    {t('burnEvents.goes_to_inbox', { defaultValue: 'A máquina será entregue na sua caixa de entrada.' })}
+                  </p>
                 </div>
 
                 <div className="flex gap-2.5 pt-2">
@@ -980,18 +1023,18 @@ function EventDetail({
                     type="button"
                     disabled={submitting}
                     onClick={() => setConfirming(false)}
-                    className="flex-1 rounded-xl border-2 border-slate-700 bg-slate-900 py-3 text-xs font-black uppercase tracking-wider text-slate-300 transition-all hover:text-white hover:border-slate-600 shadow-[2px_2px_0px_#000000] active:translate-x-0.5 active:translate-y-0.5 outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    className="flex-1 rounded-xl border-2 border-slate-700 bg-slate-800 py-3 text-xs font-black uppercase tracking-wider text-slate-300 shadow-[2px_2px_0px_#000000] transition-all hover:border-slate-600 hover:text-white active:translate-x-0.5 active:translate-y-0.5"
                   >
-                    {t('burnEvents.cancel')}
+                    {t('burnEvents.cancel', { defaultValue: 'Cancelar' })}
                   </button>
                   <button
                     type="button"
                     disabled={submitting || !isFeeSufficient}
                     onClick={() => void submit()}
-                    className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-red-600 py-3 text-xs font-black uppercase tracking-wider text-white shadow-[2px_2px_0px_#000000] transition-all hover:bg-red-700 active:translate-x-0.5 active:translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-40 outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+                    className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-red-600 py-3 text-xs font-black uppercase tracking-wider text-white shadow-[2px_2px_0px_#000000] transition-all hover:bg-red-500 active:translate-x-0.5 active:translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Flame className="h-4 w-4" />}
-                    {t('burnEvents.confirm_burn')}
+                    {t('burnEvents.confirm_burn', { defaultValue: 'Confirmar Queima' })}
                   </button>
                 </div>
               </div>
@@ -1050,7 +1093,7 @@ export default function BurnEventsPage() {
 
   if (selected) {
     return (
-      <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+      <div className="space-y-8 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <EventDetail
           event={selected}
           onClose={() => setSelected(null)}
@@ -1064,13 +1107,15 @@ export default function BurnEventsPage() {
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+    <div className="space-y-8 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* Header Neobrutalista no mesmo padrão de Tarefas e Torneios */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b-2 border-slate-800">
         <div className="flex items-center gap-3">
           <IconBadge icon={Flame} variant="amber" size="lg" />
           <div>
-            <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">{t('burnEvents.title')}</h1>
-            <p className="text-slate-400 text-xs sm:text-sm font-medium">{t('burnEvents.subtitle')}</p>
+            <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">
+              {t('burnEvents.title', { defaultValue: 'Eventos de Queima' })}
+            </h1>
           </div>
         </div>
         <button
@@ -1086,28 +1131,37 @@ export default function BurnEventsPage() {
       {loading ? (
         <Card className="h-[40vh] flex flex-col items-center justify-center gap-4 text-center">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-slate-400 font-extrabold uppercase tracking-widest text-xs">{t('common.loading')}</p>
+          <p className="text-slate-400 font-extrabold uppercase tracking-widest text-xs">
+            {t('common.loading', { defaultValue: 'Carregando eventos...' })}
+          </p>
         </Card>
       ) : loadFailed ? (
         <Card className="flex flex-col items-center justify-center py-16 text-center text-slate-400 gap-4 px-6 border-red-500/30 bg-red-950/20 shadow-[2px_2px_0px_#000000]">
-          <p className="text-sm font-black text-red-400 uppercase tracking-tight">{t('burnEvents.load_error')}</p>
+          <p className="text-sm font-black text-red-400 uppercase tracking-tight">
+            {t('burnEvents.load_error', { defaultValue: 'Erro ao carregar eventos de queima.' })}
+          </p>
           <button
             type="button"
             onClick={() => void load()}
             className="inline-flex items-center gap-2 rounded-xl border-2 border-slate-700 bg-slate-900 px-5 py-2.5 text-xs font-black uppercase tracking-wider text-white hover:border-slate-600 active:translate-x-0.5 active:translate-y-0.5 shadow-[2px_2px_0px_#000000] transition-all"
           >
             <RefreshCw className="h-3.5 w-3.5" />
-            {t('common.retry')}
+            {t('common.retry', { defaultValue: 'Tentar novamente' })}
           </button>
         </Card>
       ) : events.length === 0 ? (
         <Card className="flex flex-col items-center justify-center py-16 text-center text-slate-400 gap-2">
           <Flame className="mb-2 h-12 w-12 text-slate-600 opacity-40" />
-          <p className="text-sm font-black uppercase tracking-tight text-white">{t('burnEvents.empty')}</p>
-          <p className="text-xs text-slate-400 font-medium">{t('burnEvents.empty_hint')}</p>
+          <p className="text-sm font-black uppercase tracking-tight text-white">
+            {t('burnEvents.empty', { defaultValue: 'Nenhum evento de queima ativo' })}
+          </p>
+          <p className="text-xs text-slate-400 font-medium">
+            {t('burnEvents.empty_hint', { defaultValue: 'Novos eventos de queima aparecerão aqui em breve.' })}
+          </p>
         </Card>
       ) : (
-        <div className="space-y-4">
+        /* Grid responsivo em 2 colunas */
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {events.map((e) => (
             <EventCard key={e.id} event={e} onOpen={() => setSelected(e)} />
           ))}

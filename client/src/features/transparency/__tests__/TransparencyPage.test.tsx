@@ -505,7 +505,6 @@ describe('TransparencyPage (Public Portal)', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { level: 1, name: 'Portal de Transparencia' })).toBeInTheDocument();
-      expect(screen.getByText('BlockMiner — Costes operativos e inversiones')).toBeInTheDocument();
       expect(screen.getByText('100% Transparente')).toBeInTheDocument();
     });
   });

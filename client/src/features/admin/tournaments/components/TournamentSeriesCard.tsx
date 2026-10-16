@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Pencil, Eye, RotateCw } from 'lucide-react';
 import type { AdminTournament } from '../tournaments.admin.types';
 import { TYPE_BADGE_STYLE, STATUS_BADGE_STYLE } from './TournamentCard';
+import { formatUtcDateTime } from '../../../../shared/utils/utcTime';
 
 export interface TournamentSeriesCardProps {
   tournament: AdminTournament;
@@ -42,19 +43,9 @@ export function TournamentSeriesCard({
         <h4 className="truncate text-sm font-bold text-white">{tournament.name}</h4>
 
         <p className="text-[11px] text-slate-500 font-mono">
-          {new Date(tournament.startsAt).toLocaleString('pt-BR', {
-            day: '2-digit',
-            month: 'short',
-            hour: '2-digit',
-            minute: '2-digit',
-          })}{' '}
+          {formatUtcDateTime(tournament.startsAt, { locale: 'pt-BR', showUtc: false, day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}{' '}
           →{' '}
-          {new Date(tournament.endsAt).toLocaleString('pt-BR', {
-            day: '2-digit',
-            month: 'short',
-            hour: '2-digit',
-            minute: '2-digit',
-          })}
+          {formatUtcDateTime(tournament.endsAt, { locale: 'pt-BR', showUtc: true, day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
         </p>
       </div>
 

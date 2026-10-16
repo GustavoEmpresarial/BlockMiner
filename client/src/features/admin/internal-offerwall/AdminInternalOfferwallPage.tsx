@@ -16,6 +16,7 @@ import {
   type InternalOfferwallOfferRow,
 } from './adminInternalOfferwall.shared';
 import { validateAdminInternalOfferwallForm } from './adminInternalOfferwallValidate';
+import { formatUtcDate } from '../../../shared/utils/utcTime';
 
 function apiErrMessage(err: unknown, fallback: string): string {
   if (isAxiosError(err)) {
@@ -314,7 +315,7 @@ export default function AdminInternalOfferwallPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-slate-400">
-                      {h.createdAt ? new Date(h.createdAt).toLocaleDateString() : '—'}
+                      {h.createdAt ? formatUtcDate(h.createdAt) : '—'}
                     </td>
                     <td className="px-4 py-3 text-right">
                       {h.isActive ? (

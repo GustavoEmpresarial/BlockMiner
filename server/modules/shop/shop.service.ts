@@ -32,6 +32,7 @@ import { SHOP_ERROR_MESSAGE } from "./shop.errors.js";
 import { SHOP_CURRENCY } from "./shop.config.js";
 import { listFanCatalogForShop, readFanSalesAvailableAt } from "../fans/index.js";
 import { listRackCatalogForShop, readRackSalesAvailableAt } from "../racks/index.js";
+import { listPartsCatalogForShop } from "../parts/index.js";
 
 export type MinerPurchaseResult = {
   newBalance: number;
@@ -62,6 +63,7 @@ export async function listMinersForShop(page: number, pageSize: number, userId?:
     rackSalesAvailableAt: readRackSalesAvailableAt().toISOString(),
     fans: listFanCatalogForShop(now),
     racks: shelfRacks,
+    parts: listPartsCatalogForShop(),
     items: miners.map((miner) => ({
       id: miner.id,
       name: miner.name,

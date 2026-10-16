@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { getAdminSystemLogs } from "../lib/admin.api";
 import type { AdminSystemLogItem } from "../lib/admin.types";
+import { formatUtcDateTime } from '../../../shared/utils/utcTime';
 
 const PAGE_SIZE = 50;
 
@@ -81,12 +82,7 @@ function formatLogDetails(log: AdminSystemLogItem): string {
 function formatTimestamp(log: AdminSystemLogItem): string {
   const raw = log.created_at ?? log.createdAt;
   if (!raw) return "—";
-  try {
-    const d = new Date(raw);
-    return isNaN(d.getTime()) ? "—" : d.toLocaleString();
-  } catch {
-    return "—";
-  }
+  return formatUtcDateTime(raw, { seconds: true });
 }
 
 export default function AdminLogs() {

@@ -29,6 +29,8 @@ import type { FaucetPartnerState, FaucetRewardInfo } from "./faucet.types.js";
 import * as faucetRepository from "./faucet.repository.js";
 import { buildFaucetClaimMeasurement, emitFaucetClaimMeasurement, normalizeFaucetPartnerVisitSource } from "./faucet.measure.js";
 import { recordTournamentAction, TOURNAMENT_ACTION_PROVIDER } from "../tournaments/index.js";
+import { grantActivityPartInTx, partDropPayload, type PartDropPayload } from "../parts/parts.grant.js";
+import { PART_GRANT_SOURCE } from "../parts/parts.drop.js";
 
 const log = logger.child("faucet.service");
 
@@ -124,7 +126,7 @@ export async function getStatusForUser(userId: number) {
 }
 
 export type FaucetClaimResult =
-  | { ok: true; message: string; nextAvailableAt: number }
+  | { ok: true; message: string; nextAvailableAt: number; part: PartDropPayload | null }
   | { ok: false; code: string; status: number; message: string; remainingMs?: number };
 
 export async function claimForUser(userId: number, req: Request): Promise<FaucetClaimResult> {
@@ -149,6 +151,7 @@ export async function claimForUser(userId: number, req: Request): Promise<Faucet
 
   const miner = reward.miner;
   let faucetRewardTtlMs: number | null = null;
+  let part: PartDropPayload | null = null;
 
   await prisma.$transaction(async (tx) => {
     const slug = "faucet_power";
@@ -164,11 +167,16 @@ export async function claimForUser(userId: number, req: Request): Promise<Faucet
       data: { userId, gameId: game.id, hashRate: miner.baseHashRate, playedAt, expiresAt },
     });
 
-    await tx.faucetClaim.upsert({
+    const claim = await tx.faucetClaim.upsert({
       where: { userId },
       update: { claimedAt: now, totalClaims: { increment: 1 }, dayKey: normalized.todayKey },
       create: { userId, claimedAt: now, totalClaims: 1, dayKey: normalized.todayKey },
     });
+    part = partDropPayload(await grantActivityPartInTx(tx, {
+      userId,
+      source: PART_GRANT_SOURCE.faucet,
+      sourceRef: `faucet:${userId}:${claim.totalClaims}`,
+    }));
   });
 
   const ttlMs = faucetRewardTtlMs ?? TEMP_POWER_FALLBACK_TTL_MS;
@@ -217,5 +225,6 @@ export async function claimForUser(userId: number, req: Request): Promise<Faucet
     ok: true,
     message: `Sucesso! Poder de mineração temporário de ${miner.baseHashRate} H/s ativado por ${durationLabel}.`,
     nextAvailableAt: now.getTime() + reward.cooldownMs,
+    part,
   };
 }

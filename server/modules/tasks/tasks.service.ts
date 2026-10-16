@@ -24,8 +24,11 @@ import {
   STATUS_CLAIMED,
   STATUS_COMPLETED,
   STATUS_IN_PROGRESS,
+  TASK_BURN_CLAIMS,
   TASK_INTERNAL_OFFERWALL,
   TASK_LOGIN_DAY,
+  TASK_MERGE_MACHINES,
+  TASK_TYPE_BY_ACTION_PROVIDER,
 } from "./tasks.constants.js";
 import {
   getDailyTaskPeriodKey,
@@ -34,6 +37,7 @@ import {
   type DailyTaskResetCadence,
 } from "./tasks.period.js";
 import * as repo from "./tasks.repository.js";
+import { isTasksPreviewMode, liveCatalogWhere } from "./tasks.preview.js";
 import type { BumpDailyTasksOpts, ClaimDailyTaskResult, DailyTaskDashboard } from "./tasks.types.js";
 
 const CHECKIN_SIDEBAR_PATH = sidebarRegistryPath(SIDEBAR_ITEM_REGISTRY.checkin?.path, "checkin");
@@ -117,6 +121,21 @@ export async function notifyDailyTaskGamePlayed(
 export async function notifyDailyTaskYoutubeWatch(userId: number, youtubeWatchHistoryId: number): Promise<void> {
   if (!userId || !youtubeWatchHistoryId) return;
   await bumpDailyTasksForUser(userId, "WATCH_YOUTUBE", { dedupeKey: `yt-${youtubeWatchHistoryId}`, delta: 1 });
+}
+
+/** Fired for every normalized tournament action; maps the provider to a task type. */
+export async function notifyDailyTaskAction(
+  userId: number,
+  provider: string,
+  providerEventId: string,
+  actionCount: number,
+): Promise<void> {
+  const taskType = TASK_TYPE_BY_ACTION_PROVIDER[provider];
+  if (!taskType || !userId || !providerEventId) return;
+  // Points (merge tiers, burned H/s) are not a count of actions: each event is one action.
+  const countsOne = taskType === TASK_MERGE_MACHINES || taskType === TASK_BURN_CLAIMS;
+  const delta = countsOne ? 1 : Math.max(1, Math.trunc(Number(actionCount) || 1));
+  await bumpDailyTasksForUser(userId, taskType, { dedupeKey: `${provider}:${providerEventId}`, delta });
 }
 
 /** Fired after a completed internal-offerwall attempt. */
@@ -221,6 +240,7 @@ export async function getDailyTasksDashboard(userId: number): Promise<DailyTaskD
     periodKey: defaultPeriodKey,
     serverTime: now.toISOString(),
     nextResetAt: Number.isFinite(nextResetAtMs) ? new Date(nextResetAtMs).toISOString() : getNextDailyTaskResetAt(now).toISOString(),
+    preview: isTasksPreviewMode(),
     tasks,
   };
 }
@@ -237,7 +257,7 @@ export async function claimDailyTaskReward(userId: number, taskDefinitionId: num
         throw Object.assign(new Error("FORBIDDEN"), { code: "FORBIDDEN" });
       }
 
-      const def = await tx.dailyTaskDefinition.findFirst({ where: { id: taskDefinitionId, isActive: true } });
+      const def = await tx.dailyTaskDefinition.findFirst({ where: { id: taskDefinitionId, ...liveCatalogWhere() } });
       if (!def) {
         throw Object.assign(new Error("TASK_NOT_FOUND"), { code: "NOT_FOUND" });
       }
@@ -319,12 +339,19 @@ export async function claimDailyTaskReward(userId: number, taskDefinitionId: num
         }
       }
 
-      if (inboxPayload) await createRewardInboxEntry(tx, inboxPayload);
+      // Dev preview shares the production database: collecting is recorded, the reward is not paid.
+      if (inboxPayload && !isTasksPreviewMode()) await createRewardInboxEntry(tx, inboxPayload);
 
       await repo.createAuditLogTx(tx, {
         userId,
         action: "DAILY_TASK_CLAIM",
-        detailsJson: JSON.stringify({ taskDefinitionId, periodKey, slug: def.slug, rewardKind: def.rewardKind }),
+        detailsJson: JSON.stringify({
+          taskDefinitionId,
+          periodKey,
+          slug: def.slug,
+          rewardKind: def.rewardKind,
+          ...(isTasksPreviewMode() ? { preview: true, rewardPaid: false } : {}),
+        }),
       });
 
       return { summary: { kind: def.rewardKind } };

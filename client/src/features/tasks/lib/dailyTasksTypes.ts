@@ -23,6 +23,8 @@ export type DailyTaskRow = {
 
 export type DailyTasksDashboardData = {
   ok?: boolean;
+  /** Dev preview catalog: claims are recorded but pay nothing. */
+  preview?: boolean;
   nextResetAt?: string | null;
   tasks?: DailyTaskRow[];
 };

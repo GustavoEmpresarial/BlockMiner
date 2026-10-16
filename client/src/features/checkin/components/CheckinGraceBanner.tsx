@@ -1,15 +1,10 @@
 import { useTranslation } from 'react-i18next';
 import { Clock } from 'lucide-react';
+import { formatUtcDateTime } from '../../../shared/utils/utcTime';
 
 export function CheckinGraceBanner({ graceEndsAt }: { graceEndsAt: string }) {
   const { t } = useTranslation();
-  const time = (() => {
-    try {
-      return new Date(graceEndsAt).toLocaleString();
-    } catch {
-      return graceEndsAt;
-    }
-  })();
+  const time = formatUtcDateTime(graceEndsAt, { fallback: graceEndsAt });
 
   return (
     <div className="rounded-2xl border-2 border-amber-500/30 bg-amber-950/20 px-5 py-4 flex items-start gap-3 shadow-[2px_2px_0px_#000000]">

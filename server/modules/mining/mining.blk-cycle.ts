@@ -67,7 +67,7 @@ export async function getBlkEconomyConfig() {
     minConvertPol: new Prisma.Decimal(50),
     dailyConvertLimitBlk: null,
     convertCooldownSec: 300,
-    blkCycleReward: new Prisma.Decimal(0.03),
+    blkCycleReward: new Prisma.Decimal("0.00347222"),
     blkCycleIntervalSec: 600,
     blkCycleActivitySec: 900,
     blkCycleMinHashrate: new Prisma.Decimal(0.00000001),

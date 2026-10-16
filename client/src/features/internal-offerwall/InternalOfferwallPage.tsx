@@ -273,7 +273,6 @@ export default function InternalOfferwall() {
           <IconBadge icon={LayoutGrid} variant="sky" size="lg" />
           <div>
             <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">{t('internalOfferwallPage.title')}</h1>
-            <p className="text-slate-400 text-xs sm:text-sm font-medium">{t('internalOfferwallPage.subtitle')}</p>
           </div>
         </div>
         <Card className="h-[45vh] flex flex-col items-center justify-center gap-4 text-center">
@@ -291,7 +290,6 @@ export default function InternalOfferwall() {
           <IconBadge icon={LayoutGrid} variant="sky" size="lg" />
           <div>
             <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">{t('internalOfferwallPage.title')}</h1>
-            <p className="text-slate-400 text-xs sm:text-sm font-medium">{t('internalOfferwallPage.subtitle')}</p>
           </div>
         </div>
         <Card className="p-8 text-center text-slate-400 space-y-3">
@@ -309,7 +307,6 @@ export default function InternalOfferwall() {
           <IconBadge icon={LayoutGrid} variant="sky" size="lg" />
           <div>
             <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">{t('internalOfferwallPage.title')}</h1>
-            <p className="text-slate-400 text-xs sm:text-sm font-medium">{t('internalOfferwallPage.subtitle')}</p>
           </div>
         </div>
       </div>

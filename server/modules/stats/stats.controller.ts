@@ -22,6 +22,7 @@ import { isAutoMiningV2SchemaAvailable } from "../auto-mining/index.js";
 import { getBlkCyclePublicSnapshot } from "../mining/index.js";
 import { logger } from "../../core/logger/index.js";
 import { getUserEarningsStats, parseEarningsPeriod } from "./stats.earnings.service.js";
+import { listUserActivityHistory } from "./stats.history.service.js";
 
 const log = logger.child("stats.controller");
 
@@ -387,5 +388,37 @@ export async function getEarningsStats(req: Request, res: Response): Promise<voi
   } catch (e: unknown) {
     log.error("getEarningsStats", { error: e instanceof Error ? e.message : String(e) });
     res.status(500).json({ ok: false, message: "Não foi possível carregar os ganhos agora." });
+  }
+}
+
+/**
+ * GET /api/stats/activity-history?page=1&pageSize=15&category=all&q=
+ * Activity log and history for the authenticated user.
+ */
+export async function getUserActivityHistory(req: Request, res: Response): Promise<void> {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ ok: false, message: "Session invalid." });
+      return;
+    }
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const pageSize = Math.min(50, Math.max(5, Number(req.query.pageSize) || 15));
+    const category = typeof req.query.category === "string" ? req.query.category : "all";
+    const q = typeof req.query.q === "string" ? req.query.q : undefined;
+    const days = Number(req.query.days) || undefined;
+
+    const result = await listUserActivityHistory({
+      userId,
+      page,
+      pageSize,
+      category,
+      q,
+      days,
+    });
+    res.json(result);
+  } catch (e: unknown) {
+    log.error("getUserActivityHistory", { error: e instanceof Error ? e.message : String(e) });
+    res.status(500).json({ ok: false, message: "Não foi possível carregar o histórico de atividades." });
   }
 }

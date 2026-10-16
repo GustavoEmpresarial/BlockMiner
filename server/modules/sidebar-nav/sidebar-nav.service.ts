@@ -127,9 +127,22 @@ export async function getSidebarNavForAdmin(): Promise<{
   };
 }
 
+/**
+ * Items forced visible on this deployment only (SIDEBAR_FORCE_VISIBLE_ITEMS, comma-separated
+ * item ids). The dev VM shares the production nav row, so it previews pages this way without
+ * writing to it. The admin editor keeps showing the stored state.
+ */
+function forcedVisibleItemIds(): Set<string> {
+  const raw = String(process.env.SIDEBAR_FORCE_VISIBLE_ITEMS ?? "").trim();
+  if (!raw) return new Set();
+  return new Set(raw.split(",").map((s) => s.trim()).filter((id) => id in SIDEBAR_ITEM_REGISTRY));
+}
+
 export async function getSidebarNavCategoriesPublic(): Promise<SidebarCategory[]> {
-  const { categories } = await getSidebarNavForAdmin();
-  return categories;
+  const { entries, categories } = await getSidebarNavForAdmin();
+  const forced = forcedVisibleItemIds();
+  if (forced.size === 0) return categories;
+  return buildResolvedCategories(entries.map((e) => (forced.has(e.itemId) ? { ...e, visible: true } : e)));
 }
 
 export async function saveSidebarNavEntries(

@@ -343,9 +343,6 @@ export default function OffersPage() {
             <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">
                 {t('offers.title')}
             </h1>
-            <p className="max-w-3xl text-xs sm:text-sm text-slate-400 font-medium">
-                {t('offers.subtitle')}
-            </p>
         </div>
     );
 

@@ -25,6 +25,7 @@ import { toast } from 'sonner';
 import { adminAntibotApi } from './adminAntibot.api';
 import { BAND_STYLE, SEVERITY_STYLE, bandForScore, fmtDateShort } from './adminAntibot.shared';
 import type { AdminAntibotUserProfile } from './adminAntibot.types';
+import { formatUtcDate } from '../../../shared/utils/utcTime';
 
 export default function AdminAntibotUserProfilePage() {
   const { id } = useParams<{ id: string }>();
@@ -168,7 +169,7 @@ export default function AdminAntibotUserProfilePage() {
                 </span>
                 <span className="flex items-center gap-1">
                   <Calendar className="w-3.5 h-3.5 text-slate-500" />
-                  Registrado em {new Date(user.createdAt).toLocaleDateString('pt-BR')}
+                  Registrado em {formatUtcDate(user.createdAt, { locale: 'pt-BR' })}
                 </span>
               </div>
 

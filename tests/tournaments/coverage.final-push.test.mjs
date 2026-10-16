@@ -4,6 +4,7 @@
  * without restoreAll (that zeroes service coverage).
  */
 import test, { mock, describe } from "node:test";
+import { withOfferwallFindMany } from "./_offerwall-mock-adapter.mjs";
 import assert from "node:assert/strict";
 import { pathToFileURL } from "node:url";
 import path from "node:path";
@@ -104,11 +105,13 @@ const prismaMock = {
   internalOfferwallAttempt: { groupBy: async () => [] },
   offerwallMeCallback: { groupBy: async () => [] },
   moneyRainCallback: { groupBy: async () => [] },
+  multiwallCallback: { groupBy: async () => [] },
+  offerwallGgCallback: { groupBy: async () => [] },
   zeradsCallback: { findMany: async () => [], groupBy: async () => [] },
 };
 
 mock.module(prismaSpec, {
-  defaultExport: prismaMock,
+  defaultExport: withOfferwallFindMany(prismaMock),
 });
 
 mock.module(redisSpec, {

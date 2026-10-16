@@ -96,4 +96,5 @@ export type MachineTipState = {
   displayName: string;
   hashrateStr: string;
   slotSize: number;
+  level?: number | null;
 };

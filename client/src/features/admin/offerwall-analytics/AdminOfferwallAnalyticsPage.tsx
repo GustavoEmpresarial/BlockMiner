@@ -12,10 +12,13 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { api } from '../../../shared/auth/auth.store';
+import { addUtcDays, fromUtcInputValue, startOfUtcDay, toUtcInputValue } from '../../../shared/utils/utcTime';
 
 type DailyRow = {
   day: string;
-  dayBrt: string;
+  /** Server is renaming dayBrt → dayUtc; accept both during the transition. */
+  dayUtc?: string;
+  dayBrt?: string;
   internal: number;
   internalPol: number;
   offerwallMe: number;
@@ -41,12 +44,9 @@ type AnalyticsTotals = {
 };
 
 export default function AdminOfferwallAnalytics() {
-  const [from, setFrom] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 6);
-    return d.toISOString().slice(0, 16);
-  });
-  const [to, setTo] = useState(() => new Date().toISOString().slice(0, 16));
+  // datetime-local values are UTC wall-clock ("YYYY-MM-DDTHH:mm").
+  const [from, setFrom] = useState(() => toUtcInputValue(addUtcDays(-6)));
+  const [to, setTo] = useState(() => toUtcInputValue(new Date()));
   const [userId, setUserId] = useState('');
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<Record<string, unknown> | null>(null);
@@ -55,8 +55,8 @@ export default function AdminOfferwallAnalytics() {
     setLoading(true);
     try {
       const params: Record<string, string> = {
-        from: new Date(from).toISOString(),
-        to: new Date(to).toISOString(),
+        from: fromUtcInputValue(from) ?? new Date(startOfUtcDay()).toISOString(),
+        to: fromUtcInputValue(to) ?? new Date().toISOString(),
       };
       if (userId.trim()) params.userId = userId.trim();
       const res = await api.get('/admin/offerwall/analytics', { params });
@@ -77,12 +77,9 @@ export default function AdminOfferwallAnalytics() {
   }, [load]);
 
   function setPresetDays(days: number) {
-    const now = new Date();
-    const past = new Date();
-    past.setDate(now.getDate() - (days - 1));
-    past.setHours(0, 0, 0, 0);
-    setFrom(past.toISOString().slice(0, 16));
-    setTo(now.toISOString().slice(0, 16));
+    // Start at 00:00 UTC of the first day in the window.
+    setFrom(toUtcInputValue(addUtcDays(-(days - 1))));
+    setTo(toUtcInputValue(new Date()));
   }
 
   const totals = data?.totals as AnalyticsTotals | undefined;
@@ -116,7 +113,7 @@ export default function AdminOfferwallAnalytics() {
           <div>
             <h1 className="text-2xl font-black text-white tracking-tight">Offerwall Analytics</h1>
             <p className="text-xs text-slate-400 font-mono mt-0.5">
-              Servidor UTC: {String(data?.serverNow ?? '—')} · BRT: {String(data?.serverNowBrt ?? '—')}
+              Servidor (UTC): {String(data?.serverNowUtc ?? data?.serverNowBrt ?? data?.serverNow ?? '—')}
             </p>
           </div>
         </div>
@@ -168,7 +165,7 @@ export default function AdminOfferwallAnalytics() {
 
         <div className="flex flex-wrap gap-4 items-end">
           <label className="text-xs text-slate-400 font-bold">
-            De:
+            De (UTC):
             <input
               type="datetime-local"
               value={from}
@@ -177,7 +174,7 @@ export default function AdminOfferwallAnalytics() {
             />
           </label>
           <label className="text-xs text-slate-400 font-bold">
-            Até:
+            Até (UTC):
             <input
               type="datetime-local"
               value={to}
@@ -288,7 +285,7 @@ export default function AdminOfferwallAnalytics() {
               <thead className="bg-slate-950/80 text-slate-400 text-[10px] uppercase font-black tracking-wider border-b border-white/5">
                 <tr>
                   <th className="px-4 py-3 text-left">Dia (UTC)</th>
-                  <th className="px-4 py-3 text-left">Data BRT</th>
+                  <th className="px-4 py-3 text-left">Data (UTC)</th>
                   <th className="px-4 py-3 text-right">Internas</th>
                   <th className="px-4 py-3 text-right">OfferwallMe</th>
                   <th className="px-4 py-3 text-right">Multiwall</th>
@@ -309,7 +306,7 @@ export default function AdminOfferwallAnalytics() {
                   return (
                     <tr key={row.day} className="hover:bg-white/[0.02] transition-colors">
                       <td className="px-4 py-3 text-white font-bold">{row.day}</td>
-                      <td className="px-4 py-3 text-slate-300 font-sans">{row.dayBrt || '—'}</td>
+                      <td className="px-4 py-3 text-slate-300 font-sans">{row.dayUtc ?? row.dayBrt ?? '—'}</td>
                       <td className="px-4 py-3 text-right text-sky-300">
                         {row.internal} <span className="text-[10px] text-slate-500">({row.internalPol.toFixed(4)})</span>
                       </td>

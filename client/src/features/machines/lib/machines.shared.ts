@@ -26,6 +26,11 @@ export function sumRackHashRate(slots: UserRackSlot[]): number {
   return total;
 }
 
+export function computeRackFanBonus(rackBaseHashRate: number, hasFan: boolean): number {
+  if (!hasFan || rackBaseHashRate <= 0) return 0;
+  return rackBaseHashRate * 0.01;
+}
+
 export function groupIntoRacks(racks: UserRackSlot[], slotsPerRack = SLOTS_PER_VISUAL_RACK): VisualRackGroup[] {
   const size = Math.max(1, Math.floor(slotsPerRack));
   const groups: VisualRackGroup[] = [];

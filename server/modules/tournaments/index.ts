@@ -1,7 +1,7 @@
 export { tournamentsRouter } from "./tournaments.routes.js";
 export { tournamentsAdminRouter, adminTournamentsRouter } from "./tournaments.admin.routes.js";
 export { rankingRouter } from "./ranking.routes.js";
-export { recordTournamentAction, TOURNAMENT_ACTION_PROVIDER } from "./tournaments.actions.js";
+export { recordTournamentAction, reverseTournamentAction, TOURNAMENT_ACTION_PROVIDER } from "./tournaments.actions.js";
 export type { TournamentActionProvider, RecordTournamentActionInput } from "./tournaments.actions.js";
 export { scoringConfigPayload } from "./tournaments.scoring-config.js";
 export { startTournamentsCron } from "./tournaments.cron.js";

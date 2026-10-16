@@ -58,13 +58,15 @@ export const MULTIWALL_DEFAULT_EMBED_BASE = "https://multiwall-ads.shop/api.php"
  */
 export function buildMultiwallEmbedUrl(args: {
   apiKey: string;
-  userId: number;
+  /** Numeric id or signed subid from `signOfferwallSubId`. */
+  userId: number | string;
   /** Full api.php URL or host base; query params are always appended. */
   baseUrl?: string;
 }): string | null {
   const apiKey = String(args.apiKey ?? "").trim();
   if (!apiKey) return null;
-  if (!Number.isFinite(args.userId) || args.userId <= 0) return null;
+  if (typeof args.userId === "number" && (!Number.isFinite(args.userId) || args.userId <= 0)) return null;
+  if (String(args.userId).trim() === "") return null;
 
   const raw = String(args.baseUrl ?? MULTIWALL_DEFAULT_EMBED_BASE).trim();
   let base: string;

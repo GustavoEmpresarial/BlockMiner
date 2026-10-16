@@ -17,6 +17,7 @@ import { reportApiFailure } from "../../shared/utils/reportApiFailure";
 import { usePowerBoostActive } from "../../shared/hooks/usePowerBoostActive";
 import { AutoMiningDailyResetBanner, AutoMiningSidebar } from "./components/autoMining.parts";
 import { useAutoMiningPageLease } from "./lib/autoMiningBackground";
+import { formatPartDropNotice, type PartDropNotice } from "../parts/lib/partDropNotice";
 import {
   AUTO_MINING_STALL_REPORT_AFTER_CYCLES,
   adoptLaterNextClaimAt,
@@ -74,6 +75,7 @@ interface AutoMiningV2Payload {
   code?: string;
   retryAfterMs?: number;
   secondsShort?: number;
+  part?: PartDropNotice | null;
 }
 
 function errToast(t: TFunction, err: unknown) {
@@ -229,6 +231,8 @@ export default function AutoMining() {
           stallReportedRef.current = false;
           setClaimNotice(null);
           toast.success(t("autoMiningGpuPage.claim_success_normal"));
+          const notice = formatPartDropNotice(res.data.part, t);
+          if (notice) toast.success(notice);
           setV2(res.data);
           const s = res.data.session;
           if (s?.nextClaimAt) {
@@ -443,12 +447,8 @@ export default function AutoMining() {
       document.removeEventListener("visibilitychange", onHidden);
       window.removeEventListener("blur", onBlur);
       window.removeEventListener("focus", onFocus);
-      // Power Boost is exactly the paid privilege of NOT freezing here: AutoMiningBackgroundRunner
-      // (mounted app-wide in ProtectedLayout) takes over the claim cycle the moment this lease is
-      // released. Pausing on unmount anyway is what silently killed the entitlement — the runner
-      // would wake up to a `pausedAt` session and every claim would answer SESSION_PAUSED.
-      // Without boost, leaving the route still pauses, unchanged.
-      if (!unloading && !powerBoostActiveRef.current) postPause();
+      // Route leave: always freeze when navigating away from /auto-mining to prevent ghost mining off-page.
+      if (!unloading) postPause();
     };
     // `powerBoostActive` is deliberately NOT a dependency, and is read through a ref above.
     // It resolves asynchronously (usePowerBoostActive starts false, settles after /boosts/status,
@@ -561,7 +561,6 @@ export default function AutoMining() {
           <IconBadge icon={Cpu} size="lg" />
           <div>
             <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">{t("autoMiningGpuPage.title")}</h1>
-            <p className="text-slate-400 text-xs sm:text-sm font-medium max-w-xl">{t("autoMiningGpuPage.subtitle")}</p>
           </div>
         </div>
         <StatusPill variant="success" icon={ShieldCheck} label={t("autoMiningGpuPage.secure_badge")} />

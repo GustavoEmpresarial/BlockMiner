@@ -7,8 +7,6 @@ import Header from './components/Header';
 import BroadcastPopup from './broadcast/BroadcastPopup';
 import PtcSessionManager from '../ptc/components/PtcSessionManager';
 import ShortlinkBackgroundRunner from '../shortlinks/components/ShortlinkBackgroundRunner';
-import AutoMiningBackgroundRunner from '../auto-mining/components/AutoMiningBackgroundRunner';
-import YoutubeBackgroundRunner from '../youtube/components/YoutubeBackgroundRunner';
 import SiteFooter from '../../shared/components/SiteFooter';
 import EmailVerifyBanner from '../verify-email/EmailVerifyBanner';
 import ChatPanel from './chat/ChatPanel';
@@ -68,8 +66,6 @@ export default function ProtectedLayout() {
       <ChatPanel />
       <PtcSessionManager />
       <ShortlinkBackgroundRunner />
-      <AutoMiningBackgroundRunner />
-      <YoutubeBackgroundRunner />
     </div>
   );
 }

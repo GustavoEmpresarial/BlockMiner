@@ -35,6 +35,7 @@ import type {
   WalletActivityPayload,
   WithdrawalsResponse,
 } from './adminAnalytics.shared';
+import { formatUtcDate, formatUtcDateTime } from '../../../shared/utils/utcTime';
 
 export function OverviewTab(props: {
   isLoading: boolean; summary?: AnalyticsSummary; forecast?: AnalyticsForecast;
@@ -135,7 +136,7 @@ export function OverviewTab(props: {
                     <td className="py-2 px-2 text-slate-400">{polPrice > 0 ? `$${(Number(r.rewardAmount) * polPrice).toFixed(6)}` : "--"}</td>
                     <td className="py-2 px-2 text-slate-400">{Number(r.percentage ?? 0).toFixed(2)}%</td>
                     <td className="py-2 px-2 text-right text-slate-600">
-                      {r.createdAt ? new Date(r.createdAt).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "--"}
+                      {r.createdAt ? formatUtcDateTime(r.createdAt, { locale: "pt-BR", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "--"}
                     </td>
                   </tr>
                 ))}
@@ -361,7 +362,7 @@ function DistributionTab({ data, polPrice, isLoading, periodLabel }: { data: Dis
             <div>
               <p className="text-xs font-black text-white uppercase tracking-widest">Emissão de mineração — Real × Esperado</p>
               <p className="text-[10px] text-slate-500 mt-1">
-                No ar há {me.siteAgeDays} dias desde {new Date(me.launchDate).toLocaleDateString("pt-BR")} ·
+                No ar há {me.siteAgeDays} dias desde {formatUtcDate(me.launchDate, { locale: 'pt-BR' })} ·
                 Config: {me.rewardBase} POL/bloco · {me.blockDurationMinutes} min/bloco · {me.blocksPerDay} blocos/dia
               </p>
             </div>

@@ -35,28 +35,56 @@ function chunkRows<T>(rows: T[], size: number): T[][] {
 }
 
 /**
+ * 1% bonus on total machine hashrate for each visual rack that has a cooling fan installed.
+ * Each fan (UserVisualFanPlacement) is mounted under a specific visual rack in a room.
+ * The rack has 8 slots (position: visualIndex * 8 .. visualIndex * 8 + 7).
+ */
+export async function computeFanBonusHashRate(userId: number): Promise<number> {
+  const fans = await prisma.userVisualFanPlacement.findMany({
+    where: { userId },
+    select: { roomId: true, visualIndex: true },
+  });
+  if (fans.length === 0) return 0;
+
+  const fanSet = new Set(fans.map((f) => `${f.roomId}:${f.visualIndex}`));
+  const occupiedSlots = await prisma.userRack.findMany({
+    where: {
+      userId,
+      userMiner: { isActive: true },
+    },
+    select: {
+      roomId: true,
+      position: true,
+      userMiner: { select: { hashRate: true } },
+    },
+  });
+
+  let bonus = 0;
+  for (const slot of occupiedSlots) {
+    const visualIndex = Math.floor(slot.position / 8);
+    if (fanSet.has(`${slot.roomId}:${visualIndex}`)) {
+      bonus += (slot.userMiner?.hashRate || 0) * 0.01;
+    }
+  }
+
+  return bonus;
+}
+
+/**
  * Sum of hashrate from every source the mining engine understands: installed rack machines
- * (permanent) + every active temporary power grant (games, YouTube, shortlinks, auto-mining
- * GPU legacy + v2). Ported for real from legacy's `getOrCreateMinerProfile`/
- * `syncUserBaseHashRate` (models/minerProfileModel.ts).
- *
- * Real bug fixed 12/08/2026 (PROGRESSO.txt item 74): this used to be a documented, deliberate
- * stub ("none of those [temp-power] modules exist in current/ yet") — true when written, but
- * every one of those modules (games, YouTube, shortlinks, auto-mining v2) was built later this
- * same session and nobody came back to extend this function per its own TODO. Every user with
- * active temporary power (which is most active users, most of the time) had their real
- * contribution to the block silently capped at just their installed machines — visible as
- * "poder total não contabiliza jogos/auto/YouTube" in production.
+ * (permanent) + fan cooling bonus (1% per rack with fan) + every active temporary power grant
+ * (games, YouTube, shortlinks, auto-mining GPU legacy + v2).
  */
 async function computeBaseHashRate(userId: number): Promise<number> {
   const now = new Date();
-  const [activeMiners, gamePowers, ytPowers, shortlinkPowers, gpuPowers, v2Grants] = await Promise.all([
+  const [activeMiners, gamePowers, ytPowers, shortlinkPowers, gpuPowers, v2Grants, fanBonusHashRate] = await Promise.all([
     prisma.userMiner.findMany({ where: { userId, isActive: true }, select: { hashRate: true } }),
     prisma.userPowerGame.findMany({ where: { userId, expiresAt: { gt: now } }, select: { hashRate: true } }),
     prisma.youtubeWatchPower.findMany({ where: { userId, expiresAt: { gt: now } }, select: { hashRate: true } }),
     prisma.shortlinkPower.findMany({ where: { userId, expiresAt: { gt: now } }, select: { hashRate: true } }),
     prisma.autoMiningGpu.findMany({ where: { userId, isClaimed: true, expiresAt: { gt: now } }, select: { gpuHashRate: true } }),
     prisma.autoMiningV2PowerGrant.findMany({ where: { userId, expiresAt: { gt: now } }, select: { hashRate: true } }),
+    computeFanBonusHashRate(userId),
   ]);
 
   const machineHashRate = activeMiners.reduce((sum, m) => sum + (m.hashRate || 0), 0);
@@ -66,7 +94,7 @@ async function computeBaseHashRate(userId: number): Promise<number> {
   const legacyGpuHashRate = gpuPowers.reduce((sum, p) => sum + (p.gpuHashRate || 0), 0);
   const v2GpuHashRate = v2Grants.reduce((sum, g) => sum + (Number(g.hashRate) || 0), 0);
 
-  return machineHashRate + gameHashRate + ytHashRate + shortlinkHashRate + legacyGpuHashRate + v2GpuHashRate;
+  return machineHashRate + fanBonusHashRate + gameHashRate + ytHashRate + shortlinkHashRate + legacyGpuHashRate + v2GpuHashRate;
 }
 
 export type MinerProfileRow = {

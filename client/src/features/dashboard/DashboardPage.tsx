@@ -17,6 +17,7 @@ import {
   patchMiningAllocation,
   postLinkReferral,
 } from './lib/dashboard.api';
+import { updateMiningPayoutMode } from '../stats/lib/stats.api';
 import type { DashboardBlockRow, DashboardCycleState } from './lib/dashboard.types';
 import {
   DASHBOARD_POL_BALANCE_DECIMALS,
@@ -233,48 +234,69 @@ export default function DashboardPage() {
 
   const miner = cycle?.miner ?? undefined;
   const blockHistory = Array.isArray(cycle?.blockHistory) ? cycle.blockHistory : [];
+  const serverPayoutMode = ((miner as { miningPayoutMode?: string })?.miningPayoutMode === 'blk' ? 'blk' : 'pol') as 'pol' | 'blk';
+  const [draftPayoutMode, setDraftPayoutMode] = useState<'pol' | 'blk'>('pol');
+  const [pendingPayoutMode, setPendingPayoutMode] = useState<'pol' | 'blk' | null>(null);
+  const effectivePayoutMode = pendingPayoutMode ?? serverPayoutMode;
+
   const polBps = Math.max(0, Math.min(10_000, Math.round(Number(miner?.miningAllocationPolBps ?? 10_000))));
   const serverPolPercent = Math.round(polBps / 100);
-  const effectivePolPercent = pendingAllocPercent ?? serverPolPercent;
-  const effectiveShibPercent = 100 - effectivePolPercent;
+  const effectivePolPercent = effectivePayoutMode === 'blk' ? 0 : (pendingAllocPercent ?? serverPolPercent);
+  const effectiveShibPercent = effectivePayoutMode === 'blk' ? 0 : (100 - effectivePolPercent);
+  const effectiveBlkPercent = effectivePayoutMode === 'blk' ? 100 : 0;
   const blockRewardPol = Number(cycle?.blockReward ?? 0);
   const blockRewardShib = Number(cycle?.blockRewardShib ?? 0);
+  const blockRewardBlk = Number((cycle as { blockRewardBlk?: number })?.blockRewardBlk ?? 0.00347222);
 
   useEffect(() => {
-    if (pendingAllocPercent == null || pendingAllocPercent === serverPolPercent) return;
+    const hasModeChange = pendingPayoutMode != null && pendingPayoutMode !== serverPayoutMode;
+    const hasAllocChange = pendingAllocPercent != null && pendingAllocPercent !== serverPolPercent;
+    if (!hasModeChange && !hasAllocChange) return;
+
     const timer = window.setTimeout(async () => {
       try {
         setSavingAlloc(true);
-        const polBpsPayload = Math.round(pendingAllocPercent * 100);
-        const res = await patchMiningAllocation(polBpsPayload);
-        if (res?.ok) {
-          toast.success(t('dashboard.allocation_updated'));
-          setCycleRest((prev) =>
-            prev?.miner
-              ? {
-                  ...prev,
-                  miner: {
-                    ...prev.miner,
-                    miningAllocationPolBps: Number(res.polBps ?? polBpsPayload),
-                  },
-                }
-              : prev,
-          );
-          setPendingAllocPercent(null);
-        } else {
-          toast.error(res?.message || t('common.error'));
-          setPendingAllocPercent(null);
+        if (hasModeChange && pendingPayoutMode) {
+          const modeRes = await updateMiningPayoutMode(pendingPayoutMode);
+          if (!modeRes.ok) throw new Error(modeRes.message || 'Failed to update mode');
         }
+        let savedPolBps: number | undefined;
+        if (effectivePayoutMode === 'pol' && pendingAllocPercent != null) {
+          const polBpsPayload = Math.round(pendingAllocPercent * 100);
+          const res = await patchMiningAllocation(polBpsPayload);
+          if (!res?.ok) throw new Error(res?.message || 'Failed to update allocation');
+          savedPolBps = Number(res.polBps ?? polBpsPayload);
+        }
+        toast.success(t('dashboard.allocation_updated'));
+        setCycleRest((prev) =>
+          prev?.miner
+            ? {
+                ...prev,
+                miner: {
+                  ...prev.miner,
+                  miningPayoutMode: pendingPayoutMode ?? (prev.miner as { miningPayoutMode?: string }).miningPayoutMode ?? 'pol',
+                  miningAllocationPolBps:
+                    savedPolBps ??
+                    (pendingAllocPercent != null
+                      ? Math.round(pendingAllocPercent * 100)
+                      : prev.miner.miningAllocationPolBps),
+                },
+              }
+            : prev,
+        );
+        setPendingAllocPercent(null);
+        setPendingPayoutMode(null);
       } catch (err: unknown) {
         logDashboardError('DASHBOARD_ALLOCATION_SAVE_FAILED', err);
         toast.error(apiErrorMessage(err, t('common.error')));
         setPendingAllocPercent(null);
+        setPendingPayoutMode(null);
       } finally {
         setSavingAlloc(false);
       }
-    }, 500);
+    }, 400);
     return () => window.clearTimeout(timer);
-  }, [pendingAllocPercent, serverPolPercent, t]);
+  }, [pendingPayoutMode, serverPayoutMode, pendingAllocPercent, serverPolPercent, t]);
 
   const referralUrl =
     user?.id != null ? buildReferralRegisterUrl(user.id, user.refCode ?? null) : '';
@@ -351,9 +373,6 @@ export default function DashboardPage() {
             <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">
               {t('dashboard.welcome', { name: displayName })}
             </h1>
-            <p className="text-slate-400 text-xs sm:text-sm font-medium">
-              {t('dashboard.subtitle')}
-            </p>
           </div>
         </div>
         <div
@@ -400,21 +419,30 @@ export default function DashboardPage() {
       <MiningAllocationPanel
         effectivePolPercent={effectivePolPercent}
         effectiveShibPercent={effectiveShibPercent}
+        effectiveBlkPercent={effectiveBlkPercent}
         blockRewardPol={blockRewardPol}
         blockRewardShib={blockRewardShib}
+        blockRewardBlk={blockRewardBlk}
+        payoutMode={effectivePayoutMode}
         savingAlloc={savingAlloc}
         allocModalOpen={allocModalOpen}
         draftPol={draftPol}
         draftShib={draftShib}
+        draftPayoutMode={draftPayoutMode}
         draftError={draftError}
         onOpenModal={() => {
-          setDraftPol(String(effectivePolPercent));
-          setDraftShib(String(effectiveShibPercent));
+          setDraftPol(String(serverPolPercent));
+          setDraftShib(String(100 - serverPolPercent));
+          setDraftPayoutMode(serverPayoutMode);
           setDraftError(null);
           setAllocModalOpen(true);
         }}
         onCloseModal={() => {
           if (!savingAlloc) setAllocModalOpen(false);
+        }}
+        onDraftPayoutModeChange={(mode) => {
+          setDraftPayoutMode(mode);
+          setDraftError(null);
         }}
         onDraftPolChange={(raw) => {
           if (raw === '') {
@@ -427,6 +455,7 @@ export default function DashboardPage() {
           const clamped = Math.max(0, Math.min(100, Math.round(n)));
           setDraftPol(String(clamped));
           setDraftShib(String(100 - clamped));
+          setDraftPayoutMode('pol');
           setDraftError(null);
         }}
         onDraftShibChange={(raw) => {
@@ -440,14 +469,21 @@ export default function DashboardPage() {
           const clamped = Math.max(0, Math.min(100, Math.round(n)));
           setDraftShib(String(clamped));
           setDraftPol(String(100 - clamped));
+          setDraftPayoutMode('pol');
           setDraftError(null);
         }}
         onPreset={(pol) => {
           setDraftPol(String(pol));
           setDraftShib(String(100 - pol));
+          setDraftPayoutMode('pol');
           setDraftError(null);
         }}
         onSave={() => {
+          if (draftPayoutMode === 'blk') {
+            setPendingPayoutMode('blk');
+            setAllocModalOpen(false);
+            return;
+          }
           const polN = Number(draftPol);
           const shibN = Number(draftShib);
           if (!Number.isFinite(polN) || !Number.isFinite(shibN)) {
@@ -464,6 +500,7 @@ export default function DashboardPage() {
           }
           const snapped = Math.round(polN / 5) * 5;
           setPendingAllocPercent(snapped);
+          setPendingPayoutMode('pol');
           setAllocModalOpen(false);
         }}
       />

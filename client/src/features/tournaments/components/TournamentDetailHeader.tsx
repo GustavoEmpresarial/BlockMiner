@@ -4,13 +4,17 @@ import {
   CalendarCheck,
   CheckCircle,
   CheckSquare,
+  ClipboardList,
+  Combine,
   Cpu,
   Droplets,
+  Flame,
   Gamepad2,
   Layers,
   Link2,
   Radio,
   Sparkles,
+  UserPlus,
   Users,
   Wallet,
   Youtube,
@@ -20,14 +24,22 @@ import type { TournamentDetail } from '../lib/tournaments.types';
 import {
   formatMyScoreTotal,
   isAllActivitiesMetric,
+  isBurnMetric,
   isDepositMetric,
+  isMergeMetric,
   isMinigameMetric,
+  isReferralMetric,
+  isYoutubeMetric,
   scoreTotalI18nKey,
   TOURNAMENT_TYPE_BADGE,
+  tournamentDisplayDescription,
+  tournamentDisplayName,
 } from '../lib/tournamentMetricDisplay';
 import { TournamentCountdown } from './TournamentCountdown';
 import { TournamentPrizesPanel } from './TournamentPrizeDisplay';
 import { TournamentScore } from './TournamentScore';
+import { OfferwallScoringPanel } from './OfferwallScoringPanel';
+import { formatUtcTime } from '../../../shared/utils/utcTime';
 
 export function TournamentDetailHeader({
   detail,
@@ -62,7 +74,7 @@ export function TournamentDetailHeader({
             {liveConnected ? (
               <span
                 className="flex items-center gap-1 text-[10px] text-sky-400 font-mono font-bold"
-                title={lastUpdateAt ? new Date(lastUpdateAt).toLocaleTimeString() : undefined}
+                title={lastUpdateAt ? formatUtcTime(lastUpdateAt, { second: '2-digit', hour: '2-digit', minute: '2-digit' }) : undefined}
               >
                 <Radio className="h-3 w-3 animate-pulse" />
                 {t('tournaments.realtime')}
@@ -70,10 +82,16 @@ export function TournamentDetailHeader({
             ) : null}
           </div>
 
-          <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight">{tournament.name}</h2>
+          <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight">{tournamentDisplayName(tournament)}</h2>
 
-          {tournament.description ? (
-            <p className="text-sm text-slate-400 max-w-2xl leading-relaxed">{tournament.description}</p>
+          {tournament.preview ? (
+            <p className="inline-flex max-w-2xl items-center gap-2 rounded-lg border border-yellow-500/40 bg-yellow-500/10 px-3 py-1.5 text-[11px] font-bold text-yellow-200">
+              {t('tournaments.preview_notice')}
+            </p>
+          ) : null}
+
+          {tournamentDisplayDescription(tournament) ? (
+            <p className="text-sm text-slate-400 max-w-2xl leading-relaxed">{tournamentDisplayDescription(tournament)}</p>
           ) : null}
 
           <div className="flex items-center gap-4 text-xs text-slate-400 flex-wrap">
@@ -172,7 +190,7 @@ export function TournamentDetailHeader({
                   <Youtube className="h-3.5 w-3.5 text-red-400 shrink-0" />
                   <div>
                     <p className="font-bold text-white text-[10px] leading-tight">{t('tournaments.activity_youtube')}</p>
-                    <p className="text-[9px] text-red-400 font-mono">+1 pt / claim</p>
+                    <p className="text-[9px] text-red-400 font-mono">{t('tournaments.activity_youtube_points')}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 rounded-xl bg-slate-900/60 border border-white/5 p-2 text-slate-300">
@@ -200,6 +218,91 @@ export function TournamentDetailHeader({
               <p className="text-[10px] text-sky-200/70 font-mono">
                 {t('tournaments.scores_live_hint')}
               </p>
+            </div>
+          ) : null}
+
+          {detail.offerwallRules ? (
+            <OfferwallScoringPanel
+              rules={detail.offerwallRules}
+              breakdown={detail.myOfferwallBreakdown}
+              loggedIn={detail.myOfferwallBreakdown != null}
+            />
+          ) : null}
+
+          {isYoutubeMetric(tournament.metric) ? (
+            <div className="mt-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 max-w-2xl">
+              <p className="text-[10px] font-black uppercase tracking-widest text-red-300 mb-1.5">
+                {t('tournaments.youtube_scoring_title')}
+              </p>
+              <p className="text-xs text-red-50/90 leading-relaxed">
+                {t('tournaments.youtube_scoring_hint')}
+              </p>
+            </div>
+          ) : null}
+
+          {isReferralMetric(tournament.metric) ? (
+            <div className="mt-2 rounded-xl border border-violet-500/30 bg-violet-500/10 px-4 py-3 max-w-2xl">
+              <p className="text-[10px] font-black uppercase tracking-widest text-violet-300 mb-1.5 flex items-center gap-1.5">
+                <UserPlus className="h-3.5 w-3.5" />
+                {t('tournaments.referral_scoring_title')}
+              </p>
+              <p className="text-xs text-violet-50/90 leading-relaxed">
+                {t('tournaments.referral_scoring_hint')}
+              </p>
+              <p className="mt-2 text-[10px] text-violet-200/70 font-mono">
+                {t('tournaments.referral_anti_fraud_note')}
+              </p>
+            </div>
+          ) : null}
+
+          {isMergeMetric(tournament.metric) ? (
+            <div className="mt-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 max-w-2xl">
+              <p className="text-[10px] font-black uppercase tracking-widest text-amber-300 mb-1.5 flex items-center gap-1.5">
+                <Combine className="h-3.5 w-3.5" />
+                {t('tournaments.merge_scoring_title')}
+              </p>
+              <p className="text-xs text-amber-50/90 leading-relaxed">{t('tournaments.merge_scoring_hint')}</p>
+              <Link
+                to="/merge"
+                className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 px-3 py-1.5 text-[11px] font-black text-slate-950 transition-colors"
+              >
+                <Combine className="h-3.5 w-3.5" />
+                {t('tournaments.merge_cta')}
+              </Link>
+            </div>
+          ) : null}
+
+          {isBurnMetric(tournament.metric) ? (
+            <div className="mt-2 rounded-xl border border-orange-500/30 bg-orange-500/10 px-4 py-3 max-w-2xl">
+              <p className="text-[10px] font-black uppercase tracking-widest text-orange-300 mb-1.5 flex items-center gap-1.5">
+                <Flame className="h-3.5 w-3.5" />
+                {t('tournaments.burn_scoring_title')}
+              </p>
+              <p className="text-xs text-orange-50/90 leading-relaxed">{t('tournaments.burn_scoring_hint')}</p>
+              <Link
+                to="/burn"
+                className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-orange-500 hover:bg-orange-400 px-3 py-1.5 text-[11px] font-black text-slate-950 transition-colors"
+              >
+                <Flame className="h-3.5 w-3.5" />
+                {t('tournaments.burn_cta')}
+              </Link>
+            </div>
+          ) : null}
+
+          {tournament.metric === 'TASKS_COMPLETED' ? (
+            <div className="mt-2 rounded-xl border border-teal-500/30 bg-teal-500/10 px-4 py-3 max-w-2xl">
+              <p className="text-[10px] font-black uppercase tracking-widest text-teal-300 mb-1.5 flex items-center gap-1.5">
+                <ClipboardList className="h-3.5 w-3.5" />
+                {t('tournaments.tasks_scoring_title')}
+              </p>
+              <p className="text-xs text-teal-50/90 leading-relaxed">{t('tournaments.tasks_scoring_hint')}</p>
+              <Link
+                to="/tasks"
+                className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-teal-500 hover:bg-teal-400 px-3 py-1.5 text-[11px] font-black text-slate-950 transition-colors"
+              >
+                <ClipboardList className="h-3.5 w-3.5" />
+                {t('tournaments.tasks_cta')}
+              </Link>
             </div>
           ) : null}
 

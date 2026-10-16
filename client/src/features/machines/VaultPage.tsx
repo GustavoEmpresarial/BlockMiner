@@ -209,7 +209,6 @@ export default function VaultPage() {
             <IconBadge icon={Shield} size="lg" variant="primary" />
             <h1 className="text-2xl font-black tracking-tight text-white sm:text-3xl uppercase">{t('vault.title')}</h1>
           </div>
-          <p className="max-w-2xl text-sm font-medium text-slate-400 sm:text-base">{t('vault.subtitle')}</p>
         </div>
         {headerNav}
       </header>

@@ -20,34 +20,47 @@ type Tournament = {
   prizes?: unknown[];
 };
 
+/**
+ * `reachedAt` (when known) is stored in firstContributionAt, which every
+ * leaderboard sorts on after score: on a tie, whoever reached the score first
+ * ranks higher.
+ */
 async function batchUpsertEntries(
   tournamentId: number,
-  rows: { userId: number; score: number }[],
+  rows: { userId: number; score: number; reachedAt?: Date | null }[],
 ): Promise<void> {
+  // Entries that already received a prize are history — never rewrite or drop them.
+  const unpaid = { rewardGranted: false } as const;
   const active = rows.filter((r) => r.score > 0);
   const activeIds = active.map((r) => r.userId);
 
   if (activeIds.length === 0) {
-    await prisma.tournamentEntry.deleteMany({ where: { tournamentId } });
+    await prisma.tournamentEntry.deleteMany({ where: { tournamentId, ...unpaid } });
     await invalidateLeaderboardCache(tournamentId);
     notifyTournamentDirty(tournamentId);
     return;
   }
 
   await prisma.tournamentEntry.deleteMany({
-    where: { tournamentId, userId: { notIn: activeIds } },
+    where: { tournamentId, userId: { notIn: activeIds }, ...unpaid },
   });
 
   for (let i = 0; i < active.length; i += 100) {
     const chunk = active.slice(i, i + 100);
     await Promise.all(
-      chunk.map(({ userId, score }) =>
-        prisma.tournamentEntry.upsert({
-          where: { tournamentId_userId: { tournamentId, userId } },
-          update: { score },
-          create: { tournamentId, userId, score },
-        }),
-      ),
+      chunk.map(({ userId, score, reachedAt }) => {
+        const tieBreak = reachedAt !== undefined ? { firstContributionAt: reachedAt } : {};
+        return prisma.tournamentEntry.updateMany({
+          where: { tournamentId, userId, ...unpaid },
+          data: { score, ...tieBreak },
+        }).then(async (res) => {
+          if (res.count > 0) return;
+          await prisma.tournamentEntry.createMany({
+            data: [{ tournamentId, userId, score, ...tieBreak }],
+            skipDuplicates: true,
+          });
+        });
+      }),
     );
   }
 
@@ -104,7 +117,8 @@ export async function computeScoresForTournament(tournament: Tournament): Promis
   if (metric === "TASKS_COMPLETED") {
     const rows = await prisma.userDailyTaskProgress.groupBy({
       by: ["userId"],
-      where: { completedAt: { gte: startsAt, lte: upperBound } },
+      // Only tasks the player went to /tasks and collected — auto-completed progress never scores.
+      where: { rewardClaimedAt: { gte: startsAt, lte: upperBound } },
       _count: { id: true },
     });
     await batchUpsertEntries(
@@ -190,7 +204,7 @@ export async function computeScoresForTournament(tournament: Tournament): Promis
     return;
   }
 
-  if (metric === "FAUCET" || metric === "SHORTLINK" || metric === "AUTO_MINING" || metric === "YOUTUBE") {
+  if (metric === "FAUCET" || metric === "SHORTLINK" || metric === "AUTO_MINING" || metric === "YOUTUBE" || metric === "REFERRALS" || metric === "MERGES" || metric === "BURNS") {
     registerTournamentMetricScorers();
     const scorer = getMetricScorer(metric);
     if (!scorer) throw new Error(`${metric} scorer not registered`);
@@ -244,7 +258,7 @@ export async function computeScoresForTournament(tournament: Tournament): Promis
     await batchUpsertEntries(
       tournament.id,
       Array.from(scores.entries())
-        .map(([userId, b]) => ({ userId, score: b.total }))
+        .map(([userId, b]) => ({ userId, score: b.total, reachedAt: b.reachedAt }))
         .filter((r) => r.score > 0),
     );
     return;

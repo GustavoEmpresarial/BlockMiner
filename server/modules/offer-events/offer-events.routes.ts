@@ -47,3 +47,18 @@ offerEventsRouter.post(
   requireCriticalIdempotency({ scope: "offer_event_purchase_rack" }),
   ctrl.purchaseRackOffer,
 );
+offerEventsRouter.post(
+  "/purchase-part",
+  requireAuth,
+  purchaseLimiter,
+  requireCriticalIdempotency({ scope: "offer_event_purchase_part" }),
+  ctrl.purchasePartOffer,
+);
+offerEventsRouter.post(
+  "/purchase-part-pack",
+  requireAuth,
+  purchaseLimiter,
+  requireCriticalIdempotency({ scope: "offer_event_purchase_part_pack" }),
+  ctrl.purchasePartPackOffer,
+);
+

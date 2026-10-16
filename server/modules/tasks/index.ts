@@ -19,6 +19,7 @@ export {
   notifyDailyTaskGamePlayed,
   notifyDailyTaskYoutubeWatch,
   notifyDailyTaskInternalOfferwallCompleted,
+  notifyDailyTaskAction,
 } from "./tasks.service.js";
 
 export {
