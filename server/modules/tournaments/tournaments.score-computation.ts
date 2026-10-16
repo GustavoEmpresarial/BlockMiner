@@ -25,7 +25,7 @@ type Tournament = {
  * leaderboard sorts on after score: on a tie, whoever reached the score first
  * ranks higher.
  */
-async function batchUpsertEntries(
+export async function batchUpsertEntries(
   tournamentId: number,
   rows: { userId: number; score: number; reachedAt?: Date | null }[],
 ): Promise<void> {
@@ -45,27 +45,57 @@ async function batchUpsertEntries(
     where: { tournamentId, userId: { notIn: activeIds }, ...unpaid },
   });
 
-  for (let i = 0; i < active.length; i += 100) {
-    const chunk = active.slice(i, i + 100);
-    await Promise.all(
-      chunk.map(({ userId, score, reachedAt }) => {
-        const tieBreak = reachedAt !== undefined ? { firstContributionAt: reachedAt } : {};
-        return prisma.tournamentEntry.updateMany({
-          where: { tournamentId, userId, ...unpaid },
-          data: { score, ...tieBreak },
-        }).then(async (res) => {
-          if (res.count > 0) return;
-          await prisma.tournamentEntry.createMany({
-            data: [{ tournamentId, userId, score, ...tieBreak }],
-            skipDuplicates: true,
-          });
-        });
-      }),
-    );
+  // Rows that carry reachedAt rewrite the tie-break; rows that don't must leave it alone, so the
+  // two kinds go in separate statements (EXCLUDED cannot tell "set to null" from "not given").
+  const withTieBreak = active.filter((r) => r.reachedAt !== undefined);
+  const scoreOnly = active.filter((r) => r.reachedAt === undefined);
+  for (let i = 0; i < withTieBreak.length; i += UPSERT_CHUNK) {
+    await upsertEntriesChunk(tournamentId, withTieBreak.slice(i, i + UPSERT_CHUNK), true);
+  }
+  for (let i = 0; i < scoreOnly.length; i += UPSERT_CHUNK) {
+    await upsertEntriesChunk(tournamentId, scoreOnly.slice(i, i + UPSERT_CHUNK), false);
   }
 
   await invalidateLeaderboardCache(tournamentId);
   notifyTournamentDirty(tournamentId);
+}
+
+/** Rows per statement. One statement replaces what used to be one UPDATE (+ maybe INSERT) per user. */
+const UPSERT_CHUNK = 1000;
+
+/**
+ * Single-statement upsert. Same rules as the old per-row updateMany/createMany pair:
+ * a paid entry (reward_granted) is never touched, and an unchanged row is not rewritten,
+ * so a scoring tick with no movement costs one round trip instead of one per participant.
+ */
+async function upsertEntriesChunk(
+  tournamentId: number,
+  rows: { userId: number; score: number; reachedAt?: Date | null }[],
+  setTieBreak: boolean,
+): Promise<void> {
+  if (rows.length === 0) return;
+  const userIds = rows.map((r) => r.userId);
+  const scores = rows.map((r) => r.score);
+  if (setTieBreak) {
+    const reached = rows.map((r) => (r.reachedAt ? r.reachedAt.toISOString() : null));
+    await prisma.$executeRaw`
+      INSERT INTO tournament_entries AS te (tournament_id, user_id, score, first_contribution_at, updated_at)
+      SELECT ${tournamentId}, t.user_id, t.score, t.reached::timestamptz AT TIME ZONE 'UTC', now()
+      FROM unnest(${userIds}::int[], ${scores}::float8[], ${reached}::text[]) AS t(user_id, score, reached)
+      ON CONFLICT (tournament_id, user_id) DO UPDATE
+        SET score = EXCLUDED.score, first_contribution_at = EXCLUDED.first_contribution_at, updated_at = now()
+        WHERE te.reward_granted = false
+          AND (te.score IS DISTINCT FROM EXCLUDED.score
+               OR te.first_contribution_at IS DISTINCT FROM EXCLUDED.first_contribution_at)`;
+    return;
+  }
+  await prisma.$executeRaw`
+    INSERT INTO tournament_entries AS te (tournament_id, user_id, score, updated_at)
+    SELECT ${tournamentId}, t.user_id, t.score, now()
+    FROM unnest(${userIds}::int[], ${scores}::float8[]) AS t(user_id, score)
+    ON CONFLICT (tournament_id, user_id) DO UPDATE
+      SET score = EXCLUDED.score, updated_at = now()
+      WHERE te.reward_granted = false AND te.score IS DISTINCT FROM EXCLUDED.score`;
 }
 
 export async function computeScoresForTournament(tournament: Tournament): Promise<void> {
