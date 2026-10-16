@@ -53,6 +53,21 @@ import DashboardEnergyTaxModal from './components/DashboardEnergyTaxModal';
 import { logDashboardError } from './lib/dashboard.errors';
 import { useDashboardPoll } from './lib/useDashboardPoll';
 
+function overlayBlkRewards(rows: DashboardBlockRow[], restRows: DashboardBlockRow[] | undefined): DashboardBlockRow[] {
+  if (!restRows?.length) return rows;
+  const byBlock = new Map<string, DashboardBlockRow>();
+  for (const row of restRows) {
+    if (row?.blockNumber == null) continue;
+    byBlock.set(String(row.blockNumber), row);
+  }
+  return rows.map((row) => {
+    const rest = byBlock.get(String(row.blockNumber));
+    if (!rest) return row;
+    if (rest.userRewardBlk == null && rest.totalRewardBlk == null) return row;
+    return { ...row, userRewardBlk: rest.userRewardBlk, totalRewardBlk: rest.totalRewardBlk };
+  });
+}
+
 function mergeCycleWithSocket(
   rest: DashboardCycleState | null,
   socket: MiningStatsSnapshot | null | undefined,
@@ -64,7 +79,7 @@ function mergeCycleWithSocket(
   const socketHistory = socket?.blockHistory;
   const restHistory = rest?.blockHistory;
   if (Array.isArray(socketHistory) && socketHistory.length > 0) {
-    base.blockHistory = socketHistory as DashboardBlockRow[];
+    base.blockHistory = overlayBlkRewards(socketHistory as DashboardBlockRow[], restHistory as DashboardBlockRow[] | undefined);
   } else if (Array.isArray(restHistory)) {
     base.blockHistory = restHistory as DashboardBlockRow[];
   }

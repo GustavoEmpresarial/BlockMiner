@@ -20,8 +20,11 @@
  *    live-computed total hashrate for a user) — lives in `mining.repository.ts` and is already
  *    the mining module's own hashrate source of truth (used by mining.service.ts). Reused as-is.
  *  - Legacy fetched activity-eligible users with `OR: [{lastHeartbeatAt: gte cutoff}, {lastLoginAt:
- *    gte cutoff}]` plus `miningPayoutMode: "blk"` and `isBanned: false`. All of those fields exist
- *    verbatim on current/'s `User` model — ported byte-for-byte.
+ *    gte cutoff}]` plus `miningPayoutMode: "blk"` and `isBanned: false`. Presence heartbeat only
+ *    fires on YouTube / auto-mining, so a miner sitting on the dashboard (or with the tab closed
+ *    and machines installed) never refreshed `lastHeartbeatAt` and received nothing after the
+ *    login window. Installed active miners are the same activity the POL block already pays, so
+ *    they qualify alongside the legacy presence clocks.
  *  - Post-commit hooks (`notifyMiniPassBlkReward`, `notifyDailyTaskBlkMined`) are pulled from
  *    `mini-pass/index.ts` and `tasks/index.ts` (both already ported in current/), through the
  *    normal module-boundary import — not duplicated, not re-implemented.
@@ -82,11 +85,74 @@ async function fetchActivityEligibleUserIds(activitySec: number): Promise<number
     where: {
       isBanned: false,
       miningPayoutMode: "blk",
-      OR: [{ lastHeartbeatAt: { gte: cutoff } }, { lastLoginAt: { gte: cutoff } }],
+      OR: [
+        { lastHeartbeatAt: { gte: cutoff } },
+        { lastLoginAt: { gte: cutoff } },
+        { miners: { some: { isActive: true } } },
+      ],
     },
     select: { id: true },
   });
   return rows.map((r) => r.id);
+}
+
+type CycleHistoryRow = Record<string, unknown>;
+
+function historyTimestampMs(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (value instanceof Date && !Number.isNaN(value.getTime())) return value.getTime();
+  if (typeof value === "string") {
+    const parsed = Date.parse(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+/**
+ * The POL block history lives in the engine. BLK credits live in `blk_reward_logs`.
+ * Stamp the viewer's share onto each row so the dashboard can show it next to POL.
+ */
+export async function attachBlkRewardsToCycleState<T extends { blockHistory?: CycleHistoryRow[] }>(
+  userId: number,
+  state: T,
+): Promise<T> {
+  const history = state.blockHistory;
+  if (!userId || !Array.isArray(history) || history.length === 0) return state;
+
+  const config = await getBlkEconomyConfig();
+  const intervalSec = Math.max(1, Number(config.blkCycleIntervalSec) || 600);
+  const windowMs = intervalSec * 1000;
+  const stamps = history
+    .map((row) => historyTimestampMs(row.timestamp))
+    .filter((ms): ms is number => ms != null);
+  if (stamps.length === 0) return state;
+
+  const logs = await prisma.blkRewardLog.findMany({
+    where: {
+      userId,
+      cycle: { windowStart: { gte: new Date(Math.min(...stamps) - windowMs) } },
+    },
+    select: {
+      amount: true,
+      cycle: { select: { windowStart: true, totalReward: true } },
+    },
+  });
+  const byWindow = new Map<number, { amount: number; total: number }>();
+  for (const log of logs) {
+    byWindow.set(log.cycle.windowStart.getTime(), {
+      amount: Number(log.amount),
+      total: Number(log.cycle.totalReward),
+    });
+  }
+
+  state.blockHistory = history.map((row) => {
+    const ts = historyTimestampMs(row.timestamp);
+    if (ts == null) return row;
+    const hit = byWindow.get(Math.floor(ts / windowMs) * windowMs);
+    if (!hit) return row;
+    return { ...row, userRewardBlk: hit.amount, totalRewardBlk: hit.total };
+  });
+  return state;
 }
 
 async function snapshotHashrates(

@@ -4,8 +4,10 @@ export type DashboardBlockRow = {
   blockNumber?: number | string;
   userReward?: unknown;
   userRewardShib?: unknown;
+  userRewardBlk?: unknown;
   totalReward?: unknown;
   totalRewardShib?: unknown;
+  totalRewardBlk?: unknown;
   timestamp?: string | Date | unknown;
   persistFailed?: boolean;
 };

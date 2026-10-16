@@ -59,6 +59,8 @@ function sanitizeBlockHistory(arr) {
             totalRewardShib: numSafe(b.totalRewardShib ?? b.rewardShib, 0),
             userReward: numSafe(b.userReward, 0),
             userRewardShib: numSafe(b.userRewardShib, 0),
+            userRewardBlk: numSafe(b.userRewardBlk, 0),
+            totalRewardBlk: numSafe(b.totalRewardBlk, 0),
             minerCount: Math.trunc(numSafe(b.minerCount, 0)),
             timestamp: Number.isFinite(ts) ? ts : Date.now(),
             persistFailed: Boolean(b.persistFailed),

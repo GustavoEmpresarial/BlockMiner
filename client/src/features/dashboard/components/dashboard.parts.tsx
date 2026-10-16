@@ -299,6 +299,70 @@ export type DashboardHistoryProps = {
 // and this port must not add a new runtime dependency without an install step
 // the task explicitly said not to run. The sparkline is dropped; the table
 // below carries the same data. Re-add the chart once recharts is installed.
+function showPolGain(block: DashboardBlockRow): boolean {
+  const blk = Number(block.userRewardBlk ?? 0);
+  const pol = Number(block.userReward ?? 0);
+  return !(blk > 0 && !(pol > 0));
+}
+
+function UserGainLines({ block, tokenSymbol }: { block: DashboardBlockRow; tokenSymbol?: string }) {
+  const blk = Number(block.userRewardBlk ?? 0);
+  const shib = Number(block.userRewardShib ?? 0);
+  return (
+    <div className="flex flex-col leading-tight min-w-0">
+      {showPolGain(block) && (
+        <span className="text-emerald-400 font-black break-all">
+          +{safeDashboardNumber(block.userReward, 8)}{' '}
+          <span className="text-[10px] font-normal">{tokenSymbol}</span>
+        </span>
+      )}
+      {blk > 0 && (
+        <span className="text-sky-300 font-black text-[11px] md:text-xs">
+          +{safeDashboardNumber(block.userRewardBlk, 8)}{' '}
+          <span className="text-[10px] font-normal">BLK</span>
+        </span>
+      )}
+      {shib > 0 && (
+        <span className="text-amber-300 font-black text-[11px]">
+          +{safeDashboardNumber(block.userRewardShib, 2)}{' '}
+          <span className="text-[9px] font-normal">SHIB</span>
+        </span>
+      )}
+    </div>
+  );
+}
+
+function BlockTotalLines({ block, tokenSymbol }: { block: DashboardBlockRow; tokenSymbol?: string }) {
+  const { t } = useTranslation();
+  const shib = Number(block.totalRewardShib ?? 0);
+  const blk = Number(block.totalRewardBlk ?? 0);
+  return (
+    <div className="flex flex-col leading-tight text-gray-300 font-bold min-w-0">
+      <span className="break-all inline-flex items-center gap-1.5 flex-wrap">
+        {safeDashboardNumber(block.totalReward, 8)} {tokenSymbol}
+        {block.persistFailed ? (
+          <span
+            className="text-[9px] font-bold uppercase tracking-wider text-amber-400/90"
+            title={t('dashboard.persist_failed_title')}
+          >
+            DB
+          </span>
+        ) : null}
+      </span>
+      {blk > 0 && (
+        <span className="text-sky-300/90 text-[11px] font-bold">
+          {safeDashboardNumber(block.totalRewardBlk, 8)} BLK
+        </span>
+      )}
+      {shib > 0 && (
+        <span className="text-amber-300/80 text-[11px] font-bold">
+          {safeDashboardNumber(block.totalRewardShib, 2)} SHIB
+        </span>
+      )}
+    </div>
+  );
+}
+
 export function DashboardHistory({ blockHistory, tokenSymbol }: DashboardHistoryProps) {
   const { t } = useTranslation();
   const rows = blockHistory.slice(0, 5);
@@ -332,38 +396,15 @@ export function DashboardHistory({ blockHistory, tokenSymbol }: DashboardHistory
                 <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{t('dashboard.my_gain')}</p>
                 <div className="flex items-start gap-1.5">
                   <TrendingUp className="w-3.5 h-3.5 text-emerald-400 mt-0.5 shrink-0" />
-                  <div className="flex flex-col leading-tight min-w-0">
-                    <span className="text-emerald-400 font-black text-xs break-all">
-                      +{safeDashboardNumber(block.userReward, 8)}{' '}
-                      <span className="text-[10px] font-normal">{tokenSymbol}</span>
-                    </span>
-                    {Number(block.userRewardShib ?? 0) > 0 && (
-                      <span className="text-amber-300 font-black text-[11px]">
-                        +{safeDashboardNumber(block.userRewardShib, 2)} SHIB
-                      </span>
-                    )}
+                  <div className="text-xs">
+                    <UserGainLines block={block} tokenSymbol={tokenSymbol} />
                   </div>
                 </div>
               </div>
               <div className="min-w-0 space-y-1">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{t('dashboard.block_total')}</p>
-                <div className="flex flex-col leading-tight text-gray-300 font-bold">
-                  <span className="text-xs break-all inline-flex items-center gap-1.5 flex-wrap">
-                    {safeDashboardNumber(block.totalReward, 8)} {tokenSymbol}
-                    {block.persistFailed ? (
-                      <span
-                        className="text-[9px] font-bold uppercase tracking-wider text-amber-400/90"
-                        title={t('dashboard.persist_failed_title')}
-                      >
-                        DB
-                      </span>
-                    ) : null}
-                  </span>
-                  {Number(block.totalRewardShib ?? 0) > 0 && (
-                    <span className="text-amber-300/80 text-[11px] font-bold">
-                      {safeDashboardNumber(block.totalRewardShib, 2)} SHIB
-                    </span>
-                  )}
+                <div className="text-xs">
+                  <BlockTotalLines block={block} tokenSymbol={tokenSymbol} />
                 </div>
               </div>
             </div>
@@ -395,39 +436,11 @@ export function DashboardHistory({ blockHistory, tokenSymbol }: DashboardHistory
                 <td className="px-6 md:px-8 py-5">
                   <div className="flex items-start gap-2">
                     <TrendingUp className="w-4 h-4 text-emerald-400 mt-0.5" />
-                    <div className="flex flex-col leading-tight">
-                      <span className="text-emerald-400 font-black">
-                        +{safeDashboardNumber(block.userReward, 8)}{' '}
-                        <span className="text-[10px] font-normal">{tokenSymbol}</span>
-                      </span>
-                      {Number(block.userRewardShib ?? 0) > 0 && (
-                        <span className="text-amber-300 font-black text-[11px]">
-                          +{safeDashboardNumber(block.userRewardShib, 2)}{' '}
-                          <span className="text-[9px] font-normal">SHIB</span>
-                        </span>
-                      )}
-                    </div>
+                    <UserGainLines block={block} tokenSymbol={tokenSymbol} />
                   </div>
                 </td>
                 <td className="px-6 md:px-8 py-5 text-gray-300 font-bold">
-                  <div className="flex flex-col leading-tight">
-                    <span className="inline-flex items-center gap-2">
-                      {safeDashboardNumber(block.totalReward, 8)} {tokenSymbol}
-                      {block.persistFailed ? (
-                        <span
-                          className="text-[9px] font-bold uppercase tracking-wider text-amber-400/90"
-                          title={t('dashboard.persist_failed_title')}
-                        >
-                          DB
-                        </span>
-                      ) : null}
-                    </span>
-                    {Number(block.totalRewardShib ?? 0) > 0 && (
-                      <span className="text-amber-300/80 text-[11px] font-bold">
-                        {safeDashboardNumber(block.totalRewardShib, 2)} SHIB
-                      </span>
-                    )}
-                  </div>
+                  <BlockTotalLines block={block} tokenSymbol={tokenSymbol} />
                 </td>
                 <td className="px-6 md:px-8 py-5 text-right text-slate-400 font-mono text-xs">{formatDashboardBlockTime(block)}</td>
               </tr>

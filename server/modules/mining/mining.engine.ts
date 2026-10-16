@@ -325,6 +325,8 @@ export class MiningEngine {
    * accumulated `work` is split by their `miningAllocationPolBps` snapshot at settle time:
    *   workPol = work * (bps / ALLOCATION_BPS_MAX)
    *   workShib = work - workPol
+   * Miners in `miningPayoutMode === "blk"` contribute to neither pool. Their BLK comes from the
+   * separate BLK cycle; leaving them in this split was paying them POL while the UI showed 100% BLK.
    * Then `totalWorkPol` and `totalWorkShib` are computed independently, and each pool's reward
    * is shared in proportion to that pool's contributing work.
    *
@@ -358,7 +360,7 @@ export class MiningEngine {
     let totalWorkShib = 0;
     for (const [minerId, work] of roundSnapshot.entries()) {
       const miner = this.miners.get(minerId);
-      if (!miner || work <= 0) continue;
+      if (!miner || work <= 0 || miner.miningPayoutMode === "blk") continue;
       const allocBps = normalizeAllocationBps(miner.miningAllocationPolBps);
       const polFactor = allocBps / ALLOCATION_BPS_MAX;
       const workPol = work * polFactor;
@@ -441,7 +443,8 @@ export class MiningEngine {
     }
 
     const now = Date.now();
-    if (minerRewards.length === 0 || !this.persistBlockRewardsCallback) {
+    const poolWork = totalWorkPol + totalWorkShib;
+    if (poolWork > 0 && (minerRewards.length === 0 || !this.persistBlockRewardsCallback)) {
       // Falling through to the success path here would clear the round's work and record a
       // fully-rewarded block in history while writing NOTHING to the database, with no log
       // line to show for it. Surface it instead — it means work was accumulated for miner

@@ -22,12 +22,14 @@ import { getTokenFromRequest } from "../../shared/security/token.js";
 import { isTokenSessionCurrent } from "../../shared/security/sessionVersion.js";
 import { sanitizePublicStateForSocket } from "../../core/socket/socket.sanitize.js";
 import { engine, getOrCreateEngineMinerForUser, applyBoostForUser, upgradeRigForUser } from "./mining.service.js";
+import { attachBlkRewardsToCycleState } from "./mining.blk-cycle.js";
 
 const logger = rootLogger.child("MiningSocket");
 
-function safeSocketPublicState(minerId: string | undefined): Record<string, unknown> | null {
+async function safeSocketPublicState(minerId: string | undefined, userId?: number): Promise<Record<string, unknown> | null> {
   if (!minerId) return null;
   const raw = engine.getPublicState(minerId);
+  if (userId) await attachBlkRewardsToCycleState(userId, raw);
   return sanitizePublicStateForSocket(raw) ?? (raw as Record<string, unknown>);
 }
 
@@ -85,7 +87,7 @@ export function registerMiningSocketHandlers(io: Server): void {
         socket.data.userId = user.id;
         socket.join(`user:${user.id}`);
 
-        const safeState = safeSocketPublicState(miner.id);
+        const safeState = await safeSocketPublicState(miner.id, user.id);
         if (!safeState) {
           callback?.({ ok: false, message: "Estado inválido. Atualize a página." });
           return;
@@ -97,16 +99,17 @@ export function registerMiningSocketHandlers(io: Server): void {
       }
     });
 
-    socket.on("miner:toggle", (payload: unknown, callback: AckCallback) => {
+    socket.on("miner:toggle", async (payload: unknown, callback: AckCallback) => {
       const p = asRecord(payload);
       const active = Boolean(p.active);
       const minerId = socket.data.minerId;
+      const userId = socket.data.userId;
       if (!minerId) {
         callback?.({ ok: false, message: "Conecte-se primeiro." });
         return;
       }
       engine.setActive(minerId, active);
-      callback?.({ ok: true, state: safeSocketPublicState(minerId) });
+      callback?.({ ok: true, state: await safeSocketPublicState(minerId, userId) });
     });
 
     socket.on("miner:boost", async (_payload: unknown, callback: AckCallback) => {
@@ -117,7 +120,7 @@ export function registerMiningSocketHandlers(io: Server): void {
         return;
       }
       const result = await applyBoostForUser(userId);
-      callback?.({ ...result, state: safeSocketPublicState(minerId) });
+      callback?.({ ...result, state: await safeSocketPublicState(minerId, userId) });
     });
 
     socket.on("miner:upgrade-rig", async (_payload: unknown, callback: AckCallback) => {
@@ -128,7 +131,7 @@ export function registerMiningSocketHandlers(io: Server): void {
         return;
       }
       const result = await upgradeRigForUser(userId);
-      callback?.({ ...result, state: safeSocketPublicState(minerId) });
+      callback?.({ ...result, state: await safeSocketPublicState(minerId, userId) });
     });
 
     socket.on("disconnect", () => {
