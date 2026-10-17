@@ -127,24 +127,67 @@ export async function applyScoreDelta(tournamentId, userId, delta, eventAt, tx) 
         });
     }
 }
-export async function batchUpsertEntriesFromReconcile(tournamentId, rows) {
+/**
+ * Writes a tournament's scores in one statement per 1000 rows and drops users no longer scoring.
+ * Entries that already received a prize (reward_granted) are history: never rewritten, never
+ * dropped. Unchanged rows are not rewritten. Rows with `reachedAt` set the tie-break
+ * (first_contribution_at); rows without it leave the stored tie-break alone.
+ */
+export async function upsertTournamentEntryScores(tournamentId, rows) {
+    const unpaid = { rewardGranted: false };
     const active = rows.filter((r) => r.score > 0);
     const activeIds = active.map((r) => r.userId);
     if (activeIds.length === 0) {
-        await prisma.tournamentEntry.deleteMany({ where: { tournamentId } });
+        await prisma.tournamentEntry.deleteMany({ where: { tournamentId, ...unpaid } });
         return;
     }
     await prisma.tournamentEntry.deleteMany({
-        where: { tournamentId, userId: { notIn: activeIds } },
+        where: { tournamentId, userId: { notIn: activeIds }, ...unpaid },
     });
-    for (let i = 0; i < active.length; i += 100) {
-        const chunk = active.slice(i, i + 100);
-        await Promise.all(chunk.map(({ userId, score }) => prisma.tournamentEntry.upsert({
-            where: { tournamentId_userId: { tournamentId, userId } },
-            update: { score },
-            create: { tournamentId, userId, score },
-        })));
+    // EXCLUDED cannot tell "set to null" from "not given", so the two kinds go in separate statements.
+    const withTieBreak = active.filter((r) => r.reachedAt !== undefined);
+    const scoreOnly = active.filter((r) => r.reachedAt === undefined);
+    for (let i = 0; i < withTieBreak.length; i += UPSERT_CHUNK) {
+        await upsertEntriesChunk(tournamentId, withTieBreak.slice(i, i + UPSERT_CHUNK), true);
     }
+    for (let i = 0; i < scoreOnly.length; i += UPSERT_CHUNK) {
+        await upsertEntriesChunk(tournamentId, scoreOnly.slice(i, i + UPSERT_CHUNK), false);
+    }
+}
+const UPSERT_CHUNK = 1000;
+async function upsertEntriesChunk(tournamentId, rows, setTieBreak) {
+    if (rows.length === 0)
+        return;
+    const userIds = rows.map((r) => r.userId);
+    const scores = rows.map((r) => r.score);
+    if (setTieBreak) {
+        const reached = rows.map((r) => (r.reachedAt ? r.reachedAt.toISOString() : null));
+        await prisma.$executeRaw`
+      INSERT INTO tournament_entries AS te (tournament_id, user_id, score, first_contribution_at, updated_at)
+      SELECT ${tournamentId}, t.user_id, t.score, t.reached::timestamptz AT TIME ZONE 'UTC', now()
+      FROM unnest(${userIds}::int[], ${scores}::float8[], ${reached}::text[]) AS t(user_id, score, reached)
+      ON CONFLICT (tournament_id, user_id) DO UPDATE
+        SET score = EXCLUDED.score, first_contribution_at = EXCLUDED.first_contribution_at, updated_at = now()
+        WHERE te.reward_granted = false
+          AND (te.score IS DISTINCT FROM EXCLUDED.score
+               OR te.first_contribution_at IS DISTINCT FROM EXCLUDED.first_contribution_at)`;
+        return;
+    }
+    await prisma.$executeRaw`
+    INSERT INTO tournament_entries AS te (tournament_id, user_id, score, updated_at)
+    SELECT ${tournamentId}, t.user_id, t.score, now()
+    FROM unnest(${userIds}::int[], ${scores}::float8[]) AS t(user_id, score)
+    ON CONFLICT (tournament_id, user_id) DO UPDATE
+      SET score = EXCLUDED.score, updated_at = now()
+      WHERE te.reward_granted = false AND te.score IS DISTINCT FROM EXCLUDED.score`;
+}
+/**
+ * Drift correction. Used to upsert row by row and delete every entry not in `rows` — including
+ * entries already paid out (reward_granted), whose score it also rewrote. Same safe path as the
+ * scoring tick now; reconcile rows carry only scores, so the stored tie-break is kept.
+ */
+export async function batchUpsertEntriesFromReconcile(tournamentId, rows) {
+    await upsertTournamentEntryScores(tournamentId, rows.map((r) => ({ userId: r.userId, score: r.score })));
 }
 export async function getEntryScores(tournamentId) {
     const entries = await prisma.tournamentEntry.findMany({
