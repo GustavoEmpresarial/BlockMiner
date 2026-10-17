@@ -20,6 +20,7 @@ const MERGE_MESSAGE_KEY: Record<string, string> = {
   [PARTS_ERROR_CODE.INSUFFICIENT_BALANCE]: "parts.merge_need_balance",
   [PARTS_ERROR_CODE.PRICE_UNAVAILABLE]: "parts.merge_price_unavailable",
   [PARTS_ERROR_CODE.INSUFFICIENT_MACHINES]: "parts.merge_need_machines",
+  [PARTS_ERROR_CODE.MACHINES_CHANGED]: "parts.merge_need_machines",
   [PARTS_ERROR_CODE.MAX_LEVEL_REACHED]: "parts.merge_max_level",
   [PARTS_ERROR_CODE.OUT_OF_STOCK]: "parts.merge_stock",
   [PARTS_ERROR_CODE.PURCHASE_LIMIT]: "parts.merge_limit",

@@ -299,7 +299,13 @@ async function mergeOwnedMachinesTx(
     await tx.userInventory.deleteMany({ where: { ownedMachineId: { in: machineIds } } });
     await tx.userVault.deleteMany({ where: { ownedMachineId: { in: machineIds } } });
     await tx.salaTileMiner.deleteMany({ where: { userOwnedMachineId: { in: machineIds }, userId } });
-    await tx.userOwnedMachine.deleteMany({ where: { id: { in: machineIds }, userId } });
+    // Another transaction (burn claim, vault, room) may have removed these machines after we
+    // read them. Granting the merged machine anyway would mint it from machines that are gone,
+    // so abort and roll back parts and fee — same guard as burn-events destroyOwnedMachinesTx.
+    const consumed = await tx.userOwnedMachine.deleteMany({ where: { id: { in: machineIds }, userId } });
+    if (consumed.count !== machineIds.length) {
+      reject(409, "Estas máquinas mudaram durante a fusão. Atualize e tente de novo.", PARTS_ERROR_CODE.MACHINES_CHANGED);
+    }
 
     // 6. Grant the newly forged upgraded machine
     await grantPurchasedInventoryItems(
