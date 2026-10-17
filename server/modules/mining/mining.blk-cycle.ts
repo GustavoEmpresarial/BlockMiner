@@ -155,6 +155,17 @@ export async function attachBlkRewardsToCycleState<T extends { blockHistory?: Cy
   return state;
 }
 
+/**
+ * Each hashrate snapshot fires 7 queries at once (computeBaseHashRate). The old default of 40 users
+ * in flight meant ~280 queries against a pool of 20-30 connections every cycle, so for several
+ * seconds every 10 minutes all other requests queued behind it (Slow query bursts of ~250 at
+ * :x0:2x). 4 users in flight stays inside the pool; the cycle is not latency-sensitive.
+ */
+export function defaultSnapshotConcurrency(): number {
+  const n = Number.parseInt(String(process.env.BLK_CYCLE_SNAPSHOT_CONCURRENCY || "4"), 10);
+  return Number.isFinite(n) && n >= 1 ? Math.min(n, 40) : 4;
+}
+
 async function snapshotHashrates(
   userIds: number[],
   concurrency: number,
@@ -225,7 +236,7 @@ export async function runBlkRewardCycle(options: BlkRewardCycleOptions = {}): Pr
   }
 
   const userIds = await fetchActivityEligibleUserIds(activitySec);
-  const snapshots = await snapshotHashrates(userIds, options.concurrency ?? 40);
+  const snapshots = await snapshotHashrates(userIds, options.concurrency ?? defaultSnapshotConcurrency());
   const entries: Array<{ userId: number; hashrate: number }> = snapshots
     .filter((s) => s.hashrate > minHr)
     .map((s) => ({ userId: s.userId, hashrate: s.hashrate }));
