@@ -70,7 +70,7 @@ export async function claimReward(req: Request, res: Response): Promise<void> {
       res.status(result.status).json(body);
       return;
     }
-    res.json({ ok: true, message: result.message, rewardGh: result.rewardGh });
+    res.json({ ok: true, message: result.message, rewardGh: result.rewardGh, part: result.part });
   } catch (err: unknown) {
     log.error("YT claimReward error", { error: err instanceof Error ? err.message : String(err) });
     res.status(500).json({ ok: false, message: "Error claiming reward." });

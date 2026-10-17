@@ -45,7 +45,6 @@ export default function ShopPage() {
         <h1 className="text-3xl font-black uppercase tracking-tight text-white">
           {t('shop.title')}
         </h1>
-        <p className="max-w-3xl text-sm text-slate-400 font-medium">{t('shop.subtitle')}</p>
       </div>
 
       {racks.length > 0 && (

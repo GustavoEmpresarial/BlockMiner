@@ -15,6 +15,7 @@ import {
 import { toast } from 'sonner';
 import { isAxiosError } from 'axios';
 import { api } from '../../shared/auth/auth.store';
+import { formatPartDropNotice, type PartDropNotice } from '../parts/lib/partDropNotice';
 import IconBadge from '../../shared/components/IconBadge';
 import PowerBoostBanner from '../../shared/components/PowerBoostBanner';
 import { useDocumentTitleCountdown } from '../../shared/hooks/useDocumentTitleCountdown';
@@ -256,9 +257,11 @@ export default function FaucetPage() {
     if (!canClaim || claiming) return;
     setClaiming(true);
     try {
-      const res = await api.post<{ ok?: boolean; message?: string }>('/faucet/claim');
+      const res = await api.post<{ ok?: boolean; message?: string; part?: PartDropNotice | null }>('/faucet/claim');
       if (res.data?.ok) {
-        toast.success(res.data.message || t('common.success'));
+        const notice = formatPartDropNotice(res.data.part, t);
+        const base = res.data.message || t('common.success');
+        toast.success(notice ? `${base} ${notice}` : base);
         clearPartnerSession();
         setVisitStarted(false);
         setPartnerReady(false);
@@ -298,7 +301,6 @@ export default function FaucetPage() {
         <IconBadge icon={Droplets} variant="sky" size="lg" />
         <div>
           <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">{t('faucet.title')}</h1>
-          <p className="text-slate-400 text-xs sm:text-sm font-medium">{t('faucet.subtitle')}</p>
         </div>
       </div>
     </div>

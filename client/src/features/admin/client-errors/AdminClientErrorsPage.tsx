@@ -17,6 +17,7 @@ import { ClientErrorStatsPanel } from './components/ClientErrorStats';
 import { ClientErrorCard } from './components/ClientErrorCard';
 import { CriticalityBadge } from './components/CriticalityBadge';
 import { actorLabel } from './adminClientErrors.logic';
+import { formatUtcDateTime } from '../../../shared/utils/utcTime';
 
 const DEFAULT_FILTERS: ClientErrorFilters = {
   criticalities: new Set(),
@@ -242,7 +243,7 @@ export default function AdminClientErrorsPage() {
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-bold text-white">{actorLabel(g)}</p>
                     <p className="text-[11px] text-slate-500">
-                      {g.rows.length} evento(s) · último {new Date(g.lastAt).toLocaleString('pt-BR')}
+                      {g.rows.length} evento(s) · último {formatUtcDateTime(g.lastAt, { locale: 'pt-BR', seconds: true })}
                     </p>
                   </div>
                 </button>

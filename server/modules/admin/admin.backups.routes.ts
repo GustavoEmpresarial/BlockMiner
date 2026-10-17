@@ -9,7 +9,6 @@
  *       Backups are only transmitted via Google Drive cloud sync.
  */
 import express from "express";
-import prisma from "../../core/database/prisma.js";
 import {
   createPostgresSqlBackup,
   listSqlBackups,
@@ -24,6 +23,7 @@ import {
   configureGoogleDriveOAuth,
 } from "./google-drive.service.js";
 import { requireAdminPermission } from "./admin.permissions.js";
+import { runBackupInChildProcess, BackupWorkerError } from "./admin.backups.child.js";
 import { logAdminAction } from "./admin.audit-log.service.js";
 import { logger } from "../../core/logger/index.js";
 
@@ -116,7 +116,8 @@ backupsAdminRouter.post("/verify", async (req, res) => {
 // -------------------------------------------------------------
 backupsAdminRouter.post("/", async (req, res) => {
   try {
-    const backup = await createPostgresSqlBackup({ prisma, logger: log });
+    // Separate process: the dump must not run on the app's event loop (see admin.backups.child.ts).
+    const backup = await runBackupInChildProcess<Awaited<ReturnType<typeof createPostgresSqlBackup>>>("backup");
 
     void logAdminAction({
       adminId: req.admin?.adminId,
@@ -139,7 +140,11 @@ backupsAdminRouter.post("/", async (req, res) => {
 
     res.json({ ok: true, message: "Backup created and verified intact.", backup });
   } catch (error) {
-    log.error("admin_backup_create_failed", { message: errMsg(error) });
+    if (error instanceof BackupWorkerError && error.code === "BACKUP_ALREADY_RUNNING") {
+      res.status(409).json({ ok: false, code: error.code, message: "A backup is already running. Try again when it finishes." });
+      return;
+    }
+    log.error("admin_backup_create_failed", { message: errMsg(error), code: (error as { code?: unknown })?.code });
     res.status(500).json({ ok: false, message: errMsg(error) || "Backup failed" });
   }
 });

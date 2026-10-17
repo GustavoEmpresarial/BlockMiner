@@ -59,6 +59,8 @@ function sanitizeBlockHistory(arr) {
             totalRewardShib: numSafe(b.totalRewardShib ?? b.rewardShib, 0),
             userReward: numSafe(b.userReward, 0),
             userRewardShib: numSafe(b.userRewardShib, 0),
+            userRewardBlk: numSafe(b.userRewardBlk, 0),
+            totalRewardBlk: numSafe(b.totalRewardBlk, 0),
             minerCount: Math.trunc(numSafe(b.minerCount, 0)),
             timestamp: Number.isFinite(ts) ? ts : Date.now(),
             persistFailed: Boolean(b.persistFailed),
@@ -91,6 +93,7 @@ function sanitizeMiner(m) {
         lastShibReward: numSafe(rec.lastShibReward, 0),
         lifetimeMinedShib: numSafe(rec.lifetimeMinedShib, 0),
         shibBalance: numSafe(rec.shibBalance, 0),
+        miningPayoutMode: String(rec.miningPayoutMode || "pol").toLowerCase() === "blk" ? "blk" : "pol",
     };
 }
 /** Returns a plain JSON-safe object for Socket.IO `state:update`-style payloads, or null if `raw` isn't shaped like public state. */
@@ -105,6 +108,7 @@ export function sanitizePublicStateForSocket(raw) {
         tokenPrice: numSafe(s.tokenPrice, 0),
         blockReward: numSafe(s.blockReward, 0),
         blockRewardShib: numSafe(s.blockRewardShib, 0),
+        blockRewardBlk: numSafe(s.blockRewardBlk, 0.00347222),
         blockIntervalMinutes: numSafe(s.blockIntervalMinutes, 0),
         blockNumber: Math.trunc(numSafe(s.blockNumber, 0)),
         blockProgress: numSafe(s.blockProgress, 0),

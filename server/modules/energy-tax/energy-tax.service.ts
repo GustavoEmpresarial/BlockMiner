@@ -47,7 +47,7 @@ export { ACTIVITY_DISCOUNT_THRESHOLD };
 const log = logger.child("energy-tax.service");
 
 /** Rate constants — see legacy TaxesPage spec.
- *  • FULL_WEEK_RATE  = 15% — automatic Monday 21h charge (penalty for letting it accumulate)
+ *  • FULL_WEEK_RATE  = 15% — automatic Monday (UTC) charge (penalty for letting it accumulate)
  *  • DAILY_WEEK_RATE = 5%  — pay once/day (7 days straight) → big savings
  */
 export const FULL_WEEK_RATE = 0.15;
@@ -55,7 +55,7 @@ export const DAILY_WEEK_RATE = 0.05;
 export const DAILY_PER_DAY_RATE = DAILY_WEEK_RATE / 7;
 export const AUTO_PER_DAY_RATE = FULL_WEEK_RATE / 7;
 
-/** Feature flag — energy tax starts 29/06/2026 21:00 BRT. No charge (manual or cron) before this. */
+/** Feature flag — energy tax starts 2026-06-30 00:00 UTC. No charge (manual or cron) before this. */
 const DEFAULT_STARTS_AT_ISO = "2026-06-30T00:00:00.000Z";
 export const ENERGY_TAX_STARTS_AT = new Date(process.env.ENERGY_TAX_STARTS_AT_ISO || DEFAULT_STARTS_AT_ISO);
 
@@ -302,7 +302,7 @@ export async function computeWeekSummary(userId: number, now: Date = new Date())
 }
 
 /**
- * Manual daily payment. Idempotent: 1 charge per (userId, mined-BRT-day).
+ * Manual daily payment. Idempotent: 1 charge per (userId, mined UTC day).
  * "Pay today" settles the tax on yesterday's mining; periodDayStartsAt = yesterday.
  * `currency` chooses which wallet balance to debit (POL / BLK / SHIB); charge.amount
  * stays POL-denominated for reporting.

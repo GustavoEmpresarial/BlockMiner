@@ -35,6 +35,7 @@ import type {
   AdminUserDetailsPayload,
   MinerCatalogRow,
 } from './adminUsers.types';
+import { formatUtcDate, formatUtcDateTime } from '../../../shared/utils/utcTime';
 
 export default function AdminUserDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -342,14 +343,14 @@ export default function AdminUserDetailPage() {
                 </span>
                 <span className="flex items-center gap-1.5">
                   <Calendar className="w-3.5 h-3.5 text-slate-500" />
-                  Cadastro: {user.createdAt ? new Date(user.createdAt).toLocaleDateString('pt-BR') : '—'}
+                  Cadastro: {user.createdAt ? formatUtcDate(user.createdAt, { locale: 'pt-BR' }) : '—'}
                 </span>
               </div>
 
               {isBanned && user.banReason && (
                 <p className="text-xs text-red-400/90 italic pt-1">
                   Motivo do banimento: &ldquo;{user.banReason}&rdquo;
-                  {user.bannedUntil && ` (até ${new Date(user.bannedUntil).toLocaleDateString('pt-BR')})`}
+                  {user.bannedUntil && ` (até ${formatUtcDate(user.bannedUntil, { locale: 'pt-BR' })})`}
                 </p>
               )}
             </div>
@@ -707,7 +708,7 @@ export default function AdminUserDetailPage() {
                         </td>
                         <td className="p-3 font-mono">{t._count?.replies ?? 0}</td>
                         <td className="p-3 font-mono text-right text-slate-400">
-                          {new Date(t.createdAt).toLocaleString('pt-BR')}
+                          {formatUtcDateTime(t.createdAt, { locale: 'pt-BR', seconds: true })}
                         </td>
                       </tr>
                     ))}
@@ -755,7 +756,7 @@ export default function AdminUserDetailPage() {
                         </td>
                         <td className="p-3 font-mono text-[11px] text-slate-400">{log.ip ?? '—'}</td>
                         <td className="p-3 font-mono text-slate-400 text-right whitespace-nowrap">
-                          {new Date(log.createdAt).toLocaleString('pt-BR')}
+                          {formatUtcDateTime(log.createdAt, { locale: 'pt-BR', seconds: true })}
                         </td>
                       </tr>
                     ))}

@@ -34,6 +34,7 @@ import type {
   FraudScope,
   FraudSignalsResponse,
 } from './adminFraudSignals.types';
+import { formatUtcDate } from '../../../shared/utils/utcTime';
 
 const RISK_BADGES: Record<string, { label: string; badge: string }> = {
   critical: { label: 'Crítico', badge: 'border-red-500/40 bg-red-500/15 text-red-300' },
@@ -492,7 +493,7 @@ export default function AdminFraudSignalsPage() {
                                 )}
                               </td>
                               <td className="p-3 text-slate-400 font-mono text-[11px] whitespace-nowrap">
-                                {new Date(u.createdAt).toLocaleDateString('pt-BR')}
+                                {formatUtcDate(u.createdAt, { locale: 'pt-BR' })}
                               </td>
                               <td className="p-3 text-right">
                                 <Link

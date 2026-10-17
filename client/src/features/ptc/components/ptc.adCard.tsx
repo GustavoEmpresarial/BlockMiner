@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { validateTrustedEvent } from '../../../shared/utils/security';
 import { api } from '../../../shared/auth/auth.store';
+import { formatPartDropNotice, type PartDropNotice } from '../../parts/lib/partDropNotice';
 import { usePtcSessionStore } from '../lib/ptcSession.store';
 import { useActiveViewSeconds } from '../lib/ptcOfferwallHooks';
 import { useDocumentTitleCountdown } from '../../../shared/hooks/useDocumentTitleCountdown';
@@ -408,11 +409,13 @@ export function ActiveSessionView({ onDone }: { onDone: () => void }) {
     if (!storeSession || claiming) return;
     setClaiming(true);
     try {
-      const res = await api.post<{ ok: boolean; message?: string }>(`/ptc/session/${storeSession.sessionId}/claim`);
+      const res = await api.post<{ ok: boolean; message?: string; part?: PartDropNotice | null }>(`/ptc/session/${storeSession.sessionId}/claim`);
       if (res.data.ok) {
         setStatus('claimed');
         setClaimed(true);
-        toast.success(t('ptc.reward_credited', { amount: Number(storeSession.rewardShib).toLocaleString(undefined, { maximumFractionDigits: 4 }) }));
+        const credited = t('ptc.reward_credited', { amount: Number(storeSession.rewardShib).toLocaleString(undefined, { maximumFractionDigits: 4 }) });
+        const notice = formatPartDropNotice(res.data.part, t);
+        toast.success(notice ? `${credited} ${notice}` : credited);
         setTimeout(() => { clearSession(); onDone(); }, 2500);
       } else {
         toast.error(res.data.message ?? t('ptc.claim_failed'));

@@ -23,6 +23,7 @@ import {
   WALLETS_MAX_RETRIES,
 } from './transparency.base';
 import { useTranslation } from 'react-i18next';
+import { formatUtcTime } from '../../../shared/utils/utcTime';
 
 export function WalletCard({ wallet, loading }: { wallet: TrackedWalletEntry; loading: boolean }) {
   const { t } = useTranslation();
@@ -104,7 +105,7 @@ export function WalletCard({ wallet, loading }: { wallet: TrackedWalletEntry; lo
             </span>
             {!isManualValue && mode === 'current_balance' && wallet.fetchedAt && (
               <span className="text-slate-400 normal-case tracking-normal font-medium">
-                · {t('transparency.wallets.updated')} {new Date(wallet.fetchedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                · {t('transparency.wallets.updated')} {formatUtcTime(wallet.fetchedAt)}
               </span>
             )}
             {isManualValue && (

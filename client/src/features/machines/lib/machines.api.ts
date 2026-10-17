@@ -76,6 +76,9 @@ export function postVisualPlacement(body: { roomNumber: number; visualIndex: num
   return api.post<{
     ok: boolean;
     placements: Array<{ visualIndex: number; floorSlot: number | null }>;
+    rackCredits?: number;
+    fanCredits?: number;
+    creditReturned?: boolean;
     message?: string;
     code?: string;
   }>('/rooms/visual-placements', body);

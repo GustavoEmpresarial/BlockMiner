@@ -16,9 +16,6 @@ export default function CreatorPage() {
             <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">
               {t('ranking.social.creator_area')}
             </h1>
-            <p className="text-slate-400 text-xs sm:text-sm font-medium">
-              {t('ranking.social.creator_area_sub')}
-            </p>
           </div>
         </div>
       </div>

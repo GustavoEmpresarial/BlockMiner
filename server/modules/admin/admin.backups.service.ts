@@ -512,6 +512,73 @@ function observeDumpLine(state: PlainDumpScan, line: string, criticalTables: str
   }
 }
 
+const NEWLINE = 0x0a;
+const COPY_PUBLIC_MARK = Buffer.from("COPY public.");
+const DUMP_HEADER_MARK = Buffer.from("PostgreSQL database dump");
+const DUMP_FOOTER_MARK = Buffer.from("PostgreSQL database dump complete");
+
+/**
+ * Same result as running observeDumpLine on every line of `buf` (which must start at a line
+ * boundary), but only with native Buffer searches. The old version walked every byte in JS and
+ * decoded every line to a string — on a ~22 GB dump that pinned the app's event loop for the
+ * whole backup (over an hour) and every request waited behind it.
+ */
+function scanCompleteDumpLines(state: PlainDumpScan, buf: Buffer, criticalTables: string[]) {
+  if (!state.headerOk && buf.indexOf(DUMP_HEADER_MARK) !== -1) state.headerOk = true;
+  if (!state.footerOk && buf.indexOf(DUMP_FOOTER_MARK) !== -1) state.footerOk = true;
+  let pos = 0;
+  while (pos < buf.length) {
+    const hit = buf.indexOf(COPY_PUBLIC_MARK, pos);
+    if (hit === -1) return;
+    const eol = buf.indexOf(NEWLINE, hit);
+    const end = eol === -1 ? buf.length : eol;
+    if (hit === 0 || buf[hit - 1] === NEWLINE) {
+      observeDumpLine(state, buf.subarray(hit, end).toString("utf8"), criticalTables);
+    }
+    pos = end + 1;
+  }
+}
+
+/** Pass-through stream that hashes the plain dump and records header/footer/COPY sections. */
+export function createPlainDumpScanner(criticalTables: string[]) {
+  const hash = crypto.createHash("sha256");
+  const scan: PlainDumpScan = {
+    headerOk: false,
+    footerOk: false,
+    copyPublicLineCount: 0,
+    found: new Set(),
+    plainBytes: 0,
+    sha256: "",
+  };
+  let pending = Buffer.alloc(0);
+  const transform = new Transform({
+    transform(chunk, _encoding, callback) {
+      const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+      hash.update(buf);
+      scan.plainBytes += buf.length;
+      const combined = pending.length > 0 ? Buffer.concat([pending, buf]) : buf;
+      const lastNewline = combined.lastIndexOf(NEWLINE);
+      if (lastNewline === -1) {
+        pending = Buffer.from(combined);
+      } else {
+        scanCompleteDumpLines(scan, combined.subarray(0, lastNewline + 1), criticalTables);
+        pending = Buffer.from(combined.subarray(lastNewline + 1));
+      }
+      callback(null, buf);
+    },
+    flush(callback) {
+      if (pending.length > 0) scanCompleteDumpLines(scan, pending, criticalTables);
+      pending = Buffer.alloc(0);
+      callback();
+    },
+  });
+  const finish = () => {
+    scan.sha256 = hash.digest("hex");
+    return scan;
+  };
+  return { transform, scan, finish };
+}
+
 /**
  * pg_dump writes plain SQL to stdout and this process gzips it immediately.
  * The app disk cannot hold the uncompressed dump (about 22 GB) plus the .gz.
@@ -529,43 +596,12 @@ function runPgDumpToGzip({
 }): Promise<PlainDumpScan> {
   const args = ["--format=p", "--encoding=UTF8", "--no-owner", "--no-acl", "--dbname", databaseUrl];
   const child = spawn(pgDumpPath, args, { stdio: ["ignore", "pipe", "pipe"], env: { ...process.env } });
-  const hash = crypto.createHash("sha256");
-  const scan: PlainDumpScan = {
-    headerOk: false,
-    footerOk: false,
-    copyPublicLineCount: 0,
-    found: new Set(),
-    plainBytes: 0,
-    sha256: "",
-  };
-  let pending = Buffer.alloc(0);
+  const scanner = createPlainDumpScanner(criticalTables);
   let stderr = "";
 
   child.stderr?.on("data", (chunk) => {
     stderr += String(chunk || "");
     if (stderr.length > 400_000) stderr = stderr.slice(-200_000);
-  });
-
-  const scanner = new Transform({
-    transform(chunk, _encoding, callback) {
-      const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
-      hash.update(buf);
-      scan.plainBytes += buf.length;
-      const combined = pending.length > 0 ? Buffer.concat([pending, buf]) : buf;
-      let start = 0;
-      for (let i = 0; i < combined.length; i += 1) {
-        if (combined[i] !== 10) continue;
-        observeDumpLine(scan, combined.subarray(start, i).toString("utf8"), criticalTables);
-        start = i + 1;
-      }
-      pending = Buffer.from(combined.subarray(start));
-      callback(null, buf);
-    },
-    flush(callback) {
-      if (pending.length > 0) observeDumpLine(scan, pending.toString("utf8"), criticalTables);
-      pending = Buffer.alloc(0);
-      callback();
-    },
   });
 
   const gzip = createGzip({ level: BACKUP_GZIP_LEVEL });
@@ -582,18 +618,20 @@ function runPgDumpToGzip({
 
     child.on("error", (err) => fail(new Error(`Failed to start pg_dump: ${err.message}`)));
 
-    pipeline(child.stdout, scanner, gzip, output)
-      .then(() => {
-        child.once("close", (code) => {
-          if (settled) return;
-          settled = true;
-          if (code === 0) {
-            scan.sha256 = hash.digest("hex");
-            resolve(scan);
-            return;
-          }
-          reject(new Error(`pg_dump exited with code ${code}: ${stderr.slice(-8000) || "no stderr"}`));
-        });
+    // Listen for "close" from the start: pg_dump often closes before gzip has flushed the file,
+    // and a listener attached only after the pipeline finished never fired — the backup then
+    // hung forever (or, in a process with nothing else alive, exited 0 without a result).
+    const closed = new Promise<number | null>((res) => child.once("close", (code) => res(code)));
+
+    Promise.all([pipeline(child.stdout, scanner.transform, gzip, output), closed])
+      .then(([, code]) => {
+        if (settled) return;
+        settled = true;
+        if (code === 0) {
+          resolve(scanner.finish());
+          return;
+        }
+        reject(new Error(`pg_dump exited with code ${code}: ${stderr.slice(-8000) || "no stderr"}`));
       })
       .catch((err: unknown) => fail(err instanceof Error ? err : new Error(String(err))));
   });

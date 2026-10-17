@@ -18,15 +18,20 @@
 # client/index.html layout). Ship the prebuilt SPA from client/dist (extracted
 # from the last healthy production image / local build).
 FROM node:22-bookworm-slim AS frontend-builder
+# deploy.py points this at the fresh build (client/dist.next) so the live client/dist mount is
+# only touched right before the app is recreated.
+ARG CLIENT_DIST=client/dist
 WORKDIR /app/client
-COPY client/dist ./dist
+COPY ${CLIENT_DIST} ./dist
 
 # ---- Stage 2: backend artifacts ----
 # current/server source tree is incomplete in this workspace (partial modularization).
 # Production ships the already-compiled dist from the previous healthy image / local dist/.
 FROM node:22-bookworm-slim AS builder
+# Same for the server: deploy.py passes .build-next/dist.
+ARG SERVER_DIST=dist
 WORKDIR /app
-COPY dist ./dist
+COPY ${SERVER_DIST} ./dist
 
 # ---- Stage 3: runtime (prod deps only) ----
 FROM node:22-bookworm-slim

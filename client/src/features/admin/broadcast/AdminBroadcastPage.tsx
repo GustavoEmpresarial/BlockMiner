@@ -28,6 +28,7 @@ import {
   readAxiosResponseMessage,
 } from "../lib/admin.api";
 import type { AdminBroadcastMessage, AdminBroadcastForm } from "../lib/admin.types";
+import { formatUtcDateTime } from '../../../shared/utils/utcTime';
 
 const EMPTY_FORM: AdminBroadcastForm = {
   title: "",
@@ -612,13 +613,7 @@ export default function AdminBroadcast() {
                     <span>&middot;</span>
                     <span>
                       Criado em{" "}
-                      {new Date(m.createdAt).toLocaleString("pt-BR", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                      {formatUtcDateTime(m.createdAt, { locale: "pt-BR" })}
                     </span>
                   </div>
                 </div>

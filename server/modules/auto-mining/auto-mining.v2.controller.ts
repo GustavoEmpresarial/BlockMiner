@@ -190,6 +190,7 @@ export async function postClaimNormal(req: Request, res: Response): Promise<void
       },
       nextClaimAt: result.nextClaimAt.toISOString(),
       ...payload,
+      part: result.part,
     });
   } catch (err: unknown) {
     sendError(res, err);
@@ -260,6 +261,7 @@ export async function postClaimTurbo(req: Request, res: Response): Promise<void>
       },
       nextClaimAt: result.nextClaimAt.toISOString(),
       ...payload,
+      part: result.part,
     });
   } catch (err: unknown) {
     sendError(res, err);

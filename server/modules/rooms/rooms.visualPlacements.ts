@@ -1,6 +1,8 @@
 import prisma from "../../core/database/prisma.js";
 import { HttpStatusError } from "../../shared/errors/httpStatusError.js";
 import { getRackCreditsForUser } from "../racks/racks.service.js";
+import { getFanCreditsForUser } from "../fans/fans.service.js";
+import { syncUserBaseHashRate, miningEngine } from "../mining/index.js";
 import { SLOTS_PER_VISUAL_RACK } from "./rooms.types.js";
 
 function visualCountFromSlots(slotCount: number, _roomNumber?: number | null): number {
@@ -45,100 +47,6 @@ export async function listVisualPlacementsForUser(userId: number) {
       return { roomId: room.id, roomNumber: room.roomNumber, visualCount, placements };
     }),
   };
-}
-
-async function readShowcasePlacementResponse(roomId: number, userId: number) {
-  const rows = await prisma.userVisualRackPlacement.findMany({
-    where: { roomId },
-    select: { visualIndex: true, floorSlot: true, purchased: true },
-    orderBy: { visualIndex: "asc" },
-  });
-  const rackCredits = await getRackCreditsForUser(userId);
-  return {
-    ok: true as const,
-    rackCredits,
-    placements: rows.map((row) => ({
-      visualIndex: row.visualIndex,
-      floorSlot: row.floorSlot,
-      purchased: Boolean(row.purchased),
-    })),
-  };
-}
-
-/**
- * The 3D credit is an unplaced rack in this room, created by the shop or the offer.
- * It is not users.rack_credits: that column pays for the shelf rack.
- * Moving a rack that is already on a pad stays refused. Taking it off the pad
- * returns that same rack as a credit. A second call does not create another one.
- */
-async function setShowcasePlacementForUser(
-  userId: number,
-  roomId: number,
-  visualIndex: number | null,
-  floorSlot: number | null,
-  fromCredit: boolean,
-) {
-  if (fromCredit) {
-    throw new HttpStatusError(400, "O rack desta sala não usa o crédito da estante.", {
-      code: "SHOWCASE_RACK_FIXED",
-    });
-  }
-  if (visualIndex == null || !Number.isInteger(visualIndex) || visualIndex < 0) {
-    throw new HttpStatusError(400, "visualIndex inválido.");
-  }
-  if (
-    floorSlot != null &&
-    (!Number.isInteger(floorSlot) || floorSlot < 0 || floorSlot >= SHOWCASE_RACKS_PER_ROOM)
-  ) {
-    throw new HttpStatusError(400, "Posição inválida.", { code: "RACK_INVALID_PLACEMENT" });
-  }
-
-  await prisma.$transaction(async (tx) => {
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(${userId}::int, ${SHOWCASE_3D_ROOM_NUMBER}::int)`;
-    const current = await tx.userVisualRackPlacement.findUnique({
-      where: { roomId_visualIndex: { roomId, visualIndex } },
-    });
-    if (!current) throw new HttpStatusError(404, "Rack não encontrado.");
-
-    if (floorSlot == null) {
-      if (current.floorSlot == null) return;
-      const start = visualIndex * SHOWCASE_RACK_BAYS;
-      const end = start + SHOWCASE_RACK_BAYS;
-      const busy = await tx.userRack.count({
-        where: {
-          roomId,
-          position: { gte: start, lt: end },
-          OR: [{ userMinerId: { not: null } }, { blockedByMinerId: { not: null } }],
-        },
-      });
-      if (busy > 0) {
-        throw new HttpStatusError(400, "Esvazie o rack antes de guardar.", { code: "RACK_NOT_EMPTY" });
-      }
-      await tx.userVisualRackPlacement.update({
-        where: { id: current.id },
-        data: { floorSlot: null },
-      });
-      return;
-    }
-
-    if (current.floorSlot != null && current.floorSlot !== floorSlot) {
-      throw new HttpStatusError(400, "O rack desta sala fica fixo no chão.", { code: "SHOWCASE_RACK_FIXED" });
-    }
-    if (current.floorSlot === floorSlot) return;
-
-    const occupant = await tx.userVisualRackPlacement.findFirst({
-      where: { roomId, floorSlot, visualIndex: { not: visualIndex } },
-    });
-    if (occupant) {
-      throw new HttpStatusError(400, "Posição ocupada.", { code: "SHOWCASE_RACK_OCCUPIED" });
-    }
-    await tx.userVisualRackPlacement.update({
-      where: { id: current.id },
-      data: { floorSlot },
-    });
-  });
-
-  return readShowcasePlacementResponse(roomId, userId);
 }
 
 async function seedDefaultsIfEmpty(userId: number, roomId: number, visualCount: number) {
@@ -286,19 +194,43 @@ export async function setVisualPlacementForUser(
 
   let creditReturned = false;
   await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(${userId}::int, ${room.id}::int)`;
+
     const current = await tx.userVisualRackPlacement.findUnique({
       where: { roomId_visualIndex: { roomId: room.id, visualIndex } },
     });
 
     if (floorSlot != null) {
+      if (current?.floorSlot === floorSlot) return;
+
       const occupant = await tx.userVisualRackPlacement.findFirst({
         where: { roomId: room.id, floorSlot, visualIndex: { not: visualIndex } },
       });
       if (occupant) {
+        if (current?.floorSlot == null) {
+          throw new HttpStatusError(400, "Posição ocupada.", { code: "RACK_OCCUPIED" });
+        }
+        const oldFloor = current.floorSlot;
         await tx.userVisualRackPlacement.update({
           where: { id: occupant.id },
-          data: { floorSlot: current?.floorSlot ?? null },
+          data: { floorSlot: null },
         });
+        await tx.userVisualRackPlacement.upsert({
+          where: { roomId_visualIndex: { roomId: room.id, visualIndex } },
+          create: {
+            userId,
+            roomId: room.id,
+            visualIndex,
+            floorSlot,
+            purchased: false,
+          },
+          update: { floorSlot },
+        });
+        await tx.userVisualRackPlacement.update({
+          where: { id: occupant.id },
+          data: { floorSlot: oldFloor },
+        });
+        return;
       }
     }
 
@@ -325,21 +257,31 @@ export async function setVisualPlacementForUser(
         data: { purchased: false },
       });
     }
-
-    if (floorSlot == null) {
-      await tx.userVisualFanPlacement.deleteMany({ where: { roomId: room.id, visualIndex } });
-    }
+    // The fan stays attached to the rack while it is stored and comes back with it.
   });
+
+  if (floorSlot == null) {
+    await syncUserBaseHashRate(userId);
+    try {
+      await miningEngine.reloadMinerProfile(userId, { forceBalanceSync: true });
+    } catch {
+      /* engine profile reload is best-effort */
+    }
+  }
 
   const rows = await prisma.userVisualRackPlacement.findMany({
     where: { roomId: room.id },
     select: { visualIndex: true, floorSlot: true, purchased: true },
     orderBy: { visualIndex: "asc" },
   });
-  const rackCredits = await getRackCreditsForUser(userId);
+  const [rackCredits, fanCredits] = await Promise.all([
+    getRackCreditsForUser(userId),
+    getFanCreditsForUser(userId),
+  ]);
   return {
     ok: true,
     rackCredits,
+    fanCredits,
     creditReturned,
     placements: rows.map((row) => ({
       visualIndex: row.visualIndex,

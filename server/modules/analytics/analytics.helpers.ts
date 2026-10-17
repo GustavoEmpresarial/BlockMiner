@@ -7,6 +7,9 @@ export const BLOCK_DURATION_MS_FALLBACK = 10 * 60 * 1000; // 10 min
 export const DEFAULT_FALLBACK_POL_PRICE = 0.35;
 export const SITE_LAUNCH_DATE_FALLBACK = '2026-03-05T00:00:00.000Z';
 
+const MS_HOUR = 60 * 60 * 1000;
+const MS_DAY = 24 * MS_HOUR;
+
 export function parsePeriodParam(raw: unknown): PeriodKey {
   const s = String(raw ?? 'month').trim().toLowerCase();
   if (s === 'day' || s === 'week' || s === 'year' || s === 'all') {
@@ -111,95 +114,74 @@ export function resolveAnalyticsPeriod(raw: unknown, now = new Date()): Resolved
   let since: Date;
   let bucketUnit: BucketUnit;
 
+  const monthLabel = (d: Date) =>
+    d.toLocaleString('pt-BR', { month: 'short', year: '2-digit', timeZone: 'UTC' });
+  const dayBuckets = (count: number) => {
+    const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+    for (let i = count - 1; i >= 0; i--) {
+      const from = new Date(today - i * MS_DAY);
+      buckets.push({
+        label: `${from.getUTCDate()}/${from.getUTCMonth() + 1}`,
+        from,
+        to: new Date(from.getTime() + MS_DAY),
+        year: from.getUTCFullYear(),
+        month: from.getUTCMonth() + 1,
+        day: from.getUTCDate(),
+      });
+    }
+  };
+  const monthBuckets = (count: number) => {
+    for (let i = count - 1; i >= 0; i--) {
+      const from = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
+      buckets.push({
+        label: monthLabel(from),
+        from,
+        to: new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth() + 1, 1)),
+        year: from.getUTCFullYear(),
+        month: from.getUTCMonth() + 1,
+      });
+    }
+  };
+
   if (period === 'day') {
     bucketUnit = 'hour';
-    since = new Date(now);
-    since.setHours(since.getHours() - 23, 0, 0, 0);
+    const currentHour = Math.floor(now.getTime() / MS_HOUR) * MS_HOUR;
+    since = new Date(currentHour - 23 * MS_HOUR);
     for (let i = 23; i >= 0; i--) {
-      const d = new Date(now);
-      d.setHours(d.getHours() - i, 0, 0, 0);
-      const end = new Date(d);
-      end.setHours(end.getHours() + 1);
+      const from = new Date(currentHour - i * MS_HOUR);
       buckets.push({
-        label: `${String(d.getHours()).padStart(2, '0')}h`,
-        from: d,
-        to: end,
-        year: d.getFullYear(),
-        month: d.getMonth() + 1,
-        day: d.getDate(),
-        hour: d.getHours(),
+        label: `${String(from.getUTCHours()).padStart(2, '0')}h`,
+        from,
+        to: new Date(from.getTime() + MS_HOUR),
+        year: from.getUTCFullYear(),
+        month: from.getUTCMonth() + 1,
+        day: from.getUTCDate(),
+        hour: from.getUTCHours(),
       });
     }
   } else if (period === 'week') {
     bucketUnit = 'day';
-    since = new Date(now);
-    since.setDate(since.getDate() - 7);
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date(now);
-      d.setDate(d.getDate() - i);
-      const startOfDay = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
-      const endOfDay = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1, 0, 0, 0, 0);
-      buckets.push({
-        label: `${d.getDate()}/${d.getMonth() + 1}`,
-        from: startOfDay,
-        to: endOfDay,
-        year: d.getFullYear(),
-        month: d.getMonth() + 1,
-        day: d.getDate(),
-      });
-    }
+    since = new Date(now.getTime() - 7 * MS_DAY);
+    dayBuckets(7);
   } else if (period === 'year') {
     bucketUnit = 'month';
     since = new Date(now);
-    since.setFullYear(since.getFullYear() - 1);
-    for (let i = 11; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const endOfMonth = new Date(d.getFullYear(), d.getMonth() + 1, 1);
-      buckets.push({
-        label: d.toLocaleString('pt-BR', { month: 'short', year: '2-digit' }),
-        from: d,
-        to: endOfMonth,
-        year: d.getFullYear(),
-        month: d.getMonth() + 1,
-      });
-    }
+    since.setUTCFullYear(since.getUTCFullYear() - 1);
+    monthBuckets(12);
   } else if (period === 'all') {
     bucketUnit = 'month';
     since = siteLaunchDate();
     const monthsSinceLaunch = Math.max(
       0,
-      (now.getFullYear() - since.getFullYear()) * 12 + (now.getMonth() - since.getMonth())
+      (now.getUTCFullYear() - since.getUTCFullYear()) * 12 + (now.getUTCMonth() - since.getUTCMonth())
     );
-    for (let i = monthsSinceLaunch; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const endOfMonth = new Date(d.getFullYear(), d.getMonth() + 1, 1);
-      buckets.push({
-        label: d.toLocaleString('pt-BR', { month: 'short', year: '2-digit' }),
-        from: d,
-        to: endOfMonth,
-        year: d.getFullYear(),
-        month: d.getMonth() + 1,
-      });
-    }
+    monthBuckets(monthsSinceLaunch + 1);
   } else {
     // Default: 'month' (30 days)
     bucketUnit = 'day';
     since = new Date(now);
-    since.setMonth(since.getMonth() - 1);
-    for (let i = 29; i >= 0; i--) {
-      const d = new Date(now);
-      d.setDate(d.getDate() - i);
-      const startOfDay = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
-      const endOfDay = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1, 0, 0, 0, 0);
-      buckets.push({
-        label: `${d.getDate()}/${d.getMonth() + 1}`,
-        from: startOfDay,
-        to: endOfDay,
-        year: d.getFullYear(),
-        month: d.getMonth() + 1,
-        day: d.getDate(),
-      });
-    }
+    since.setUTCMonth(since.getUTCMonth() - 1);
+    dayBuckets(30);
   }
 
   return { period, since, buckets, bucketUnit };
@@ -211,14 +193,14 @@ export function buildBuckets(period: PeriodKey, now: Date): { since: Date; bucke
 }
 
 export function bucketKeyFor(d: Date, unit: BucketUnit, hour?: number): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
   if (unit === 'month') {
     return `${y}-${m}`;
   }
-  const day = String(d.getDate()).padStart(2, '0');
+  const day = String(d.getUTCDate()).padStart(2, '0');
   if (unit === 'hour') {
-    return `${y}-${m}-${day}-${String(hour ?? d.getHours() ?? 0).padStart(2, '0')}`;
+    return `${y}-${m}-${day}-${String(hour ?? d.getUTCHours()).padStart(2, '0')}`;
   }
   return `${y}-${m}-${day}`;
 }

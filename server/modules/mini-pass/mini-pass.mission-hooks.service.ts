@@ -188,7 +188,7 @@ export async function notifyMiniPassLoginDay(userId: number, checkinDateKey: str
   await dispatchMissionProgressHook({
     userId,
     missionType: MISSION_LOGIN_DAY,
-    dedupeKey: `login-${checkinDateKey}`,
+    dedupeKey: `login-${userId}-${checkinDateKey}`,
     delta: 1,
   });
 }

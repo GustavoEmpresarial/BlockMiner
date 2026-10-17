@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
+import { MachineRarityBadge } from './MachineRarityBadge';
 
 const VIEWPORT_MARGIN = 8;
 const GAP = 8;
@@ -32,13 +33,14 @@ type RackMachineTooltipPortalProps = {
   hashrateStr: string;
   /** Number of rack slots occupied (e.g. 1 or 2). */
   slotSize: number;
+  level?: number | null;
 };
 
 /**
  * Portal-mounted tooltip for rack machine slots. Escapes ancestor overflow/transform clipping.
  * Marked aria-hidden: screen readers use the slot button's aria-label instead.
  */
-export function RackMachineTooltipPortal({ open, anchorEl, displayName, hashrateStr, slotSize }: RackMachineTooltipPortalProps) {
+export function RackMachineTooltipPortal({ open, anchorEl, displayName, hashrateStr, slotSize, level }: RackMachineTooltipPortalProps) {
   const { t } = useTranslation();
   const tooltipRef = useRef<HTMLDivElement>(null);
   const [coords, setCoords] = useState({ top: 0, left: 0 });
@@ -101,6 +103,7 @@ export function RackMachineTooltipPortal({ open, anchorEl, displayName, hashrate
     >
       <p className="text-[9px] font-bold uppercase tracking-wide text-gray-500">{t('machines.tooltip_label')}</p>
       <p className="truncate text-xs font-bold text-white -mt-0.5">{displayName}</p>
+      <MachineRarityBadge level={level} size="xs" className="mt-1" />
       <p className="mt-0.5 text-[10px] font-bold uppercase tracking-wide text-primary">
         {t('machines.tooltip_power', { hashrate: hashrateStr })}
       </p>

@@ -11,6 +11,7 @@ import { logger as rootLogger } from "../../core/logger/index.js";
 import prisma from "../../core/database/prisma.js";
 import { MiningEngine, ALLOCATION_BPS_MAX, normalizeAllocationBps } from "./mining.engine.js";
 import * as miningRepo from "./mining.repository.js";
+import { attachBlkRewardsToCycleState } from "./mining.blk-cycle.js";
 const logger = rootLogger.child("MiningService");
 /** Process-wide engine singleton. One MiningEngine per Node process, same as legacy. */
 export const engine = new MiningEngine();
@@ -168,7 +169,9 @@ export async function getCycleSnapshotForUser(userId) {
         const miner = await getOrCreateEngineMinerForUser(userId);
         minerId = miner.id;
     }
-    return engine.getPublicState(minerId, { includeLeaderboard: false });
+    const state = engine.getPublicState(minerId, { includeLeaderboard: false });
+    if (userId) await attachBlkRewardsToCycleState(userId, state);
+    return state;
 }
 /** GET /mining/reward-rate — authenticated user's current hashrate + estimated reward. */
 export async function getRewardRateForUser(userId) {

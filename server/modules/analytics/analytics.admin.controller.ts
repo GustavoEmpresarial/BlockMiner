@@ -445,7 +445,7 @@ async function computeAnalytics(
   }
 
   const chartData = months.map((m) => {
-    const dateObj = new Date(m.year, m.month - 1, m.day ?? 1);
+    const dateObj = new Date(Date.UTC(m.year, m.month - 1, m.day ?? 1, m.hour ?? 0));
     const key = bucketKeyFor(dateObj, unit as 'hour' | 'day' | 'month', m.hour);
     const pol = Number((buckets[key] || 0).toFixed(8));
     return { label: m.label, value: pol, valueUsd: pol * economy.polPrice };

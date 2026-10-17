@@ -39,6 +39,8 @@ import { loginClientIp } from "../login/login.anonymous-ip.js";
 import { buildDeviceFingerprint, getAuthIpContext, evaluateRegistrationAttempt, recordUserIpLog } from "./register.risk.js";
 import { signEmailVerificationToken, APP_URL } from "../auth.service.js";
 import { sendEmailVerificationEmail } from "../../../shared/security/mailer.js";
+import { isDisposableEmail } from "../../../shared/security/disposableEmail.js";
+import { evaluateReferralLinkFraud } from "../../referrals/referrals.anti-abuse.js";
 
 const log = logger.child("RegisterController");
 
@@ -72,6 +74,17 @@ export async function registerPost(req: Request, res: Response): Promise<void> {
 
     const normalizedUsername = normalizeIdentifier(username);
     const normalizedEmail = normalizeEmail(email);
+
+    if (isDisposableEmail(normalizedEmail)) {
+      log.security("AUTH_REGISTER_DISPOSABLE_EMAIL_BLOCKED", { email: normalizedEmail, clientIp: loginClientIp(req) }, req);
+      res.status(400).json({
+        ok: false,
+        code: "DISPOSABLE_EMAIL_NOT_ALLOWED",
+        message: "Endereços de e-mail temporários ou descartáveis não são permitidos. Use um provedor de e-mail permanente (como Gmail, Outlook, Yahoo, etc.).",
+      });
+      return;
+    }
+
     const clientIp = loginClientIp(req);
     const deviceFingerprint = buildDeviceFingerprint(req);
     const ipContext = await getAuthIpContext(prisma, clientIp);
@@ -147,8 +160,25 @@ export async function registerPost(req: Request, res: Response): Promise<void> {
     if (refCodeInput) {
       const referrer = await resolveReferrerFromRefInput(refCodeInput);
       if (referrer) {
-        if (referrer.ip === clientIp || referrer.registrationIp === clientIp) {
-          log.warn("Self-referral attempt blocked", { username: normalizedUsername, clientIp });
+        const fraudVerdict = await evaluateReferralLinkFraud(prisma, {
+          referrer,
+          refereeIp: clientIp,
+          refereeFingerprint: deviceFingerprint,
+          refereeNetworkCidr: authIpContext?.networkCidr,
+          refereeUserAgent: (req.headers["user-agent"] as string | undefined) || null,
+        });
+
+        if (!fraudVerdict.allowed) {
+          log.security(
+            "AUTH_REGISTER_SELF_REFERRAL_CLUSTER_BLOCKED",
+            {
+              username: normalizedUsername,
+              referrerId: referrer.id,
+              clientIp,
+              reasons: fraudVerdict.reasons,
+            },
+            req,
+          );
         } else {
           referrerId = referrer.id;
         }

@@ -66,7 +66,7 @@ export async function claim(req: Request, res: Response): Promise<void> {
     } catch (syncErr: unknown) {
       log.warn("faucet hashrate sync failed", { error: String(syncErr) });
     }
-    res.json({ ok: true, message: result.message, nextAvailableAt: result.nextAvailableAt });
+    res.json({ ok: true, message: result.message, nextAvailableAt: result.nextAvailableAt, part: result.part });
   } catch (error: unknown) {
     log.error("claim failed", { error: String(error) });
     res.status(500).json({ ok: false, message: "Error claiming faucet." });

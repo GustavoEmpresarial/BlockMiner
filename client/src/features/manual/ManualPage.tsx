@@ -21,7 +21,6 @@ export default function ManualPage() {
           <IconBadge icon={BookOpen} variant="primary" size="lg" />
           <div>
             <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">Manual do Operador</h1>
-            <p className="text-slate-400 text-xs sm:text-sm font-medium">Guia de referência técnica, econômica e operacional</p>
           </div>
         </div>
       </div>

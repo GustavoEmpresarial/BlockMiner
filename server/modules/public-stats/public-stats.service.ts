@@ -25,7 +25,7 @@ export function estimateNetworkHashRateHs(activeRigs) {
 function formatBlockListTime(d) {
     if (!(d instanceof Date) || Number.isNaN(d.getTime()))
         return "—";
-    return d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", hour12: false });
+    return d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC" });
 }
 function formatIntervalLabel(seconds) {
     const s = Math.max(60, Math.round(Number(seconds) || 600));
@@ -77,7 +77,7 @@ export async function getPublicLiveStats() {
         }),
     ]);
     const intervalSec = num(blkConfig?.blkCycleIntervalSec) || 600;
-    const blkCycleReward = num(blkConfig?.blkCycleReward) || 0.03;
+    const blkCycleReward = num(blkConfig?.blkCycleReward) || 0.00347222;
     let avgBlockSeconds = intervalSec;
     if (recentDistributions.length >= 2) {
         const a = recentDistributions[0].createdAt.getTime();

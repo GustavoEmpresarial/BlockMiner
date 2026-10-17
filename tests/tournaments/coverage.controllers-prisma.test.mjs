@@ -3,6 +3,7 @@
  * Run with --experimental-test-module-mocks (see npm test / coverage suite).
  */
 import test, { mock } from "node:test";
+import { withOfferwallFindMany } from "./_offerwall-mock-adapter.mjs";
 import assert from "node:assert/strict";
 import { pathToFileURL } from "node:url";
 import path from "node:path";
@@ -53,6 +54,8 @@ const prismaMock = {
   internalOfferwallAttempt: { groupBy: async () => [] },
   offerwallMeCallback: { groupBy: async () => [] },
   moneyRainCallback: { groupBy: async () => [] },
+  multiwallCallback: { groupBy: async () => [] },
+  offerwallGgCallback: { groupBy: async () => [] },
   zeradsCallback: { findMany: async () => [] },
   blockMinerReward: { groupBy: async () => [] },
   dailyCheckin: { groupBy: async () => [] },
@@ -71,7 +74,7 @@ const prismaMock = {
 
 let errorSeq = 0;
 
-mock.module(prismaSpec, { defaultExport: prismaMock });
+mock.module(prismaSpec, { defaultExport: withOfferwallFindMany(prismaMock) });
 mock.module(miningSpec, {
   namedExports: {
     miningEngine: { drainSettlements: async () => {} },

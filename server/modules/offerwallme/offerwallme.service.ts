@@ -18,7 +18,14 @@
 import crypto from "node:crypto";
 import { logger } from "../../core/logger/index.js";
 import { OFFERWALL_BLK_PER_CLICK, blkForOfferwallClicks } from "../../shared/offerwallBlkPayout.js";
-import { recordTournamentAction, TOURNAMENT_ACTION_PROVIDER } from "../tournaments/index.js";
+import {
+  OFFERWALL_CALLBACK_STATUS,
+  isPrismaUniqueViolation,
+  type OfferwallReversalOutcome,
+} from "../../shared/offerwallCallbackStatus.js";
+import { parseOfferwallSubId, signOfferwallSubId } from "../../shared/security/offerwallSubId.js";
+import { recordTournamentAction, reverseTournamentAction, TOURNAMENT_ACTION_PROVIDER } from "../tournaments/index.js";
+import { utcWeekStart } from "../tournaments/tournament-window.js";
 import * as offerwallmeRepo from "./offerwallme.repository.js";
 import type { OfferwallMePostbackInput } from "./offerwallme.types.js";
 
@@ -47,7 +54,7 @@ export function offerwallMePublisherId(): string {
 
 export function buildOfferwallMeUrl(userId: number): string {
   const publisherId = offerwallMePublisherId();
-  return `https://offerwall.me/offerwall/${publisherId}/${userId}`;
+  return `https://offerwall.me/offerwall/${publisherId}/${signOfferwallSubId("offerwallme", userId)}`;
 }
 
 /** Fixed BLK per completed offer (= 1 click). */
@@ -100,11 +107,12 @@ export async function processPostback(input: OfferwallMePostbackInput, clientIp:
     return { kind: "forbidden", message: "ERROR: Signature doesn't match" };
   }
 
-  const userId = parseInt(subId, 10);
-  if (!Number.isFinite(userId) || userId <= 0) {
-    log.warn("postback.invalid_user_id", { subId });
+  const parsed = parseOfferwallSubId("offerwallme", subId);
+  if (!parsed.ok) {
+    log.warn("postback.invalid_user_id", { subId, reason: parsed.reason });
     return { kind: "bad_request", message: "ERROR: Invalid user" };
   }
+  const userId = parsed.userId;
 
   const rawPayoutUsd = parseFloat(payout) || 0;
   const payoutUsd = Math.min(rawPayoutUsd, MAX_PAYOUT_USD_PER_CALLBACK);
@@ -122,6 +130,9 @@ export async function processPostback(input: OfferwallMePostbackInput, clientIp:
     log.warn("postback.user_not_found", { userId });
     return { kind: "not_found", message: "ERROR: User not found" };
   }
+  if (status === OFFERWALL_CALLBACK_STATUS.CHARGEBACK) {
+    return processChargeback({ userId, transId, offerName, offerType, payoutUsd, clientIp });
+  }
   if (user.isBanned) {
     log.warn("postback.user_banned", { userId });
     return { kind: "ok" }; // Acknowledge to avoid provider retries but don't credit.
@@ -132,48 +143,32 @@ export async function processPostback(input: OfferwallMePostbackInput, clientIp:
   const blkAmount = Number(blkToCredit);
 
   let creditedAt = new Date();
-
   try {
-    if (status === 2) {
-      await offerwallmeRepo.createChargebackCallback({
-        userId,
-        transId,
-        offerName: offerName || null,
-        offerType: offerType || null,
-        payoutUsd,
-        polPrice: 1, // 1 BLK ≈ $1 audit placeholder
-        status,
-        clientIp,
-        polDebited: -blkAmount,
-        polDebit: blkToCredit,
-      });
-    } else {
-      const row = await offerwallmeRepo.createCreditCallback({
-        userId,
-        transId,
-        offerName: offerName || null,
-        offerType: offerType || null,
-        payoutUsd,
-        polPrice: 1,
-        status,
-        clientIp,
-        polDecimal: blkToCredit,
-      });
-      creditedAt = row.createdAt;
-    }
+    const row = await offerwallmeRepo.createCreditCallback({
+      userId,
+      transId,
+      offerName: offerName || null,
+      offerType: offerType || null,
+      payoutUsd,
+      polPrice: 1, // 1 BLK ≈ $1 audit placeholder
+      status,
+      clientIp,
+      polDecimal: blkToCredit,
+    });
+    creditedAt = row.createdAt;
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    if (msg.includes("Unique constraint") && msg.includes("trans_id")) {
+    if (isPrismaUniqueViolation(err)) {
       log.warn("postback.duplicate_ignored", { transId, userId });
       return { kind: "ok" };
     }
+    const msg = err instanceof Error ? err.message : String(err);
     log.error("postback.transaction_failed", { transId, userId, error: msg });
     return { kind: "internal", message: "ERROR: Internal" };
   }
 
   log.info("postback.credited", { userId, transId, payoutUsd, blkCredited: blkToCredit.toFixed(8), status });
 
-  if (status === 1) {
+  if (status === OFFERWALL_CALLBACK_STATUS.CREDIT) {
     void recordTournamentAction({
       userId,
       provider: TOURNAMENT_ACTION_PROVIDER.OFFERWALLME,
@@ -185,6 +180,53 @@ export async function processPostback(input: OfferwallMePostbackInput, clientIp:
   }
 
   return { kind: "ok" };
+}
+
+async function processChargeback(args: {
+  userId: number;
+  transId: string;
+  offerName: string;
+  offerType: string;
+  payoutUsd: number;
+  clientIp: string;
+}): Promise<PostbackResult> {
+  const { userId, transId } = args;
+  let outcome: OfferwallReversalOutcome;
+  try {
+    outcome = await offerwallmeRepo.reverseCreditCallback({
+      userId,
+      transId,
+      offerName: args.offerName || null,
+      offerType: args.offerType || null,
+      payoutUsd: args.payoutUsd,
+      polPrice: 1,
+      clientIp: args.clientIp,
+    });
+  } catch (err: unknown) {
+    // A credit for the same trans_id raced in; the partner retries and the next attempt reverses it.
+    const msg = err instanceof Error ? err.message : String(err);
+    log.error("postback.chargeback_failed", { transId, userId, error: msg });
+    return { kind: "internal", message: "ERROR: Internal" };
+  }
+
+  switch (outcome.kind) {
+    case "user_mismatch":
+      log.warn("postback.chargeback_user_mismatch", { transId, userId, ownerUserId: outcome.ownerUserId });
+      return { kind: "bad_request", message: "ERROR: Transaction belongs to another user" };
+    case "already_reversed":
+      log.info("postback.chargeback_duplicate", { transId, userId });
+      return { kind: "ok" };
+    case "recorded_without_credit":
+      log.warn("postback.chargeback_without_credit", { transId, userId });
+      return { kind: "ok" };
+    case "reversed":
+      log.info("postback.chargeback_applied", { transId, userId, creditedAt: outcome.creditedAt.toISOString() });
+      void reverseTournamentAction({
+        provider: TOURNAMENT_ACTION_PROVIDER.OFFERWALLME,
+        providerEventId: transId,
+      }).catch((err) => log.warn("tournament.action.reverse_failed", { transId, error: String(err) }));
+      return { kind: "ok" };
+  }
 }
 
 export async function getHistoryForUser(userId: number, page: number) {
@@ -203,8 +245,7 @@ export async function getHistoryForUser(userId: number, page: number) {
 export async function getStatsForUser(userId: number) {
   const startOfDay = new Date();
   startOfDay.setUTCHours(0, 0, 0, 0);
-  const startOfWeek = new Date(startOfDay);
-  startOfWeek.setUTCDate(startOfWeek.getUTCDate() - startOfWeek.getUTCDay());
+  const startOfWeek = utcWeekStart(startOfDay);
   const startOfMonth = new Date(Date.UTC(startOfDay.getUTCFullYear(), startOfDay.getUTCMonth(), 1));
 
   const { agg, offersToday, offersWeek, offersMonth } = await offerwallmeRepo.getStatsAggregates(

@@ -24,6 +24,7 @@ import { usePtcSessionStore } from '../../ptc/lib/ptcSession.store';
 import { useOfferwallTimerStore } from '../../offerwall/lib/offerwallTimer.store';
 import LanguageSwitcher from '../../../shared/components/LanguageSwitcher';
 import { NOTIFICATION_PANEL_WIDTH_PX, useAnchoredFixedMenu } from '../../../shared/hooks/anchoredMenuPosition';
+import { formatUtcTime } from '../../../shared/utils/utcTime';
 
 function headerActionGhost(active = false): string {
   return `inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
@@ -388,10 +389,7 @@ export default function Header() {
                             </p>
                             <p className="text-[11px] text-gray-500 leading-normal line-clamp-2">{n.message}</p>
                             <p className="text-[9px] text-slate-400 font-medium">
-                              {new Date(n.createdAt ?? 0).toLocaleTimeString([], {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })}
+                              {formatUtcTime(n.createdAt ?? 0)}
                             </p>
                           </div>
                         </div>

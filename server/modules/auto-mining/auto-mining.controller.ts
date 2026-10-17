@@ -32,8 +32,8 @@ export async function claimGPUHandler(req, res) {
             res.status(400).json({ ok: false, message: "GPU ID is required" });
             return;
         }
-        const { gpu } = await service.claimGPU(user.id, Number(gpu_id));
-        res.json({ ok: true, message: "GPU claimed successfully", data: gpu });
+        const { gpu, part } = await service.claimGPU(user.id, Number(gpu_id));
+        res.json({ ok: true, message: "GPU claimed successfully", data: gpu, part });
     }
     catch (err) {
         const e = err;

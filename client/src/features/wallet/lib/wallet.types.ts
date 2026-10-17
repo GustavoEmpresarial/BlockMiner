@@ -23,12 +23,18 @@ export type WalletBalanceResponse = {
 };
 
 export type WalletTransactionRow = {
+  id?: number;
   type: string;
   amount: number | string;
   status: string;
   createdAt?: string;
   created_at?: string;
   txHash?: string | null;
+  fromAsset?: string | null;
+  toAsset?: string | null;
+  outputAmount?: number | null;
+  usdRateAtConfirmation?: number | string | null;
+  usdValueAtConfirmation?: number | string | null;
 };
 
 export type WalletTransactionsResponse = {

@@ -210,8 +210,8 @@ export async function claimSession(req: Request, res: Response): Promise<void> {
     const user = requireSessionUser(req, res);
     if (!user) return;
     const sessionId = String(req.params.sessionId);
-    await svc.claimSession(sessionId, user.id);
-    res.json({ ok: true, message: "Recompensa creditada!" });
+    const part = await svc.claimSession(sessionId, user.id);
+    res.json({ ok: true, message: "Recompensa creditada!", part });
   } catch (e: unknown) {
     handleServiceError(res, e);
   }

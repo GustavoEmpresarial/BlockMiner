@@ -7,6 +7,7 @@ import { requireSessionUser } from "../../shared/errors/httpStatusError.js";
 import { classifyInfrastructureError } from "../../shared/errors/prismaHttpErrors.js";
 import { logger } from "../../core/logger/index.js";
 import { consumeOfferwallPass, extractPassToken } from "../bm-captcha/index.js";
+import { getCallbackSourceIp } from "../ip-intelligence/index.js";
 import { OFFERWALLME_ERROR } from "./offerwallme.errors.js";
 import * as offerwallmeService from "./offerwallme.service.js";
 
@@ -40,17 +41,11 @@ function reportCaught(
   return report.errorId;
 }
 
-function getClientIp(req: Request): string {
-  const cfIp = req.headers["cf-connecting-ip"];
-  if (cfIp && typeof cfIp === "string") return cfIp.trim();
-  return String(req.ip ?? "").replace("::ffff:", "");
-}
-
 /** Offerwall.me publisher wall id — env override. */
 export const offerwallMePublisherId = offerwallmeService.offerwallMePublisherId;
 
 export async function offerwallMePostback(req: Request, res: Response): Promise<void> {
-  const clientIp = getClientIp(req);
+  const clientIp = getCallbackSourceIp(req);
   if (!offerwallmeService.isIpAllowed(clientIp)) {
     log.warn("postback.ip_rejected", { ip: clientIp });
     res.status(403).send("ERROR: Invalid source");

@@ -15,6 +15,12 @@ const createdMinerIds = [];
 const createdWindowStarts = [];
 let originalConfig = null;
 
+// Real blk-mode users with an installed machine are eligible on the shared dev database too.
+// Fixture hashrates sit far above any real miner and blkCycleMinHashrate sits between them,
+// so only this file's users enter the split.
+const HR_UNIT = 1_000_000_000_000;
+const ISOLATED_MIN_HASHRATE = String(HR_UNIT / 2);
+
 async function makeUser(overrides = {}) {
   const suffix = `blkcyc_${Date.now()}_${Math.random().toString(36).slice(2)}`;
   const user = await prisma.user.create({
@@ -44,12 +50,12 @@ async function makeActiveMiner(userId, hashRate, slotIndex) {
 }
 
 /**
- * Eligibility for a cycle is activity-based across ALL users (miningPayoutMode "blk" +
- * recent heartbeat), same as production — it is not scoped to a single test's fixtures. So
- * each test must retire the users/miners it created (set payout mode off + deactivate the
- * miner) before the next test runs a cycle, otherwise earlier tests' users would leak into
- * later windows' hashrate pool. Real deletion happens once in test.after (final cleanup);
- * this just neutralizes eligibility between tests.
+ * Eligibility is every non-banned user in miningPayoutMode "blk" who either had a recent
+ * heartbeat/login or still has an active miner. It is not scoped to a single test's fixtures.
+ * Each test must retire the users/miners it created (set payout mode off + deactivate the
+ * miner) before the next test runs a cycle, otherwise earlier tests' users leak into later
+ * windows. The stale-heartbeat case sets blkCycleMinHashrate above any real miner so a shared
+ * dev database is not credited. Real deletion happens once in test.after.
  */
 async function retire(userIds, minerIds) {
   if (minerIds.length) {
@@ -118,15 +124,15 @@ test("runBlkRewardCycle: distributes BLK proportionally to hashrate and credits 
   await setConfig({
     blkCycleReward: "10",
     blkCycleActivitySec: 900,
-    blkCycleMinHashrate: "0",
+    blkCycleMinHashrate: ISOLATED_MIN_HASHRATE,
     blkCyclePaused: false,
     blkCycleBoost: "1",
   });
 
   const userA = await makeUser(); // 3x hashrate
   const userB = await makeUser(); // 1x hashrate
-  await makeActiveMiner(userA.id, 300, 0);
-  await makeActiveMiner(userB.id, 100, 0);
+  await makeActiveMiner(userA.id, 3 * HR_UNIT, 0);
+  await makeActiveMiner(userB.id, HR_UNIT, 0);
 
   const beforeA = await prisma.user.findUnique({ where: { id: userA.id }, select: { blkBalance: true } });
   const beforeB = await prisma.user.findUnique({ where: { id: userB.id }, select: { blkBalance: true } });
@@ -158,7 +164,7 @@ test("runBlkRewardCycle: distributes BLK proportionally to hashrate and credits 
   assert.equal(logB.shareBps, 2500);
 
   const cycle = await prisma.blkRewardCycle.findUnique({ where: { id: result.cycleId } });
-  assert.equal(Number(cycle.totalHashrate), 400);
+  assert.equal(Number(cycle.totalHashrate), 4 * HR_UNIT);
   assert.equal(Number(cycle.totalReward), 10);
   assert.equal(Number(cycle.distributed), 10);
 
@@ -166,10 +172,10 @@ test("runBlkRewardCycle: distributes BLK proportionally to hashrate and credits 
 });
 
 test("runBlkRewardCycle: idempotent per windowStart — running the same window twice never double-credits", async () => {
-  await setConfig({ blkCycleReward: "5", blkCycleActivitySec: 900, blkCycleMinHashrate: "0", blkCyclePaused: false, blkCycleBoost: "1" });
+  await setConfig({ blkCycleReward: "5", blkCycleActivitySec: 900, blkCycleMinHashrate: ISOLATED_MIN_HASHRATE, blkCyclePaused: false, blkCycleBoost: "1" });
 
   const user = await makeUser();
-  const miner = await makeActiveMiner(user.id, 50, 0);
+  const miner = await makeActiveMiner(user.id, HR_UNIT, 0);
 
   const windowStart = newWindowStart();
   const first = await runBlkRewardCycle({ windowStart });
@@ -215,12 +221,12 @@ test("runBlkRewardCycle: paused config skips distribution and credits nothing", 
 });
 
 test("runBlkRewardCycle: users below minHashrate are excluded from the split", async () => {
-  await setConfig({ blkCycleReward: "9", blkCycleMinHashrate: "10", blkCyclePaused: false, blkCycleBoost: "1" });
+  await setConfig({ blkCycleReward: "9", blkCycleMinHashrate: String(2 * HR_UNIT), blkCyclePaused: false, blkCycleBoost: "1" });
 
   const eligible = await makeUser();
   const tooSmall = await makeUser();
-  const minerEligible = await makeActiveMiner(eligible.id, 100, 0);
-  const minerTooSmall = await makeActiveMiner(tooSmall.id, 5, 0); // below minHashrate=10, excluded
+  const minerEligible = await makeActiveMiner(eligible.id, 3 * HR_UNIT, 0);
+  const minerTooSmall = await makeActiveMiner(tooSmall.id, HR_UNIT, 0); // below minHashrate, excluded
 
   const windowStart = newWindowStart();
   const result = await runBlkRewardCycle({ windowStart });
@@ -254,6 +260,32 @@ test("getLatestBlkRewardCycle / getBlkCyclePublicSnapshot: reflect the most rece
   assert.equal(snap.rewardPerCycle, 2);
   assert.ok(snap.currentWindowStart);
   assert.ok(snap.nextWindowStart);
+
+  await retire([user.id], [miner.id]);
+});
+
+test("runBlkRewardCycle: pays a blk miner with a stale heartbeat when an active machine is installed", async () => {
+    await setConfig({
+    blkCycleReward: "4",
+    blkCycleActivitySec: 900,
+    blkCycleMinHashrate: ISOLATED_MIN_HASHRATE,
+    blkCyclePaused: false,
+    blkCycleBoost: "1",
+  });
+
+  const user = await makeUser({
+    lastHeartbeatAt: new Date("2020-01-01T00:00:00.000Z"),
+    lastLoginAt: new Date("2020-01-01T00:00:00.000Z"),
+  });
+  const miner = await makeActiveMiner(user.id, 2 * HR_UNIT, 0);
+
+  const windowStart = newWindowStart();
+  const result = await runBlkRewardCycle({ windowStart });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.minerCount, 1);
+  const after = await prisma.user.findUnique({ where: { id: user.id }, select: { blkBalance: true } });
+  assert.equal(Number(after.blkBalance), 4);
 
   await retire([user.id], [miner.id]);
 });

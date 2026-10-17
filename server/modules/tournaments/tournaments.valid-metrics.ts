@@ -15,6 +15,9 @@ export const TOURNAMENT_VALID_METRICS = [
   "AUTO_MINING",
   "ALL_ACTIVITIES",
   "YOUTUBE",
+  "REFERRALS",
+  "MERGES",
+  "BURNS",
 ] as const;
 
 export type TournamentValidMetric = (typeof TOURNAMENT_VALID_METRICS)[number];

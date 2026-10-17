@@ -1,5 +1,6 @@
 import { forwardRef, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import i18n from 'i18next';
 
 /**
  * Widget do Cloudflare Turnstile — porte de legacy/client/src/shared/components/auth/
@@ -169,6 +170,9 @@ const TurnstileField = forwardRef<TurnstileFieldHandle, TurnstileFieldProps>(fun
           sitekey: resolvedSiteKey,
           appearance: 'always',
           theme: 'dark',
+          // Without this Cloudflare follows the browser language, so a pt-BR
+          // player on an English browser saw "Success!" in the middle of the page.
+          language: turnstileLanguage(),
           'refresh-expired': 'auto',
           callback: (token: string) => onTokenRef.current?.(token),
           'expired-callback': () => onTokenRef.current?.(''),
@@ -244,3 +248,12 @@ const TurnstileField = forwardRef<TurnstileFieldHandle, TurnstileFieldProps>(fun
 TurnstileField.displayName = 'TurnstileField';
 
 export default TurnstileField;
+
+/** Turnstile language codes: it accepts `pt-br`, `es`, `en`… — follow the site, not the browser. */
+function turnstileLanguage(): string {
+  const lang = (i18n.language || document.documentElement.lang || 'pt-BR').toLowerCase();
+  if (lang.startsWith('pt')) return 'pt-br';
+  if (lang.startsWith('es')) return 'es';
+  if (lang.startsWith('en')) return 'en';
+  return 'auto';
+}

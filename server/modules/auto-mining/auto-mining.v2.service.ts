@@ -12,6 +12,8 @@
 import prisma, { type TxClient } from "../../core/database/prisma.js";
 import { isAutoMiningV2SchemaAvailable } from "./auto-mining.db-availability.js";
 import { recordTournamentAction, TOURNAMENT_ACTION_PROVIDER } from "../tournaments/index.js";
+import { grantActivityPartInTx, partDropPayload } from "../parts/parts.grant.js";
+import { PART_GRANT_SOURCE } from "../parts/parts.drop.js";
 import { logger } from "../../core/logger/index.js";
 import {
   MINING_MODES,
@@ -442,8 +444,13 @@ export async function claimNormal(userId: number) {
         expiresAt,
       },
     });
+    const part = partDropPayload(await grantActivityPartInTx(tx, {
+      userId,
+      source: PART_GRANT_SOURCE.automining,
+      sourceRef: `automining:v2:${grant.id}`,
+    }));
 
-    return { grant, nextClaimAt: nextAt };
+    return { grant, nextClaimAt: nextAt, part };
   });
 
   void recordTournamentAction({
@@ -646,8 +653,13 @@ export async function claimTurbo(userId: number, impressionId: string) {
       where: { id: impression.id },
       data: { grantId: grant.id },
     });
+    const part = partDropPayload(await grantActivityPartInTx(tx, {
+      userId,
+      source: PART_GRANT_SOURCE.automining,
+      sourceRef: `automining:v2:${grant.id}`,
+    }));
 
-    return { grant, nextClaimAt: nextAt };
+    return { grant, nextClaimAt: nextAt, part };
   });
 
   void recordTournamentAction({

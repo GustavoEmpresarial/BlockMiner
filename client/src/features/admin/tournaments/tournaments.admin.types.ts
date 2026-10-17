@@ -1,3 +1,4 @@
+import { toUtcInputValue } from '../../../shared/utils/utcTime';
 export type TournamentType = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'CUSTOM';
 
 export type TournamentMetric =
@@ -15,7 +16,10 @@ export type TournamentMetric =
   | 'SHORTLINK'
   | 'AUTO_MINING'
   | 'ALL_ACTIVITIES'
-  | 'YOUTUBE';
+  | 'YOUTUBE'
+  | 'REFERRALS'
+  | 'MERGES'
+  | 'BURNS';
 
 export type TournamentStatus = 'SCHEDULED' | 'ACTIVE' | 'ENDED' | 'CANCELLED';
 
@@ -110,6 +114,9 @@ export const TOURNAMENT_METRICS: TournamentMetric[] = [
   'AUTO_MINING',
   'ALL_ACTIVITIES',
   'YOUTUBE',
+  'REFERRALS',
+  'MERGES',
+  'BURNS',
 ];
 
 export const PRIZE_TYPES: PrizeType[] = ['POL', 'BLK', 'MINING_BOOST', 'MACHINE'];
@@ -188,13 +195,6 @@ export function draftToApiPrize(p: PrizeDraft): {
   };
 }
 
-export function toLocalInputValue(value: string | Date | null | undefined): string {
-  if (!value) return '';
-  const d = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(d.getTime())) return '';
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
 
 export function emptyForm(): TournamentFormState {
   const now = new Date();
@@ -204,8 +204,8 @@ export function emptyForm(): TournamentFormState {
     description: '',
     type: 'DAILY',
     metric: 'OFFERS_ALL',
-    startsAt: toLocalInputValue(now),
-    endsAt: toLocalInputValue(end),
+    startsAt: toUtcInputValue(now),
+    endsAt: toUtcInputValue(end),
     recurring: true,
     prizes: [emptyPrizeDraft(1, 1), emptyPrizeDraft(2, 3), emptyPrizeDraft(4, 10)],
   };

@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import prisma, { type TxClient } from "../../core/database/prisma.js";
+import { liveCatalogWhere } from "./tasks.preview.js";
 
 function dateWindowFilter(now: Date): Prisma.DailyTaskDefinitionWhereInput["AND"] {
   return [
@@ -10,7 +11,7 @@ function dateWindowFilter(now: Date): Prisma.DailyTaskDefinitionWhereInput["AND"
 
 export function activeDefinitionWhere(taskType: string, now: Date): Prisma.DailyTaskDefinitionWhereInput {
   return {
-    isActive: true,
+    ...liveCatalogWhere(),
     taskType,
     AND: dateWindowFilter(now),
   };
@@ -18,7 +19,7 @@ export function activeDefinitionWhere(taskType: string, now: Date): Prisma.Daily
 
 export function activeDefinitionsInWindowWhere(now: Date): Prisma.DailyTaskDefinitionWhereInput {
   return {
-    isActive: true,
+    ...liveCatalogWhere(),
     AND: dateWindowFilter(now),
   };
 }
@@ -80,7 +81,7 @@ export async function findUserById(id: number) {
 }
 
 export async function findActiveDefinitionById(id: number) {
-  return prisma.dailyTaskDefinition.findFirst({ where: { id, isActive: true } });
+  return prisma.dailyTaskDefinition.findFirst({ where: { id, ...liveCatalogWhere() } });
 }
 
 export async function findProgressUnique(userId: number, taskDefinitionId: number, periodKey: string) {

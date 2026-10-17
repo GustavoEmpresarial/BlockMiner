@@ -9,6 +9,7 @@ import StatusPill from '../../shared/components/StatusPill';
 import { toast } from 'sonner';
 import { isAxiosError } from 'axios';
 import { api } from '../../shared/auth/auth.store';
+import { formatUtcDateTime } from '../../shared/utils/utcTime';
 
 type SeasonSummary = {
   id: number;
@@ -40,11 +41,7 @@ type SeasonDetail = {
 };
 
 function formatSeasonDate(iso: string, locale: string) {
-  try {
-    return new Intl.DateTimeFormat(locale, { dateStyle: 'short', timeStyle: 'short' }).format(new Date(iso));
-  } catch {
-    return iso;
-  }
+  return formatUtcDateTime(iso, { locale, dateStyle: 'short', timeStyle: 'short', fallback: iso });
 }
 
 function msUntil(iso: string) {
@@ -152,7 +149,6 @@ export default function MiniPassPage() {
         <IconBadge icon={Ticket} variant="amber" size="lg" />
         <div>
           <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">{t('miniPass.title')}</h1>
-          <p className="text-slate-400 text-xs sm:text-sm font-medium">{t('miniPass.subtitle')}</p>
         </div>
       </div>
     </div>

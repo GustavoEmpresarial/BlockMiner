@@ -26,7 +26,7 @@ test("Helpers: resolveAnalyticsPeriod for 'day' generates 24 hourly buckets", ()
   assert.equal(res.period, "day");
   assert.equal(res.bucketUnit, "hour");
   assert.equal(res.buckets.length, 24);
-  assert.equal(res.buckets[res.buckets.length - 1].hour, now.getHours());
+  assert.equal(res.buckets[res.buckets.length - 1].hour, now.getUTCHours());
   assert.ok(res.buckets.every((b) => b.from < b.to));
 });
 

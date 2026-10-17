@@ -17,6 +17,7 @@ import {
   readMaxBurnOwnedMachineIds,
 } from "./burn-events.config.js";
 import * as repo from "./burn-events.repository.js";
+import { recordTournamentAction, TOURNAMENT_ACTION_PROVIDER } from "../tournaments/tournaments.actions.js";
 
 const log = logger.child("BurnEventsService");
 
@@ -457,6 +458,7 @@ export async function claimBurnEvent(userId: number, eventId: number, sessionIdR
   }
 
   let rewardInboxId: number | null = null;
+  let burnedHashRate = 0;
 
   await prisma.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(${userId}::int, ${eventId}::int)`;
@@ -491,6 +493,7 @@ export async function claimBurnEvent(userId: number, eventId: number, sessionIdR
           }));
 
     const totalHashRate = burnedMachinesJson.reduce((sum, m) => sum + Number(m.hashRate || 0), 0);
+    burnedHashRate = Math.round(totalHashRate);
 
     await repoRef.incrementBurnEventStockClaimedTx(tx, eventId);
     const reward = event.rewardMiner;
@@ -525,6 +528,19 @@ export async function claimBurnEvent(userId: number, eventId: number, sessionIdR
   });
 
   await repoRef.completeBurnSession(sessionId);
+
+  if (burnedHashRate > 0) {
+    void recordTournamentAction({
+      userId,
+      provider: TOURNAMENT_ACTION_PROVIDER.BURN,
+      actionCount: burnedHashRate,
+      executedAtUTC: now,
+      providerEventId: `burn:${sessionId}`,
+      metadata: { eventId, sessionId, burnedMachines: uniqueIds.length },
+    }).catch((err) => {
+      log.warn("burn.claim.tournament_action_failed", { userId, sessionId, error: String(err) });
+    });
+  }
 
   try {
     await syncUserBaseHashRate(userId);

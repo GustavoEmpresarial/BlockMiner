@@ -170,6 +170,22 @@ describe('DashboardHistory', () => {
     expect(screen.getAllByText(/100\.00 SHIB/).length).toBeGreaterThan(0);
   });
 
+  it('shows the BLK share and hides a zero POL line when the block paid only BLK', () => {
+    render(
+      withProviders(
+        <DashboardHistory
+          blockHistory={[
+            { blockNumber: 11, userReward: 0, userRewardBlk: 0.0002453, totalReward: 0.3, totalRewardBlk: 0.00347222 },
+          ]}
+          tokenSymbol="POL"
+        />,
+      ),
+    );
+    expect(screen.getAllByText(/0\.00024530/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/0\.00347222 BLK/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/\+0\.00000000/)).not.toBeInTheDocument();
+  });
+
   it('does not throw on a malformed block row missing every optional field', () => {
     expect(() =>
       render(withProviders(<DashboardHistory blockHistory={[{}]} tokenSymbol={undefined} />)),

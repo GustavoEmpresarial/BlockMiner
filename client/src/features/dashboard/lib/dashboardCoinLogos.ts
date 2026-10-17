@@ -2,6 +2,6 @@
 export const DASHBOARD_COIN_LOGO = {
   POL: '/media/icons/polygon.webp',
   SHIB: '/media/brand/shib.webp',
-  /** No dedicated BLK coin art yet — brand mark until asset ships. */
-  BLK: '/media/brand/icon.webp',
+  /** Dedicated BLK coin logo (cache-busted). */
+  BLK: '/media/icons/blk.webp?v=2',
 } as const;

@@ -18,6 +18,8 @@ export const TOURNAMENT_ERROR = {
   FINALIZE_PARTIAL: "TOURNAMENT_FINALIZE_PARTIAL",
   /** A recurring tournament closed but its next cycle could not be created. */
   RECURRING_SPAWN_FAILED: "TOURNAMENT_RECURRING_SPAWN_FAILED",
+  /** Another ACTIVE/SCHEDULED daily, weekly, or monthly already owns this window. */
+  OPEN_WINDOW_EXISTS: "TOURNAMENT_OPEN_WINDOW_EXISTS",
   /** The lifecycle cron tick failed before it reached any tournament. */
   LIFECYCLE_TICK_FAILED: "TOURNAMENT_LIFECYCLE_TICK_FAILED",
 

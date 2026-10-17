@@ -4,6 +4,7 @@ import { Youtube, Plus, Trash2, Search, X, Save, ExternalLink, Loader2 } from 'l
 import { readAxiosResponseMessage } from '../lib/admin.api';
 import type { CreatorUser } from './creators.types';
 import * as creatorsApi from './creators.api';
+import { formatUtcDate } from '../../../shared/utils/utcTime';
 
 export function AddCreatorModal({ onClose, onAdded }: { onClose: () => void; onAdded: () => void }) {
   const [query, setQuery] = useState('');
@@ -309,7 +310,7 @@ export function CreatorsFlagsTab() {
                       )}
                     </td>
                     <td className="px-6 py-4 hidden md:table-cell text-xs text-slate-500">
-                      {c.createdAt ? new Date(c.createdAt).toLocaleDateString('pt-BR') : '—'}
+                      {c.createdAt ? formatUtcDate(c.createdAt, { locale: 'pt-BR' }) : '—'}
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-1">

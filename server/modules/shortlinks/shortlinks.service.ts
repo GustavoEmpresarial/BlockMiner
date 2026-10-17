@@ -16,6 +16,8 @@ import { generateStepToken, detectStepFraud } from "./shortlinks.session.js";
 import { buildPasteadStatus } from "./shortlinks-pastead.service.js";
 import { buildAdlinkflyStatus } from "./shortlinks-adlinkfly.service.js";
 import { recordTournamentAction, TOURNAMENT_ACTION_PROVIDER } from "../tournaments/index.js";
+import { grantActivityPartInTx, partDropPayload, type PartDropPayload } from "../parts/parts.grant.js";
+import { PART_GRANT_SOURCE } from "../parts/parts.drop.js";
 import {
   TOTAL_STEPS,
   MAX_DAILY_RUNS,
@@ -149,6 +151,7 @@ export async function completeStepForUser(
   const isLastStep = normalizedStep === TOTAL_STEPS;
   const nextStep = isLastStep ? 0 : normalizedStep + 1;
   const nextSessionToken = isLastStep ? null : generateStepToken(userId, nextStep, now);
+  let part: PartDropPayload | null = null;
 
   await prisma.$transaction(async (tx) => {
     await advisoryLock(tx, `shortlink:${userId}`);
@@ -179,6 +182,11 @@ export async function completeStepForUser(
         ip: audit.ip,
         userAgent: audit.userAgent,
       });
+      part = partDropPayload(await grantActivityPartInTx(tx, {
+        userId,
+        source: PART_GRANT_SOURCE.shortlink,
+        sourceRef: `shortlink:internal:${userId}:${now.toISOString()}`,
+      }));
     }
   });
 
@@ -203,5 +211,6 @@ export async function completeStepForUser(
     runCompleted: isLastStep,
     sessionToken: nextSessionToken,
     rewardMessage,
+    part,
   };
 }

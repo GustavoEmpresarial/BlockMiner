@@ -123,12 +123,12 @@ test("Offerwall Analytics Integration: aggregates conversions across Internal, O
       assert.ok(report.totals.zerads.callbacks >= 1);
       assert.ok(Array.isArray(report.daily));
       assert.ok(report.daily.length > 0);
-      assert.ok(report.serverNowBrt, "serverNowBrt must be present");
+      assert.ok(report.serverNowUtc, "serverNowUtc must be present");
 
       // Verify row structure
       const row = report.daily.find((r) => r.day === past.toISOString().slice(0, 10));
       assert.ok(row, "Daily row for test date must exist");
-      assert.ok(row.dayBrt, "dayBrt must be populated in daily row");
+      assert.ok(row.dayUtc, "dayUtc must be populated in daily row");
     });
 
     // ── Test 2: User-scoped aggregation isolates by user ───────────────────────

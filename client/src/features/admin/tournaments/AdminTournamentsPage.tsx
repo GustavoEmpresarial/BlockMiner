@@ -21,7 +21,6 @@ import {
   emptyForm,
   prizeRowToDraft,
   seriesKey,
-  toLocalInputValue,
   TOURNAMENT_METRICS,
   TOURNAMENT_TYPES,
   type AdminTournament,
@@ -32,6 +31,7 @@ import { TournamentCard } from './components/TournamentCard';
 import { TournamentForm } from './components/TournamentForm';
 import { TournamentSeriesCard } from './components/TournamentSeriesCard';
 import { TournamentInspectPanel } from './components/TournamentInspectPanel';
+import { fromUtcInputValue, toUtcInputValue } from '../../../shared/utils/utcTime';
 
 type ListTab = 'live' | 'history' | 'all';
 
@@ -142,8 +142,8 @@ export default function AdminTournamentsPage() {
       metric: (TOURNAMENT_METRICS.includes(row.metric as TournamentMetric)
         ? row.metric
         : 'OFFERS_ALL') as TournamentMetric,
-      startsAt: toLocalInputValue(row.startsAt),
-      endsAt: toLocalInputValue(row.endsAt),
+      startsAt: toUtcInputValue(row.startsAt),
+      endsAt: toUtcInputValue(row.endsAt),
       recurring: Boolean(row.recurring),
       prizes: (row.prizes ?? []).map(prizeRowToDraft),
     });
@@ -167,8 +167,8 @@ export default function AdminTournamentsPage() {
         description: data.description.trim() || undefined,
         type: data.type,
         metric: data.metric,
-        startsAt: new Date(data.startsAt).toISOString(),
-        endsAt: new Date(data.endsAt).toISOString(),
+        startsAt: fromUtcInputValue(data.startsAt) ?? data.startsAt,
+        endsAt: fromUtcInputValue(data.endsAt) ?? data.endsAt,
         recurring: data.recurring,
         prizes: data.prizes.map(draftToApiPrize),
       };

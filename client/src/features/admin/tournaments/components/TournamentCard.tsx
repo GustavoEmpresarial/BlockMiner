@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Eye, Pencil, CheckCircle2, XCircle, RotateCw, Users } from 'lucide-react';
 import type { AdminTournament, TournamentStatus, TournamentType } from '../tournaments.admin.types';
+import { formatUtcDateTime } from '../../../../shared/utils/utcTime';
 
 export const TYPE_BADGE_STYLE: Record<TournamentType, { label: string; style: string }> = {
   DAILY: { label: 'Diário', style: 'bg-sky-500/10 text-sky-400 border-sky-500/20' },
@@ -88,19 +89,9 @@ export function TournamentCard({
 
         <div className="flex items-center gap-3 flex-wrap text-[11px] text-slate-500 font-mono">
           <span>
-            {new Date(tournament.startsAt).toLocaleString('pt-BR', {
-              day: '2-digit',
-              month: 'short',
-              hour: '2-digit',
-              minute: '2-digit',
-            })}{' '}
+            {formatUtcDateTime(tournament.startsAt, { locale: 'pt-BR', showUtc: false, day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}{' '}
             →{' '}
-            {new Date(tournament.endsAt).toLocaleString('pt-BR', {
-              day: '2-digit',
-              month: 'short',
-              hour: '2-digit',
-              minute: '2-digit',
-            })}
+            {formatUtcDateTime(tournament.endsAt, { locale: 'pt-BR', showUtc: true, day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
           </span>
 
           <span className="flex items-center gap-1 text-slate-400 font-sans">

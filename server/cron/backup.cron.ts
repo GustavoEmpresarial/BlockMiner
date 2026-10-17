@@ -29,6 +29,7 @@ import {
   getGoogleDriveStatus,
   uploadBackupPackageToGoogleDrive,
 } from "../modules/admin/google-drive.service.js";
+import { runBackupInChildProcess } from "../modules/admin/admin.backups.child.js";
 
 const log = logger.child("BackupCron");
 
@@ -74,14 +75,35 @@ async function compressSqlToGzip(sqlPath: string, gzPath: string): Promise<boole
   }
 }
 
-export async function runDatabaseBackupJob(): Promise<{
+export type DatabaseBackupJobResult = {
   ok: boolean;
   filename?: string;
   driveUploaded?: boolean;
   driveFileId?: string;
   prunedCount?: number;
   error?: string;
-}> {
+  code?: string;
+};
+
+/**
+ * Scheduled backup entry. Runs the whole job in a separate process (admin.backups.worker.ts) so
+ * the dump never shares the app's event loop. BACKUP_IN_PROCESS=1 restores the old in-process
+ * path, only as an escape hatch if forking is ever unavailable.
+ */
+export async function runDatabaseBackupJob(): Promise<DatabaseBackupJobResult> {
+  if (process.env.BACKUP_IN_PROCESS === "1") return runDatabaseBackupJobInProcess();
+  try {
+    return await runBackupInChildProcess<DatabaseBackupJobResult>("job");
+  } catch (err: unknown) {
+    const error = err instanceof Error ? err.message : String(err);
+    const code = (err as { code?: unknown })?.code;
+    log.error("admin_backup_job_failed", { error, code });
+    return { ok: false, error, code: typeof code === "string" ? code : "BACKUP_WORKER_FAILED" };
+  }
+}
+
+/** The job itself. Runs inside the backup worker process; do not call from the app process. */
+export async function runDatabaseBackupJobInProcess(): Promise<DatabaseBackupJobResult> {
   if (isRunning) {
     log.warn("admin_backup_job_skipped", { reason: "backup already in progress" });
     return { ok: false, error: "Backup already in progress" };

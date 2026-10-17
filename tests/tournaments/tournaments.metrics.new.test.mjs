@@ -11,17 +11,19 @@ import {
 } from "../../server/modules/tournaments/tournaments.providers.ts";
 
 describe("tournament valid metrics", () => {
-  it("includes FAUCET, SHORTLINK, AUTO_MINING, ALL_ACTIVITIES, YOUTUBE", () => {
+  it("includes FAUCET, SHORTLINK, AUTO_MINING, ALL_ACTIVITIES, YOUTUBE, REFERRALS", () => {
     assert.ok(TOURNAMENT_VALID_METRICS.includes("FAUCET"));
     assert.ok(TOURNAMENT_VALID_METRICS.includes("SHORTLINK"));
     assert.ok(TOURNAMENT_VALID_METRICS.includes("AUTO_MINING"));
     assert.ok(TOURNAMENT_VALID_METRICS.includes("ALL_ACTIVITIES"));
     assert.ok(TOURNAMENT_VALID_METRICS.includes("YOUTUBE"));
+    assert.ok(TOURNAMENT_VALID_METRICS.includes("REFERRALS"));
     assert.equal(isTournamentValidMetric("FAUCET"), true);
     assert.equal(isTournamentValidMetric("SHORTLINK"), true);
     assert.equal(isTournamentValidMetric("AUTO_MINING"), true);
     assert.equal(isTournamentValidMetric("ALL_ACTIVITIES"), true);
     assert.equal(isTournamentValidMetric("YOUTUBE"), true);
+    assert.equal(isTournamentValidMetric("REFERRALS"), true);
     assert.equal(isTournamentValidMetric("NOT_A_METRIC"), false);
   });
 });
@@ -64,6 +66,8 @@ describe("claim-count scorers", () => {
     assert.equal(providerAllowedForMetric(TOURNAMENT_ACTION_PROVIDER.AUTO_MINING, "AUTO_MINING"), true);
     assert.equal(providerAllowedForMetric(TOURNAMENT_ACTION_PROVIDER.YOUTUBE, "YOUTUBE"), true);
     assert.equal(providerAllowedForMetric(TOURNAMENT_ACTION_PROVIDER.CHECKIN, "CHECKINS"), true);
+    assert.equal(providerAllowedForMetric(TOURNAMENT_ACTION_PROVIDER.REFERRAL, "REFERRALS"), true);
+    assert.equal(providerAllowedForMetric(TOURNAMENT_ACTION_PROVIDER.FAUCET, "REFERRALS"), false);
     assert.equal(providerAllowedForMetric(TOURNAMENT_ACTION_PROVIDER.FAUCET, "ALL_ACTIVITIES"), true);
     assert.equal(providerAllowedForMetric(TOURNAMENT_ACTION_PROVIDER.MINIGAME, "ALL_ACTIVITIES"), true);
     assert.equal(providerAllowedForMetric(TOURNAMENT_ACTION_PROVIDER.SHORTLINK, "ALL_ACTIVITIES"), true);
@@ -113,13 +117,30 @@ describe("all-activities scorer", () => {
         executedAtUTC: "2026-10-05T12:05:00.000Z",
         sourceId: "yt:10:x",
         tournamentEligible: true,
-        metadata: null,
+        metadata: { hashRate: 10, tournamentOnly: false },
       },
       tournament,
     );
     assert.ok(deltaYt);
     assert.equal(deltaYt.userId, 10);
     assert.equal(deltaYt.metricValue, 1);
+
+    const capped = scorer.onTournamentAction(
+      {
+        actionId: "126",
+        userId: 10,
+        provider: TOURNAMENT_ACTION_PROVIDER.YOUTUBE,
+        actionCount: 1,
+        executedAtUTC: "2026-10-05T12:06:00.000Z",
+        sourceId: "yt:10:capped",
+        tournamentEligible: true,
+        metadata: { hashRate: 0, tournamentOnly: true },
+      },
+      tournament,
+    );
+    // Product rule: a claim past the daily 1,000 H/s cap still scores +1 in Atividade.
+    assert.ok(capped);
+    assert.equal(capped.metricValue, 1);
 
     const deltaCheckin = scorer.onTournamentAction(
       {
@@ -137,5 +158,20 @@ describe("all-activities scorer", () => {
     assert.ok(deltaCheckin);
     assert.equal(deltaCheckin.userId, 10);
     assert.equal(deltaCheckin.metricValue, 1);
+  });
+});
+
+describe("MERGES / BURNS metrics", () => {
+  it("are valid admin metrics", () => {
+    assert.equal(isTournamentValidMetric("MERGES"), true);
+    assert.equal(isTournamentValidMetric("BURNS"), true);
+  });
+
+  it("only accept their own provider", () => {
+    assert.equal(providerAllowedForMetric(TOURNAMENT_ACTION_PROVIDER.MERGE, "MERGES"), true);
+    assert.equal(providerAllowedForMetric(TOURNAMENT_ACTION_PROVIDER.BURN, "BURNS"), true);
+    assert.equal(providerAllowedForMetric(TOURNAMENT_ACTION_PROVIDER.MERGE, "BURNS"), false);
+    assert.equal(providerAllowedForMetric(TOURNAMENT_ACTION_PROVIDER.MERGE, "ALL_ACTIVITIES"), false);
+    assert.equal(providerAllowedForMetric(TOURNAMENT_ACTION_PROVIDER.BURN, "ALL_ACTIVITIES"), false);
   });
 });

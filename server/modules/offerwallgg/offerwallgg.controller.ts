@@ -5,18 +5,13 @@ import type { Request, Response } from "express";
 import { requireSessionUser } from "../../shared/errors/httpStatusError.js";
 import { logger } from "../../core/logger/index.js";
 import { consumeOfferwallPass, extractPassToken } from "../bm-captcha/index.js";
+import { getCallbackSourceIp } from "../ip-intelligence/index.js";
 import * as offerwallGgService from "./offerwallgg.service.js";
 
 const log = logger.child("offerwallgg.controller");
 
-function getClientIp(req: Request): string {
-  const cfIp = req.headers["cf-connecting-ip"];
-  if (cfIp && typeof cfIp === "string") return cfIp.trim();
-  return String(req.ip ?? "").replace("::ffff:", "");
-}
-
 export async function offerwallGgPostback(req: Request, res: Response): Promise<void> {
-  const clientIp = getClientIp(req);
+  const clientIp = getCallbackSourceIp(req);
   if (!offerwallGgService.isIpAllowed(clientIp)) {
     log.warn("postback.ip_rejected", { ip: clientIp });
     res.status(403).send("ERROR: Invalid source");

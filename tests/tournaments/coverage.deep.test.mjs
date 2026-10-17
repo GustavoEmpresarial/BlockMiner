@@ -2,6 +2,7 @@
  * Deep line coverage for tournaments package (mock prisma + selective deps).
  * Run: npx tsx --import ./tests/_env-test-overrides.mjs --test --experimental-test-module-mocks tests/tournaments/coverage.deep.test.mjs
  */
+import { withOfferwallFindMany } from "./_offerwall-mock-adapter.mjs";
 import test, { mock } from "node:test";
 import assert from "node:assert/strict";
 import { pathToFileURL } from "node:url";
@@ -91,6 +92,8 @@ const prismaMock = {
   internalOfferwallAttempt: { groupBy: async () => [] },
   offerwallMeCallback: { groupBy: async () => [] },
   moneyRainCallback: { groupBy: async () => [] },
+  multiwallCallback: { groupBy: async () => [] },
+  offerwallGgCallback: { groupBy: async () => [] },
   zeradsCallback: { findMany: async () => [] },
   blockMinerReward: { groupBy: async () => [] },
   dailyCheckin: { groupBy: async () => [] },
@@ -111,7 +114,7 @@ const prismaMock = {
 
 const reportedErrors = [];
 
-mock.module(prismaSpec, { defaultExport: prismaMock });
+mock.module(prismaSpec, { defaultExport: withOfferwallFindMany(prismaMock) });
 mock.module(miningSpec, {
   namedExports: {
     miningEngine: { drainSettlements: async () => {} },

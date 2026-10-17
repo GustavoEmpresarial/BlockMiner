@@ -333,7 +333,6 @@ export default function OfferwallPage() {
           <IconBadge icon={LayoutGrid} variant="primary" size="lg" />
           <div>
             <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">{t('sidebar.offerwall')}</h1>
-            <p className="text-slate-400 text-xs sm:text-sm font-medium">{t('offerwall.subtitle')}</p>
           </div>
         </div>
       </div>
@@ -410,7 +409,6 @@ function ZeradsPanel({ onBack }: { onBack: () => void }) {
     <OfferwallProviderShell
       onBack={onBack}
       title={t('zerads.title')}
-      tagline={t('zerads.subtitle')}
       accent={OFFERWALL_ACCENTS.purple}
       Icon={MousePointerClick}
       backLabel={t('offerwall.panel.back')}
@@ -602,7 +600,6 @@ function OfferwallMePanel({ onBack }: { onBack: () => void }) {
     <OfferwallProviderShell
       onBack={onBack}
       title="Offerwall.me"
-      tagline={t('offerwall.offerwallme.tagline')}
       accent={OFFERWALL_ACCENTS.violet}
       Icon={LayoutGrid}
       backLabel={t('offerwall.panel.back')}
@@ -816,7 +813,6 @@ function MoneyRainPanel({ onBack }: { onBack: () => void }) {
     <OfferwallProviderShell
       onBack={onBack}
       title={t('moneyrain.title')}
-      tagline={t('moneyrain.subtitle')}
       accent={OFFERWALL_ACCENTS.amber}
       Icon={CloudRain}
       backLabel={t('offerwall.panel.back')}
@@ -888,7 +884,6 @@ function MultiwallPanel({ onBack }: { onBack: () => void }) {
     <OfferwallProviderShell
       onBack={onBack}
       title="Multiwall Ads"
-      tagline={t('offerwall.multiwall.tagline')}
       accent={OFFERWALL_ACCENTS.cyan}
       Icon={LayoutGrid}
       backLabel={t('offerwall.panel.back')}
@@ -962,7 +957,6 @@ function OfferwallGgPanel({ onBack }: { onBack: () => void }) {
     <OfferwallProviderShell
       onBack={onBack}
       title="Offerwall.GG"
-      tagline={t('offerwall.offerwallgg.tagline')}
       accent={OFFERWALL_ACCENTS.emerald}
       Icon={LayoutGrid}
       backLabel={t('offerwall.panel.back')}

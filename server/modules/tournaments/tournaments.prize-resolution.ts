@@ -210,6 +210,16 @@ export function maxPrizeRank(prizes: readonly { rankTo: number }[]): number {
   return max;
 }
 
+/**
+ * The one leaderboard order (Prisma form) — must match assignRanks below:
+ * score desc, earliest firstContributionAt (nulls last), id asc.
+ */
+export const LEADERBOARD_ORDER = [
+  { score: "desc" },
+  { firstContributionAt: { sort: "asc", nulls: "last" } },
+  { id: "asc" },
+] as const;
+
 export type RankableEntry = {
   id: number;
   userId: number;
