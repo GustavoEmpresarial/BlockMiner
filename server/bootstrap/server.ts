@@ -86,6 +86,7 @@ import { startShortlinksPasteadExpireCron } from "../cron/shortlinks-pastead-exp
 import { startShortlinksAdlinkflyExpireCron } from "../cron/shortlinks-adlinkfly-expire.cron.js";
 import { startSecurityArtifactCleanupCron } from "../cron/security-artifact-cleanup.cron.js";
 import { startNotificationsRetentionCron } from "../cron/notifications-retention.cron.js";
+import { startEventOutboxRetentionCron } from "../cron/event-outbox-retention.cron.js";
 import { startSupportRetentionCron } from "../cron/support-retention.cron.js";
 import { startExpiredPowersCleanupCron } from "../cron/expired-powers-cleanup.cron.js";
 import { startUserCountSnapshotCron } from "../cron/user-count-snapshot.cron.js";
@@ -328,6 +329,7 @@ async function main() {
     const shortlinksAdlinkflyExpireCron = startShortlinksAdlinkflyExpireCron();
     const securityArtifactCleanupCron = startSecurityArtifactCleanupCron();
     const notificationsRetentionCron = startNotificationsRetentionCron();
+    const eventOutboxRetentionCron = startEventOutboxRetentionCron();
     const supportRetentionCron = startSupportRetentionCron();
     const expiredPowersCleanupCron = startExpiredPowersCleanupCron();
     const userCountSnapshotCron = startUserCountSnapshotCron();
@@ -352,6 +354,7 @@ async function main() {
         shortlinksAdlinkflyExpireCron.stop();
         securityArtifactCleanupCron.stop();
         notificationsRetentionCron.stop();
+        eventOutboxRetentionCron.stop();
         supportRetentionCron.stop();
         expiredPowersCleanupCron.stop();
         userCountSnapshotCron.stop();
