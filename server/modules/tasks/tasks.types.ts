@@ -3,6 +3,8 @@ export type BumpDailyTasksOpts = {
   delta: number;
   gameSlug?: string | null;
   internalOfferwallOfferId?: number | null;
+  /** Bucket progress by this instant. Defaults to now. Check-in passes the UTC day that was confirmed. */
+  occurredAt?: Date;
 };
 
 export type DailyTaskDashboardTask = {
