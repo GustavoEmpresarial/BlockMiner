@@ -618,17 +618,20 @@ function runPgDumpToGzip({
 
     child.on("error", (err) => fail(new Error(`Failed to start pg_dump: ${err.message}`)));
 
-    pipeline(child.stdout, scanner.transform, gzip, output)
-      .then(() => {
-        child.once("close", (code) => {
-          if (settled) return;
-          settled = true;
-          if (code === 0) {
-            resolve(scanner.finish());
-            return;
-          }
-          reject(new Error(`pg_dump exited with code ${code}: ${stderr.slice(-8000) || "no stderr"}`));
-        });
+    // Listen for "close" from the start: pg_dump often closes before gzip has flushed the file,
+    // and a listener attached only after the pipeline finished never fired — the backup then
+    // hung forever (or, in a process with nothing else alive, exited 0 without a result).
+    const closed = new Promise<number | null>((res) => child.once("close", (code) => res(code)));
+
+    Promise.all([pipeline(child.stdout, scanner.transform, gzip, output), closed])
+      .then(([, code]) => {
+        if (settled) return;
+        settled = true;
+        if (code === 0) {
+          resolve(scanner.finish());
+          return;
+        }
+        reject(new Error(`pg_dump exited with code ${code}: ${stderr.slice(-8000) || "no stderr"}`));
       })
       .catch((err: unknown) => fail(err instanceof Error ? err : new Error(String(err))));
   });
