@@ -50,13 +50,21 @@ function envInt(name: string, fallback: number, min: number, max: number): numbe
   return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback;
 }
 
+function killGroup(child: ChildProcess, signal: NodeJS.Signals): void {
+  try {
+    if (child.pid) process.kill(-child.pid, signal);
+  } catch {
+    child.kill(signal); // group already gone or not a group leader
+  }
+}
+
 export function runBackupInChildProcess<T>(mode: BackupWorkerMode): Promise<T> {
   if (running) {
     return Promise.reject(
       new BackupWorkerError("BACKUP_ALREADY_RUNNING", `Backup already in progress (${running.mode}, pid ${running.pid ?? "?"})`),
     );
   }
-  const timeoutMs = envInt("BACKUP_WORKER_TIMEOUT_MS", 6 * 3_600_000, 60_000, 24 * 3_600_000);
+  const timeoutMs = envInt("BACKUP_WORKER_TIMEOUT_MS", 6 * 3_600_000, 1_000, 24 * 3_600_000);
   const nice = envInt("BACKUP_WORKER_NICE", 10, 0, 19);
   const { file, execArgv } = resolveBackupWorkerEntry();
   const startedAt = Date.now();
@@ -70,6 +78,8 @@ export function runBackupInChildProcess<T>(mode: BackupWorkerMode): Promise<T> {
         env: process.env,
         stdio: ["ignore", "inherit", "inherit", "ipc"],
         serialization: "advanced",
+        // Own process group, so a timeout also takes down pg_dump/tar spawned by the worker.
+        detached: true,
       });
     } catch (err: unknown) {
       running = null;
@@ -98,8 +108,8 @@ export function runBackupInChildProcess<T>(mode: BackupWorkerMode): Promise<T> {
 
     const timer = setTimeout(() => {
       log.error("backup_worker_timeout", { mode, pid: child.pid, timeoutMs });
-      child.kill("SIGTERM");
-      setTimeout(() => child.kill("SIGKILL"), 30_000).unref();
+      killGroup(child, "SIGTERM");
+      setTimeout(() => killGroup(child, "SIGKILL"), 30_000).unref();
       finish(() => reject(new BackupWorkerError("BACKUP_WORKER_TIMEOUT", `Backup worker exceeded ${timeoutMs} ms`)));
     }, timeoutMs);
     timer.unref();

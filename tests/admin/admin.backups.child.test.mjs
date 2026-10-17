@@ -134,3 +134,30 @@ test("the worker runs at a lower CPU priority than the app", { timeout: 120_000 
   await p;
   if (prio !== null) assert.ok(prio > os.getPriority(), `child nice ${prio} > parent ${os.getPriority()}`);
 });
+
+test("a stuck backup is killed after BACKUP_WORKER_TIMEOUT_MS and reported as BACKUP_WORKER_TIMEOUT", { timeout: 120_000 }, async () => {
+  const stuck = path.join(tmpDir, "stuck-pg_dump.sh");
+  await fs.writeFile(stuck, "#!/bin/sh\nprintf -- '-- PostgreSQL database dump\\n'\nexec sleep 617.25\n", { mode: 0o755 });
+  setEnv("PG_DUMP_PATH", stuck);
+  setEnv("BACKUP_WORKER_TIMEOUT_MS", "3000");
+  try {
+    const t0 = Date.now();
+    const p = runBackupInChildProcess("backup");
+    const pid = backupWorkerStatus().pid;
+    await assert.rejects(p, (e) => e instanceof BackupWorkerError && e.code === "BACKUP_WORKER_TIMEOUT");
+    assert.ok(Date.now() - t0 < 20_000, "gave up near the configured timeout");
+    assert.equal(backupWorkerStatus(), null, "guard released");
+    await new Promise((r) => setTimeout(r, 500));
+    assert.throws(() => process.kill(pid, 0), "worker process is gone");
+    const { execSync } = await import("node:child_process");
+    const left = execSync("ps -eo pid=,args=")
+      .toString()
+      .split("\n")
+      .filter((l) => /^\s*\d+\s+sleep 617\.25$/.test(l))
+      .join("\n");
+    assert.equal(left, "", "the stuck pg_dump of the worker was killed too");
+  } finally {
+    setEnv("BACKUP_WORKER_TIMEOUT_MS", undefined);
+    setEnv("PG_DUMP_PATH", path.join(tmpDir, "fake-pg_dump.sh"));
+  }
+});
