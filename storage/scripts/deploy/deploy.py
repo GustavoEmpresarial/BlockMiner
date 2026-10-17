@@ -215,10 +215,18 @@ compose() {{
   fi
   "${{c[@]}}" "$@"
 }}
+# The image copies dist/ and client/dist/; point it at the fresh build when there is one.
+build_args=()
+if [[ -f "$APP_ROOT/.build-next/dist/server/bootstrap/server.js" ]]; then
+  build_args+=(--build-arg SERVER_DIST=.build-next/dist)
+fi
+if [[ -f "$APP_ROOT/client/dist.next/index.html" ]]; then
+  build_args+=(--build-arg CLIENT_DIST=client/dist.next)
+fi
 if [[ "${{BLOCKMINER_DOCKER_BUILD_NO_CACHE:-0}}" == "1" ]]; then
-  compose build --no-cache app
+  compose build --no-cache "${{build_args[@]}}" app
 else
-  compose build app
+  compose build "${{build_args[@]}}" app
 fi
 compose up -d --remove-orphans redis kafka phd nginx stats-materializer
 # `db` is profile local-db. Naming it on the command line starts an empty local Postgres.
@@ -240,9 +248,38 @@ if ! compose run --rm --no-deps --entrypoint npx app prisma migrate deploy --sch
 fi
 # Force-recreate app so bind mounts (client/dist, dist/) pick up fresh directory inodes
 # after git pull / SPA rebuild — otherwise Docker can keep an empty stale mount.
+{_install_built_artifacts()}
 compose up -d --force-recreate --no-deps app
 {_app_ready_gate(container_app, health_port)}
 echo "[vm] docker steps finished"
+'''
+
+
+def _install_built_artifacts() -> str:
+    """Copy the fresh build into the live dist/ and client/dist/ IN PLACE, last thing before
+    the app is recreated. rsync keeps the directories (and so the running container's bind
+    mounts) intact; index.html is swapped last and atomically so a request never gets an
+    index that points at chunks not copied yet. Old chunks stay until purge-spa-orphans runs.
+    """
+    return r'''
+command -v rsync >/dev/null 2>&1 || { apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq rsync; }
+if [[ -f "$APP_ROOT/.build-next/dist/server/bootstrap/server.js" ]]; then
+  mkdir -p "$APP_ROOT/dist"
+  rsync -a --checksum "$APP_ROOT/.build-next/dist/" "$APP_ROOT/dist/"
+  echo "[vm] server dist installed in place"
+fi
+if [[ -f "$APP_ROOT/client/dist.next/index.html" ]]; then
+  mkdir -p "$APP_ROOT/client/dist"
+  rsync -a --checksum --exclude index.html "$APP_ROOT/client/dist.next/" "$APP_ROOT/client/dist/"
+  cp "$APP_ROOT/client/dist.next/index.html" "$APP_ROOT/client/dist/index.html.next"
+  mv -f "$APP_ROOT/client/dist/index.html.next" "$APP_ROOT/client/dist/index.html"
+  echo "[vm] client dist installed in place"
+  if [[ -f "$APP_ROOT/storage/scripts/purge-spa-orphans.py" ]]; then
+    python3 "$APP_ROOT/storage/scripts/purge-spa-orphans.py" --apply \
+      || echo "[vm] WARN: SPA orphan purge failed"
+  fi
+fi
+rm -rf "$APP_ROOT/.build-next" "$APP_ROOT/client/dist.next"
 '''
 
 
@@ -283,37 +320,34 @@ fi
 
 
 def _restore_runtime_artifacts() -> str:
+    """Put preserved artifacts back only if the git step actually removed them.
+
+    dist/, client/dist/ and storage/uploads/ are excluded from git clean and ignored by git
+    reset, so they normally survive in place. The old version always did `rm -rf` + `mv`,
+    which swapped the directory inode under the RUNNING container's bind mounts: the live
+    site lost its SPA (503) for the whole build until the app was recreated (~10 min per
+    deploy). Restoring only a missing path keeps the live mounts untouched.
+    """
     return r'''
-# Restore preserved artifacts when git tree has no dist/ (gitignored).
-if [[ -d "$BM_KEEP/dist" ]]; then
-  rm -rf "$APP_ROOT/dist"
-  mv "$BM_KEEP/dist" "$APP_ROOT/dist"
-elif [[ -d "$BM_KEEP/dist-from-container" ]]; then
-  rm -rf "$APP_ROOT/dist"
-  mv "$BM_KEEP/dist-from-container" "$APP_ROOT/dist"
-fi
-if [[ -d "$BM_KEEP/client/dist" ]]; then
-  mkdir -p "$APP_ROOT/client"
-  rm -rf "$APP_ROOT/client/dist"
-  mv "$BM_KEEP/client/dist" "$APP_ROOT/client/dist"
-elif [[ -d "$BM_KEEP/client-dist-from-container" ]]; then
-  mkdir -p "$APP_ROOT/client"
-  # Preserve cartrush game assets if the new tree lacks them.
-  if [[ -d "$APP_ROOT/client/dist/games/cartrush" ]]; then
-    :
-  elif [[ -d "$BM_KEEP/client-dist-from-container/games/cartrush" ]]; then
-    mkdir -p "$BM_KEEP/client-dist-from-container/games"
+if [[ ! -d "$APP_ROOT/dist" ]]; then
+  if [[ -d "$BM_KEEP/dist" ]]; then
+    mv "$BM_KEEP/dist" "$APP_ROOT/dist"
+  elif [[ -d "$BM_KEEP/dist-from-container" ]]; then
+    mv "$BM_KEEP/dist-from-container" "$APP_ROOT/dist"
   fi
-  rm -rf "$APP_ROOT/client/dist"
-  mv "$BM_KEEP/client-dist-from-container" "$APP_ROOT/client/dist"
 fi
-for path in storage/uploads; do
-  if [[ -d "$BM_KEEP/$path" ]]; then
-    mkdir -p "$APP_ROOT/$(dirname "$path")"
-    rm -rf "$APP_ROOT/$path"
-    mv "$BM_KEEP/$path" "$APP_ROOT/$path"
+if [[ ! -d "$APP_ROOT/client/dist" ]]; then
+  mkdir -p "$APP_ROOT/client"
+  if [[ -d "$BM_KEEP/client/dist" ]]; then
+    mv "$BM_KEEP/client/dist" "$APP_ROOT/client/dist"
+  elif [[ -d "$BM_KEEP/client-dist-from-container" ]]; then
+    mv "$BM_KEEP/client-dist-from-container" "$APP_ROOT/client/dist"
   fi
-done
+fi
+if [[ ! -d "$APP_ROOT/storage/uploads" && -d "$BM_KEEP/storage/uploads" ]]; then
+  mkdir -p "$APP_ROOT/storage"
+  mv "$BM_KEEP/storage/uploads" "$APP_ROOT/storage/uploads"
+fi
 rm -rf "$BM_KEEP"
 '''
 
@@ -346,16 +380,25 @@ def _build_server_on_vm() -> str:
     exit code as pass/fail; instead verify the one file server.ts always produces.
     """
     return r'''
+# Build into .build-next/dist, NOT into the dist/ the running app has mounted. It is installed
+# into dist/ (rsync, same directory) only right before the app is recreated — see
+# _install_built_artifacts().
+rm -rf "$APP_ROOT/.build-next/dist"
+mkdir -p "$APP_ROOT/.build-next"
+check_server_build() {
+  if [[ -f "$APP_ROOT/.build-next/dist/server/bootstrap/server.js" ]]; then
+    echo "[vm] server build OK (.build-next/dist/server/bootstrap/server.js present)"
+  else
+    echo "[vm] ERROR: server build did not produce server.js — keeping previous dist (server-side changes in this deploy were NOT applied)"
+    rm -rf "$APP_ROOT/.build-next/dist"
+  fi
+}
 if [[ "${SKIP_SERVER_BUILD:-0}" == "1" ]]; then
   echo "[vm] SKIP_SERVER_BUILD=1 — keeping previous server dist/"
 elif command -v npm >/dev/null 2>&1; then
   echo "[vm] building server with host npm (tsc may report known pre-existing type errors in unrelated modules; JS is still emitted for everything that type-checks — see tsconfig noEmitOnError)"
-  ( cd "$APP_ROOT" && npm ci --no-audit --no-fund && npm run build; true )
-  if [[ -f "$APP_ROOT/dist/server/bootstrap/server.js" ]]; then
-    echo "[vm] server build OK (dist/server/bootstrap/server.js present)"
-  else
-    echo "[vm] ERROR: server build did not produce dist/server/bootstrap/server.js — keeping previous dist (server-side changes in this deploy were NOT applied)"
-  fi
+  ( cd "$APP_ROOT" && npm ci --no-audit --no-fund && npx tsc -p tsconfig.json --outDir "$APP_ROOT/.build-next/dist"; true )
+  check_server_build
 elif command -v docker >/dev/null 2>&1; then
   echo "[vm] building server via node container (host has no npm)"
   docker run --rm \
@@ -363,12 +406,8 @@ elif command -v docker >/dev/null 2>&1; then
     -v /root/.npm:/root/.npm \
     -w /app \
     node:22-bookworm-slim \
-    bash -lc 'npm ci --no-audit --no-fund && npm run build; true'
-  if [[ -f "$APP_ROOT/dist/server/bootstrap/server.js" ]]; then
-    echo "[vm] server build OK (dist/server/bootstrap/server.js present)"
-  else
-    echo "[vm] ERROR: server container build did not produce dist/server/bootstrap/server.js — keeping previous dist"
-  fi
+    bash -lc 'npm ci --no-audit --no-fund && npx tsc -p tsconfig.json --outDir /app/.build-next/dist; true'
+  check_server_build
 else
   echo "[vm] WARN: no npm/docker to rebuild server — keeping previous dist (server-side changes in this deploy were NOT applied)"
 fi
@@ -387,18 +426,14 @@ def _build_client_on_vm() -> str:
     """
     return r'''
 install_fresh_client_dist() {
+  # Only validate here. The live client/dist is updated in place by _install_built_artifacts()
+  # right before the app is recreated; swapping the directory broke the running mount.
   if [[ ! -f "$APP_ROOT/client/dist.next/index.html" ]]; then
     echo "[vm] ERROR: client build did not write index.html — keeping previous client/dist"
     rm -rf "$APP_ROOT/client/dist.next"
     return 1
   fi
-  rm -rf "$APP_ROOT/client/dist"
-  mv "$APP_ROOT/client/dist.next" "$APP_ROOT/client/dist"
-  if [[ -f "$APP_ROOT/storage/scripts/purge-spa-orphans.py" ]]; then
-    python3 "$APP_ROOT/storage/scripts/purge-spa-orphans.py" --apply \
-      || echo "[vm] WARN: SPA orphan purge failed"
-  fi
-  echo "[vm] client build OK (client/dist replaced; previous chunks dropped)"
+  echo "[vm] client build OK (client/dist.next ready; installed right before the app recreate)"
 }
 if [[ "${SKIP_CLIENT_BUILD:-0}" == "1" ]]; then
   echo "[vm] SKIP_CLIENT_BUILD=1 — keeping previous client dist/"
@@ -493,7 +528,7 @@ echo "[vm] git sync OK @ $(cd "$APP_ROOT" && git rev-parse --short HEAD 2>/dev/n
     if _skip_docker():
         return f"""set -euo pipefail
 {no_cache}{skip_server}{skip_client}APP_ROOT={shlex.quote(app_root)}
-{pull}echo "[vm] SKIP_DOCKER=1"
+{pull}{_install_built_artifacts()}echo "[vm] SKIP_DOCKER=1"
 """
     return f"""set -euo pipefail
 {no_cache}{skip_server}{skip_client}APP_ROOT={shlex.quote(app_root)}
