@@ -5,6 +5,7 @@ export {
   PART_SHOP_PRICES,
   PART_OFFER_PRICES,
   PART_OFFER_PACKS,
+  PART_PACKS_ON_SALE,
   listPartsCatalogForShop,
   listPartsCatalogForOffer,
   buildActivePartOffersPayload,

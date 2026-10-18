@@ -48,6 +48,13 @@ export type PartPackDef = {
   items: PartPackItem[];
 };
 
+/**
+ * Kits are off sale (product call, 18/10/2026): /offers lists single parts only and
+ * POST /offer-events/purchase-part-pack answers 404. The definitions stay so turning
+ * them back on is this one flag.
+ */
+export const PART_PACKS_ON_SALE = false;
+
 export const PART_OFFER_PACKS: readonly PartPackDef[] = [
   {
     id: "starter_pack",
@@ -121,7 +128,7 @@ export function buildActivePartOffersPayload() {
     isLive: true,
     currency: "BLK",
     items: listPartsCatalogForOffer(),
-    packs: PART_OFFER_PACKS,
+    packs: PART_PACKS_ON_SALE ? PART_OFFER_PACKS : [],
   };
 }
 

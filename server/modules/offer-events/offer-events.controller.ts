@@ -8,7 +8,7 @@ import { readErrorCode, readHttpStatus, readErrorMessage, requireSessionUser } f
 import { classifyInfrastructureError } from "../../shared/errors/prismaHttpErrors.js";
 import { purchaseFansForUser, FAN_ERROR_MESSAGE, readFanMaxBulkQuantity } from "../fans/index.js";
 import { purchaseRacksForUser, RACK_ERROR_MESSAGE, readRackMaxBulkQuantity } from "../racks/index.js";
-import { purchasePartForUser, purchasePartPackForUser } from "../parts/index.js";
+import { PART_PACKS_ON_SALE, purchasePartForUser, purchasePartPackForUser } from "../parts/index.js";
 import { OFFER_EVENT_PURCHASE_MAX_QUANTITY } from "./offer-events.config.js";
 import { OFFER_EVENTS_ERROR } from "./offer-events.errors.js";
 import * as svc from "./offer-events.service.js";
@@ -341,6 +341,11 @@ export async function purchasePartOffer(req: import("express").Request, res: imp
 export async function purchasePartPackOffer(req: import("express").Request, res: import("express").Response): Promise<void> {
   const user = requireSessionUser(req, res);
   if (!user) return;
+
+  if (!PART_PACKS_ON_SALE) {
+    res.status(404).json({ ok: false, code: "PACK_NOT_FOUND", message: "Pacote de peças não encontrado." });
+    return;
+  }
 
   const { packId } = req.body ?? {};
   const idem = await resolveCriticalMutation(req, res);

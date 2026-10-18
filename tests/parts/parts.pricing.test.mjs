@@ -71,5 +71,6 @@ test("parts.pricing: active payload structure", () => {
   assert.equal(payload.isLive, true);
   assert.equal(payload.currency, "BLK");
   assert.equal(payload.items.length, 30);
-  assert.equal(payload.packs.length, 2);
+  // Kits are off sale: the offers payload lists single parts only.
+  assert.equal(payload.packs.length, 0);
 });
