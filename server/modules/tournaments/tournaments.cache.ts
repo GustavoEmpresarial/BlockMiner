@@ -13,6 +13,11 @@ export async function invalidateLeaderboardCache(tournamentId: number): Promise<
   log.info("tournament.cache.invalidated", { tournamentId, cacheVersion: version, redis: false });
 }
 
+/** Drops the in-process leaderboard entry only; the version bump is batched (see metrics). */
+export function dropCachedLeaderboard(tournamentId: number): void {
+  lbCache.delete(tournamentId);
+}
+
 export async function getCachedLeaderboard<T>(tournamentId: number): Promise<T | null> {
   const hit = lbCache.get(tournamentId);
   if (!hit) return null;

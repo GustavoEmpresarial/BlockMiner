@@ -3,8 +3,8 @@ import {
   applyScoreDelta,
   insertContributionIdempotent,
 } from "./tournaments.repository.js";
-import { invalidateLeaderboardCache } from "./tournaments.cache.js";
-import { touchEngineStatsOnContribution } from "./tournaments.metrics.js";
+import { dropCachedLeaderboard } from "./tournaments.cache.js";
+import { queueContributionStats } from "./tournaments.metrics.js";
 import { notifyTournamentDirty } from "./tournaments.realtime.js";
 import prisma from "../../core/database/prisma.js";
 import { logger } from "../../core/logger/index.js";
@@ -69,15 +69,10 @@ export async function applyContribution(
     eventAt: delta.eventAt.toISOString(),
   });
 
-  await invalidateLeaderboardCache(tournamentId);
+  // The leaderboard cache is in-process; engine stats + cache version are batched per tournament.
+  dropCachedLeaderboard(tournamentId);
   log.info("tournament.cache.invalidated", { tournamentId });
-
-  await touchEngineStatsOnContribution(
-    tournamentId,
-    delta.userId,
-    delta.metricValue,
-    delta.eventAt,
-  );
+  queueContributionStats(tournamentId, delta.userId, delta.metricValue, delta.eventAt);
 
   notifyTournamentDirty(tournamentId);
   log.info("tournament.ranking.update_scheduled", {
