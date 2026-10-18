@@ -18,6 +18,8 @@ import RootErrorBoundary from '../app/RootErrorBoundary';
 import { TermsOfUsePage } from '../features/legal/TermsOfUsePage';
 import { PrivacyPolicyPage } from '../features/legal/PrivacyPolicyPage';
 import { readAuthErrorMessage } from '../shared/auth/auth.errors';
+import { AiInfrastructure3DSection } from '../features/transparency/components/transparency.ai-models';
+import ImageUploader from '../shared/components/ImageUploader';
 
 /** Portuguese-only characters/words that must not leak into an English or Spanish screen. */
 const PT_LEAK = /[ãõç]|\b(você|não|peças?|carteira|tente|entrar|carregando|verificação)\b/i;
@@ -101,5 +103,23 @@ describe('legal documents in Spanish', () => {
   it('English legal pages show no translation notice', async () => {
     await renderIn('en', <TermsOfUsePage />);
     expect(screen.queryByTestId('legal-translation-notice')).toBeNull();
+  });
+});
+
+describe('transparency and admin upload', () => {
+  it.each(['en', 'es'] as const)('AI & infrastructure 3D block has no Portuguese in %s', async (lng) => {
+    const L = lng === 'en' ? en : es;
+    const { container } = await renderIn(lng, <AiInfrastructure3DSection />);
+    expect(screen.getByText(L.transparency.ai_models.title)).toBeInTheDocument();
+    expect(container.textContent).toContain(L.transparency.ai_models.items.claude.description);
+    expect(container.textContent?.match(PT_LEAK)?.[0] ?? null).toBeNull();
+    expect(container.textContent).not.toMatch(/Assinatura|balanço|Arraste|Mascote|\/mês/);
+  });
+
+  it('image uploader is in Spanish', async () => {
+    const { container } = await renderIn('es', <ImageUploader value="" onChange={vi.fn()} />);
+    expect(screen.getByText(es.imageUploader.drop_hint)).toBeInTheDocument();
+    expect(screen.getByText(es.imageUploader.label)).toBeInTheDocument();
+    expect(container.textContent?.match(PT_LEAK)?.[0] ?? null).toBeNull();
   });
 });

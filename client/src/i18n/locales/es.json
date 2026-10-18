@@ -3898,9 +3898,61 @@
       "deprecated_badge": "Desactivada — Ya no se utiliza",
       "deprecated_description": "Esta cartera ha sido retirada. Los depósitos a esta dirección ya no se procesan. Por favor, utilice únicamente la dirección de depósito activa actual mostrada en la plataforma.",
       "off_chain_badge": "Off-chain",
-      "manual_value_label": "Valor declarado"
+      "manual_value_label": "Valor declarado",
+      "liquid_balance": "Saldo líquido",
+      "active_lps": "LPs activas",
+      "wallet_label": "Billetera"
     },
-    "wallet_link": "Cartera"
+    "wallet_link": "Cartera",
+    "ai_models": {
+      "title": "Modelos 3D de IA e infraestructura",
+      "badge_interactive": ".GLB interactivo",
+      "active_subscription": "Suscripción activa",
+      "monthly_subscription": "Suscripción mensual",
+      "per_month": "/mes",
+      "audited": "Auditado en el balance",
+      "loading_3d": "Cargando 3D...",
+      "controls_hint": "Arrastra para girar en 3D · desplázate para hacer zoom",
+      "download_glb": "Descargar .glb",
+      "items": {
+        "claude": {
+          "name": "Claude Code (Clawd)",
+          "category": "Herramientas de IA",
+          "description": "Clawd — la mascota oficial de Claude Code de Anthropic, en 3D. IA utilizada en el desarrollo, las pruebas de seguridad y la arquitectura de BlockMiner.",
+          "tags": [
+            "Mascota Clawd 3D",
+            "Claude 3.7 Sonnet",
+            "Anthropic PBC"
+          ]
+        },
+        "gemini": {
+          "name": "Gemini Pro",
+          "category": "Herramientas de IA",
+          "description": "IA multimodal de Google aplicada al apoyo de razonamiento, prototipado, automatización y diseño de los recursos de la plataforma.",
+          "tags": [
+            "Gemini 1.5 Pro",
+            "Google LLC",
+            "IA multimodal"
+          ]
+        },
+        "contabo": {
+          "name": "Servidor cloud VPS",
+          "category": "Infraestructura",
+          "description": "Instancia de servidor en la nube de alta capacidad dedicada a ejecutar el backend en Node.js, los contenedores Docker, la base de datos PostgreSQL y Redis.",
+          "tags": [
+            "Hosting cloud VPS",
+            "Centro de datos Contabo",
+            "Disponibilidad 99,9 %"
+          ]
+        }
+      }
+    },
+    "aria": {
+      "monthly_distribution": "Valores de la distribución mensual",
+      "nav": "Navegación de transparencia",
+      "sections": "Secciones del portal de transparencia",
+      "kpi_summary": "Resumen de indicadores financieros"
+    }
   },
   "adminCheckinMilestones": {
     "title": "Check-in — Streak milestones",
@@ -7168,5 +7220,16 @@
     "step1": "Borra los datos del sitio / caché (Ctrl+Shift+Supr en el PC, o Ajustes → Datos de navegación en el móvil) y ábrelo de nuevo.",
     "step2": "Si sigue fallando, prueba otro navegador (Chrome, Edge, Firefox) o una ventana de incógnito.",
     "step3": "Pega el error copiado en el Telegram oficial y avisa a un admin."
+  },
+  "imageUploader": {
+    "label": "Imagen",
+    "mode_upload": "Subir",
+    "uploading": "Subiendo...",
+    "drop_hint": "Haz clic o arrastra una imagen aquí",
+    "formats": "JPG, PNG, GIF, WEBP, SVG — máx. 5 MB",
+    "remove": "Quitar imagen",
+    "error_status": "Error {{status}} al subir la imagen.",
+    "error_no_response": "Error al subir la imagen (sin respuesta).",
+    "error_generic": "Error en la subida."
   }
 }

@@ -183,6 +183,10 @@ export function Generic3DViewer({ src, fallbackImg, alt }: { src: string; fallba
 }
 
 export function AiInfrastructure3DSection() {
+  const { t } = useTranslation();
+  /** Card copy lives in the locales by item id; the data above is the Portuguese fallback. */
+  const itemT = (item: SubscriptionModelItem, field: 'name' | 'category' | 'description') =>
+    t(`transparency.ai_models.items.${item.id}.${field}`, { defaultValue: item[field] });
   const [selectedId, setSelectedId] = useState<string>('claude');
   const [scriptReady, setScriptReady] = useState(false);
 
@@ -213,9 +217,9 @@ export function AiInfrastructure3DSection() {
           </div>
           <div>
             <h2 className="text-xs font-black text-violet-300 uppercase tracking-wider flex items-center gap-2">
-              Modelos 3D de IA & Infraestrutura
+              {t('transparency.ai_models.title')}
               <span className="rounded-full bg-violet-500/20 px-2 py-0.5 text-[9px] font-black text-violet-300 uppercase border border-violet-500/30 shadow-[1px_1px_0px_#000000]">
-                .GLB Interativo
+                {t('transparency.ai_models.badge_interactive')}
               </span>
             </h2>
           </div>
@@ -237,7 +241,7 @@ export function AiInfrastructure3DSection() {
                 }`}
               >
                 <img src={item.imageUrl} alt="" className="w-3.5 h-3.5 rounded-full object-contain shrink-0" />
-                <span>{item.name}</span>
+                <span>{itemT(item, 'name')}</span>
                 <span className={`text-[10px] ${isSelected ? 'text-violet-100 font-black' : 'text-slate-500'}`}>
                   ${item.monthlyCostUsd.toFixed(2)}
                 </span>
@@ -254,18 +258,18 @@ export function AiInfrastructure3DSection() {
           <div>
             <div className="flex items-center justify-between gap-2">
               <span className="text-[10px] font-black uppercase tracking-wider text-violet-400">
-                {activeItem.category}
+                {itemT(activeItem, 'category')}
               </span>
               <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-emerald-400">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                Assinatura Ativa
+                {t('transparency.ai_models.active_subscription')}
               </span>
             </div>
 
             <div className="flex items-baseline justify-between gap-3 mt-1.5">
               <div>
                 <h3 className="text-lg font-black text-white leading-tight">
-                  {activeItem.name}
+                  {itemT(activeItem, 'name')}
                 </h3>
                 <a
                   href={activeItem.providerUrl}
@@ -279,10 +283,10 @@ export function AiInfrastructure3DSection() {
               </div>
 
               <div className="text-right shrink-0">
-                <span className="text-[10px] text-slate-500 uppercase tracking-widest font-bold block">Assinatura Mensal</span>
+                <span className="text-[10px] text-slate-500 uppercase tracking-widest font-bold block">{t('transparency.ai_models.monthly_subscription')}</span>
                 <p className="text-xl font-black text-emerald-400 leading-tight">
                   ${activeItem.monthlyCostUsd.toFixed(2)}
-                  <span className="text-xs text-slate-500 font-bold ml-1">/mês</span>
+                  <span className="text-xs text-slate-500 font-bold ml-1">{t('transparency.ai_models.per_month')}</span>
                 </p>
                 {activeItem.monthlyCostOriginal && (
                   <span className="text-[10px] text-slate-500 block font-medium">({activeItem.monthlyCostOriginal})</span>
@@ -291,7 +295,7 @@ export function AiInfrastructure3DSection() {
             </div>
 
             <p className="text-xs text-slate-300 leading-relaxed mt-2.5 line-clamp-3">
-              {activeItem.description}
+              {itemT(activeItem, 'description')}
             </p>
           </div>
 
@@ -303,14 +307,14 @@ export function AiInfrastructure3DSection() {
                   key={idx}
                   className="text-[10px] font-semibold bg-slate-950/80 text-slate-300 px-2.5 py-1 rounded-lg border border-slate-800 shadow-[1px_1px_0px_#000000]"
                 >
-                  {tag}
+                  {t(`transparency.ai_models.items.${activeItem.id}.tags.${idx}`, { defaultValue: tag })}
                 </span>
               ))}
             </div>
 
             <span className="flex items-center gap-1 text-[10px] font-bold text-slate-400 ml-auto">
               <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" />
-              Auditado no balanço
+              {t('transparency.ai_models.audited')}
             </span>
           </div>
         </div>
@@ -321,12 +325,12 @@ export function AiInfrastructure3DSection() {
             <Generic3DViewer
               src={activeItem.model3dUrl}
               fallbackImg={activeItem.imageUrl}
-              alt={activeItem.name}
+              alt={itemT(activeItem, 'name')}
             />
           ) : (
             <div className="flex flex-col items-center justify-center gap-2">
               <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-              <span className="text-[11px] font-bold text-slate-400">Carregando 3D...</span>
+              <span className="text-[11px] font-bold text-slate-400">{t('transparency.ai_models.loading_3d')}</span>
             </div>
           )}
 
@@ -334,7 +338,7 @@ export function AiInfrastructure3DSection() {
           <div className="absolute bottom-2 inset-x-3 flex items-center justify-between pointer-events-none text-[9px] font-bold text-slate-400 bg-slate-950/85 backdrop-blur-md px-2.5 py-1 rounded-lg border border-slate-800 shadow-[2px_2px_0px_#000000]">
             <span className="flex items-center gap-1">
               <RotateCcw className="w-3 h-3 text-primary" />
-              Arraste para girar em 3D · scroll para zoom
+              {t('transparency.ai_models.controls_hint')}
             </span>
             <a
               href={activeItem.model3dUrl}
@@ -342,7 +346,7 @@ export function AiInfrastructure3DSection() {
               className="pointer-events-auto text-primary hover:underline flex items-center gap-1"
             >
               <Box className="w-2.5 h-2.5" />
-              Download .glb
+              {t('transparency.ai_models.download_glb')}
             </a>
           </div>
         </div>

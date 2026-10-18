@@ -1,10 +1,12 @@
 import { useRef, useState } from 'react';
 import type { ChangeEvent, DragEvent } from 'react';
 import { isAxiosError } from 'axios';
+import type { TFunction } from 'i18next';
+import { useTranslation } from 'react-i18next';
 import { Upload, X, Link2, Image } from 'lucide-react';
 import { api } from '../auth/auth.store';
 
-function readUploadErrorMessage(err: unknown): string {
+function readUploadErrorMessage(err: unknown, t: TFunction): string {
   if (isAxiosError(err)) {
     const data = err.response?.data;
     if (data && typeof data === 'object' && 'message' in data) {
@@ -12,11 +14,11 @@ function readUploadErrorMessage(err: unknown): string {
       if (typeof msg === 'string' && msg.trim()) return msg;
     }
     if (typeof err.response?.status === 'number') {
-      return `Erro ${err.response.status} ao enviar imagem.`;
+      return t('imageUploader.error_status', { status: err.response.status });
     }
-    return 'Erro ao enviar imagem (sem resposta).';
+    return t('imageUploader.error_no_response');
   }
-  return 'Erro ao enviar imagem (sem resposta).';
+  return t('imageUploader.error_no_response');
 }
 
 type ImageUploaderProps = {
@@ -30,9 +32,10 @@ type ImageUploaderProps = {
 export default function ImageUploader({
   value,
   onChange,
-  label = 'Imagem',
+  label,
   previewClass = 'max-h-40',
 }: ImageUploaderProps) {
+  const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
   const [mode, setMode] = useState<'upload' | 'url'>('upload');
   const [uploading, setUploading] = useState(false);
@@ -48,10 +51,10 @@ export default function ImageUploader({
       if (res.data.ok && typeof res.data.url === 'string') {
         onChange(res.data.url);
       } else {
-        setError(typeof res.data.message === 'string' ? res.data.message : 'Erro no upload.');
+        setError(typeof res.data.message === 'string' ? res.data.message : t('imageUploader.error_generic'));
       }
     } catch (err: unknown) {
-      setError(readUploadErrorMessage(err));
+      setError(readUploadErrorMessage(err, t));
     } finally {
       setUploading(false);
     }
@@ -73,14 +76,14 @@ export default function ImageUploader({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <label className="text-[10px] font-bold uppercase text-slate-500">{label}</label>
+        <label className="text-[10px] font-bold uppercase text-slate-500">{label ?? t('imageUploader.label')}</label>
         <div className="flex gap-1">
           <button
             type="button"
             onClick={() => setMode('upload')}
             className={`flex items-center gap-1 rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase transition-all ${mode === 'upload' ? 'bg-primary text-white' : 'bg-slate-800 text-slate-400 hover:text-white'}`}
           >
-            <Upload className="h-3 w-3" /> Upload
+            <Upload className="h-3 w-3" /> {t('imageUploader.mode_upload')}
           </button>
           <button
             type="button"
@@ -107,12 +110,12 @@ export default function ImageUploader({
             onChange={(e) => void handleFile(e)}
           />
           {uploading ? (
-            <p className="animate-pulse text-xs font-bold text-primary">Enviando...</p>
+            <p className="animate-pulse text-xs font-bold text-primary">{t('imageUploader.uploading')}</p>
           ) : (
             <>
               <Image className="mx-auto mb-2 h-8 w-8 text-slate-600" />
-              <p className="text-xs font-medium text-slate-400">Clique ou arraste uma imagem aqui</p>
-              <p className="mt-1 text-[10px] text-slate-600">JPG, PNG, GIF, WEBP, SVG — máx 5 MB</p>
+              <p className="text-xs font-medium text-slate-400">{t('imageUploader.drop_hint')}</p>
+              <p className="mt-1 text-[10px] text-slate-600">{t('imageUploader.formats')}</p>
             </>
           )}
         </div>
@@ -133,6 +136,7 @@ export default function ImageUploader({
           <button
             type="button"
             onClick={() => onChange('')}
+            aria-label={t('imageUploader.remove')}
             className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 transition-colors hover:bg-red-400"
           >
             <X className="h-3 w-3 text-white" />

@@ -3898,9 +3898,61 @@
       "deprecated_badge": "Deactivated — No longer in use",
       "deprecated_description": "This wallet has been retired. Deposits to this address are no longer processed. Please use only the current active deposit address shown on the platform.",
       "off_chain_badge": "Off-chain",
-      "manual_value_label": "Declared value"
+      "manual_value_label": "Declared value",
+      "liquid_balance": "Liquid balance",
+      "active_lps": "Active LPs",
+      "wallet_label": "Wallet"
     },
-    "wallet_link": "Wallet"
+    "wallet_link": "Wallet",
+    "ai_models": {
+      "title": "3D AI models & infrastructure",
+      "badge_interactive": "Interactive .GLB",
+      "active_subscription": "Active subscription",
+      "monthly_subscription": "Monthly subscription",
+      "per_month": "/month",
+      "audited": "Audited in the balance sheet",
+      "loading_3d": "Loading 3D...",
+      "controls_hint": "Drag to rotate in 3D · scroll to zoom",
+      "download_glb": "Download .glb",
+      "items": {
+        "claude": {
+          "name": "Claude Code (Clawd)",
+          "category": "AI tools",
+          "description": "Clawd — the official Claude Code mascot by Anthropic, in 3D. AI used for BlockMiner development, security testing and architecture.",
+          "tags": [
+            "Clawd 3D mascot",
+            "Claude 3.7 Sonnet",
+            "Anthropic PBC"
+          ]
+        },
+        "gemini": {
+          "name": "Gemini Pro",
+          "category": "AI tools",
+          "description": "Google's multimodal AI, used for reasoning support, prototyping, automation and designing the platform's assets.",
+          "tags": [
+            "Gemini 1.5 Pro",
+            "Google LLC",
+            "Multimodal AI"
+          ]
+        },
+        "contabo": {
+          "name": "Cloud VPS server",
+          "category": "Infrastructure",
+          "description": "High-capacity cloud server instance dedicated to running the Node.js backend, Docker containers, the PostgreSQL database and Redis.",
+          "tags": [
+            "Cloud VPS hosting",
+            "Contabo datacenter",
+            "99.9% uptime"
+          ]
+        }
+      }
+    },
+    "aria": {
+      "monthly_distribution": "Monthly distribution values",
+      "nav": "Transparency navigation",
+      "sections": "Transparency portal sections",
+      "kpi_summary": "Financial indicators summary"
+    }
   },
   "adminCheckinMilestones": {
     "title": "Check-in — Streak milestones",
@@ -7178,5 +7230,16 @@
     "step1": "Clear the site data / cache (Ctrl+Shift+Del on PC, or Settings → Browsing data on mobile) and open it again.",
     "step2": "If it still fails, try another browser (Chrome, Edge, Firefox) or a private window.",
     "step3": "Paste the copied error on the official Telegram and let an admin know."
+  },
+  "imageUploader": {
+    "label": "Image",
+    "mode_upload": "Upload",
+    "uploading": "Uploading...",
+    "drop_hint": "Click or drag an image here",
+    "formats": "JPG, PNG, GIF, WEBP, SVG — max 5 MB",
+    "remove": "Remove image",
+    "error_status": "Error {{status}} while uploading the image.",
+    "error_no_response": "Image upload failed (no response).",
+    "error_generic": "Upload failed."
   }
 }
