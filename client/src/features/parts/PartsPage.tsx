@@ -328,13 +328,19 @@ export default function PartsPage() {
       const res = await craftPart(partSlug, fromRarity, count);
       if (res.data?.ok) {
         toast.success(
-          `Fundido com sucesso: ${res.data.consumed}x ${t(`parts.items.${partSlug}`, { defaultValue: partSlug })} (${t(RARITY_THEME[fromRarity]?.nameKey)}) → ${res.data.crafted}x ${t(RARITY_THEME[res.data.targetRarity]?.nameKey)}!`,
+          t('parts.page.craft_success', {
+            consumed: res.data.consumed,
+            part: t(`parts.items.${partSlug}`, { defaultValue: partSlug }),
+            fromRarity: t(RARITY_THEME[fromRarity]?.nameKey),
+            crafted: res.data.crafted,
+            toRarity: t(RARITY_THEME[res.data.targetRarity]?.nameKey),
+          }),
         );
         void load();
       }
     } catch (err: unknown) {
       const msg =
-        isAxiosError(err) && err.response?.data?.message ? err.response.data.message : 'Falha ao fundir peças.';
+        isAxiosError(err) && err.response?.data?.message ? err.response.data.message : t('parts.page.craft_failed');
       toast.error(msg);
     } finally {
       setCraftingKey(null);
@@ -439,7 +445,7 @@ export default function PartsPage() {
                 {t('sidebar.merge')}
               </h1>
               <span className="hidden sm:inline-block rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-0.5 text-[10px] font-black uppercase text-amber-300">
-                Oficina de Fusão
+                {t('parts.page.forge_badge')}
               </span>
             </div>
           </div>
@@ -450,7 +456,7 @@ export default function PartsPage() {
           <div className="flex items-center gap-2 rounded-2xl border-2 border-slate-800 bg-slate-900/80 px-3.5 py-2 shadow-[2px_2px_0px_#000000]">
             <Coins className="h-4 w-4 text-amber-400" />
             <div>
-              <p className="text-[9px] uppercase tracking-wider text-slate-400 font-bold leading-none">Saldo BLK</p>
+              <p className="text-[9px] uppercase tracking-wider text-slate-400 font-bold leading-none">{t('parts.page.kpi_blk')}</p>
               <p className="text-xs font-black text-white font-mono leading-tight mt-0.5">
                 {formatBlkAmount(blkBalance)} BLK
               </p>
@@ -460,9 +466,9 @@ export default function PartsPage() {
           <div className="flex items-center gap-2 rounded-2xl border-2 border-slate-800 bg-slate-900/80 px-3.5 py-2 shadow-[2px_2px_0px_#000000]">
             <Layers className="h-4 w-4 text-sky-400" />
             <div>
-              <p className="text-[9px] uppercase tracking-wider text-slate-400 font-bold leading-none">Suas Peças</p>
+              <p className="text-[9px] uppercase tracking-wider text-slate-400 font-bold leading-none">{t('parts.page.kpi_parts')}</p>
               <p className="text-xs font-black text-sky-300 font-mono leading-tight mt-0.5">
-                {totalPlates} {totalPlates === 1 ? 'peça' : 'peças'}
+                {t('parts.page.parts_count', { count: totalPlates })}
               </p>
             </div>
           </div>
@@ -476,9 +482,9 @@ export default function PartsPage() {
           >
             <Zap className={`h-4 w-4 ${mergeableCount > 0 ? 'text-emerald-400 animate-pulse' : 'text-slate-500'}`} />
             <div>
-              <p className="text-[9px] uppercase tracking-wider font-bold leading-none">Prontas p/ Fusão</p>
+              <p className="text-[9px] uppercase tracking-wider font-bold leading-none">{t('parts.page.kpi_ready')}</p>
               <p className="text-xs font-black font-mono leading-tight mt-0.5">
-                {mergeableCount} {mergeableCount === 1 ? 'modelo' : 'modelos'}
+                {t('parts.page.models_count', { count: mergeableCount })}
               </p>
             </div>
           </div>
@@ -492,17 +498,17 @@ export default function PartsPage() {
       >
         <span className="inline-flex items-center gap-1.5 font-black uppercase tracking-wider text-slate-300">
           <Coins className="h-3.5 w-3.5 text-amber-400" />
-          Taxa da forja
+          {t('parts.page.fee_rules_title')}
         </span>
         <span>
-          <b className="text-amber-300">{feePercentBlk}%</b> do valor base em BLK
+          <b className="text-amber-300">{feePercentBlk}%</b> {t('parts.page.fee_rule_blk')}
         </span>
         <span className="text-slate-600">·</span>
         <span>
-          <b className="text-emerald-300">{feePercentCrypto}%</b> em POL/SHIB
+          <b className="text-emerald-300">{feePercentCrypto}%</b> {t('parts.page.fee_rule_crypto')}
         </span>
         <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-black uppercase text-emerald-300">
-          -{feePercentBlk - feePercentCrypto}% pagando em cripto
+          {t('parts.page.crypto_discount', { pct: feePercentBlk - feePercentCrypto })}
         </span>
       </div>
 
@@ -527,7 +533,7 @@ export default function PartsPage() {
             type="button"
             onClick={() => setNotice(null)}
             className="text-slate-400 hover:text-white"
-            aria-label="Close"
+            aria-label={t('common.close')}
           >
             <X className="h-4 w-4" />
           </button>
@@ -548,18 +554,18 @@ export default function PartsPage() {
           <div className="flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
             <h2 className="text-base font-black uppercase tracking-wider text-white">
-              Bancada de Fusão
+              {t('parts.page.bench_title')}
             </h2>
           </div>
 
           <div className="flex items-center gap-3 text-xs">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-emerald-300 font-bold">
               <Zap className="h-3 w-3" />
-              {selectedCandidate ? `+${selectedCandidate.boostPercent}% Hashrate` : '+30% a +200%'}
+              {selectedCandidate ? `+${selectedCandidate.boostPercent}% Hashrate` : t('parts.page.boost_range')}
             </span>
             <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-500/30 bg-sky-500/10 px-3 py-1 text-sky-300 font-bold">
               <Coins className="h-3 w-3" />
-              Taxa: {feePercentBlk}% em BLK · {feePercentCrypto}% em POL/SHIB
+              {t('parts.page.fee_chip', { blk: feePercentBlk, crypto: feePercentCrypto })}
             </span>
           </div>
         </div>
@@ -570,10 +576,10 @@ export default function PartsPage() {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <p className="text-[11px] font-black uppercase tracking-wider text-slate-400">
-                  1. Duas Máquinas Idênticas ({selectedCandidate.currentTierName})
+                  {t('parts.page.step1', { tier: selectedCandidate.currentTierName })}
                 </p>
                 <span className="text-xs font-mono font-bold text-slate-300">
-                  Possui: <span className={selectedCandidate.hasMachinePair ? 'text-emerald-400 font-black' : 'text-red-400'}>{selectedCandidate.ownedCount}/2</span>
+                  {t('parts.page.owned_label')} <span className={selectedCandidate.hasMachinePair ? 'text-emerald-400 font-black' : 'text-red-400'}>{selectedCandidate.ownedCount}/2</span>
                 </span>
               </div>
 
@@ -602,7 +608,7 @@ export default function PartsPage() {
                           <span
                             className={`rounded-full border px-2 py-0.5 text-[9px] font-black uppercase ${currentTierTheme.badge}`}
                           >
-                            Nível {selectedCandidate.currentLevel} · {selectedCandidate.currentTierName}
+                            {t('parts.page.level_tier', { level: selectedCandidate.currentLevel, tier: selectedCandidate.currentTierName })}
                           </span>
                           <p className="text-xs font-bold text-white mt-1 truncate max-w-full px-1">
                             {selectedCandidate.name}
@@ -617,10 +623,10 @@ export default function PartsPage() {
                             <X className="h-5 w-5" />
                           </div>
                           <p className="text-xs font-black text-red-300 uppercase tracking-wide">
-                            Falta 1 Máquina
+                            {t('parts.page.missing_one_machine')}
                           </p>
                           <p className="text-[10px] text-slate-500 font-medium">
-                            Compre ou ganhe outra cópia
+                            {t('parts.page.get_another_copy')}
                           </p>
                         </div>
                       )}
@@ -633,7 +639,7 @@ export default function PartsPage() {
               <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-3.5 space-y-2 mt-3">
                 <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
                   <Wrench className="h-3 w-3 text-sky-400" />
-                  Peças Necessárias para a Fusão:
+                  {t('parts.page.required_parts')}
                 </p>
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -679,12 +685,12 @@ export default function PartsPage() {
             <div className="space-y-4 rounded-2xl border-2 border-slate-800 bg-slate-950/80 p-5 shadow-[2px_2px_0px_#000000]">
               <div className="flex items-center justify-between">
                 <p className="text-[11px] font-black uppercase tracking-wider text-slate-400">
-                  2. Resultado da Fusão ({selectedCandidate.targetTierName})
+                  {t('parts.page.step2', { tier: selectedCandidate.targetTierName })}
                 </p>
                 <span
                   className={`rounded-full border px-2 py-0.5 text-[10px] font-black uppercase ${targetTierTheme.badge}`}
                 >
-                  Nível {selectedCandidate.targetLevel} · {selectedCandidate.targetTierName}
+                  {t('parts.page.level_tier', { level: selectedCandidate.targetLevel, tier: selectedCandidate.targetTierName })}
                 </span>
               </div>
 
@@ -705,12 +711,12 @@ export default function PartsPage() {
                   </h3>
 
                   <div className="flex items-center gap-2 text-xs font-mono">
-                    <span className="text-slate-400 text-[11px]" title="Poder das 2 máquinas somadas">
+                    <span className="text-slate-400 text-[11px]" title={t('parts.page.combined_power')}>
                       2x {formatHashrate(selectedCandidate.currentHashRate)} ({formatHashrate(selectedCandidate.currentHashRate * 2)})
                     </span>
                     <ArrowRight className="h-3.5 w-3.5 text-slate-500 shrink-0" />
                     <span className="font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-1.5 py-0.5 rounded">
-                      {formatHashrate(selectedCandidate.targetHashRate)} (+{selectedCandidate.boostPercent}% bônus)
+                      {formatHashrate(selectedCandidate.targetHashRate)} ({t('parts.page.bonus_pct', { pct: selectedCandidate.boostPercent })})
                     </span>
                   </div>
 
@@ -720,7 +726,7 @@ export default function PartsPage() {
               {/* Forma de pagamento da taxa */}
               {!selectedCandidate.isMaxLevel ? (
                 <div className="space-y-1.5" data-testid="merge-payment">
-                  <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Pagar taxa com</p>
+                  <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">{t('parts.page.pay_fee_with')}</p>
                   <div className="grid grid-cols-3 gap-1.5">
                     {feeOptions.map((opt) => {
                       const active = selectedFee?.asset === opt.asset;
@@ -792,12 +798,12 @@ export default function PartsPage() {
                 ) : !selectedFee?.affordable ? (
                   <>
                     <Coins className="h-4 w-4" />
-                    Saldo de {selectedFee?.asset ?? 'BLK'} insuficiente
+                    {t('parts.page.insufficient_asset', { asset: selectedFee?.asset ?? 'BLK' })}
                   </>
                 ) : (
                   <>
                     <Zap className="h-4 w-4 fill-current" />
-                    Fundir pagando {formatCoinAmount(selectedFee.amount, selectedFee.asset)} {selectedFee.asset}
+                    {t('parts.page.merge_paying', { amount: formatCoinAmount(selectedFee.amount, selectedFee.asset), asset: selectedFee.asset })}
                   </>
                 )}
               </button>
@@ -806,9 +812,9 @@ export default function PartsPage() {
         ) : (
           <div className="py-12 text-center text-slate-500 text-xs font-medium space-y-2">
             <Cpu className="h-10 w-10 mx-auto text-slate-700 mb-2" />
-            <p className="font-bold text-slate-300 text-sm">Selecione uma mineradora abaixo</p>
+            <p className="font-bold text-slate-300 text-sm">{t('parts.page.select_below')}</p>
             <p className="text-xs text-slate-500 max-w-md mx-auto">
-              Escolha uma mineradora que você possui para colocá-la na bancada da forja.
+              {t('parts.page.select_below_hint')}
             </p>
           </div>
         )}
@@ -823,18 +829,18 @@ export default function PartsPage() {
             <div className="flex items-center gap-2.5">
               <h2 className="text-lg font-black uppercase tracking-tight text-white flex items-center gap-2">
                 <Cpu className="h-5 w-5 text-amber-400" />
-                {filterMode === 'catalog' ? 'Catálogo de Fusão' : 'Suas Mineradoras para Merge'}
+                {filterMode === 'catalog' ? t('parts.page.catalog_title') : t('parts.page.owned_title')}
               </h2>
               {mergeableCount > 0 ? (
                 <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-black uppercase text-emerald-300">
-                  {mergeableCount} {mergeableCount === 1 ? 'pronta para fundir' : 'prontas para fundir'}
+                  {t('parts.page.ready_badge', { count: mergeableCount })}
                 </span>
               ) : null}
             </div>
             <p className="text-xs text-slate-400 font-medium mt-0.5">
               {filterMode === 'catalog'
-                ? `Todos os ${catalogCount} modelos que podem ser fundidos (Loja + Ofertas). Junte 2 iguais para evoluir.`
-                : 'Máquinas que você possui agrupadas por modelo e nível de raridade.'}
+                ? t('parts.page.catalog_desc', { count: catalogCount })
+                : t('parts.page.owned_desc')}
             </p>
           </div>
 
@@ -850,7 +856,7 @@ export default function PartsPage() {
               }`}
             >
               <Zap className="h-3.5 w-3.5 fill-current" />
-              Prontas para Fundir ({mergeableCount})
+              {t('parts.page.filter_ready', { count: mergeableCount })}
             </button>
 
             <button
@@ -863,7 +869,7 @@ export default function PartsPage() {
               }`}
             >
               <Layers className="h-3.5 w-3.5" />
-              Todas as Suas ({ownedOnly.length})
+              {t('parts.page.filter_owned', { count: ownedOnly.length })}
             </button>
 
             <button
@@ -876,7 +882,7 @@ export default function PartsPage() {
               }`}
             >
               <Combine className="h-3.5 w-3.5" />
-              Catálogo de Fusão ({catalogCount})
+              {t('parts.page.filter_catalog', { count: catalogCount })}
             </button>
           </div>
         </div>
@@ -885,9 +891,9 @@ export default function PartsPage() {
           <div className="flex flex-wrap items-center gap-2">
             {(
               [
-                ['all', `Todas (${catalogCount})`],
-                ['catalog', `Loja (${ownedCandidates.filter((c) => (c.source ?? 'catalog') === 'catalog').length})`],
-                ['offer', `Ofertas (${ownedCandidates.filter((c) => c.source === 'offer').length})`],
+                ['all', t('parts.page.src_all', { count: catalogCount })],
+                ['catalog', t('parts.page.src_shop', { count: ownedCandidates.filter((c) => (c.source ?? 'catalog') === 'catalog').length })],
+                ['offer', t('parts.page.src_offers', { count: ownedCandidates.filter((c) => c.source === 'offer').length })],
               ] as const
             ).map(([key, label]) => (
               <button
@@ -908,7 +914,7 @@ export default function PartsPage() {
               <input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Buscar máquina..."
+                placeholder={t('parts.search_machines_placeholder')}
                 className="rounded-xl border border-slate-800 bg-slate-950 py-1.5 pl-8 pr-3 text-xs text-white placeholder:text-slate-500 focus:border-amber-500 focus:outline-none"
               />
             </div>
@@ -938,7 +944,7 @@ export default function PartsPage() {
                     <span
                       className={`rounded-full border px-2 py-0.5 text-[9px] font-black uppercase ${tierTheme.badge}`}
                     >
-                      Nível {c.currentLevel} · {c.currentTierName}
+                      {t('parts.page.level_tier', { level: c.currentLevel, tier: c.currentTierName })}
                     </span>
 
                     <span
@@ -973,7 +979,7 @@ export default function PartsPage() {
                     </h3>
 
                     <div className="flex items-center gap-2 text-xs font-mono">
-                      <span className="text-slate-400 font-bold" title="Poder das 2 máquinas somadas">
+                      <span className="text-slate-400 font-bold" title={t('parts.page.combined_power')}>
                         2x {formatHashrate(c.currentHashRate)} ({formatHashrate(c.currentHashRate * 2)})
                       </span>
                       <ArrowRight className="h-3 w-3 text-slate-500" />
@@ -983,7 +989,7 @@ export default function PartsPage() {
                     </div>
 
                     <p className="text-[11px] text-slate-400 font-mono">
-                      Evolução:{' '}
+                      {t('parts.page.evolution')}{' '}
                       <span className={`font-bold ${nextTierTheme.text}`}>
                         {c.targetTierName} (+{c.boostPercent}%)
                       </span>
@@ -995,7 +1001,7 @@ export default function PartsPage() {
                     {c.canMerge ? (
                       <span className="text-emerald-400 flex items-center gap-1 font-black text-[11px]">
                         <Zap className="h-3.5 w-3.5 fill-current" />
-                        PRONTA PARA FUSÃO
+                        {t('parts.page.ready_to_merge')}
                       </span>
                     ) : c.ownedCount === 0 ? (
                       <Link
@@ -1003,14 +1009,14 @@ export default function PartsPage() {
                         onClick={(e) => e.stopPropagation()}
                         className="text-sky-400 hover:text-sky-300 text-[11px]"
                       >
-                        Você não tem · {c.source === 'offer' ? 'ver Ofertas' : 'ver Loja'}
+                        {t(c.source === 'offer' ? 'parts.page.not_owned_offers' : 'parts.page.not_owned_shop')}
                       </Link>
                     ) : !c.hasMachinePair ? (
-                      <span className="text-slate-500 text-[11px]">Falta {2 - c.ownedCount} máquina ({c.ownedCount}/2)</span>
+                      <span className="text-slate-500 text-[11px]">{t('parts.page.missing_machines', { missing: 2 - c.ownedCount, owned: c.ownedCount })}</span>
                     ) : !c.hasParts ? (
-                      <span className="text-red-400 text-[11px]">Faltam peças</span>
+                      <span className="text-red-400 text-[11px]">{t('parts.page.missing_parts_short')}</span>
                     ) : (
-                      <span className="text-amber-400 text-[11px]">Falta saldo p/ taxa</span>
+                      <span className="text-amber-400 text-[11px]">{t('parts.page.missing_fee_balance')}</span>
                     )}
 
                     <ChevronRight className="h-4 w-4 text-slate-500 group-hover:text-amber-300 transition-colors" />
@@ -1024,15 +1030,15 @@ export default function PartsPage() {
             <Cpu className="h-10 w-10 text-slate-600 mx-auto" />
             <p className="text-sm font-bold text-slate-300">
               {filterMode === 'ready'
-                ? 'Nenhuma máquina pronta para fundir agora.'
+                ? t('parts.page.empty_ready')
                 : filterMode === 'catalog'
-                  ? 'Nenhuma máquina encontrada.'
-                  : 'Você não possui mineradoras para merge.'}
+                  ? t('parts.page.empty_catalog')
+                  : t('parts.page.empty_owned')}
             </p>
             <p className="text-xs text-slate-500 max-w-md mx-auto">
               {filterMode === 'ready'
-                ? 'Para fundir, você precisa de pelo menos 2 máquinas idênticas do mesmo nível, peças da receita e saldo em BLK.'
-                : 'Adquira mineradoras na Loja ou ganhe em missões e eventos para começar a fundir!'}
+                ? t('parts.page.empty_ready_hint')
+                : t('parts.page.empty_owned_hint')}
             </p>
             {filterMode !== 'catalog' ? (
               <button
@@ -1040,7 +1046,7 @@ export default function PartsPage() {
                 onClick={() => setFilterMode('catalog')}
                 className="mr-2 inline-flex items-center gap-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 px-4 py-2 text-xs font-black transition-colors"
               >
-                Ver Catálogo de Fusão ({catalogCount})
+                {t('parts.page.view_catalog', { count: catalogCount })}
               </button>
             ) : null}
             {filterMode === 'ready' && ownedOnly.length > 0 ? (
@@ -1049,7 +1055,7 @@ export default function PartsPage() {
                 onClick={() => setFilterMode('all')}
                 className="inline-flex items-center gap-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 text-xs font-bold transition-colors"
               >
-                Ver todas as suas máquinas ({ownedOnly.length})
+                {t('parts.page.view_owned', { count: ownedOnly.length })}
               </button>
             ) : null}
           </div>
@@ -1067,7 +1073,7 @@ export default function PartsPage() {
           <div>
             <h2 className="text-lg font-black uppercase tracking-tight text-white flex items-center gap-2">
               <Puzzle className="h-5 w-5 text-sky-400" />
-              Sua Bolsa de Peças & Oficina de Fusão
+              {t('parts.page.bag_title')}
             </h2>
             <p className="text-xs text-slate-400 font-medium mt-0.5">
               {t('parts.bag_subtitle')}
@@ -1084,7 +1090,7 @@ export default function PartsPage() {
                   : 'border-slate-800 bg-slate-900/60 text-slate-400 hover:text-white'
               }`}
             >
-              Todas ({totalPlates})
+              {t('parts.page.all_count', { count: totalPlates })}
             </button>
             {PART_RARITIES.map((r) => {
               const count = rarityCounts[r];
@@ -1155,7 +1161,7 @@ export default function PartsPage() {
                             disabled={isCraftingThis}
                             onClick={() => void handleCraftPart(part.slug, r, 1)}
                             className="flex-1 flex items-center justify-center gap-1 rounded-lg bg-amber-500 hover:bg-amber-400 active:translate-x-0.5 active:translate-y-0.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-slate-950 shadow-[1px_1px_0px_#000000] transition-all disabled:opacity-50"
-                            title="Fundir 5 peças para 1 de raridade superior"
+                            title={t('parts.page.craft_one_title')}
                           >
                             {isCraftingThis ? (
                               <Loader2 className="h-3 w-3 animate-spin" />
@@ -1170,7 +1176,7 @@ export default function PartsPage() {
                               disabled={isCraftingThis}
                               onClick={() => void handleCraftPart(part.slug, r, maxCraftCount)}
                               className="px-2 py-1.5 rounded-lg border border-amber-500/40 bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 text-[10px] font-black uppercase transition-all"
-                              title={`Fundir tudo (${maxCraftCount * 5}x → ${maxCraftCount}x)`}
+                              title={t('parts.page.craft_all_title', { from: maxCraftCount * 5, to: maxCraftCount })}
                             >
                               Max
                             </button>
@@ -1178,7 +1184,7 @@ export default function PartsPage() {
                         </div>
                       ) : (
                         <p className="text-[9px] font-semibold text-slate-500 text-center">
-                          {part.quantity}/5 para fundir
+                          {t('parts.page.to_fuse', { qty: part.quantity })}
                         </p>
                       )}
                     </div>
@@ -1192,7 +1198,7 @@ export default function PartsPage() {
             <Gift className="h-10 w-10 text-slate-600 mx-auto" />
             <div>
               <p className="text-sm font-bold text-slate-300">
-                Sua bolsa de peças está vazia no momento.
+                {t('parts.page.bag_empty')}
               </p>
               <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
                 {t('parts.bag_empty_hint')}
@@ -1203,7 +1209,7 @@ export default function PartsPage() {
               className="inline-flex items-center gap-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 px-4 py-2 text-xs font-black uppercase tracking-wider transition-colors"
             >
               <Gift className="h-4 w-4" />
-              Ir para o Offerwall
+              {t('parts.go_to_offerwall')}
             </Link>
           </div>
         )}
@@ -1224,27 +1230,27 @@ export default function PartsPage() {
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-950/80 text-[10px] uppercase tracking-wider text-slate-400 border-b-2 border-slate-800 font-black">
               <tr>
-                <th className="p-3.5">Nível</th>
-                <th className="p-3.5">Raridade</th>
-                <th className="p-3.5">Cor</th>
-                <th className="p-3.5">Requisito de Fusão</th>
-                <th className="p-3.5">Multiplicador de Poder</th>
-                <th className="p-3.5">Taxa da Forja</th>
+                <th className="p-3.5">{t('parts.page.col_level')}</th>
+                <th className="p-3.5">{t('parts.page.col_rarity')}</th>
+                <th className="p-3.5">{t('parts.page.col_color')}</th>
+                <th className="p-3.5">{t('parts.page.col_requirement')}</th>
+                <th className="p-3.5">{t('parts.page.col_multiplier')}</th>
+                <th className="p-3.5">{t('parts.page.col_fee')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/80 font-medium">
               {[
-                { lvl: 1, name: 'Common (Comum)', color: 'Branco / Cinza', badgeColor: 'text-slate-300', req: 'Nível básico de fábrica', bonus: '1.0x (Poder Padrão)', fee: '—' },
-                { lvl: 2, name: 'Uncommon (Incomum)', color: 'Verde', badgeColor: 'text-emerald-400 font-bold', req: '2x Máquinas Comuns idênticas + peças comuns', bonus: '+30% Hashrate', fee: `${feePercentBlk}% em BLK · ${feePercentCrypto}% em POL/SHIB` },
-                { lvl: 3, name: 'Rare (Raro)', color: 'Azul', badgeColor: 'text-sky-400 font-bold', req: '2x Máquinas Incomuns idênticas + peças incomuns', bonus: '+75% Hashrate', fee: `${feePercentBlk}% em BLK · ${feePercentCrypto}% em POL/SHIB` },
-                { lvl: 4, name: 'Epic (Épico)', color: 'Roxo', badgeColor: 'text-purple-400 font-bold', req: '2x Máquinas Raras idênticas + peças raras', bonus: '+130% Hashrate', fee: `${feePercentBlk}% em BLK · ${feePercentCrypto}% em POL/SHIB` },
-                { lvl: 5, name: 'Legendary (Lendário)', color: 'Dourado / Laranja', badgeColor: 'text-amber-400 font-bold', req: '2x Máquinas Épicas idênticas + peças épicas', bonus: '+200% Hashrate (Topo do Jogo)', fee: `${feePercentBlk}% em BLK · ${feePercentCrypto}% em POL/SHIB` },
+                { lvl: 1, badgeColor: 'text-slate-300', bonus: t('parts.page.tier.1.bonus'), fee: '—' },
+                { lvl: 2, badgeColor: 'text-emerald-400 font-bold', bonus: t('parts.page.tier.2.bonus'), fee: t('parts.page.tier_fee', { blk: feePercentBlk, crypto: feePercentCrypto }) },
+                { lvl: 3, badgeColor: 'text-sky-400 font-bold', bonus: t('parts.page.tier.3.bonus'), fee: t('parts.page.tier_fee', { blk: feePercentBlk, crypto: feePercentCrypto }) },
+                { lvl: 4, badgeColor: 'text-purple-400 font-bold', bonus: t('parts.page.tier.4.bonus'), fee: t('parts.page.tier_fee', { blk: feePercentBlk, crypto: feePercentCrypto }) },
+                { lvl: 5, badgeColor: 'text-amber-400 font-bold', bonus: t('parts.page.tier.5.bonus'), fee: t('parts.page.tier_fee', { blk: feePercentBlk, crypto: feePercentCrypto }) },
               ].map((tier) => (
                 <tr key={tier.lvl} className="hover:bg-slate-800/40 transition-colors">
-                  <td className="p-3.5 font-mono font-bold text-white">Nível {tier.lvl}</td>
-                  <td className="p-3.5 font-bold text-white">{tier.name}</td>
-                  <td className={`p-3.5 ${tier.badgeColor}`}>{tier.color}</td>
-                  <td className="p-3.5 text-slate-300">{tier.req}</td>
+                  <td className="p-3.5 font-mono font-bold text-white">{t('parts.page.level_n', { level: tier.lvl })}</td>
+                  <td className="p-3.5 font-bold text-white">{t(`parts.page.tier.${tier.lvl}.name`)}</td>
+                  <td className={`p-3.5 ${tier.badgeColor}`}>{t(`parts.page.tier.${tier.lvl}.color`)}</td>
+                  <td className="p-3.5 text-slate-300">{t(`parts.page.tier.${tier.lvl}.req`)}</td>
                   <td className="p-3.5 font-bold text-emerald-400">{tier.bonus}</td>
                   <td className="p-3.5 font-mono text-amber-300">{tier.fee}</td>
                 </tr>

@@ -2565,7 +2565,9 @@
       "you_receive": "You receive",
       "network_protocol_fee": "Network protocol fee",
       "gas_covered": "Gas Covered by Pool"
-    }
+    },
+    "connect_required": "Please connect your wallet first.",
+    "switch_network": "Please switch to the Polygon network."
   },
   "faucet": {
     "title": "Power Faucet",
@@ -2842,7 +2844,9 @@
       "current_streak": "Current streak: {{days}} days",
       "longest_streak": "Longest streak: {{days}} days",
       "streak_reset_warning": "Missing a day will reset your streak to 0"
-    }
+    },
+    "sending_tx": "Sending transaction...",
+    "confirming_tx": "Confirming transaction on the blockchain..."
   },
   "powerBoost": {
     "title": "Power Boost — 7-Day Rewards",
@@ -6040,7 +6044,8 @@
       "INSUFFICIENT_FEE_BALANCE": "Insufficient balance for the burn fee.",
       "VALIDATION_ERROR": "Invalid request.",
       "RATE_LIMIT_EXCEEDED": "Too many attempts. Wait a moment and try again."
-    }
+    },
+    "enter_event": "Enter event"
   },
   "adminCheckin": {
     "title": "Check-in milestones",
@@ -6934,6 +6939,111 @@
         "shortlinks": "Shortlinks",
         "internal_offerwall": "Internal offerwall",
         "offerwall": "Offerwalls"
+      }
+    },
+    "page": {
+      "craft_success": "Fused: {{consumed}}x {{part}} ({{fromRarity}}) → {{crafted}}x {{toRarity}}!",
+      "craft_failed": "Could not fuse parts.",
+      "forge_badge": "Fusion Workshop",
+      "kpi_blk": "BLK balance",
+      "kpi_parts": "Your parts",
+      "parts_count_one": "{{count}} part",
+      "parts_count_other": "{{count}} parts",
+      "kpi_ready": "Ready to merge",
+      "models_count_one": "{{count}} model",
+      "models_count_other": "{{count}} models",
+      "fee_rules_title": "Forge fee",
+      "fee_rule_blk": "of the base value in BLK",
+      "fee_rule_crypto": "in POL/SHIB",
+      "crypto_discount": "-{{pct}}% paying in crypto",
+      "bench_title": "Merge bench",
+      "boost_range": "+30% to +200%",
+      "fee_chip": "Fee: {{blk}}% in BLK · {{crypto}}% in POL/SHIB",
+      "step1": "1. Two identical machines ({{tier}})",
+      "owned_label": "Owned:",
+      "level_tier": "Level {{level}} · {{tier}}",
+      "missing_one_machine": "1 machine missing",
+      "get_another_copy": "Buy or earn another copy",
+      "required_parts": "Parts required to merge:",
+      "step2": "2. Merge result ({{tier}})",
+      "combined_power": "Combined power of the 2 machines",
+      "bonus_pct": "+{{pct}}% bonus",
+      "pay_fee_with": "Pay fee with",
+      "insufficient_asset": "Insufficient {{asset}} balance",
+      "merge_paying": "Merge paying {{amount}} {{asset}}",
+      "select_below": "Select a miner below",
+      "select_below_hint": "Choose a miner you own to place it on the forge bench.",
+      "catalog_title": "Merge catalog",
+      "owned_title": "Your miners for merging",
+      "ready_badge_one": "{{count}} ready to merge",
+      "ready_badge_other": "{{count}} ready to merge",
+      "catalog_desc": "All {{count}} models that can be merged (Shop + Offers). Combine 2 identical ones to upgrade.",
+      "owned_desc": "Machines you own, grouped by model and rarity level.",
+      "filter_ready": "Ready to merge ({{count}})",
+      "filter_owned": "All yours ({{count}})",
+      "filter_catalog": "Merge catalog ({{count}})",
+      "src_all": "All ({{count}})",
+      "src_shop": "Shop ({{count}})",
+      "src_offers": "Offers ({{count}})",
+      "evolution": "Upgrade:",
+      "ready_to_merge": "READY TO MERGE",
+      "not_owned_offers": "You don't own it · see Offers",
+      "not_owned_shop": "You don't own it · see Shop",
+      "missing_machines": "{{missing}} machine missing ({{owned}}/2)",
+      "missing_parts_short": "Parts missing",
+      "missing_fee_balance": "Not enough balance for the fee",
+      "empty_ready": "No machine is ready to merge right now.",
+      "empty_catalog": "No machines found.",
+      "empty_owned": "You don't own any miners to merge.",
+      "empty_ready_hint": "To merge you need at least 2 identical machines of the same level, the recipe parts and BLK balance.",
+      "empty_owned_hint": "Get miners in the Shop or earn them in missions and events to start merging!",
+      "view_catalog": "View merge catalog ({{count}})",
+      "view_owned": "View all your machines ({{count}})",
+      "bag_title": "Your Parts Bag & Fusion Workshop",
+      "all_count": "All ({{count}})",
+      "craft_one_title": "Fuse 5 parts into 1 of the next rarity",
+      "craft_all_title": "Fuse all ({{from}}x → {{to}}x)",
+      "to_fuse": "{{qty}}/5 to fuse",
+      "bag_empty": "Your parts bag is empty right now.",
+      "col_level": "Level",
+      "col_rarity": "Rarity",
+      "col_color": "Color",
+      "col_requirement": "Merge requirement",
+      "col_multiplier": "Power multiplier",
+      "col_fee": "Forge fee",
+      "level_n": "Level {{level}}",
+      "tier_fee": "{{blk}}% in BLK · {{crypto}}% in POL/SHIB",
+      "tier": {
+        "1": {
+          "name": "Common",
+          "color": "White / Grey",
+          "req": "Factory base level",
+          "bonus": "1.0x (standard power)"
+        },
+        "2": {
+          "name": "Uncommon",
+          "color": "Green",
+          "req": "2x identical Common machines + common parts",
+          "bonus": "+30% Hashrate"
+        },
+        "3": {
+          "name": "Rare",
+          "color": "Blue",
+          "req": "2x identical Uncommon machines + uncommon parts",
+          "bonus": "+75% Hashrate"
+        },
+        "4": {
+          "name": "Epic",
+          "color": "Purple",
+          "req": "2x identical Rare machines + rare parts",
+          "bonus": "+130% Hashrate"
+        },
+        "5": {
+          "name": "Legendary",
+          "color": "Gold / Orange",
+          "req": "2x identical Epic machines + epic parts",
+          "bonus": "+200% Hashrate (top of the game)"
+        }
       }
     }
   },
