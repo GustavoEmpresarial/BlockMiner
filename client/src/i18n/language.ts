@@ -16,13 +16,12 @@ export function normalizeExplicitLanguage(raw: unknown): 'pt-BR' | 'es' | 'en' |
 }
 
 export function normalizeBrowserLanguage(raw: unknown): 'pt-BR' | 'es' | 'en' {
-  // Product default is Portuguese (Brazil). Spanish browsers get es;
-  // everything else (including en-*) falls back to pt-BR — English is opt-in via switcher.
+  // Portuguese browsers get pt-BR, Spanish browsers get es; every other visitor
+  // (en-*, fr, de, ru, no language at all) gets English, the international default.
   const value = String(raw || '').trim().toLowerCase();
-  if (!value) return 'pt-BR';
   if (value.startsWith('pt')) return 'pt-BR';
   if (value.startsWith('es')) return 'es';
-  return 'pt-BR';
+  return 'en';
 }
 
 export function extractCookieLanguage(cookieString = ''): string | null {
@@ -68,10 +67,12 @@ export function resolveInitialLanguage(options: ResolveInitialLanguageOptions = 
   const explicitLanguage = normalizeExplicitLanguage(explicit);
   if (explicitLanguage) return explicitLanguage;
 
+  // `htmlLang` is the static lang="pt-BR" of index.html at boot, not a visitor signal,
+  // so it must not turn a browser with no language into Portuguese.
+  void htmlLang;
   const browserRaw = firstNonEmpty([
     ...(Array.isArray(navigatorLanguages) ? navigatorLanguages : []),
     navigatorLanguage,
-    htmlLang,
   ]);
   return normalizeBrowserLanguage(browserRaw);
 }
