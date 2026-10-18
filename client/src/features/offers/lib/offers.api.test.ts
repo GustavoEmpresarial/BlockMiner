@@ -166,3 +166,22 @@ describe('limites e erros alinhados ao backend', () => {
     expect(readOfferPurchaseError(err, 'fallback', t)).toBe('Invalid fan product.');
   });
 });
+
+describe('part offers helpers', () => {
+  it('partDiscountPercent arredonda e é 0 sem desconto', async () => {
+    const { partDiscountPercent } = await import('./offers.api');
+    expect(partDiscountPercent(0.038, 0.05)).toBe(24);
+    expect(partDiscountPercent(0.75, 1)).toBe(25);
+    expect(partDiscountPercent(1, 1)).toBe(0);
+    expect(partDiscountPercent(1, 0)).toBe(0);
+  });
+
+  it('hasLivePartOffers exige isLive e algum item ou kit', async () => {
+    const { hasLivePartOffers, isActiveOffersPayloadLive } = await import('./offers.api');
+    expect(hasLivePartOffers(null)).toBe(false);
+    expect(hasLivePartOffers({ isLive: false, items: [{ slug: 'a', rarity: 'common', nameKey: 'k', price: 1, listPrice: 1, currency: 'BLK' }] })).toBe(false);
+    expect(hasLivePartOffers({ isLive: true, items: [], packs: [] })).toBe(false);
+    expect(hasLivePartOffers({ isLive: true, packs: [{ id: 'p', nameKey: 'n', descriptionKey: 'd', price: 1, currency: 'BLK', items: [] }] })).toBe(true);
+    expect(isActiveOffersPayloadLive({ events: [], partOffers: { isLive: true, packs: [{ id: 'p', nameKey: 'n', descriptionKey: 'd', price: 1, currency: 'BLK', items: [] }] } })).toBe(true);
+  });
+});

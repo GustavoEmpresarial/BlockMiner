@@ -77,12 +77,48 @@ export type FanOffersDTO = {
 export type RackOffersDTO = FanOffersDTO;
 export type RackOfferItemDTO = FanOfferItemDTO;
 
+/** Mirrors `listPartsCatalogForOffer` — one row per (slug, rarity). */
+export interface PartOfferItemDTO {
+  slug: string;
+  rarity: string;
+  nameKey: string;
+  price: number;
+  listPrice: number;
+  currency: string;
+  imageUrl?: string | null;
+}
+
+/** Mirrors `PART_OFFER_PACKS`. */
+export interface PartPackDTO {
+  id: string;
+  nameKey: string;
+  descriptionKey: string;
+  price: number;
+  currency: string;
+  badgeKey?: string;
+  items: { slug: string; rarity: string; quantity: number }[];
+}
+
+/** Mirrors `buildActivePartOffersPayload`. */
+export interface PartOffersDTO {
+  titleKey?: string;
+  descriptionKey?: string;
+  isLive?: boolean;
+  currency?: string;
+  items?: PartOfferItemDTO[];
+  packs?: PartPackDTO[];
+}
+
+/** UI stepper cap for one part; the server accepts up to 10 000 per request. */
+export const PART_OFFER_MAX_QUANTITY = 100;
+
 export interface OfferEventsListResponse {
   ok?: boolean;
   events?: OfferEventDTO[];
   roomOffers?: RoomOffersDTO | null;
   fanOffers?: FanOffersDTO | null;
   rackOffers?: RackOffersDTO | null;
+  partOffers?: PartOffersDTO | null;
   serverTime?: string;
 }
 
@@ -111,6 +147,7 @@ export type ActiveOffersCache = {
   roomOffers: RoomOffersDTO | null;
   fanOffers: FanOffersDTO | null;
   rackOffers: RackOffersDTO | null;
+  partOffers?: PartOffersDTO | null;
   userId?: number;
   fetchedAtMs: number;
 };
@@ -143,6 +180,16 @@ export function hasLiveGearOffers(offers: FanOffersDTO | null | undefined): bool
   return Boolean(offers?.isLive && (offers.items?.length ?? 0) > 0);
 }
 
+export function hasLivePartOffers(offers: PartOffersDTO | null | undefined): boolean {
+  return Boolean(offers?.isLive && ((offers.items?.length ?? 0) > 0 || (offers.packs?.length ?? 0) > 0));
+}
+
+/** Rounded discount vs the shop price; 0 when there is none (no badge then). */
+export function partDiscountPercent(price: number, listPrice: number): number {
+  if (!(listPrice > 0) || !(price < listPrice)) return 0;
+  return Math.round((1 - price / listPrice) * 100);
+}
+
 /** Badge da sidebar e empty-state da /offers — mesma regra, um dono. */
 export function isActiveOffersPayloadLive(body: OfferEventsListResponse | null | undefined): boolean {
   if (!body) return false;
@@ -151,7 +198,8 @@ export function isActiveOffersPayloadLive(body: OfferEventsListResponse | null |
     events.length > 0 ||
     hasLiveRoomOffers(body.roomOffers) ||
     hasLiveGearOffers(body.fanOffers) ||
-    hasLiveGearOffers(body.rackOffers)
+    hasLiveGearOffers(body.rackOffers) ||
+    hasLivePartOffers(body.partOffers)
   );
 }
 
@@ -211,4 +259,12 @@ export function postOfferFanPurchase(body: { sku: string; quantity: number }) {
 
 export function postOfferRackPurchase(body: { sku: string; quantity: number }) {
   return api.post<OfferEventPurchaseResponse>('/offer-events/purchase-rack', body);
+}
+
+export function postOfferPartPurchase(body: { slug: string; rarity: string; quantity: number }) {
+  return api.post<OfferEventPurchaseResponse>('/offer-events/purchase-part', body);
+}
+
+export function postOfferPartPackPurchase(body: { packId: string }) {
+  return api.post<OfferEventPurchaseResponse>('/offer-events/purchase-part-pack', body);
 }

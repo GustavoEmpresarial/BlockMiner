@@ -125,6 +125,36 @@ export function buildActivePartOffersPayload() {
   };
 }
 
+type PartsTx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
+/**
+ * Debits BLK for a parts purchase and writes its ledger row. The debit is conditional
+ * (`blkBalance >= amount`) because the advisory locks are keyed per part/pack: two
+ * purchases of different items by the same user run in parallel, and an unconditional
+ * decrement after a separate balance read let both through into a negative balance.
+ */
+async function debitPartsPurchaseTx(
+  tx: PartsTx,
+  userId: number,
+  amount: number,
+  type: "part_purchase" | "part_pack_purchase",
+  details: Record<string, unknown>,
+): Promise<number> {
+  const amountStr = amount.toFixed(8);
+  const debited = await tx.user.updateMany({
+    where: { id: userId, blkBalance: { gte: amountStr } },
+    data: { blkBalance: { decrement: amountStr } },
+  });
+  if (debited.count !== 1) {
+    throw new HttpStatusError(400, "Saldo BLK insuficiente.", { code: "INSUFFICIENT_BALANCE" });
+  }
+  await tx.transaction.create({
+    data: { userId, type, amount: amountStr, rawTx: JSON.stringify({ asset: "blk", ...details }), status: "completed" },
+  });
+  const user = await tx.user.findUnique({ where: { id: userId }, select: { blkBalance: true } });
+  return Number(user?.blkBalance ?? 0);
+}
+
 export type PurchasePartArgs = {
   userId: number;
   slug: string;
@@ -161,19 +191,12 @@ export async function purchasePartForUser(args: PurchasePartArgs) {
     .$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(${userId}::int, hashtext(${`part:${slug}:${rarity}`})::int)`;
 
-      const user = await tx.user.findUnique({
-        where: { id: userId },
-        select: { blkBalance: true },
-      });
-      const balanceBefore = Number(user?.blkBalance ?? 0);
-      if (!user || balanceBefore < totalPrice) {
-        throw new HttpStatusError(400, "Saldo BLK insuficiente.", { code: "INSUFFICIENT_BALANCE" });
-      }
-
-      const updatedUser = await tx.user.update({
-        where: { id: userId },
-        data: { blkBalance: { decrement: totalPrice } },
-        select: { blkBalance: true },
+      const newBalance = await debitPartsPurchaseTx(tx, userId, totalPrice, "part_purchase", {
+        channel,
+        slug,
+        rarity,
+        quantity,
+        unitPrice,
       });
 
       const stack = await tx.userPartStack.upsert({
@@ -191,7 +214,7 @@ export async function purchasePartForUser(args: PurchasePartArgs) {
         unitPrice,
         totalPrice,
         currency: "BLK",
-        newBalance: Number(updatedUser.blkBalance ?? 0),
+        newBalance,
         totalOwnedQuantity: stack.quantity,
       };
     })
@@ -220,19 +243,9 @@ export async function purchasePartPackForUser(userId: number, packId: string) {
     .$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(${userId}::int, hashtext(${`pack:${packId}`})::int)`;
 
-      const user = await tx.user.findUnique({
-        where: { id: userId },
-        select: { blkBalance: true },
-      });
-      const balanceBefore = Number(user?.blkBalance ?? 0);
-      if (!user || balanceBefore < totalPrice) {
-        throw new HttpStatusError(400, "Saldo BLK insuficiente.", { code: "INSUFFICIENT_BALANCE" });
-      }
-
-      const updatedUser = await tx.user.update({
-        where: { id: userId },
-        data: { blkBalance: { decrement: totalPrice } },
-        select: { blkBalance: true },
+      const newBalance = await debitPartsPurchaseTx(tx, userId, totalPrice, "part_pack_purchase", {
+        packId: pack.id,
+        items: pack.items,
       });
 
       for (const item of pack.items) {
@@ -249,7 +262,7 @@ export async function purchasePartPackForUser(userId: number, packId: string) {
         nameKey: pack.nameKey,
         totalPrice,
         currency: "BLK",
-        newBalance: Number(updatedUser.blkBalance ?? 0),
+        newBalance,
         itemsGranted: pack.items,
       };
     })

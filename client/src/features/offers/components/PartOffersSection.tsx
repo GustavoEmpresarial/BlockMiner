@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Cpu } from 'lucide-react';
+import { Cpu, Package } from 'lucide-react';
 import { IconBadge, StatusPill } from '../../../shared/components';
-import type { PartOffersDTO, PartOfferItemDTO } from '../lib/offers.api';
+import { hasLivePartOffers, partDiscountPercent } from '../lib/offers.api';
+import type { PartOffersDTO, PartOfferItemDTO, PartPackDTO } from '../lib/offers.api';
 
 const RARITY_THEMES: Record<
   string,
@@ -48,20 +49,26 @@ const RARITY_THEMES: Record<
 interface PartOffersSectionProps {
   offers: PartOffersDTO | null;
   onBuyPart: (item: PartOfferItemDTO) => void;
+  onBuyPack: (pack: PartPackDTO) => void;
   buying: boolean;
+}
+
+function formatPartPrice(value: number): string {
+  return value < 0.01 ? value.toFixed(4) : value.toFixed(2);
 }
 
 export function PartOffersSection({
   offers,
   onBuyPart,
+  onBuyPack,
   buying,
 }: PartOffersSectionProps) {
   const { t } = useTranslation();
   const [rarityFilter, setRarityFilter] = useState<string>('all');
 
-  if (!offers?.isLive) return null;
+  if (!offers || !hasLivePartOffers(offers)) return null;
   const items = offers.items ?? [];
-  if (items.length === 0) return null;
+  const packs = offers.packs ?? [];
 
   return (
     <div className="space-y-6">
@@ -92,19 +99,73 @@ export function PartOffersSection({
         </div>
       </div>
 
+      {packs.length > 0 && (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          {packs.map((pack) => (
+            <div
+              key={pack.id}
+              data-testid={`part-pack-${pack.id}`}
+              className="flex flex-col justify-between gap-4 rounded-2xl border-2 border-primary/40 bg-slate-900/80 p-5 shadow-[4px_4px_0px_#000000]"
+            >
+              <div className="space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <IconBadge icon={Package} variant="sky" size="md" />
+                    <div>
+                      <h3 className="text-base font-black text-white">{t(pack.nameKey)}</h3>
+                      <p className="text-xs text-slate-400">{t(pack.descriptionKey)}</p>
+                    </div>
+                  </div>
+                  {pack.badgeKey && (
+                    <span className="shrink-0 rounded-lg border border-emerald-500/60 bg-emerald-900/60 px-2 py-0.5 text-[10px] font-black uppercase text-emerald-300">
+                      {t(pack.badgeKey)}
+                    </span>
+                  )}
+                </div>
+                <ul className="flex flex-wrap gap-1.5">
+                  {pack.items.map((it) => (
+                    <li
+                      key={`${it.slug}-${it.rarity}`}
+                      className="rounded-lg border border-slate-700 bg-slate-950/70 px-2 py-0.5 text-[11px] font-bold text-slate-300"
+                    >
+                      {it.quantity}× {t(`parts.items.${it.slug}`, { defaultValue: it.slug })} ·{' '}
+                      {t(`parts.rarity.${it.rarity}`, { defaultValue: it.rarity })}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="flex items-center justify-between border-t border-slate-800/80 pt-3">
+                <span className="text-lg font-black text-white font-mono">
+                  {formatPartPrice(pack.price)}{' '}
+                  <span className="text-xs font-bold uppercase text-slate-400">{pack.currency}</span>
+                </span>
+                <button
+                  type="button"
+                  disabled={buying}
+                  onClick={() => onBuyPack(pack)}
+                  className="rounded-lg bg-primary hover:bg-primary-hover active:translate-x-0.5 active:translate-y-0.5 px-4 py-2 text-xs font-black uppercase tracking-wider text-slate-950 shadow-[2px_2px_0px_#000000] transition-all disabled:opacity-40"
+                >
+                  {t('shop.buy', { defaultValue: 'Comprar' })}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6">
         {items
           .filter((it) => rarityFilter === 'all' || it.rarity === rarityFilter)
           .map((part) => {
             const theme = RARITY_THEMES[part.rarity] ?? RARITY_THEMES.common;
-            const priceStr =
-              part.price < 0.01 ? part.price.toFixed(4) : part.price.toFixed(2);
-            const listPriceStr =
-              part.listPrice < 0.01 ? part.listPrice.toFixed(4) : part.listPrice.toFixed(2);
+            const priceStr = formatPartPrice(part.price);
+            const listPriceStr = formatPartPrice(part.listPrice);
+            const discount = partDiscountPercent(part.price, part.listPrice);
 
             return (
               <div
                 key={`${part.slug}-${part.rarity}`}
+                data-testid={`part-offer-${part.slug}-${part.rarity}`}
                 className={`group relative overflow-hidden rounded-2xl border-2 ${theme.border} ${theme.bg} p-4 shadow-[4px_4px_0px_#000000] transition-all duration-300 hover:scale-[1.02] flex flex-col justify-between`}
               >
                 <div className="space-y-3">
@@ -114,9 +175,9 @@ export function PartOffersSection({
                     >
                       {t(`parts.rarity.${part.rarity}`, { defaultValue: part.rarity })}
                     </span>
-                    <span className="text-[10px] font-bold text-emerald-400 font-mono">
-                      -25%
-                    </span>
+                    {discount > 0 && (
+                      <span className="text-[10px] font-bold text-emerald-400 font-mono">-{discount}%</span>
+                    )}
                   </div>
 
                   <div className="flex aspect-square items-center justify-center rounded-xl border border-slate-800/80 bg-slate-950/80 p-3 shadow-[2px_2px_0px_#000000]">
@@ -141,9 +202,11 @@ export function PartOffersSection({
 
                 <div className="mt-3 flex items-center justify-between border-t border-slate-800/80 pt-3">
                   <div className="flex flex-col">
-                    <span className="text-[9px] line-through text-slate-500 font-mono">
-                      {listPriceStr} {part.currency}
-                    </span>
+                    {discount > 0 && (
+                      <span className="text-[9px] line-through text-slate-500 font-mono">
+                        {listPriceStr} {part.currency}
+                      </span>
+                    )}
                     <span className="text-sm font-black text-white font-mono">
                       {priceStr}{' '}
                       <span className="text-[10px] font-bold uppercase text-slate-400">
