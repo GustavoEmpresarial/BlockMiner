@@ -5218,7 +5218,8 @@
       "renda": "Income Sources",
       "torneios": "Tournaments",
       "carteira": "Wallet",
-      "ranking": "Ranking"
+      "ranking": "Ranking",
+      "pecas": "Piezas y Merge"
     },
     "cover_title": "Operator Manual",
     "cover_body": "Technical, economic, and operational reference for the BlockMiner protocol. Everything you need to maximize your mining operation.",
@@ -5569,6 +5570,15 @@
         "locked_rooms_value": "Shown with a lock in the public room"
       },
       "tip_html": "To compete specifically for <strong class=\"text-white\">hashrate prizes</strong>, join <strong class=\"text-white\">Tournaments</strong> — they measure hashrate over fixed periods with automatic reward distribution."
+    },
+    "parts": {
+      "title": "Piezas y Merge",
+      "subtitle": "De dónde salen las piezas y cómo usarlas para mejorar máquinas",
+      "step_drop": "Las piezas caen gratis mientras usas Faucet, PTC, Auto Mining, YouTube, Shortlinks y Offerwalls (probabilidades abajo).",
+      "step_fuse": "Cada pieza cae común. En la página de Merge, fusiona 5 piezas iguales en 1 de la rareza siguiente: Común → Poco común → Rara → Épica → Legendaria.",
+      "step_merge": "En Merge, junta 2 máquinas iguales con las piezas requeridas y una tarifa para crear 1 máquina de nivel mayor, con más hashrate.",
+      "step_buy": "¿Te falta una pieza? Puedes comprarla con descuento en Ofertas.",
+      "offerwall_tiers": "Offerwalls: menos de US$ 0,01 → 40%; de US$ 0,01 a 0,10 → 75%; de US$ 0,10 a 0,50 → 1 pieza garantizada; de US$ 0,50 a 1 → 1 garantizada + 50% de una 2ª; más de US$ 1 → de 2 a 5 piezas."
     }
   },
   "shell": {
@@ -6859,7 +6869,9 @@
     },
     "offers": {
       "title": "Piezas de Forja",
-      "desc": "Piezas y kits con descuento promocional."
+      "desc": "Piezas y kits con descuento promocional.",
+      "free_hint": "También puedes ganar piezas gratis con Faucet, PTC, Auto Mining, YouTube, Shortlinks y Offerwalls.",
+      "free_link": "Ver cómo"
     },
     "packs": {
       "title": "Kits Promocionales",
@@ -6878,7 +6890,25 @@
     "purchase_success": "¡Pieza comprada con éxito!",
     "singles_title": "Piezas Sueltas",
     "merge_need_balance": "Saldo insuficiente en la moneda elegida para pagar la tasa de la forja.",
-    "merge_price_unavailable": "Cotización de la cripto no disponible ahora. Intenta pagar en BLK."
+    "merge_price_unavailable": "Cotización de la cripto no disponible ahora. Intenta pagar en BLK.",
+    "free_guide": {
+      "title": "Cómo conseguir piezas gratis",
+      "subtitle": "Cada vez que usas una de estas áreas, puede caer una pieza en tu bolsa.",
+      "per_claim": "{{pct}}% de probabilidad por claim",
+      "per_offer": "desde {{pct}}% hasta garantizada, según el valor de la oferta",
+      "how_it_works": "Cada pieza cae común, de un tipo al azar. Junta 5 iguales para fusionar 1 de la rareza siguiente (5:1) y usa las piezas para fusionar máquinas.",
+      "buy_hint": "¿Con prisa? También puedes comprar piezas con descuento.",
+      "buy_link": "Ver en Ofertas",
+      "sources": {
+        "faucet": "Faucet",
+        "ptc": "PTC",
+        "automining": "Auto Mining",
+        "youtube": "YouTube",
+        "shortlinks": "Shortlinks",
+        "internal_offerwall": "Offerwall interna",
+        "offerwall": "Offerwalls"
+      }
+    }
   },
   "cookieConsent": {
     "message": "Usamos cookies esenciales para mantener tu sesión segura, y cookies opcionales de analítica/publicidad solo con tu permiso.",

@@ -1,6 +1,7 @@
 import '@testing-library/jest-dom/vitest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 import { I18nextProvider } from 'react-i18next';
 import i18next from 'i18next';
@@ -62,9 +63,11 @@ function body(partOffers: unknown) {
 
 function renderPage() {
   return render(
-    <I18nextProvider i18n={i18n}>
-      <OffersPage />
-    </I18nextProvider>,
+    <MemoryRouter>
+      <I18nextProvider i18n={i18n}>
+        <OffersPage />
+      </I18nextProvider>
+    </MemoryRouter>,
   );
 }
 
@@ -132,5 +135,11 @@ describe('OffersPage — peças', () => {
     renderPage();
     expect(await screen.findByText(i18n.t('offers.empty'))).toBeInTheDocument();
     expect(screen.queryByText(i18n.t('parts.offers.title'))).not.toBeInTheDocument();
+  });
+
+  it('a seção de peças aponta para a página de Merge para ganhar peças grátis', async () => {
+    renderPage();
+    const hint = await screen.findByTestId('part-offers-free-hint');
+    expect(within(hint).getByRole('link')).toHaveAttribute('href', '/merge');
   });
 });

@@ -6,10 +6,12 @@ import {
     Trophy, Gamepad2, ChevronDown, ChevronUp, Shield, Coins, LayoutGrid,
     Server, TrendingUp, ArrowDownCircle, ArrowUpCircle, Hash,
     Star, AlertCircle, Info, CheckCircle2, Lock, Layers, Bolt,
-    Crosshair, ListChecks, Globe, Sparkles, Receipt,
+    Crosshair, ListChecks, Globe, Sparkles, Receipt, Puzzle,
 } from 'lucide-react';
 import Card from '../../../shared/components/Card';
 import IconBadge from '../../../shared/components/IconBadge';
+import { useTranslation } from 'react-i18next';
+import { FreePartsGuide } from '../../parts/components/FreePartsGuide';
 
 interface SectionProps {
     id: string;
@@ -513,6 +515,26 @@ export function ManualIncomeSection() {
                         </div>
                     </div>
                 ))}
+            </div>
+        </Section>
+    );
+}
+
+export function ManualPartsSection() {
+    const { t } = useTranslation();
+    return (
+        <Section id="pecas" icon={Puzzle} title={t('manual.parts.title')} badge={t('manual.badge_new')} subtitle={t('manual.parts.subtitle')}>
+            <div className="space-y-4">
+                <Card>
+                    <ol className="space-y-3 text-sm text-slate-300 leading-relaxed list-decimal pl-5">
+                        <li>{t('manual.parts.step_drop')}</li>
+                        <li>{t('manual.parts.step_fuse')}</li>
+                        <li>{t('manual.parts.step_merge')}</li>
+                        <li>{t('manual.parts.step_buy')}</li>
+                    </ol>
+                </Card>
+                <FreePartsGuide showBuyHint={false} />
+                <p className="text-xs text-slate-500">{t('manual.parts.offerwall_tiers')}</p>
             </div>
         </Section>
     );

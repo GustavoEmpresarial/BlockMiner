@@ -2,6 +2,7 @@ import prisma from "../../core/database/prisma.js";
 import { SHOP_CURRENCY } from "../shop/shop.config.js";
 import { PART_CATALOG, PART_RARITY, isPartRarity, isPartSlug, partImageUrl } from "./parts.catalog.js";
 import { partCostsForHashRate, priceBandForHashRate } from "./parts.machinePrices.js";
+import { OFFERWALL_MICRO_DROP_BPS, readActivityPartDropBaseBps, readFrequentActivityDropBaseBps } from "./parts.drop.js";
 import {
   MERGE_OWNED_CATALOG_WHERE,
   MERGE_OWNED_MACHINE_WHERE,
@@ -259,6 +260,12 @@ export async function getPartsOverview(userId: number) {
     mergeFeeBasisPoints: readMergeFeeBasisPoints(),
     mergeHashrateBoostBasisPoints: readMergeHashrateBoostBasisPoints(),
     tierDefinitions: MACHINE_MERGE_TIERS,
+    // Live drop chances (env-tunable) so the "free parts" guide never drifts from the roll.
+    dropRates: {
+      activityBps: readActivityPartDropBaseBps(),
+      frequentActivityBps: readFrequentActivityDropBaseBps(),
+      offerwallMicroBps: OFFERWALL_MICRO_DROP_BPS,
+    },
     ownedMergeCandidates,
     parts: PART_CATALOG.map((part) => ({
       slug: part.slug,

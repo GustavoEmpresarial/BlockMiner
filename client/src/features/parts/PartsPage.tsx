@@ -34,11 +34,13 @@ import {
   MergeForgeOverlay,
   type MergeForgeSnapshot,
 } from './components/MergeForgeOverlay';
+import { FreePartsGuide } from './components/FreePartsGuide';
 import type {
   MergeFeeOption,
   MergePaymentAsset,
   OwnedMergeCandidate,
   PartMachinePriceDto,
+  PartDropRates,
   PartStackDto,
 } from './lib/parts.types';
 import {
@@ -149,6 +151,7 @@ export default function PartsPage() {
   const [paymentAsset, setPaymentAsset] = useState<MergePaymentAsset>('BLK');
   const [feePercentBlk, setFeePercentBlk] = useState(MERGE_FEE_PERCENT_BLK);
   const [feePercentCrypto, setFeePercentCrypto] = useState(MERGE_FEE_PERCENT_CRYPTO);
+  const [dropRates, setDropRates] = useState<PartDropRates | null>(null);
 
   // Selected candidate for forge workbench
   const [selectedCandidateKey, setSelectedCandidateKey] = useState<string | null>(null);
@@ -172,6 +175,7 @@ export default function PartsPage() {
       blkBalance?: number;
       mergeFeePercentBlk?: number;
       mergeFeePercentCrypto?: number;
+      dropRates?: PartDropRates;
     }) => {
       if (!data?.ok) {
         setError(true);
@@ -181,6 +185,7 @@ export default function PartsPage() {
       setBlkBalance(Number.isFinite(balance) ? balance : 0);
       if (Number.isFinite(Number(data.mergeFeePercentBlk))) setFeePercentBlk(Number(data.mergeFeePercentBlk));
       if (Number.isFinite(Number(data.mergeFeePercentCrypto))) setFeePercentCrypto(Number(data.mergeFeePercentCrypto));
+      if (data.dropRates) setDropRates(data.dropRates);
 
       const nextParts = Array.isArray(data.parts) ? data.parts : [];
       const nextCandidates = Array.isArray(data.ownedMergeCandidates) ? data.ownedMergeCandidates : [];
@@ -1057,6 +1062,7 @@ export default function PartsPage() {
       {/* 3. BOLSA DE PEÇAS & OFICINA DE FUSÃO DE COMPONENTES      */}
       {/* ======================================================== */}
       <div className="space-y-4 pt-4 border-t-2 border-slate-800">
+        <FreePartsGuide rates={dropRates} />
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
             <h2 className="text-lg font-black uppercase tracking-tight text-white flex items-center gap-2">

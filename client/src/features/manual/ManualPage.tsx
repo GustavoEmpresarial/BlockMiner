@@ -7,6 +7,7 @@ import {
   ManualInfrastructureSection,
   ManualMachinesSection,
   ManualIncomeSection,
+  ManualPartsSection,
   ManualTournamentsSection,
   ManualWalletSection,
   ManualRankingSection,
@@ -30,6 +31,7 @@ export default function ManualPage() {
       <ManualInfrastructureSection />
       <ManualMachinesSection />
       <ManualIncomeSection />
+      <ManualPartsSection />
       <ManualTournamentsSection />
       <ManualWalletSection />
       <ManualRankingSection />

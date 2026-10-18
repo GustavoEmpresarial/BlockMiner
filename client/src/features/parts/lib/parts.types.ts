@@ -89,7 +89,18 @@ export type PartsOverviewResponse = {
   parts: PartStackDto[];
   machines: PartMachinePriceDto[];
   ownedMergeCandidates?: OwnedMergeCandidate[];
+  /** Live drop chances in basis points (10000 = 100%). Older servers omit it. */
+  dropRates?: PartDropRates;
   message?: string;
+};
+
+export type PartDropRates = {
+  /** Faucet and PTC. */
+  activityBps: number;
+  /** Auto-mining, YouTube and shortlinks. */
+  frequentActivityBps: number;
+  /** Offerwall credits under US$ 0.01. */
+  offerwallMicroBps: number;
 };
 
 export type PartsMergeResponse = {

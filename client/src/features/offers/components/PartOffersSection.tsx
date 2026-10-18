@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { Cpu, Package } from 'lucide-react';
 import { IconBadge, StatusPill } from '../../../shared/components';
 import { hasLivePartOffers, partDiscountPercent } from '../lib/offers.api';
@@ -98,6 +99,13 @@ export function PartOffersSection({
           ))}
         </div>
       </div>
+
+      <p className="text-xs text-slate-400" data-testid="part-offers-free-hint">
+        {t('parts.offers.free_hint')}{' '}
+        <Link to="/merge" className="font-bold text-emerald-400 hover:underline">
+          {t('parts.offers.free_link')}
+        </Link>
+      </p>
 
       {packs.length > 0 && (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

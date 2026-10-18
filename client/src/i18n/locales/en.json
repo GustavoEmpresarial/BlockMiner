@@ -5246,7 +5246,8 @@
       "renda": "Income Sources",
       "torneios": "Tournaments",
       "carteira": "Wallet",
-      "ranking": "Ranking"
+      "ranking": "Ranking",
+      "pecas": "Parts & Merge"
     },
     "cover_title": "Operator Manual",
     "cover_body": "Technical, economic, and operational reference for the BlockMiner protocol. Everything you need to maximize your mining operation.",
@@ -5597,6 +5598,15 @@
         "locked_rooms_value": "Shown with a lock in the public room"
       },
       "tip_html": "To compete specifically for <strong class=\"text-white\">hashrate prizes</strong>, join <strong class=\"text-white\">Tournaments</strong> — they measure hashrate over fixed periods with automatic reward distribution."
+    },
+    "parts": {
+      "title": "Parts & Merge",
+      "subtitle": "Where parts come from and how to use them to upgrade machines",
+      "step_drop": "Parts drop for free while you use Faucet, PTC, Auto Mining, YouTube, Shortlinks and Offerwalls (chances below).",
+      "step_fuse": "Every part drops as common. On the Merge page, fuse 5 identical parts into 1 of the next rarity: Common → Uncommon → Rare → Epic → Legendary.",
+      "step_merge": "In Merge, combine 2 identical machines with the required parts and a fee to create 1 higher-level machine with more hashrate.",
+      "step_buy": "Missing a part? You can buy it at a discount in Offers.",
+      "offerwall_tiers": "Offerwalls: under US$ 0.01 → 40% chance; US$ 0.01–0.10 → 75%; US$ 0.10–0.50 → 1 guaranteed part; US$ 0.50–1 → 1 guaranteed + 50% chance of a 2nd; above US$ 1 → 2 to 5 parts."
     }
   },
   "shell": {
@@ -6886,7 +6896,9 @@
     },
     "offers": {
       "title": "Forge Parts",
-      "desc": "Parts and discounted bundles."
+      "desc": "Parts and discounted bundles.",
+      "free_hint": "You can also earn parts for free with Faucet, PTC, Auto Mining, YouTube, Shortlinks and Offerwalls.",
+      "free_link": "See how"
     },
     "packs": {
       "title": "Featured Kits",
@@ -6905,7 +6917,25 @@
     "purchase_success": "Part purchased successfully!",
     "singles_title": "Single Parts",
     "merge_need_balance": "Not enough balance in the selected coin to pay the forge fee.",
-    "merge_price_unavailable": "Crypto price unavailable right now. Try paying in BLK."
+    "merge_price_unavailable": "Crypto price unavailable right now. Try paying in BLK.",
+    "free_guide": {
+      "title": "How to get free parts",
+      "subtitle": "Every time you use one of these areas, a part may drop into your bag.",
+      "per_claim": "{{pct}}% chance per claim",
+      "per_offer": "from {{pct}}% up to guaranteed, by offer value",
+      "how_it_works": "Every part drops as common, of a random type. Collect 5 of the same to fuse 1 of the next rarity (5:1) and use parts to merge machines.",
+      "buy_hint": "In a hurry? You can also buy parts at a discount.",
+      "buy_link": "See Offers",
+      "sources": {
+        "faucet": "Faucet",
+        "ptc": "PTC",
+        "automining": "Auto Mining",
+        "youtube": "YouTube",
+        "shortlinks": "Shortlinks",
+        "internal_offerwall": "Internal offerwall",
+        "offerwall": "Offerwalls"
+      }
+    }
   },
   "cookieConsent": {
     "message": "We use essential cookies to keep your session secure, and optional analytics/advertising cookies only with your permission.",

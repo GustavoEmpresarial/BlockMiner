@@ -172,4 +172,21 @@ describe('PartsPage (Unified RollerCoin-style Merge)', () => {
     });
     await waitFor(() => expect(screen.queryByTestId('merge-forge-overlay')).not.toBeInTheDocument());
   });
+
+  it('mostra o guia de peças grátis com as taxas que o servidor mandou', async () => {
+    mockedGet.mockResolvedValue(
+      resolvedOverview({
+        ok: true,
+        blkBalance: 1,
+        parts: [],
+        machines: [],
+        ownedMergeCandidates: [],
+        dropRates: { activityBps: 2000, frequentActivityBps: 500, offerwallMicroBps: 4000 },
+      }),
+    );
+    renderPage();
+    const faucet = await screen.findByTestId('free-parts-source-faucet');
+    await waitFor(() => expect(faucet).toHaveTextContent('20% de chance por claim'));
+    expect(screen.getByTestId('free-parts-source-automining')).toHaveTextContent('5% de chance por claim');
+  });
 });
