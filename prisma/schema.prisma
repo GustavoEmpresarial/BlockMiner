@@ -1316,6 +1316,8 @@ model YoutubeWatchHistory {
   user User @relation(fields: [userId], references: [id])
 
   @@index([userId])
+  @@index([userId, createdAt])
+  @@index([claimedAt])
   @@map("youtube_watch_power_history")
 }
 
@@ -1721,6 +1723,7 @@ model CallbackQueue {
   nextRetryAt  DateTime? @map("next_retry_at")
 
   @@index([status])
+  @@index([callbackType, callbackHash])
   @@map("callback_queue")
 }
 

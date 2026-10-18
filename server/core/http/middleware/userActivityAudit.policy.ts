@@ -60,7 +60,9 @@ export function shouldAuditUserRequest(
 ): boolean {
   if (!req?.user?.id) return false;
   const method = String(req.method || "GET").toUpperCase();
-  const auditReads = options.auditReads ?? process.env.USER_ACTIVITY_LOG_READS !== "0";
+  // Reads are off by default: nearly every authenticated GET is UI polling, and auditing them
+  // meant one audit_logs insert per request on the remote DB (~6/s, 14 GB) that nothing reads.
+  const auditReads = options.auditReads ?? process.env.USER_ACTIVITY_LOG_READS === "1";
   if (!auditReads && !MUTATING_METHODS.has(method)) return false;
 
   const status = Number(res?.statusCode || 0);
