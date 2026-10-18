@@ -25,11 +25,24 @@ export interface ShopCatalogFan {
 
 export type ShopCatalogRack = ShopCatalogFan;
 
+/** Mirrors `listPartsCatalogForShop` — one row per (slug, rarity), full shop price. */
+export interface ShopCatalogPart {
+  slug: string;
+  rarity: string;
+  nameKey: string;
+  price: number;
+  listPrice?: number;
+  currency?: string;
+  imageUrl?: string | null;
+  maxQuantity?: number;
+}
+
 export interface ShopMinersResponse {
   ok?: boolean;
   miners?: ShopCatalogMiner[];
   fans?: ShopCatalogFan[];
   racks?: ShopCatalogRack[];
+  parts?: ShopCatalogPart[];
   currency?: string;
   fanSalesAvailableAt?: string;
   rackSalesAvailableAt?: string;
@@ -49,4 +62,5 @@ export interface ShopPurchaseResponse {
 export type PurchaseModalState =
   | { kind: 'miner'; item: ShopCatalogMiner }
   | { kind: 'fan'; item: ShopCatalogFan }
-  | { kind: 'rack'; item: ShopCatalogRack };
+  | { kind: 'rack'; item: ShopCatalogRack }
+  | { kind: 'part'; item: ShopCatalogPart };

@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import type { ShopCatalogPart } from '../lib/shop.types';
+import { formatPrice } from '../../../shared/utils/formatPrice';
 
 const RARITY_THEMES: Record<
   string,
@@ -53,11 +54,11 @@ export function ShopPartCard({ part, shopCurrency, onSelect }: ShopPartCardProps
   const theme = RARITY_THEMES[part.rarity] ?? RARITY_THEMES.common;
   const currency = part.currency || shopCurrency;
 
-  const priceStr =
-    part.price < 0.01 ? part.price.toFixed(4) : part.price.toFixed(2);
+  const priceStr = formatPrice(part.price);
 
   return (
     <div
+      data-testid={`shop-part-${part.slug}-${part.rarity}`}
       className={`group relative overflow-hidden rounded-2xl border-2 ${theme.border} ${theme.bg} p-4 shadow-[4px_4px_0px_#000000] transition-all duration-300 hover:scale-[1.02] flex flex-col justify-between`}
     >
       <div className="space-y-3">

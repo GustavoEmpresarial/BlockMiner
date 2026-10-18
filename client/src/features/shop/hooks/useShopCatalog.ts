@@ -5,6 +5,7 @@ import { getShopMiners } from '../lib/shop.api';
 import type {
   ShopCatalogFan,
   ShopCatalogMiner,
+  ShopCatalogPart,
   ShopCatalogRack,
 } from '../lib/shop.types';
 import { reportApiFailure } from '../../../shared/utils/reportApiFailure';
@@ -14,6 +15,7 @@ export function useShopCatalog() {
   const [miners, setMiners] = useState<ShopCatalogMiner[]>([]);
   const [fans, setFans] = useState<ShopCatalogFan[]>([]);
   const [racks, setRacks] = useState<ShopCatalogRack[]>([]);
+  const [parts, setParts] = useState<ShopCatalogPart[]>([]);
   const [shopCurrency, setShopCurrency] = useState('BLK');
   const [fanSalesAvailableAt, setFanSalesAvailableAt] = useState<string | null>(null);
   const [rackSalesAvailableAt, setRackSalesAvailableAt] = useState<string | null>(null);
@@ -27,6 +29,7 @@ export function useShopCatalog() {
         setMiners(res.data.miners ?? []);
         setFans(res.data.fans ?? []);
         setRacks(Array.isArray(res.data.racks) ? res.data.racks : []);
+        setParts(Array.isArray(res.data.parts) ? res.data.parts : []);
         setShopCurrency(res.data.currency || 'BLK');
         setFanSalesAvailableAt(res.data.fanSalesAvailableAt ?? null);
         setRackSalesAvailableAt(res.data.rackSalesAvailableAt ?? null);
@@ -53,6 +56,7 @@ export function useShopCatalog() {
     miners,
     fans,
     racks,
+    parts,
     shopCurrency,
     fanSalesAvailableAt,
     rackSalesAvailableAt,

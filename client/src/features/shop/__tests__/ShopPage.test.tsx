@@ -1,6 +1,7 @@
 import '@testing-library/jest-dom/vitest';
 import { describe, expect, it, vi, afterEach } from 'vitest';
-import { render, screen, cleanup, fireEvent } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent, within } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { I18nextProvider } from 'react-i18next';
 import i18next from 'i18next';
 import ptBR from '../../../i18n/locales/pt-BR.json';
@@ -15,7 +16,11 @@ await i18n.init({
 });
 
 function renderWithI18n(ui: React.ReactElement) {
-  return render(<I18nextProvider i18n={i18n}>{ui}</I18nextProvider>);
+  return render(
+    <MemoryRouter>
+      <I18nextProvider i18n={i18n}>{ui}</I18nextProvider>
+    </MemoryRouter>,
+  );
 }
 
 afterEach(() => cleanup());
@@ -26,6 +31,7 @@ describe('ShopPage', () => {
       miners: [],
       fans: [],
       racks: [],
+      parts: [],
       shopCurrency: 'BLK',
       fanSalesAvailableAt: null,
       rackSalesAvailableAt: null,
@@ -68,6 +74,7 @@ describe('ShopPage', () => {
           isPurchaseLive: true,
         },
       ],
+      parts: [],
       shopCurrency: 'BLK',
       fanSalesAvailableAt: null,
       rackSalesAvailableAt: null,
@@ -103,6 +110,7 @@ describe('ShopPage', () => {
       miners: [],
       fans: [],
       racks: [],
+      parts: [],
       shopCurrency: 'BLK',
       fanSalesAvailableAt: null,
       rackSalesAvailableAt: null,
@@ -112,5 +120,45 @@ describe('ShopPage', () => {
 
     renderWithI18n(<ShopPage />);
     expect(screen.getByText(/Nenhum equipamento disponível/i)).toBeInTheDocument();
+  });
+
+  it('lista as peças com filtro por raridade e abre a compra da peça certa', () => {
+    vi.spyOn(catalogHook, 'useShopCatalog').mockReturnValue({
+      miners: [],
+      fans: [],
+      racks: [],
+      parts: [
+        { slug: 'asic_chip', rarity: 'common', nameKey: 'parts.items.asic_chip', price: 0.002, listPrice: 0.002, currency: 'BLK', imageUrl: null },
+        { slug: 'hashboard', rarity: 'rare', nameKey: 'parts.items.hashboard', price: 0.05, listPrice: 0.05, currency: 'BLK', imageUrl: null },
+      ],
+      shopCurrency: 'BLK',
+      fanSalesAvailableAt: null,
+      rackSalesAvailableAt: null,
+      loading: false,
+      reload: vi.fn(),
+    });
+
+    renderWithI18n(<ShopPage />);
+    const section = screen.getByTestId('shop-parts-section');
+    expect(within(section).getByRole('heading', { name: ptBR.parts.shop_section_title })).toBeInTheDocument();
+    expect(within(section).getByText('0.002')).toBeInTheDocument();
+    expect(within(section).getByRole('link', { name: ptBR.parts.offers.free_link })).toHaveAttribute('href', '/merge');
+
+    fireEvent.click(within(section).getByRole('button', { name: ptBR.parts.rarity.rare }));
+    expect(screen.queryByTestId('shop-part-asic_chip-common')).not.toBeInTheDocument();
+    const rare = screen.getByTestId('shop-part-hashboard-rare');
+
+    fireEvent.click(within(rare).getByRole('button', { name: /comprar/i }));
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByText(`${ptBR.parts.items.hashboard} · ${ptBR.parts.rarity.rare}`)).toBeInTheDocument();
+  });
+
+  it('sem peças no catálogo (servidor antigo) a seção não aparece', () => {
+    vi.spyOn(catalogHook, 'useShopCatalog').mockReturnValue({
+      miners: [], fans: [], racks: [], parts: [], shopCurrency: 'BLK',
+      fanSalesAvailableAt: null, rackSalesAvailableAt: null, loading: false, reload: vi.fn(),
+    });
+    renderWithI18n(<ShopPage />);
+    expect(screen.queryByTestId('shop-parts-section')).not.toBeInTheDocument();
   });
 });

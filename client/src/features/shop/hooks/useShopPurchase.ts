@@ -6,17 +6,31 @@ import { useGameStore } from '../../shell/lib/game.store';
 import {
   postShopPurchase,
   postShopPurchaseFan,
+  postShopPurchasePart,
   postShopPurchaseRack,
 } from '../lib/shop.api';
 import type {
   PurchaseModalState,
   ShopCatalogFan,
   ShopCatalogMiner,
+  ShopCatalogPart,
   ShopCatalogRack,
 } from '../lib/shop.types';
 import { reportApiFailure } from '../../../shared/utils/reportApiFailure';
 
 export const MAX_SHOP_QTY = 25;
+/** Parts are cheap and fused 5:1, so the stepper goes further (server accepts up to 10 000). */
+export const MAX_SHOP_PART_QTY = 100;
+
+function maxQtyFor(modal: PurchaseModalState | null): number {
+  if (!modal) return MAX_SHOP_QTY;
+  if (modal.kind === 'part') return MAX_SHOP_PART_QTY;
+  if (modal.kind === 'miner') return MAX_SHOP_QTY;
+  const catalogMax = modal.item.maxQuantity;
+  return catalogMax != null && Number.isInteger(catalogMax) && catalogMax >= 1
+    ? Math.min(MAX_SHOP_QTY, catalogMax)
+    : MAX_SHOP_QTY;
+}
 
 function generateIdempotencyKey(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -51,6 +65,11 @@ export function useShopPurchase() {
     setModal({ kind: 'rack', item });
   };
 
+  const openPartModal = (item: ShopCatalogPart) => {
+    setQuantity(1);
+    setModal({ kind: 'part', item });
+  };
+
   const closeModal = () => {
     if (!buying) {
       setModal(null);
@@ -60,11 +79,7 @@ export function useShopPurchase() {
   const confirmPurchase = async () => {
     if (!modal || buying) return;
 
-    const catalogMax = modal.kind === 'miner' ? undefined : modal.item.maxQuantity;
-    const qtyCap =
-      catalogMax != null && Number.isInteger(catalogMax) && catalogMax >= 1
-        ? Math.min(MAX_SHOP_QTY, catalogMax)
-        : MAX_SHOP_QTY;
+    const qtyCap = maxQtyFor(modal);
     const qty = Math.min(qtyCap, Math.max(1, Number(quantity) || 1));
     if (!Number.isInteger(qty)) {
       toast.error(t('shop.invalid_quantity', { defaultValue: 'Quantidade inválida.' }));
@@ -98,6 +113,21 @@ export function useShopPurchase() {
             typeof messageKey === 'string' && messageKey
               ? t(messageKey, params as Record<string, unknown>)
               : res.data.message || t('fans.purchase_success'),
+          );
+          fetchAll();
+          setModal(null);
+        }
+      } else if (modal.kind === 'part') {
+        const res = await postShopPurchasePart({
+          slug: modal.item.slug,
+          rarity: modal.item.rarity,
+          quantity: qty,
+          idempotencyKey,
+        });
+        if (res.data?.ok) {
+          const messageKey = res.data.messageKey;
+          toast.success(
+            typeof messageKey === 'string' && messageKey ? t(messageKey) : res.data.message || t('parts.purchase_success'),
           );
           fetchAll();
           setModal(null);
@@ -144,7 +174,9 @@ export function useShopPurchase() {
               ? 'shop_purchase_miner'
               : modal.kind === 'fan'
                 ? 'shop_purchase_fan'
-                : 'shop_purchase_rack',
+                : modal.kind === 'part'
+                  ? 'shop_purchase_part'
+                  : 'shop_purchase_rack',
           message: 'Failed to complete shop purchase',
           context: {
             kind: modal.kind,
@@ -163,14 +195,12 @@ export function useShopPurchase() {
     modal,
     buying,
     quantity,
-    maxQty:
-      modal && modal.kind !== 'miner' && modal.item.maxQuantity != null && Number.isInteger(modal.item.maxQuantity) && modal.item.maxQuantity >= 1
-        ? Math.min(MAX_SHOP_QTY, modal.item.maxQuantity)
-        : MAX_SHOP_QTY,
+    maxQty: maxQtyFor(modal),
     setQuantity,
     openMinerModal,
     openFanModal,
     openRackModal,
+    openPartModal,
     closeModal,
     confirmPurchase,
   };
