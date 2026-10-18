@@ -154,6 +154,11 @@ export function LegalDocumentPage({
               {t(titleKey)}
             </h1>
             <p className="mt-5 max-w-3xl text-base leading-7 text-slate-200 md:text-lg md:leading-8 font-medium">{t(introKey)}</p>
+            {t('legal.common.translationNotice') ? (
+              <p data-testid="legal-translation-notice" className="mt-4 max-w-3xl text-sm leading-6 text-amber-200/90">
+                {t('legal.common.translationNotice')}
+              </p>
+            ) : null}
             <div className="mt-8 flex flex-wrap items-center gap-4 border-t-2 border-slate-800 pt-6">
               <p className="text-xs font-mono uppercase tracking-[0.2em] text-slate-400">
                 {t('legal.common.lastUpdated', { date: t('legal.common.lastUpdatedDate') })}

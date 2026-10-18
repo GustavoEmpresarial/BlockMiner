@@ -223,7 +223,8 @@
       "skipToContent": "Ir para o conteúdo legal",
       "backToHome": "Início",
       "scrollToTop": "Voltar ao topo",
-      "readCookiePolicy": "Ler Política de Cookies"
+      "readCookiePolicy": "Ler Política de Cookies",
+      "translationNotice": ""
     },
     "footer": {
       "description": "Informações legais públicas para usuários e visitantes do BlockMiner.",
@@ -692,7 +693,10 @@
       "shortlink_message": "Você saiu da etapa do shortlink, então o tempo parou. O contador continua de onde parou.",
       "youtube_message": "Você saiu da página do YouTube, então o tempo parou. O contador continua de onde parou.",
       "autoMining_message": "Você saiu do Auto Mining, então o tempo parou. O contador continua de onde parou."
-    }
+    },
+    "load_more": "Carregar mais",
+    "all": "Todas",
+    "clear": "Limpar"
   },
   "feature_gate": {
     "unavailable": "Esta página não está disponível."
@@ -769,7 +773,9 @@
       "forgot": "Esqueceu?",
       "create_account": "Criar Conta Agora",
       "or": "ou",
-      "email_placeholder": "seu@email.com"
+      "email_placeholder": "seu@email.com",
+      "two_factor_label": "Código 2FA",
+      "two_factor_email_label": "Código do e-mail"
     },
     "register": {
       "title": "Crie sua conta gratuita",
@@ -833,7 +839,9 @@
       "reset_submit": "Redefinir senha",
       "email_placeholder": "você@email.com",
       "new_password_placeholder": "Mínimo de 8 caracteres",
-      "confirm_password_placeholder": "Repita a nova senha"
+      "confirm_password_placeholder": "Repita a nova senha",
+      "new_password": "Nova senha",
+      "confirm_password": "Confirmar nova senha"
     },
     "verifyEmail": {
       "title": "Confirmar e-mail",
@@ -845,6 +853,14 @@
       "banner_body": "Confirme seu e-mail pra liberar saques e o chat.",
       "banner_resend": "Reenviar e-mail",
       "banner_sent": "E-mail reenviado! Confira sua caixa de entrada."
+    },
+    "client_errors": {
+      "gateway_busy": "O servidor está temporariamente indisponível. Não é problema com sua senha — tente entrar novamente em alguns segundos.",
+      "network": "Falha de conexão com o servidor. Verifique sua internet e tente novamente.",
+      "timeout": "O servidor demorou para responder. Aguarde alguns segundos e tente entrar novamente.",
+      "login_failed": "Não foi possível entrar. Verifique os dados e tente novamente.",
+      "session_check_failed": "Não foi possível verificar sua sessão agora. Tente novamente.",
+      "register_failed": "Falha no cadastro. Tente novamente."
     }
   },
   "sidebar": {
@@ -1417,7 +1433,10 @@
     "edit_valid_from": "Válido a partir de",
     "edit_valid_until": "Válido até",
     "edit_is_active": "Tarefa ativa",
-    "edit_sort_order": "Ordem de exibição"
+    "edit_sort_order": "Ordem de exibição",
+    "create_desc": "Configure as metas, cadência de reset e prêmios para os jogadores.",
+    "presets": "Modelos Rápidos (Preenchimento Automático)",
+    "btn_create": "Criar Tarefa"
   },
   "miniPass": {
     "title": "Mini Pass",
@@ -1675,7 +1694,16 @@
     "validation_reward_hr_positive": "A recompensa em hashrate deve ser um número positivo.",
     "validation_reward_days_range": "Os dias de hashrate devem estar entre 1 e 365.",
     "validation_action_line_too_long": "Cada linha de ação obrigatória deve ter no máximo 500 caracteres.",
-    "validation_country_iso2": "Os códigos de país devem ser ISO 3166-1 alpha-2 (duas letras), separados por vírgula ou espaço."
+    "validation_country_iso2": "Os códigos de país devem ser ISO 3166-1 alpha-2 (duas letras), separados por vírgula ou espaço.",
+    "host_deactivated": "Host desativado com sucesso",
+    "saved": "Oferta atualizada",
+    "created": "Oferta criada",
+    "toggled": "Status atualizado",
+    "approve_ok": "Aprovado",
+    "reject_ok": "Rejeitado",
+    "offers_section": "Ofertas",
+    "review_section": "Fila de revisão",
+    "frame_hosts_section": "Hosts Permitidos no Iframe (CSP frame-src)"
   },
   "dashboard_crypto_stream": {
     "title": "BlockMiner — Painel crypto",
@@ -2103,7 +2131,10 @@
     "rack_badge": "Rack",
     "miners_section_title": "Mineradoras",
     "fan_badge": "Refrigeração",
-    "sales_opens_at": "Vendas abrem em"
+    "sales_opens_at": "Vendas abrem em",
+    "loading_error": "Nenhum equipamento disponível.",
+    "invalid_miner": "Este equipamento não está disponível para compra.",
+    "invalid_quantity": "Quantidade inválida."
   },
   "fans": {
     "cooling_system_name": "Sistema de refrigeração",
@@ -2496,7 +2527,14 @@
       "link_failed": "Falha ao vincular carteira.",
       "unlink_failed": "Não foi possível desvincular a carteira.",
       "wallet_linked_success": "Carteira vinculada com sucesso!",
-      "wallet_unlinked": "Carteira desvinculada."
+      "wallet_unlinked": "Carteira desvinculada.",
+      "loading_wallet": "Carregando carteira…",
+      "wallet_linked": "Vinculada",
+      "change_wallet": "Trocar carteira",
+      "unlink_wallet": "Desvincular",
+      "linking_wallet": "Vinculando…",
+      "save_link_wallet": "Salvar / vincular carteira",
+      "connect_browser_wallet": "Conectar carteira"
     },
     "express_mode_note": "EXPRESS: associe a carteira para assinar transferências na Polygon. O saldo atualiza após {{n}} confirmações de bloco.",
     "shib": {
@@ -4141,12 +4179,19 @@
       "complete_pass_pol": "Preço do Passe Completo (POL)",
       "complete_pass_hint": "Custo em POL para comprar todos os níveis restantes de uma vez.",
       "is_active": "Temporada Ativa",
-      "is_active_hint": "Habilita a visibilidade e participação dos jogadores."
+      "is_active_hint": "Habilita a visibilidade e participação dos jogadores.",
+      "starts_at": "Início",
+      "starts_hint": "Quando a temporada abre para os jogadores.",
+      "ends_at": "Término",
+      "ends_hint": "Quando a temporada fecha; o progresso para de contar."
     },
     "placeholders": {
       "slug": "ex: season-1-cyber",
       "season_title": "Título da temporada...",
-      "subtitle": "Subtítulo explicativo..."
+      "subtitle": "Subtítulo explicativo...",
+      "reward_title_locale": "Título neste idioma",
+      "mission_title": "Ex.: Jogue 5 partidas no Arcade",
+      "mission_description": "Instruções claras para o jogador..."
     },
     "locale": {
       "en": "Inglês (EN)",
@@ -4208,7 +4253,28 @@
       "col_title": "Título",
       "col_sort": "Ordem",
       "col_actions": "Ações",
-      "empty": "Nenhuma recompensa configurada para esta temporada."
+      "empty": "Nenhuma recompensa configurada para esta temporada.",
+      "add_title": "Adicionar recompensa de nível",
+      "form_help": "Escolha o nível e o tipo de prêmio; os campos abaixo mudam conforme o tipo.",
+      "payload_heading": "Conteúdo do prêmio",
+      "shop_miner_id": "ID da máquina da loja",
+      "shop_miner_hint": "ID da máquina no catálogo da Loja.",
+      "event_miner_id": "ID da máquina de evento",
+      "event_miner_hint": "ID da máquina exclusiva de evento.",
+      "hash_rate": "Hashrate (H/s)",
+      "hash_rate_hint": "Poder temporário somado ao perfil do jogador.",
+      "hash_days": "Duração (dias)",
+      "hash_days_hint": "Por quantos dias o hashrate fica ativo.",
+      "blk_amount": "Quantidade em BLK",
+      "pol_amount": "Quantidade em POL",
+      "token_amount_hint": "Valor creditado no saldo do jogador.",
+      "optional_titles": "Títulos (opcional)",
+      "optional_titles_hint": "Nome exibido do prêmio por idioma; vazio usa o nome padrão.",
+      "add_button": "Salvar recompensa",
+      "table_level": "Nível",
+      "table_kind": "Tipo",
+      "table_amount": "Prêmio",
+      "table_actions": "Ações"
     },
     "reward_kinds": {
       "NONE": "Sem Recompensa",
@@ -4256,7 +4322,20 @@
       "col_title": "Título",
       "col_sort": "Ordem",
       "col_actions": "Ações",
-      "empty": "Nenhuma missão configurada para esta temporada."
+      "empty": "Nenhuma missão configurada para esta temporada.",
+      "form_title": "Adicionar missão",
+      "form_help": "Defina a regra, a meta e o XP; depois escreva o título que o jogador vai ver.",
+      "group_rules": "Regra",
+      "group_numbers": "Números",
+      "xp_hint": "XP concedido ao completar a meta.",
+      "sort_hint": "Ordem na lista de missões (menor primeiro).",
+      "group_copy": "Textos",
+      "titles_required": "Títulos (obrigatório)",
+      "titles_field_hint": "Preencha pelo menos um idioma.",
+      "descriptions_optional": "Descrições (opcional)",
+      "descriptions_field_hint": "Instruções extras exibidas abaixo do título.",
+      "add_button": "Salvar missão",
+      "line_meta": "Meta {{target}} · {{xp}} XP"
     },
     "cadences": {
       "EVENT": "Temporada Inteira (Única)",
@@ -4302,7 +4381,12 @@
       "mission_game_slug_format": "Slug do jogo inválido.",
       "mission_xp_range": "O XP da missão deve estar entre 1 e 1.000.000.",
       "mission_description_en_required": "A descrição em inglês é obrigatória quando fornecida descrição."
-    }
+    },
+    "warnings": {
+      "missing_reward_levels_one": "{{count}} nível ainda está sem recompensa.",
+      "missing_reward_levels_other": "{{count}} níveis ainda estão sem recompensa."
+    },
+    "delete": "Excluir"
   },
   "inventario": {
     "title": "Inventário",
@@ -4773,7 +4857,9 @@
     "tasks_scoring_hint": "Cada tarefa diária que você conclui e coleta na aba Tarefas soma +1 ponto. Tarefa concluída e não coletada não conta. Volte todos os dias: no semanal e no mensal ganha quem for mais constante.",
     "tasks_scoring_hint_short": "1 tarefa coletada = 1 ponto · só conta ao coletar · período UTC",
     "tasks_cta": "Ir para as Tarefas",
-    "preview_notice": "Torneio em teste no ambiente de desenvolvimento: o ranking é real, mas nenhum prêmio é pago."
+    "preview_notice": "Torneio em teste no ambiente de desenvolvimento: o ranking é real, mas nenhum prêmio é pago.",
+    "activity_pt_per_task": "+1 pt / tarefa",
+    "activity_pt_per_action": "+1 pt / ação"
   },
   "referrals": {
     "title": "Referrals",
@@ -5825,7 +5911,8 @@
     "active": "Ativo",
     "inactive": "Inativo",
     "empty": "Nenhum registro encontrado.",
-    "confirm_delete": "Excluir este registro?"
+    "confirm_delete": "Excluir este registro?",
+    "close": "Fechar"
   },
   "adminFinance": {
     "title": "Financeiro",
@@ -6789,7 +6876,10 @@
     "hash_rate": "Hash rate base",
     "image_url": "URL da imagem",
     "cooldown_ms": "Intervalo (ms)",
-    "save": "Salvar configuração"
+    "save": "Salvar configuração",
+    "preview": "Pré-visualização do Jogador",
+    "preview_hint": "Como a recompensa da faucet é vista na página pública",
+    "inactive": "Inativa"
   },
   "adminSala": {
     "title": "Sala (RollerCoin)",
@@ -7060,5 +7150,37 @@
     "accept": "Aceitar todos",
     "decline": "Só essenciais",
     "policyLink": "Política de Cookies"
+  },
+  "bmCaptcha": {
+    "title": "Verificação humana",
+    "instructions": "Gire o cristal até ficar em pé, escolha a peça igual e confirme.",
+    "loading": "Carregando…",
+    "which_tile": "Qual peça é igual a esta?",
+    "cancel": "Cancelar",
+    "confirm": "Confirmar",
+    "validating": "Validando…",
+    "errors": {
+      "SOLUTION_WRONG": "Resposta incorreta. Gire o cristal e escolha a peça de novo.",
+      "INVALID_SOLUTION": "Resposta inválida. Escolha uma peça e confirme.",
+      "TOO_FAST": "Rápido demais. Aguarde um instante e tente de novo.",
+      "TOO_MANY_ATTEMPTS": "Muitas tentativas. Feche e abra a verificação de novo.",
+      "RATE_LIMITED": "Muitas verificações seguidas. Aguarde um pouco e tente de novo.",
+      "CHALLENGE_EXPIRED": "O desafio expirou. Feche e abra a verificação de novo.",
+      "CHALLENGE_NOT_FOUND": "Desafio não encontrado. Feche e abra a verificação de novo.",
+      "ALREADY_SOLVED": "Este desafio já foi resolvido. Abra a verificação de novo.",
+      "generic": "Não foi possível validar agora. Tente novamente."
+    }
+  },
+  "rootError": {
+    "unknown": "Erro desconhecido",
+    "title": "Algo deu errado",
+    "body": "Não foi possível carregar esta tela. Copie o erro, envie no Telegram oficial, limpe os dados do navegador e recarregue — se continuar, tente outro navegador.",
+    "copy": "Copiar erro",
+    "copied": "Copiado",
+    "telegram": "Telegram oficial",
+    "reload": "Recarregar",
+    "step1": "Limpe os dados do site / cache (Ctrl+Shift+Del no PC, ou Configurações → Dados de navegação no celular) e abra de novo.",
+    "step2": "Se ainda falhar, tente outro navegador (Chrome, Edge, Firefox) ou uma janela anônima.",
+    "step3": "Cole o erro copiado no Telegram oficial e avise um admin."
   }
 }

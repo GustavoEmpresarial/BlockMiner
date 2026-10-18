@@ -204,14 +204,14 @@ export function TournamentDetailHeader({
                   <CheckSquare className="h-3.5 w-3.5 text-indigo-400 shrink-0" />
                   <div>
                     <p className="font-bold text-white text-[10px] leading-tight">{t('tournaments.activity_tasks')}</p>
-                    <p className="text-[9px] text-indigo-400 font-mono">+1 pt / task</p>
+                    <p className="text-[9px] text-indigo-400 font-mono">{t('tournaments.activity_pt_per_task')}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 rounded-xl bg-slate-900/60 border border-white/5 p-2 text-slate-300">
                   <Layers className="h-3.5 w-3.5 text-orange-400 shrink-0" />
                   <div>
                     <p className="font-bold text-white text-[10px] leading-tight">{t('tournaments.activity_offers_ptc')}</p>
-                    <p className="text-[9px] text-orange-400 font-mono">+1 pt / ação</p>
+                    <p className="text-[9px] text-orange-400 font-mono">{t('tournaments.activity_pt_per_action')}</p>
                   </div>
                 </div>
               </div>

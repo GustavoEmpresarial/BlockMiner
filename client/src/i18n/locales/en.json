@@ -223,7 +223,8 @@
       "skipToContent": "Skip to legal content",
       "backToHome": "Home",
       "scrollToTop": "Back to top",
-      "readCookiePolicy": "Read Cookie Policy"
+      "readCookiePolicy": "Read Cookie Policy",
+      "translationNotice": ""
     },
     "footer": {
       "description": "Public legal information for BlockMiner users and visitors.",
@@ -692,7 +693,10 @@
       "shortlink_message": "You left the shortlink step, so the timer stopped. It will continue from where it left off.",
       "youtube_message": "You left the YouTube page, so the timer stopped. It will continue from where it left off.",
       "autoMining_message": "You left Auto Mining, so the timer stopped. It will continue from where it left off."
-    }
+    },
+    "load_more": "Load more",
+    "all": "All",
+    "clear": "Clear"
   },
   "feature_gate": {
     "unavailable": "This page is not available."
@@ -769,7 +773,9 @@
       "forgot": "Forgot?",
       "create_account": "Register Now",
       "or": "or",
-      "email_placeholder": "your@email.com"
+      "email_placeholder": "your@email.com",
+      "two_factor_label": "2FA code",
+      "two_factor_email_label": "Email code"
     },
     "register": {
       "title": "Create your free account",
@@ -833,7 +839,9 @@
       "reset_submit": "Reset password",
       "email_placeholder": "you@email.com",
       "new_password_placeholder": "At least 8 characters",
-      "confirm_password_placeholder": "Repeat the new password"
+      "confirm_password_placeholder": "Repeat the new password",
+      "new_password": "New password",
+      "confirm_password": "Confirm new password"
     },
     "verifyEmail": {
       "title": "Confirm email",
@@ -845,6 +853,14 @@
       "banner_body": "Confirm your email to unlock withdrawals and chat.",
       "banner_resend": "Resend email",
       "banner_sent": "Email resent! Check your inbox."
+    },
+    "client_errors": {
+      "gateway_busy": "The server is temporarily unavailable. This is not a problem with your password — try signing in again in a few seconds.",
+      "network": "Could not connect to the server. Check your internet connection and try again.",
+      "timeout": "The server took too long to respond. Wait a few seconds and try signing in again.",
+      "login_failed": "Could not sign in. Check your details and try again.",
+      "session_check_failed": "We could not verify your session right now. Please try again.",
+      "register_failed": "Sign-up failed. Please try again."
     }
   },
   "sidebar": {
@@ -1416,7 +1432,10 @@
     "edit_valid_from": "Valid from",
     "edit_valid_until": "Valid until",
     "edit_is_active": "Task active",
-    "edit_sort_order": "Display order"
+    "edit_sort_order": "Display order",
+    "create_desc": "Set goals, reset cadence and rewards for players.",
+    "presets": "Quick templates (auto-fill)",
+    "btn_create": "Create task"
   },
   "miniPass": {
     "title": "Mini Pass",
@@ -1748,7 +1767,16 @@
     "validation_reward_hr_positive": "Hashrate reward must be a positive number.",
     "validation_reward_days_range": "Hashrate days must be between 1 and 365.",
     "validation_action_line_too_long": "Each required action line must be at most 500 characters.",
-    "validation_country_iso2": "Country codes must be ISO 3166-1 alpha-2 (two letters), comma or space separated."
+    "validation_country_iso2": "Country codes must be ISO 3166-1 alpha-2 (two letters), comma or space separated.",
+    "host_deactivated": "Host deactivated",
+    "saved": "Offer updated",
+    "created": "Offer created",
+    "toggled": "Status updated",
+    "approve_ok": "Approved",
+    "reject_ok": "Rejected",
+    "offers_section": "Offers",
+    "review_section": "Review queue",
+    "frame_hosts_section": "Allowed iframe hosts (CSP frame-src)"
   },
   "dashboard_crypto_stream": {
     "title": "BlockMiner — Crypto dashboard",
@@ -2102,7 +2130,10 @@
     "rack_badge": "Rack",
     "miners_section_title": "Miners",
     "fan_badge": "Cooling",
-    "sales_opens_at": "Sales open on"
+    "sales_opens_at": "Sales open on",
+    "loading_error": "No equipment available.",
+    "invalid_miner": "This equipment is not available for purchase.",
+    "invalid_quantity": "Invalid quantity."
   },
   "fans": {
     "cooling_system_name": "Cooling system",
@@ -2493,7 +2524,14 @@
       "link_failed": "Failed to link wallet.",
       "unlink_failed": "Unable to unlink wallet.",
       "wallet_linked_success": "Wallet linked successfully!",
-      "wallet_unlinked": "Wallet unlinked."
+      "wallet_unlinked": "Wallet unlinked.",
+      "loading_wallet": "Loading wallet…",
+      "wallet_linked": "Linked",
+      "change_wallet": "Change wallet",
+      "unlink_wallet": "Unlink",
+      "linking_wallet": "Linking…",
+      "save_link_wallet": "Save / link wallet",
+      "connect_browser_wallet": "Connect wallet"
     },
     "express_mode_note": "EXPRESS: Link your wallet to sign transfers on Polygon. Balance updates after {{n}} block confirmations.",
     "shib": {
@@ -4140,12 +4178,19 @@
       "complete_pass_pol": "Complete Pass Price (POL)",
       "complete_pass_hint": "Cost in POL to purchase all remaining levels at once.",
       "is_active": "Season Active",
-      "is_active_hint": "Enables visibility and participation for players."
+      "is_active_hint": "Enables visibility and participation for players.",
+      "starts_at": "Start",
+      "starts_hint": "When the season opens to players.",
+      "ends_at": "End",
+      "ends_hint": "When the season closes; progress stops counting."
     },
     "placeholders": {
       "slug": "e.g. season-1-cyber",
       "season_title": "Season title...",
-      "subtitle": "Informative subtitle..."
+      "subtitle": "Informative subtitle...",
+      "reward_title_locale": "Title in this language",
+      "mission_title": "E.g.: Play 5 Arcade games",
+      "mission_description": "Clear instructions for the player..."
     },
     "locale": {
       "en": "English (EN)",
@@ -4207,7 +4252,28 @@
       "col_title": "Title",
       "col_sort": "Order",
       "col_actions": "Actions",
-      "empty": "No rewards configured for this season."
+      "empty": "No rewards configured for this season.",
+      "add_title": "Add level reward",
+      "form_help": "Pick the level and the reward type; the fields below change with the type.",
+      "payload_heading": "Reward content",
+      "shop_miner_id": "Shop miner ID",
+      "shop_miner_hint": "ID of the miner in the Shop catalog.",
+      "event_miner_id": "Event miner ID",
+      "event_miner_hint": "ID of the event-exclusive miner.",
+      "hash_rate": "Hashrate (H/s)",
+      "hash_rate_hint": "Temporary power added to the player profile.",
+      "hash_days": "Duration (days)",
+      "hash_days_hint": "How many days the hashrate stays active.",
+      "blk_amount": "BLK amount",
+      "pol_amount": "POL amount",
+      "token_amount_hint": "Amount credited to the player balance.",
+      "optional_titles": "Titles (optional)",
+      "optional_titles_hint": "Displayed reward name per language; empty uses the default name.",
+      "add_button": "Save reward",
+      "table_level": "Level",
+      "table_kind": "Type",
+      "table_amount": "Reward",
+      "table_actions": "Actions"
     },
     "reward_kinds": {
       "NONE": "No Reward",
@@ -4255,7 +4321,20 @@
       "col_title": "Title",
       "col_sort": "Order",
       "col_actions": "Actions",
-      "empty": "No missions configured for this season."
+      "empty": "No missions configured for this season.",
+      "form_title": "Add mission",
+      "form_help": "Set the rule, goal and XP; then write the title the player will see.",
+      "group_rules": "Rule",
+      "group_numbers": "Numbers",
+      "xp_hint": "XP granted when the goal is completed.",
+      "sort_hint": "Order in the mission list (lowest first).",
+      "group_copy": "Copy",
+      "titles_required": "Titles (required)",
+      "titles_field_hint": "Fill in at least one language.",
+      "descriptions_optional": "Descriptions (optional)",
+      "descriptions_field_hint": "Extra instructions shown below the title.",
+      "add_button": "Save mission",
+      "line_meta": "Goal {{target}} · {{xp}} XP"
     },
     "cadences": {
       "EVENT": "Entire Season (Once)",
@@ -4301,7 +4380,12 @@
       "mission_game_slug_format": "Invalid game slug.",
       "mission_xp_range": "Mission XP must be between 1 and 1,000,000.",
       "mission_description_en_required": "English description is required when description is provided."
-    }
+    },
+    "warnings": {
+      "missing_reward_levels_one": "{{count}} level still has no reward.",
+      "missing_reward_levels_other": "{{count}} levels still have no reward."
+    },
+    "delete": "Delete"
   },
   "inventario": {
     "title": "Inventory",
@@ -4772,7 +4856,9 @@
     "tasks_scoring_hint": "Each daily task you complete and collect on the Tasks page adds +1 point. Completed but uncollected tasks do not count. Come back every day: in the weekly and monthly ranking the most consistent player wins.",
     "tasks_scoring_hint_short": "1 collected task = 1 point · only counts when collected · UTC period",
     "tasks_cta": "Go to Tasks",
-    "preview_notice": "Test tournament on the development environment: the ranking is real, but no prize is paid."
+    "preview_notice": "Test tournament on the development environment: the ranking is real, but no prize is paid.",
+    "activity_pt_per_task": "+1 pt / task",
+    "activity_pt_per_action": "+1 pt / action"
   },
   "referrals": {
     "title": "Referrals",
@@ -5823,7 +5909,8 @@
     "active": "Active",
     "inactive": "Inactive",
     "empty": "No records found.",
-    "confirm_delete": "Delete this record?"
+    "confirm_delete": "Delete this record?",
+    "close": "Close"
   },
   "adminFinance": {
     "title": "Finance",
@@ -6784,7 +6871,10 @@
     "hash_rate": "Base hash rate",
     "image_url": "Image URL",
     "cooldown_ms": "Cooldown (ms)",
-    "save": "Save configuration"
+    "save": "Save configuration",
+    "preview": "Player preview",
+    "preview_hint": "How the faucet reward looks on the public page",
+    "inactive": "Inactive"
   },
   "adminSala": {
     "title": "Room (RollerCoin)",
@@ -7056,5 +7146,37 @@
   "adminTransparencyInvestments": {
     "title": "Investments on other sites",
     "subtitle": "Manage the external investments shown in the \"Other Investments\" tab of the Transparency Portal."
+  },
+  "bmCaptcha": {
+    "title": "Human verification",
+    "instructions": "Rotate the crystal until it stands upright, pick the matching tile and confirm.",
+    "loading": "Loading…",
+    "which_tile": "Which tile matches this one?",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "validating": "Checking…",
+    "errors": {
+      "SOLUTION_WRONG": "Wrong answer. Rotate the crystal and pick the tile again.",
+      "INVALID_SOLUTION": "Invalid answer. Pick a tile and confirm.",
+      "TOO_FAST": "Too fast. Wait a moment and try again.",
+      "TOO_MANY_ATTEMPTS": "Too many attempts. Close and reopen the verification.",
+      "RATE_LIMITED": "Too many verifications in a row. Wait a little and try again.",
+      "CHALLENGE_EXPIRED": "The challenge expired. Close and reopen the verification.",
+      "CHALLENGE_NOT_FOUND": "Challenge not found. Close and reopen the verification.",
+      "ALREADY_SOLVED": "This challenge was already solved. Open the verification again.",
+      "generic": "Could not verify right now. Please try again."
+    }
+  },
+  "rootError": {
+    "unknown": "Unknown error",
+    "title": "Something went wrong",
+    "body": "This screen could not be loaded. Copy the error, send it on the official Telegram, clear your browser data and reload — if it keeps happening, try another browser.",
+    "copy": "Copy error",
+    "copied": "Copied",
+    "telegram": "Official Telegram",
+    "reload": "Reload",
+    "step1": "Clear the site data / cache (Ctrl+Shift+Del on PC, or Settings → Browsing data on mobile) and open it again.",
+    "step2": "If it still fails, try another browser (Chrome, Edge, Firefox) or a private window.",
+    "step3": "Paste the copied error on the official Telegram and let an admin know."
   }
 }
