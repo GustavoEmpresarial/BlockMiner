@@ -4,6 +4,9 @@ import { isFansFeatureEnabled } from "../fans/fans.config.js";
 import { getFanCreditsForUser } from "../fans/fans.service.js";
 import { syncUserBaseHashRate, miningEngine } from "../mining/index.js";
 import { SLOTS_PER_VISUAL_RACK } from "./rooms.types.js";
+import { logger } from "../../core/logger/index.js";
+
+const log = logger.child("RoomsFanPlacements");
 
 function visualCountFromSlots(slotCount: number, _roomNumber?: number | null): number {
   return Math.max(0, Math.ceil(slotCount / SLOTS_PER_VISUAL_RACK));
@@ -102,59 +105,48 @@ export async function setFanPlacementForUser(
   }
 
   await prisma.$transaction(async (tx) => {
+    // One fan mutation per user at a time: without this, two concurrent mounts both passed the
+    // credit check (users ended with fanCredits < 0) and two concurrent unmounts both credited.
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(${userId}::int, hashtext('fan-placement')::int)`;
+
     const existingAtDest = await tx.userVisualFanPlacement.findUnique({
       where: { roomId_visualIndex: { roomId: room.id, visualIndex } },
     });
 
-    if (mounted && existingAtDest) {
-      if (fromVisualIndex != null && fromVisualIndex === visualIndex) return;
-      throw new HttpStatusError(400, "Este rack já possui ventilador instalado.", { code: "FAN_OCCUPIED" });
-    }
-
-    if (mounted && fromVisualIndex != null && fromVisualIndex !== visualIndex) {
-      await tx.userVisualFanPlacement
-        .delete({
-          where: { roomId_visualIndex: { roomId: room.id, visualIndex: fromVisualIndex } },
-        })
-        .catch(() => undefined);
-    }
-
     if (mounted) {
-      const isMoveFromMountedSlot =
-        fromVisualIndex != null && fromVisualIndex !== visualIndex && !existingAtDest;
-      const isNewMountFromStorage = fromVisualIndex == null && !existingAtDest;
+      if (existingAtDest) {
+        if (fromVisualIndex != null && fromVisualIndex === visualIndex) return;
+        throw new HttpStatusError(400, "Este rack já possui ventilador instalado.", { code: "FAN_OCCUPIED" });
+      }
 
-      if (isNewMountFromStorage) {
-        const userRow = await tx.user.findUnique({
-          where: { id: userId },
-          select: { fanCredits: true },
+      if (fromVisualIndex != null) {
+        // Move: only if a fan really sits at the source. Before, a "move" from an empty rack
+        // created a fan for free (and unmounting it then minted a credit).
+        const moved = await tx.userVisualFanPlacement.deleteMany({
+          where: { roomId: room.id, visualIndex: fromVisualIndex, userId },
         });
-        if (Math.max(0, Number(userRow?.fanCredits ?? 0)) < 1) {
-          throw new HttpStatusError(400, "Você não tem ventiladores disponíveis.", { code: "FAN_NO_CREDITS" });
+        if (moved.count !== 1) {
+          log.warn("FAN_NOT_AT_SOURCE", { userId, roomId: room.id, visualIndex, fromVisualIndex, severity: "WARNING", category: "SECURITY" });
+          throw new HttpStatusError(409, "Não há ventilador nesse rack para mover.", { code: "FAN_NOT_AT_SOURCE" });
         }
-        await tx.user.update({
-          where: { id: userId },
+      } else {
+        const debited = await tx.user.updateMany({
+          where: { id: userId, fanCredits: { gte: 1 } },
           data: { fanCredits: { decrement: 1 } },
         });
+        if (debited.count !== 1) {
+          throw new HttpStatusError(400, "Você não tem ventiladores disponíveis.", { code: "FAN_NO_CREDITS" });
+        }
       }
 
-      if (isMoveFromMountedSlot || isNewMountFromStorage || existingAtDest) {
-        await tx.userVisualFanPlacement.upsert({
-          where: { roomId_visualIndex: { roomId: room.id, visualIndex } },
-          create: { userId, roomId: room.id, visualIndex },
-          update: {},
-        });
-      }
+      await tx.userVisualFanPlacement.create({ data: { userId, roomId: room.id, visualIndex } });
       return;
     }
 
-    const hadFan = await tx.userVisualFanPlacement.findUnique({
-      where: { roomId_visualIndex: { roomId: room.id, visualIndex } },
+    const removed = await tx.userVisualFanPlacement.deleteMany({
+      where: { roomId: room.id, visualIndex, userId },
     });
-    if (hadFan) {
-      await tx.userVisualFanPlacement.deleteMany({
-        where: { roomId: room.id, visualIndex },
-      });
+    if (removed.count === 1) {
       await tx.user.update({
         where: { id: userId },
         data: { fanCredits: { increment: 1 } },
