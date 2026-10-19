@@ -24,6 +24,23 @@ const SMTP_FROM = process.env.SMTP_FROM || "";
 
 let transporter: Transporter | null = null;
 
+/*
+ * Optional second provider. A single mailbox-SMTP (Hostinger) had its outbound disabled twice in a
+ * day; with SMTP_FALLBACK_* set, what the primary cannot take goes out through the fallback in the
+ * same call. Each sender has its own pause (circuit breaker).
+ */
+type Sender = { id: "primary" | "fallback"; from: string; pausedUntil: number; transport: () => Transporter | null };
+const FALLBACK = {
+  host: process.env.SMTP_FALLBACK_HOST || "",
+  port: Number(process.env.SMTP_FALLBACK_PORT || 587),
+  secure: String(process.env.SMTP_FALLBACK_SECURE || "false").toLowerCase() === "true",
+  user: process.env.SMTP_FALLBACK_USER || "",
+  pass: process.env.SMTP_FALLBACK_PASS || "",
+  from: process.env.SMTP_FALLBACK_FROM || "",
+};
+let fallbackTransporter: Transporter | null = null;
+const senders: Sender[] = [];
+
 /** "jogador@gmail.com" -> "j***@gmail.com": enough to tell recipients apart in logs, not to read them. */
 export function maskEmail(addr: string | null | undefined): string {
   const m = /^([^@\s])[^@\s]*@([^@\s]+)$/.exec(String(addr || "").trim());
@@ -53,26 +70,53 @@ const delivery = {
   consecutiveFailures: 0,
   alerted: false,
   lastAlertAt: 0,
-  pausedUntil: 0,
   lastFailureAt: null as string | null,
   lastSuccessAt: null as string | null,
   lastResponseCode: null as number | null,
 };
 
+function activeSenders(): Sender[] {
+  if (senders.length === 0) {
+    senders.push({ id: "primary", from: SMTP_FROM, pausedUntil: 0, transport: () => getTransporter() });
+    if (FALLBACK.host && FALLBACK.user && FALLBACK.pass && FALLBACK.from) {
+      senders.push({
+        id: "fallback",
+        from: FALLBACK.from,
+        pausedUntil: 0,
+        transport: () =>
+          (fallbackTransporter ??= nodemailer.createTransport({
+            host: FALLBACK.host,
+            port: FALLBACK.port,
+            secure: FALLBACK.secure,
+            auth: { user: FALLBACK.user, pass: FALLBACK.pass },
+          })),
+      });
+    }
+  }
+  return senders;
+}
+
 export function getEmailDeliveryHealth() {
-  const { alerted: _a, lastAlertAt: _l, pausedUntil, ...pub } = delivery;
+  const { alerted: _a, lastAlertAt: _l, ...pub } = delivery;
+  const list = activeSenders().map((s) => ({
+    id: s.id,
+    paused: s.pausedUntil > nowMs(),
+    pausedUntil: s.pausedUntil > nowMs() ? new Date(s.pausedUntil).toISOString() : null,
+  }));
+  const allPaused = list.every((s) => s.paused);
   return {
     ...pub,
-    failing: delivery.consecutiveFailures >= DELIVERY_ALERT_AFTER_FAILURES || pausedUntil > nowMs(),
-    paused: pausedUntil > nowMs(),
-    pausedUntil: pausedUntil > nowMs() ? new Date(pausedUntil).toISOString() : null,
+    senders: list,
+    paused: allPaused,
+    failing: delivery.consecutiveFailures >= DELIVERY_ALERT_AFTER_FAILURES || allPaused,
   };
 }
 
 /** @internal tests only */
 export function __resetEmailDeliveryForTests(): void {
   clockSkewForTests = 0;
-  Object.assign(delivery, { consecutiveFailures: 0, alerted: false, lastAlertAt: 0, pausedUntil: 0, lastFailureAt: null, lastSuccessAt: null, lastResponseCode: null });
+  Object.assign(delivery, { consecutiveFailures: 0, alerted: false, lastAlertAt: 0, lastFailureAt: null, lastSuccessAt: null, lastResponseCode: null });
+  for (const s of activeSenders()) s.pausedUntil = 0;
   __resetSlidingWindowMemoryForTests();
 }
 
@@ -99,13 +143,14 @@ async function raiseDeliveryAlert(details: Record<string, unknown>): Promise<voi
   await createGenericTelegramOutboxEvent("email_delivery_failing", details, { usernameSnapshot: "system" }).catch(() => undefined);
 }
 
-async function deliver(tx: Transporter, mail: { to: string; subject: string; text: string; html: string }, kind: string): Promise<void> {
+async function deliver(_primary: Transporter, mail: { to: string; subject: string; text: string; html: string }, kind: string): Promise<void> {
   if (process.env.EMAIL_SENDING_DISABLED === "1") {
     log.warn("EMAIL_SENDING_DISABLED", { kind, to: maskEmail(mail.to) });
     throw new MailerRefusedError("EMAIL_SENDING_DISABLED", "Email sending is switched off (EMAIL_SENDING_DISABLED=1).");
   }
-  if (delivery.pausedUntil > nowMs()) {
-    log.warn("EMAIL_SENDING_PAUSED", { kind, to: maskEmail(mail.to), pausedUntil: new Date(delivery.pausedUntil).toISOString() });
+  const ready = activeSenders().filter((s) => s.pausedUntil <= nowMs());
+  if (ready.length === 0) {
+    log.warn("EMAIL_SENDING_PAUSED", { kind, to: maskEmail(mail.to) });
     throw new MailerRefusedError("EMAIL_SENDING_PAUSED", "Email provider rejected the account; sending paused.");
   }
   const recipientKey = createHash("sha256").update(String(mail.to).trim().toLowerCase()).digest("hex");
@@ -114,40 +159,70 @@ async function deliver(tx: Transporter, mail: { to: string; subject: string; tex
     log.warn("EMAIL_RECIPIENT_RATE_LIMITED", { kind, to: maskEmail(mail.to), retryAfterSec: quota.retryAfterSec });
     throw new MailerRefusedError("EMAIL_RECIPIENT_RATE_LIMITED", "Too many emails to this address; try again later.");
   }
-  try {
-    await tx.sendMail({ from: SMTP_FROM, ...mail });
-  } catch (err) {
-    const e = err as { responseCode?: number; code?: string; message?: string };
-    delivery.consecutiveFailures += 1;
-    delivery.lastFailureAt = new Date().toISOString();
-    delivery.lastResponseCode = typeof e?.responseCode === "number" ? e.responseCode : null;
-    const base = {
+
+  let lastErr: unknown = null;
+  for (const sender of ready) {
+    const transport = sender.transport();
+    if (!transport) continue;
+    try {
+      await transport.sendMail({ ...mail, from: sender.from });
+    } catch (err) {
+      lastErr = err;
+      const e = err as { responseCode?: number; code?: string; message?: string };
+      delivery.lastFailureAt = new Date().toISOString();
+      delivery.lastResponseCode = typeof e?.responseCode === "number" ? e.responseCode : null;
+      if (isAccountDisabled(e)) {
+        // Definitive: retrying a disabled account only adds rejected attempts on the provider side.
+        const wasPaused = sender.pausedUntil > 0;
+        sender.pausedUntil = nowMs() + ACCOUNT_DISABLED_PAUSE_MS;
+        if (!wasPaused || nowMs() - delivery.lastAlertAt >= DELIVERY_ALERT_COOLDOWN_MS) {
+          await raiseDeliveryAlert({
+            severity: "CRITICAL",
+            impact: "HIGH",
+            category: "EXTERNAL_API",
+            reason: "ACCOUNT_DISABLED",
+            sender: sender.id,
+            fallbackAvailable: ready.some((s) => s.id !== sender.id),
+            responseCode: delivery.lastResponseCode,
+            errorCode: e?.code ?? null,
+            lastKind: kind,
+            pausedForMin: ACCOUNT_DISABLED_PAUSE_MS / 60_000,
+          });
+        }
+      } else {
+        log.warn("EMAIL_SENDER_FAILED", { sender: sender.id, errorCode: e?.code ?? null, responseCode: delivery.lastResponseCode, kind });
+      }
+      continue; // next sender
+    }
+    sender.pausedUntil = 0;
+    if (delivery.alerted) log.info("EMAIL_DELIVERY_RECOVERED", { afterFailures: delivery.consecutiveFailures, sender: sender.id });
+    delivery.consecutiveFailures = 0;
+    delivery.alerted = false;
+    delivery.lastSuccessAt = new Date().toISOString();
+    log.info(`${kind} email sent`, { to: maskEmail(mail.to), sender: sender.id });
+    return;
+  }
+
+  // Every sender failed for this message.
+  delivery.consecutiveFailures += 1;
+  const e = lastErr as { responseCode?: number; code?: string } | null;
+  if (
+    !(e && isAccountDisabled(e)) &&
+    delivery.consecutiveFailures >= DELIVERY_ALERT_AFTER_FAILURES &&
+    nowMs() - delivery.lastAlertAt >= DELIVERY_ALERT_COOLDOWN_MS
+  ) {
+    await raiseDeliveryAlert({
       severity: "CRITICAL",
       impact: "HIGH",
       category: "EXTERNAL_API",
+      reason: "CONSECUTIVE_FAILURES",
       consecutiveFailures: delivery.consecutiveFailures,
       responseCode: delivery.lastResponseCode,
       errorCode: e?.code ?? null,
       lastKind: kind,
-    };
-    if (isAccountDisabled(e)) {
-      // Definitive: retrying a disabled account only adds rejected attempts on the provider side.
-      const wasPaused = delivery.pausedUntil > 0;
-      delivery.pausedUntil = nowMs() + ACCOUNT_DISABLED_PAUSE_MS;
-      if (!wasPaused || nowMs() - delivery.lastAlertAt >= DELIVERY_ALERT_COOLDOWN_MS) {
-        await raiseDeliveryAlert({ ...base, reason: "ACCOUNT_DISABLED", pausedForMin: ACCOUNT_DISABLED_PAUSE_MS / 60_000 });
-      }
-    } else if (delivery.consecutiveFailures >= DELIVERY_ALERT_AFTER_FAILURES && nowMs() - delivery.lastAlertAt >= DELIVERY_ALERT_COOLDOWN_MS) {
-      await raiseDeliveryAlert({ ...base, reason: "CONSECUTIVE_FAILURES" });
-    }
-    throw err;
+    });
   }
-  delivery.pausedUntil = 0;
-  if (delivery.alerted) log.info("EMAIL_DELIVERY_RECOVERED", { afterFailures: delivery.consecutiveFailures });
-  delivery.consecutiveFailures = 0;
-  delivery.alerted = false;
-  delivery.lastSuccessAt = new Date().toISOString();
-  log.info(`${kind} email sent`, { to: maskEmail(mail.to) });
+  throw lastErr ?? new Error("No email sender available");
 }
 
 export function isSmtpConfigured(): boolean {
