@@ -1,7 +1,7 @@
 export type AdminCheckinMilestone = {
   id: number;
   dayThreshold: number;
-  rewardType: "pol" | "temporary_power" | "machine" | string;
+  rewardType: "pol" | "blk" | "temporary_power" | "machine" | string;
   rewardValue: number;
   validityDays: number;
   displayTitle: string | null;
@@ -25,7 +25,7 @@ export type AdminCheckinMilestonesResponse = {
 
 export type AdminCheckinMilestoneInput = {
   dayThreshold: number;
-  rewardType: "pol" | "temporary_power" | "machine" | string;
+  rewardType: "pol" | "blk" | "temporary_power" | "machine" | string;
   rewardValue: number;
   validityDays?: number;
   durationHours?: number;

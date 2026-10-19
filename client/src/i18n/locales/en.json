@@ -2802,6 +2802,10 @@
         "unknown": {
           "title": "Day {{day}} reward",
           "description": "Special check-in reward."
+        },
+        "blk": {
+          "title": "{{amount}} BLK — day {{day}}",
+          "description": "BLK bonus credited from your check-in streak."
         }
       }
     },
@@ -2885,7 +2889,8 @@
       "streak_reset_warning": "Missing a day will reset your streak to 0"
     },
     "sending_tx": "Sending transaction...",
-    "confirming_tx": "Confirming transaction on the blockchain..."
+    "confirming_tx": "Confirming transaction on the blockchain...",
+    "milestone_reward_blk": "{{value}} BLK"
   },
   "powerBoost": {
     "title": "Power Boost — 7-Day Rewards",

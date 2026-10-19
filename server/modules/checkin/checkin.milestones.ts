@@ -24,6 +24,8 @@ import { computeCheckinStreak } from "./checkin.streak.js";
 const log = logger.child("checkin.milestones");
 
 export const REWARD_POL = "pol";
+/** BLK credited through the reward inbox (same path as POL). */
+export const REWARD_BLK = "blk";
 export const REWARD_TEMPORARY_POWER = "temporary_power";
 export const REWARD_MACHINE = "machine";
 
@@ -32,6 +34,7 @@ export const LEGACY_REWARD_HASHRATE = "hashrate";
 
 export const ALLOWED_MILESTONE_REWARD_TYPES = new Set<string>([
   REWARD_POL,
+  REWARD_BLK,
   REWARD_TEMPORARY_POWER,
   REWARD_MACHINE,
 ]);
@@ -112,7 +115,7 @@ export function parseMilestoneBody(body: unknown): ParsedMilestoneInput {
 
   const rewardType = normalizeMilestoneRewardType(String(b.rewardType ?? ""));
   if (!ALLOWED_MILESTONE_REWARD_TYPES.has(rewardType)) {
-    throw new Error("rewardType must be pol, temporary_power, or machine.");
+    throw new Error("rewardType must be pol, blk, temporary_power, or machine.");
   }
 
   const rewardValue = Number(b.rewardValue ?? 0);
@@ -134,9 +137,10 @@ export function parseMilestoneBody(body: unknown): ParsedMilestoneInput {
   let durationHours: number | null = null;
   let validityDays = 1;
 
-  if (rewardType === REWARD_POL) {
-    if (!(rewardValue > 0)) throw new Error("POL milestone requires rewardValue > 0.");
-    if (minerId != null) throw new Error("POL milestone cannot include minerId.");
+  if (rewardType === REWARD_POL || rewardType === REWARD_BLK) {
+    const unit = rewardType === REWARD_BLK ? "BLK" : "POL";
+    if (!(rewardValue > 0)) throw new Error(`${unit} milestone requires rewardValue > 0.`);
+    if (minerId != null) throw new Error(`${unit} milestone cannot include minerId.`);
   } else if (rewardType === REWARD_TEMPORARY_POWER) {
     if (b.durationHours !== undefined) {
       const dh = Number(b.durationHours);
@@ -218,6 +222,23 @@ async function applyMilestoneRewardInTx(tx: TxClient, userId: number, milestone:
       rewardValue: value,
     });
     log.info("checkin milestone POL reward credited to reward inbox", {
+      userId,
+      milestoneId: milestone.id,
+      rewardType,
+      rewardValue: value,
+    });
+    return;
+  }
+
+  if (rewardType === REWARD_BLK) {
+    if (!(value > 0)) throw new Error("BLK_REWARD_INVALID_AMOUNT");
+    await createRewardInboxEntry(tx, {
+      userId,
+      source: "checkin_milestone",
+      rewardType: REWARD_BLK,
+      rewardValue: value,
+    });
+    log.info("checkin milestone BLK reward credited to reward inbox", {
       userId,
       milestoneId: milestone.id,
       rewardType,

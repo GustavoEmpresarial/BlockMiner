@@ -2805,6 +2805,10 @@
         "unknown": {
           "title": "Recompensa do dia {{day}}",
           "description": "Recompensa especial de check-in."
+        },
+        "blk": {
+          "title": "{{amount}} BLK — dia {{day}}",
+          "description": "Bônus em BLK creditado na sequência de check-in."
         }
       }
     },
@@ -2886,7 +2890,8 @@
       "current_streak": "Sequência atual: {{days}} dias",
       "longest_streak": "Maior sequência: {{days}} dias",
       "streak_reset_warning": "Faltar um dia irá resetar sua sequência para 0"
-    }
+    },
+    "milestone_reward_blk": "{{value}} BLK"
   },
   "powerBoost": {
     "title": "Power Boost — Recompensas de 7 Dias",

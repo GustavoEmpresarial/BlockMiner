@@ -152,6 +152,8 @@ export function normalizeMilestoneRewardType(raw: unknown): CheckinMilestoneRewa
     case 'pol':
     case 'balance':
       return 'pol';
+    case 'blk':
+      return 'blk';
     case 'temporary_power':
     case 'hashrate':
       return 'temporary_power';
@@ -232,6 +234,9 @@ export function milestoneRewardLine(t: CheckinT, m: CheckinMilestone): string {
   const amount = formatPositiveNumber(m.rewardValue ?? m.amount);
   if (rewardType === 'pol' && amount) {
     return String(t('checkin.milestone_reward_pol', { value: amount }));
+  }
+  if (rewardType === 'blk' && amount) {
+    return String(t('checkin.milestone_reward_blk', { value: amount }));
   }
   if (rewardType === 'temporary_power' && amount) {
     const duration = formatMilestoneDurationHours(t, m.durationHours) || '—';

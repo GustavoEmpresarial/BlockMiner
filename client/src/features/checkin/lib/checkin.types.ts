@@ -13,6 +13,7 @@ export type CheckinMilestoneState = 'locked' | 'eligible' | 'claimed' | 'unavail
 
 export type CheckinMilestoneRewardType =
   | 'pol'
+  | 'blk'
   | 'temporary_power'
   | 'machine'
   | 'unavailable'
