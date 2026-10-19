@@ -10,7 +10,15 @@ import { LoginPage, RegisterPage } from '../features/auth';
 import TransparencyErrorBoundary from '../shared/components/TransparencyErrorBoundary';
 import { DashboardPage } from '../features/dashboard/index';
 import { ProtectedLayout, ProtectedNoLayout } from '../features/shell/index';
-import { AdminLayout, adminFeatureRoutes } from '../features/admin/index';
+// These four are already lazy inside features/admin/index — wrapping them again broke /admin/dashboard (React #306).
+import {
+  AdminLayout,
+  AdminOverviewPage,
+  AdminAnalyticsPage,
+  AdminTrafficStatsPage,
+  AdminMetricsPage,
+  adminFeatureRoutes,
+} from '../features/admin/index';
 
 // Pages load on demand (the entry chunk was 765 KB gzip with all 40+ pages and the whole admin).
 // Entry points a visitor lands on first stay in the main bundle.
@@ -64,10 +72,6 @@ const YouTubeWatchPage = lazyWithRetry(() => import('../features/youtube/index')
 const AutoMiningPage = lazyWithRetry(() => import('../features/auto-mining/index').then((m) => ({ default: m.AutoMiningPage })));
 const BurnEventsPage = lazyWithRetry(() => import('../features/burn-events/index').then((m) => ({ default: m.BurnEventsPage })));
 const AdminLoginPage = lazyWithRetry(() => import('../features/admin-auth/index').then((m) => ({ default: m.AdminLoginPage })));
-const AdminOverviewPage = lazyWithRetry(() => import('../features/admin/index').then((m) => ({ default: m.AdminOverviewPage })));
-const AdminAnalyticsPage = lazyWithRetry(() => import('../features/admin/index').then((m) => ({ default: m.AdminAnalyticsPage })));
-const AdminTrafficStatsPage = lazyWithRetry(() => import('../features/admin/index').then((m) => ({ default: m.AdminTrafficStatsPage })));
-const AdminMetricsPage = lazyWithRetry(() => import('../features/admin/index').then((m) => ({ default: m.AdminMetricsPage })));
 
 function RouteFallback() {
   return (
