@@ -16,7 +16,7 @@ export const AVATAR_REMINDERS = [
   { days: 1, title: "Profile photo license expires tomorrow" },
 ] as const;
 
-const MESSAGE = "Renew your US$ 1 license in Settings to keep your profile photo visible.";
+const MESSAGE = "Renew it on the Offers page (US$ 1) or in Settings (US$ 1.50) to keep your profile photo visible.";
 
 export async function runAvatarExpiryReminders(now = new Date()): Promise<{ notified: number }> {
   let notified = 0;

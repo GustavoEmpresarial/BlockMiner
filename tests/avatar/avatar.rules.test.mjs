@@ -51,3 +51,13 @@ test("resolveAvatarUrl: only an active, unblocked license with a server-named fi
   assert.equal(r.resolveAvatarUrl({ ...ok, path: "x.svg" }, now), null);
   assert.equal(r.resolveAvatarUrl(null, now), null);
 });
+
+test("channel prices are fixed server-side: Offers US$ 1, Settings US$ 1.50", () => {
+  assert.deepEqual(r.AVATAR_PRICE_USD, { offers: 1, settings: 1.5 });
+  assert.equal(r.computeLicenseAmount(0.2, r.AVATAR_PRICE_USD.settings).toFixed(8), "7.50000000");
+  assert.equal(r.computeLicenseAmount(3, 1.5).toFixed(8), "0.50000000");
+  assert.equal(r.computeLicenseAmount(0.093, 1).toFixed(8), "10.75268818");
+  assert.equal(r.resolveAvatarChannel("offers"), "offers");
+  for (const v of [undefined, "", "OFFERS", "free", 1]) assert.equal(r.resolveAvatarChannel(v), "settings");
+  assert.throws(() => r.computeLicenseAmount(1, 0));
+});

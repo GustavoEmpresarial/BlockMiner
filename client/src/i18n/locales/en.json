@@ -7248,7 +7248,7 @@
   "profilePhoto": {
     "title": "Profile photo",
     "subtitle": "Show your own photo in the header, chat, rankings and tournaments.",
-    "license_price": "Annual license: US$ 1",
+    "license_price": "Annual license: {{price}}",
     "license_hint": "Paid once a year from your crypto balance (any currency except BLK). Renewal is manual.",
     "pay_with": "Pay with",
     "amount": "Amount",
@@ -7282,6 +7282,11 @@
       "AVATAR_UPLOAD_BLOCKED": "Photo uploads are blocked for this account.",
       "AVATAR_RATE_LIMITED": "Too many uploads. Try again later.",
       "generic": "Something went wrong. Try again."
-    }
+    },
+    "cheaper_in_offers": "Cheaper on the Offers page: {{price}} per year. Buy it there →",
+    "offer_title": "Profile photo license",
+    "offer_description": "Show your own photo in the header, chat, rankings and tournaments for one year.",
+    "per_year": "/ year",
+    "go_to_settings": "Upload your photo in Settings"
   }
 }

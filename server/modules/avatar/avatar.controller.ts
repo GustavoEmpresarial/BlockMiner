@@ -37,11 +37,12 @@ export async function purchaseLicense(req: Request, res: Response): Promise<void
   const user = requireSessionUser(req, res);
   if (!user) return;
   try {
-    const { currency, expectedAmount } = req.body as { currency?: unknown; expectedAmount?: unknown };
+    const { currency, expectedAmount, channel } = req.body as { currency?: unknown; expectedAmount?: unknown; channel?: unknown };
     const result = await avatarService.purchaseAvatarLicense({
       userId: user.id,
       currency,
       expectedAmount,
+      channel,
       idempotencyKey: req.headers["idempotency-key"],
       requestId: requestId(req),
     });

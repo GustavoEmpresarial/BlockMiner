@@ -5,7 +5,18 @@
 import { Prisma } from "@prisma/client";
 import { mediaPublicPath } from "../media/media.config.js";
 
-export const AVATAR_LICENSE_USD = 1;
+/**
+ * Price per sales channel: the Offers page sells the license at US$ 1; buying it straight from
+ * Settings costs US$ 1.50. Always decided here, never taken from the client as an amount.
+ */
+export const AVATAR_CHANNELS = ["offers", "settings"] as const;
+export type AvatarChannel = (typeof AVATAR_CHANNELS)[number];
+export const AVATAR_PRICE_USD: Record<AvatarChannel, number> = { offers: 1, settings: 1.5 };
+export const AVATAR_DEFAULT_CHANNEL: AvatarChannel = "settings";
+
+export function resolveAvatarChannel(v: unknown): AvatarChannel {
+  return typeof v === "string" && (AVATAR_CHANNELS as readonly string[]).includes(v) ? (v as AvatarChannel) : AVATAR_DEFAULT_CHANNEL;
+}
 export const AVATAR_LICENSE_DAYS = 365;
 export const AVATAR_RENEW_WINDOW_DAYS = 30;
 /** Server amount may exceed what the user saw by at most this much before we ask them to re-confirm. */
@@ -31,10 +42,11 @@ export function isAvatarCurrency(v: unknown): v is AvatarCurrency {
 
 const DAY_MS = 86_400_000;
 
-/** US$ 1 / price, rounded UP to 8 decimals (we never undercharge by rounding). */
-export function computeLicenseAmount(usdRate: number): Prisma.Decimal {
+/** USD price / rate, rounded UP to 8 decimals (we never undercharge by rounding). */
+export function computeLicenseAmount(usdRate: number, priceUsd: number = AVATAR_PRICE_USD.offers): Prisma.Decimal {
   if (!Number.isFinite(usdRate) || usdRate <= 0) throw new Error("invalid usd rate");
-  return new Prisma.Decimal(AVATAR_LICENSE_USD).div(new Prisma.Decimal(usdRate)).toDecimalPlaces(8, Prisma.Decimal.ROUND_UP);
+  if (!Number.isFinite(priceUsd) || priceUsd <= 0) throw new Error("invalid usd price");
+  return new Prisma.Decimal(priceUsd).div(new Prisma.Decimal(usdRate)).toDecimalPlaces(8, Prisma.Decimal.ROUND_UP);
 }
 
 /** True when the server amount is within tolerance of the amount the user confirmed. */

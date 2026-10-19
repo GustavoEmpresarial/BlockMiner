@@ -7,6 +7,7 @@ import { IconBadge, StatusPill } from '../../shared/components';
 import { getActiveOfferEvents, postOfferEventPurchase, postOfferFanPurchase, postOfferRackPurchase, postOfferPartPurchase, postOfferPartPackPurchase, readActiveOffersCache, writeActiveOffersCache, clearActiveOffersCache, hasLiveRoomOffers, hasLiveGearOffers, hasLivePartOffers, OFFER_PURCHASE_MAX_QUANTITY, PART_OFFER_MAX_QUANTITY, readGearMaxBulkQuantity, readOfferPurchaseError } from './lib/offers.api';
 import type { OfferEventDTO, OfferEventMinerDTO, RoomOffersDTO, FanOffersDTO, FanOfferItemDTO, RackOffersDTO, PartOffersDTO, PartOfferItemDTO, PartPackDTO } from './lib/offers.api';
 import { PartOffersSection } from './components/PartOffersSection';
+import { AvatarLicenseOfferSection } from './components/AvatarLicenseOfferSection';
 import { OfferMinerModel } from './components/OfferMinerModel';
 import { ShowcaseRoomOnlyNotice } from '../machines/components/ShowcaseRoomOnlyNotice';
 import { CoolingFanUnit } from '../inventory2/components/CoolingFanUnit';
@@ -424,6 +425,8 @@ export default function OffersPage() {
             <GearOffersSection kind="rack" offers={rackOffers} locale={offerDateLocale} buying={buying} onBuy={openGearModal} />
 
             <PartOffersSection offers={partOffers} buying={buying} onBuyPart={openPartModal} onBuyPack={openPackModal} />
+
+            <AvatarLicenseOfferSection />
 
             {hasLiveRoomOffers(roomOffers) && (
                 <div className="space-y-6">

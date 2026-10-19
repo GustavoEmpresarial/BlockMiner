@@ -1,20 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Camera, Loader2, ShieldAlert, Trash2, Upload } from 'lucide-react';
 import SectionHeader from '../../../shared/components/SectionHeader';
 import UserAvatar from '../../../shared/components/UserAvatar';
 import { useMyAvatar } from '../../../shared/hooks/useMyAvatar';
-import {
-  avatarErrorCode,
-  deleteAvatarPhoto,
-  fetchAvatarStatus,
-  newIdempotencyKey,
-  purchaseAvatarLicense,
-  uploadAvatarPhoto,
-  type AvatarCurrency,
-  type AvatarStatus,
-} from '../lib/avatar.api';
+import AvatarLicensePurchase from './AvatarLicensePurchase';
+import { avatarErrorCode, deleteAvatarPhoto, fetchAvatarStatus, uploadAvatarPhoto, type AvatarStatus } from '../lib/avatar.api';
 
 const MAX_BYTES = 2 * 1024 * 1024;
 const ACCEPT = 'image/png,image/jpeg,image/webp,image/gif';
@@ -32,14 +25,15 @@ export function profilePhotoState(status: AvatarStatus | null, now = Date.now())
 
 type Props = { displayName: string };
 
+export function formatUsd(v: number): string {
+  return `US$ ${Number.isInteger(v) ? v : v.toFixed(2)}`;
+}
+
 export default function ProfilePhotoCard({ displayName }: Props) {
   const { t, i18n } = useTranslation();
   const setMyAvatar = useMyAvatar((s) => s.setAvatarUrl);
   const [status, setStatus] = useState<AvatarStatus | null>(null);
-  const [currency, setCurrency] = useState<AvatarCurrency>('POL');
-  const [confirming, setConfirming] = useState(false);
-  const [busy, setBusy] = useState<'buy' | 'upload' | 'remove' | null>(null);
-  const attemptKey = useRef<string | null>(null);
+  const [busy, setBusy] = useState<'upload' | 'remove' | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
   const errorText = useCallback(
@@ -65,32 +59,10 @@ export default function ProfilePhotoCard({ displayName }: Props) {
   }, [refresh]);
 
   const state = profilePhotoState(status);
-  const quote = status?.quotes.find((q) => q.currency === currency) ?? null;
   const formatDate = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString(i18n.language || 'en') : '');
   const canBuy = state === 'no_license' || state === 'expired' || (state === 'expiring' && Boolean(status?.canRenew));
-  const hasBalance = quote?.amount != null && Number(quote.balance) >= Number(quote.amount);
-
-  async function handleBuy() {
-    if (!quote?.amount || busy) return;
-    if (!confirming) {
-      attemptKey.current = newIdempotencyKey();
-      setConfirming(true);
-      return;
-    }
-    setBusy('buy');
-    try {
-      await purchaseAvatarLicense(currency, quote.amount, attemptKey.current ?? newIdempotencyKey());
-      toast.success(t('profilePhoto.purchased'));
-      setConfirming(false);
-      attemptKey.current = null;
-    } catch (err) {
-      toast.error(errorText(err));
-      if (avatarErrorCode(err) === 'AVATAR_QUOTE_CHANGED') attemptKey.current = newIdempotencyKey();
-    } finally {
-      setBusy(null);
-      await refresh();
-    }
-  }
+  const settingsPrice = status?.prices?.settings ?? status?.priceUsd ?? 1.5;
+  const offersPrice = status?.prices?.offers ?? 1;
 
   async function handleFile(file: File | undefined) {
     if (!file || busy) return;
@@ -157,66 +129,22 @@ export default function ProfilePhotoCard({ displayName }: Props) {
       {canBuy && status && (
         <div className="space-y-3 rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
           <div>
-            <p className="text-sm font-black text-white">{t('profilePhoto.license_price')}</p>
+            <p className="text-sm font-black text-white">{t('profilePhoto.license_price', { price: formatUsd(settingsPrice) })}</p>
             <p className="text-[11px] text-slate-400">{t('profilePhoto.license_hint')}</p>
           </div>
-          <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400" htmlFor="avatar-currency">
-            {t('profilePhoto.pay_with')}
-          </label>
-          <select
-            id="avatar-currency"
-            value={currency}
-            disabled={busy != null}
-            onChange={(e) => {
-              setCurrency(e.target.value as AvatarCurrency);
-              setConfirming(false);
-            }}
-            className="w-full rounded-xl border-2 border-slate-700 bg-slate-950 px-3 py-2 text-sm font-bold text-white focus:border-primary focus:outline-none"
+          <Link
+            to="/offers"
+            data-testid="avatar-offers-link"
+            className="block rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-300 hover:bg-emerald-500/20"
           >
-            {status.quotes.map((q) => (
-              <option key={q.currency} value={q.currency}>
-                {q.currency}
-              </option>
-            ))}
-          </select>
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <div>
-              <span className="block text-[10px] font-black uppercase tracking-widest text-slate-500">{t('profilePhoto.amount')}</span>
-              <span className="font-mono font-bold text-white" data-testid="avatar-amount">
-                {quote?.amount ? `${quote.amount} ${currency}` : t('profilePhoto.price_unavailable')}
-              </span>
-            </div>
-            <div>
-              <span className="block text-[10px] font-black uppercase tracking-widest text-slate-500">{t('profilePhoto.your_balance')}</span>
-              <span className={`font-mono font-bold ${hasBalance ? 'text-slate-200' : 'text-red-400'}`}>{quote ? `${quote.balance} ${currency}` : '-'}</span>
-            </div>
-          </div>
-          {confirming && quote?.amount && (
-            <p className="text-xs font-bold text-amber-300" data-testid="avatar-confirm">
-              {t('profilePhoto.confirm_buy', { amount: quote.amount, currency })}
-            </p>
-          )}
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => void handleBuy()}
-              disabled={busy != null || !quote?.amount || !hasBalance}
-              className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-xs font-black uppercase tracking-wider text-white shadow-[2px_2px_0px_#000000] transition-all hover:bg-blue-700 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-            >
-              {busy === 'buy' ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              {busy === 'buy' ? t('profilePhoto.buying') : confirming ? t('common.confirm') : state === 'expiring' ? t('profilePhoto.renew') : t('profilePhoto.buy')}
-            </button>
-            {confirming && (
-              <button
-                type="button"
-                onClick={() => setConfirming(false)}
-                disabled={busy != null}
-                className="rounded-xl border-2 border-slate-700 px-4 py-3 text-xs font-black uppercase tracking-wider text-slate-300 hover:text-white"
-              >
-                {t('common.cancel')}
-              </button>
-            )}
-          </div>
+            {t('profilePhoto.cheaper_in_offers', { price: formatUsd(offersPrice) })}
+          </Link>
+          <AvatarLicensePurchase
+            status={status}
+            channel="settings"
+            ctaLabel={state === 'expiring' ? t('profilePhoto.renew') : t('profilePhoto.buy')}
+            onDone={refresh}
+          />
         </div>
       )}
 

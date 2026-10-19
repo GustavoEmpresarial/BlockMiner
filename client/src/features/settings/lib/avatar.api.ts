@@ -4,9 +4,24 @@ import { api } from '../../../shared/auth/auth.store';
 export const AVATAR_CURRENCIES = ['POL', 'USDT', 'USDC', 'BTC', 'ETH', 'SHIB'] as const;
 export type AvatarCurrency = (typeof AVATAR_CURRENCIES)[number];
 
-export type AvatarQuote = { currency: AvatarCurrency; amount: string | null; balance: string };
+export type AvatarChannel = 'offers' | 'settings';
+export type AvatarQuote = {
+  currency: AvatarCurrency;
+  /** Settings price. */
+  amount: string | null;
+  amounts?: Partial<Record<AvatarChannel, string | null>>;
+  balance: string;
+};
+
+export function quoteAmount(q: AvatarQuote | null | undefined, channel: AvatarChannel): string | null {
+  if (!q) return null;
+  const v = q.amounts?.[channel];
+  if (v !== undefined) return v;
+  return channel === 'settings' ? q.amount : null;
+}
 export type AvatarStatus = {
   priceUsd: number;
+  prices?: Partial<Record<AvatarChannel, number>>;
   licenseActive: boolean;
   licenseExpiresAt: string | null;
   canRenew: boolean;
@@ -17,6 +32,7 @@ export type AvatarStatus = {
 
 export async function fetchAvatarStatus(): Promise<AvatarStatus> {
   const res = await api.get<{ ok: boolean } & AvatarStatus>('/avatar');
+  if (!res.data || !Array.isArray(res.data.quotes)) throw new Error('AVATAR_STATUS_INVALID');
   return res.data;
 }
 
@@ -27,10 +43,15 @@ export function newIdempotencyKey(): string {
   return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-export async function purchaseAvatarLicense(currency: AvatarCurrency, expectedAmount: string, idempotencyKey: string) {
+export async function purchaseAvatarLicense(
+  currency: AvatarCurrency,
+  expectedAmount: string,
+  idempotencyKey: string,
+  channel: AvatarChannel = 'settings',
+) {
   const res = await api.post<{ ok: boolean; expiresAt: string }>(
     '/avatar/license',
-    { currency, expectedAmount },
+    { currency, expectedAmount, channel },
     { headers: { 'Idempotency-Key': idempotencyKey } },
   );
   return res.data;

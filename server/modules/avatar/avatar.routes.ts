@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireAuth } from "../../core/http/middleware/auth.js";
 import { createRateLimiter } from "../../core/http/middleware/rateLimit.js";
 import { validateBody } from "../../core/http/middleware/validate.js";
-import { AVATAR_CURRENCIES } from "./avatar.rules.js";
+import { AVATAR_CHANNELS, AVATAR_CURRENCIES } from "./avatar.rules.js";
 import * as avatarController from "./avatar.controller.js";
 
 export const avatarRouter: Router = express.Router();
@@ -15,6 +15,7 @@ export const avatarPurchaseSchema = z
   .object({
     currency: z.enum(AVATAR_CURRENCIES),
     expectedAmount: z.union([z.string().trim().max(40), z.number()]),
+    channel: z.enum(AVATAR_CHANNELS).optional(),
   })
   .strict();
 

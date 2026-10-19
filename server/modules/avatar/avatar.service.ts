@@ -17,7 +17,8 @@ import { getAvatarUsdRate } from "./avatar.pricing.js";
 import {
   AVATAR_BALANCE_COLUMN,
   AVATAR_CURRENCIES,
-  AVATAR_LICENSE_USD,
+  AVATAR_CHANNELS,
+  AVATAR_PRICE_USD,
   AVATAR_MEDIA_CATEGORY,
   computeLicenseAmount,
   isAvatarCurrency,
@@ -25,7 +26,9 @@ import {
   isLicenseActive,
   nextLicenseExpiry,
   quoteStillValid,
+  resolveAvatarChannel,
   resolveAvatarUrl,
+  type AvatarChannel,
   type AvatarCurrency,
 } from "./avatar.rules.js";
 
@@ -57,16 +60,22 @@ export async function getAvatarStatus(userId: number, now = new Date()) {
     AVATAR_CURRENCIES.map(async (currency) => {
       const rate = await getAvatarUsdRate(currency);
       const balanceKey = `${currency.toLowerCase()}Balance` as keyof NonNullable<typeof balances>;
+      const amounts = Object.fromEntries(
+        AVATAR_CHANNELS.map((ch) => [ch, rate ? computeLicenseAmount(rate, AVATAR_PRICE_USD[ch]).toFixed(8) : null]),
+      ) as Record<AvatarChannel, string | null>;
       return {
         currency,
-        amount: rate ? computeLicenseAmount(rate).toFixed(8) : null,
+        /** Settings price (kept as `amount` for the Settings card). */
+        amount: amounts.settings,
+        amounts,
         balance: balances ? new Prisma.Decimal(balances[balanceKey] ?? 0).toFixed(8) : "0.00000000",
       };
     }),
   );
   const expiresAt = row?.licenseExpiresAt ?? null;
   return {
-    priceUsd: AVATAR_LICENSE_USD,
+    priceUsd: AVATAR_PRICE_USD.settings,
+    prices: AVATAR_PRICE_USD,
     licenseActive: isLicenseActive(expiresAt, now),
     licenseExpiresAt: expiresAt ? expiresAt.toISOString() : null,
     canRenew: nextLicenseExpiry(now, expiresAt) != null,
@@ -89,6 +98,7 @@ export async function purchaseAvatarLicense(input: {
   currency: unknown;
   expectedAmount: unknown;
   idempotencyKey: unknown;
+  channel?: unknown;
   requestId?: string | null;
   now?: Date;
 }): Promise<LicensePurchaseResult> {
@@ -100,7 +110,9 @@ export async function purchaseAvatarLicense(input: {
 
   const usdRate = await getAvatarUsdRate(currency);
   if (usdRate == null) throw new AvatarError("AVATAR_PRICE_UNAVAILABLE");
-  const amount = computeLicenseAmount(usdRate);
+  const channel = resolveAvatarChannel(input.channel);
+  const priceUsd = AVATAR_PRICE_USD[channel];
+  const amount = computeLicenseAmount(usdRate, priceUsd);
   const column = AVATAR_BALANCE_COLUMN[currency];
 
   const result = await prisma.$transaction(async (tx) => {
@@ -125,7 +137,7 @@ export async function purchaseAvatarLicense(input: {
     if (debited !== 1) throw new AvatarError("AVATAR_INSUFFICIENT_BALANCE");
 
     const license = await tx.avatarLicense.create({
-      data: { userId, currency, amount, usdRate: new Prisma.Decimal(usdRate), startsAt: now, expiresAt, idempotencyKey },
+      data: { userId, currency, amount, usdRate: new Prisma.Decimal(usdRate), usdPrice: new Prisma.Decimal(priceUsd), startsAt: now, expiresAt, idempotencyKey },
     });
     await tx.userAvatar.upsert({
       where: { userId },
@@ -137,11 +149,11 @@ export async function purchaseAvatarLicense(input: {
         userId,
         type: "avatar_license",
         amount,
-        rawTx: JSON.stringify({ asset: currency, licenseId: license.id }),
+        rawTx: JSON.stringify({ asset: currency, licenseId: license.id, channel }),
         status: "completed",
         completedAt: now,
         usdRateAtConfirmation: new Prisma.Decimal(usdRate),
-        usdValueAtConfirmation: new Prisma.Decimal(AVATAR_LICENSE_USD),
+        usdValueAtConfirmation: new Prisma.Decimal(priceUsd),
       },
     });
     return { licenseId: license.id, currency, amount: amount.toFixed(8), expiresAt: expiresAt.toISOString(), replayed: false };
@@ -150,7 +162,7 @@ export async function purchaseAvatarLicense(input: {
   if (!result.replayed) {
     invalidateBalanceCache(userId);
     invalidateAuthUserCache(userId);
-    log.info("avatar.license.purchased", { userId, licenseId: result.licenseId, currency, amount: result.amount, usdRate, expiresAt: result.expiresAt, requestId: input.requestId ?? null });
+    log.info("avatar.license.purchased", { userId, licenseId: result.licenseId, channel, priceUsd, currency, amount: result.amount, usdRate, expiresAt: result.expiresAt, requestId: input.requestId ?? null });
   }
   return result;
 }

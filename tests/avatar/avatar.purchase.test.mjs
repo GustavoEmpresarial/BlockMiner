@@ -90,8 +90,8 @@ function reset(userId, balances) {
   db.avatars.delete(userId);
   db.licenses = db.licenses.filter((l) => l.userId !== userId);
 }
-const buy = (userId, currency, expectedAmount, idempotencyKey = key()) =>
-  svc.purchaseAvatarLicense({ userId, currency, expectedAmount, idempotencyKey, now });
+const buy = (userId, currency, expectedAmount, idempotencyKey = key(), channel = "offers") =>
+  svc.purchaseAvatarLicense({ userId, currency, expectedAmount, idempotencyKey, channel, now });
 
 test("buys with POL: debits exactly US$ 1 worth, sets a 365-day license, writes the ledger row", async () => {
   reset(1, { pol_balance: 10 });
@@ -103,7 +103,7 @@ test("buys with POL: debits exactly US$ 1 worth, sets a 365-day license, writes 
   assert.equal(db.avatars.get(1).licenseExpiresAt.toISOString(), r.expiresAt);
   const ledger = db.txs.at(-1);
   assert.equal(ledger.type, "avatar_license");
-  assert.deepEqual(JSON.parse(ledger.rawTx), { asset: "POL", licenseId: r.licenseId });
+  assert.deepEqual(JSON.parse(ledger.rawTx), { asset: "POL", licenseId: r.licenseId, channel: "offers" });
   assert.ok(invalidated.includes(1));
 });
 
@@ -189,4 +189,33 @@ test("a missing or malformed Idempotency-Key is refused", async () => {
     await assert.rejects(svc.purchaseAvatarLicense({ userId: 10, currency: "POL", expectedAmount: "5", idempotencyKey: k, now }), (e) => e.code === "AVATAR_IDEMPOTENCY_KEY_INVALID");
   }
   assert.equal(db.balances.get(10).pol_balance, 20);
+});
+
+test("price by channel: Offers US$ 1, Settings US$ 1.50 (default when no channel is sent)", async () => {
+  reset(11, { pol_balance: 100 });
+  const viaSettings = await svc.purchaseAvatarLicense({ userId: 11, currency: "POL", expectedAmount: "7.5", idempotencyKey: key(), now });
+  assert.equal(viaSettings.amount, "7.50000000");
+  assert.equal(db.licenses.find((l) => l.id === viaSettings.licenseId).usdPrice.toString(), "1.5");
+  assert.equal(JSON.parse(db.txs.at(-1).rawTx).channel, "settings");
+  assert.equal(db.txs.at(-1).usdValueAtConfirmation.toString(), "1.5");
+  assert.equal(db.balances.get(11).pol_balance, 92.5);
+
+  reset(12, { pol_balance: 100 });
+  const viaOffers = await buy(12, "POL", "5");
+  assert.equal(viaOffers.amount, "5.00000000");
+  assert.equal(JSON.parse(db.txs.at(-1).rawTx).channel, "offers");
+});
+
+test("a Settings purchase cannot be passed off at the Offers amount", async () => {
+  reset(13, { pol_balance: 100 });
+  await assert.rejects(
+    svc.purchaseAvatarLicense({ userId: 13, currency: "POL", expectedAmount: "5", idempotencyKey: key(), channel: "settings", now }),
+    (e) => e.code === "AVATAR_QUOTE_CHANGED",
+  );
+  await assert.rejects(
+    svc.purchaseAvatarLicense({ userId: 13, currency: "POL", expectedAmount: "5", idempotencyKey: key(), channel: "free", now }),
+    (e) => e.code === "AVATAR_QUOTE_CHANGED",
+    "an unknown channel is priced as Settings",
+  );
+  assert.equal(db.balances.get(13).pol_balance, 100);
 });

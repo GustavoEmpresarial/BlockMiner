@@ -7252,7 +7252,7 @@
   "profilePhoto": {
     "title": "Foto de perfil",
     "subtitle": "Mostre sua própria foto no cabeçalho, no chat, nos rankings e nos torneios.",
-    "license_price": "Licença anual: US$ 1",
+    "license_price": "Licença anual: {{price}}",
     "license_hint": "Paga uma vez por ano com seu saldo em cripto (qualquer moeda, menos BLK). A renovação é manual.",
     "pay_with": "Pagar com",
     "amount": "Valor",
@@ -7286,6 +7286,11 @@
       "AVATAR_UPLOAD_BLOCKED": "O envio de foto está bloqueado para esta conta.",
       "AVATAR_RATE_LIMITED": "Muitos envios. Tente mais tarde.",
       "generic": "Algo deu errado. Tente de novo."
-    }
+    },
+    "cheaper_in_offers": "Mais barato em Ofertas: {{price}} por ano. Compre lá →",
+    "offer_title": "Licença de foto de perfil",
+    "offer_description": "Mostre sua própria foto no cabeçalho, no chat, nos rankings e nos torneios por um ano.",
+    "per_year": "/ ano",
+    "go_to_settings": "Enviar sua foto nas Configurações"
   }
 }
