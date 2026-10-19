@@ -2,7 +2,7 @@
 import prisma from "../../core/database/prisma.js";
 import { logger } from "../../core/logger/index.js";
 import { isAdminKeyedPasswordResetApiEnabled } from "../../shared/security/adminPasswordResetPolicy.js";
-import { isSmtpConfigured, sendPasswordResetEmail, sendEmailVerificationEmail } from "../../shared/security/mailer.js";
+import { isSmtpConfigured, maskEmail, sendPasswordResetEmail, sendEmailVerificationEmail } from "../../shared/security/mailer.js";
 import { timingSafeAdminSecretEqual } from "../../shared/security/cookies.js";
 import { unknownErrorMessage } from "../../shared/errors/prismaHttpErrors.js";
 import { requireSessionUser } from "../../shared/errors/httpStatusError.js";
@@ -80,7 +80,7 @@ export async function forgotPasswordPost(req, res) {
                 // Do not reveal whether the account exists.
             }
             else {
-                log.warn("Password reset requested but SMTP is not configured; no email sent.", { normalizedEmail });
+                log.warn("Password reset requested but SMTP is not configured; no email sent.", { to: maskEmail(normalizedEmail) });
             }
             res.json({ ok: true, message: "Se o email existe, você receberá instruções de redefinição." });
             return;
@@ -98,10 +98,10 @@ export async function forgotPasswordPost(req, res) {
                 resetUrl,
                 ttlMinutes: Number(String(PASSWORD_RESET_TOKEN_TTL).replace(/[^0-9]/g, "")) || 20,
             });
-            log.info(`Password reset requested for email: ${normalizedEmail}`);
+            log.info("Password reset requested", { to: maskEmail(normalizedEmail) });
         }
         catch (sendError) {
-            log.error("Password reset email send failed", { normalizedEmail, error: unknownErrorMessage(sendError) });
+            log.error("Password reset email send failed", { to: maskEmail(normalizedEmail), errorCode: sendError?.code ?? null, error: unknownErrorMessage(sendError) });
         }
         res.json({ ok: true, message: "Se o email existe, você receberá instruções de redefinição." });
     }
@@ -136,7 +136,7 @@ export async function adminForcePasswordResetPost(req, res) {
         }
         const newPasswordHash = await hashPassword(String(newPassword), 10);
         await prisma.user.update({ where: { id: user.id }, data: { passwordHash: newPasswordHash } });
-        log.info(`[ADMIN] Force password reset completed for email: ${normalizedEmail}`);
+        log.info("[ADMIN] Force password reset completed", { to: maskEmail(normalizedEmail) });
         res.json({ ok: true, message: "Senha redefinida com sucesso." });
     }
     catch (error) {
@@ -230,7 +230,11 @@ export async function resendVerificationPost(req, res) {
         try {
             await sendEmailVerificationEmail({ to: user.email, name: user.name, verifyUrl });
         } catch (sendErr) {
-            log.error("Resend verification email send failed", { error: unknownErrorMessage(sendErr), userId: user.id });
+            if (sendErr?.code === "EMAIL_RECIPIENT_RATE_LIMITED") {
+                res.status(429).json({ ok: false, code: "EMAIL_RECIPIENT_RATE_LIMITED", message: "Muitos e-mails enviados para este endereço. Tente novamente em uma hora." });
+                return;
+            }
+            log.error("Resend verification email send failed", { errorCode: sendErr?.code ?? null, error: unknownErrorMessage(sendErr), userId: user.id });
             res.status(503).json({
                 ok: false,
                 code: "EMAIL_SEND_FAILED",

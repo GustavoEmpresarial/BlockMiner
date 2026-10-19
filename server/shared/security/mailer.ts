@@ -9,7 +9,9 @@
 import nodemailer from "nodemailer";
 import type { Transporter } from "nodemailer";
 import { logger } from "../../core/logger/index.js";
+import { createHash } from "node:crypto";
 import { createGenericTelegramOutboxEvent } from "../../modules/notifications/telegram.service.js";
+import { slidingWindowAllow, __resetSlidingWindowMemoryForTests } from "../../core/http/middleware/distributedRateLimit.js";
 
 const log = logger.child("Mailer");
 
@@ -40,51 +42,107 @@ function escapeHtml(v: string): string {
  */
 const DELIVERY_ALERT_AFTER_FAILURES = 3;
 const DELIVERY_ALERT_COOLDOWN_MS = 30 * 60_000;
+/** After the provider says the account is disabled, stop hitting it; one probe per window. */
+const ACCOUNT_DISABLED_PAUSE_MS = 30 * 60_000;
+/** Any single address (reset / verification / 2FA together): blocks mail-bombing a victim, which is
+ *  exactly what gets a sending account flagged. Generous for a real user. */
+export const EMAIL_PER_RECIPIENT_MAX_PER_HOUR = 5;
+let clockSkewForTests = 0;
+const nowMs = () => Date.now() + clockSkewForTests;
 const delivery = {
   consecutiveFailures: 0,
   alerted: false,
   lastAlertAt: 0,
+  pausedUntil: 0,
   lastFailureAt: null as string | null,
   lastSuccessAt: null as string | null,
   lastResponseCode: null as number | null,
 };
 
 export function getEmailDeliveryHealth() {
-  const { alerted: _a, lastAlertAt: _l, ...pub } = delivery;
-  return { ...pub, failing: delivery.consecutiveFailures >= DELIVERY_ALERT_AFTER_FAILURES };
+  const { alerted: _a, lastAlertAt: _l, pausedUntil, ...pub } = delivery;
+  return {
+    ...pub,
+    failing: delivery.consecutiveFailures >= DELIVERY_ALERT_AFTER_FAILURES || pausedUntil > nowMs(),
+    paused: pausedUntil > nowMs(),
+    pausedUntil: pausedUntil > nowMs() ? new Date(pausedUntil).toISOString() : null,
+  };
 }
 
 /** @internal tests only */
 export function __resetEmailDeliveryForTests(): void {
-  Object.assign(delivery, { consecutiveFailures: 0, alerted: false, lastAlertAt: 0, lastFailureAt: null, lastSuccessAt: null, lastResponseCode: null });
+  clockSkewForTests = 0;
+  Object.assign(delivery, { consecutiveFailures: 0, alerted: false, lastAlertAt: 0, pausedUntil: 0, lastFailureAt: null, lastSuccessAt: null, lastResponseCode: null });
+  __resetSlidingWindowMemoryForTests();
+}
+
+/** @internal tests only */
+export function __advanceEmailPauseForTests(ms: number): void {
+  clockSkewForTests += ms;
+}
+
+class MailerRefusedError extends Error {
+  constructor(public code: "EMAIL_SENDING_DISABLED" | "EMAIL_SENDING_PAUSED" | "EMAIL_RECIPIENT_RATE_LIMITED", message: string) {
+    super(message);
+    this.name = "MailerRefusedError";
+  }
+}
+
+function isAccountDisabled(e: { responseCode?: number; message?: string }): boolean {
+  return e?.responseCode === 554 || /outbound sending is disabled|5\.7\.1/i.test(String(e?.message || ""));
+}
+
+async function raiseDeliveryAlert(details: Record<string, unknown>): Promise<void> {
+  delivery.lastAlertAt = nowMs();
+  delivery.alerted = true;
+  log.error("EMAIL_DELIVERY_FAILING", details);
+  await createGenericTelegramOutboxEvent("email_delivery_failing", details, { usernameSnapshot: "system" }).catch(() => undefined);
 }
 
 async function deliver(tx: Transporter, mail: { to: string; subject: string; text: string; html: string }, kind: string): Promise<void> {
+  if (process.env.EMAIL_SENDING_DISABLED === "1") {
+    log.warn("EMAIL_SENDING_DISABLED", { kind, to: maskEmail(mail.to) });
+    throw new MailerRefusedError("EMAIL_SENDING_DISABLED", "Email sending is switched off (EMAIL_SENDING_DISABLED=1).");
+  }
+  if (delivery.pausedUntil > nowMs()) {
+    log.warn("EMAIL_SENDING_PAUSED", { kind, to: maskEmail(mail.to), pausedUntil: new Date(delivery.pausedUntil).toISOString() });
+    throw new MailerRefusedError("EMAIL_SENDING_PAUSED", "Email provider rejected the account; sending paused.");
+  }
+  const recipientKey = createHash("sha256").update(String(mail.to).trim().toLowerCase()).digest("hex");
+  const quota = await slidingWindowAllow({ dedupeKey: recipientKey, windowMs: 60 * 60_000, max: EMAIL_PER_RECIPIENT_MAX_PER_HOUR, redisPrefix: "mail:rcpt" });
+  if (!quota.ok) {
+    log.warn("EMAIL_RECIPIENT_RATE_LIMITED", { kind, to: maskEmail(mail.to), retryAfterSec: quota.retryAfterSec });
+    throw new MailerRefusedError("EMAIL_RECIPIENT_RATE_LIMITED", "Too many emails to this address; try again later.");
+  }
   try {
     await tx.sendMail({ from: SMTP_FROM, ...mail });
   } catch (err) {
-    const e = err as { responseCode?: number; code?: string };
+    const e = err as { responseCode?: number; code?: string; message?: string };
     delivery.consecutiveFailures += 1;
     delivery.lastFailureAt = new Date().toISOString();
     delivery.lastResponseCode = typeof e?.responseCode === "number" ? e.responseCode : null;
-    const now = Date.now();
-    if (delivery.consecutiveFailures >= DELIVERY_ALERT_AFTER_FAILURES && now - delivery.lastAlertAt >= DELIVERY_ALERT_COOLDOWN_MS) {
-      delivery.lastAlertAt = now;
-      delivery.alerted = true;
-      const details = {
-        severity: "CRITICAL",
-        impact: "HIGH",
-        category: "EXTERNAL_API",
-        consecutiveFailures: delivery.consecutiveFailures,
-        responseCode: delivery.lastResponseCode,
-        errorCode: e?.code ?? null,
-        lastKind: kind,
-      };
-      log.error("EMAIL_DELIVERY_FAILING", details);
-      await createGenericTelegramOutboxEvent("email_delivery_failing", details, { usernameSnapshot: "system" }).catch(() => undefined);
+    const base = {
+      severity: "CRITICAL",
+      impact: "HIGH",
+      category: "EXTERNAL_API",
+      consecutiveFailures: delivery.consecutiveFailures,
+      responseCode: delivery.lastResponseCode,
+      errorCode: e?.code ?? null,
+      lastKind: kind,
+    };
+    if (isAccountDisabled(e)) {
+      // Definitive: retrying a disabled account only adds rejected attempts on the provider side.
+      const wasPaused = delivery.pausedUntil > 0;
+      delivery.pausedUntil = nowMs() + ACCOUNT_DISABLED_PAUSE_MS;
+      if (!wasPaused || nowMs() - delivery.lastAlertAt >= DELIVERY_ALERT_COOLDOWN_MS) {
+        await raiseDeliveryAlert({ ...base, reason: "ACCOUNT_DISABLED", pausedForMin: ACCOUNT_DISABLED_PAUSE_MS / 60_000 });
+      }
+    } else if (delivery.consecutiveFailures >= DELIVERY_ALERT_AFTER_FAILURES && nowMs() - delivery.lastAlertAt >= DELIVERY_ALERT_COOLDOWN_MS) {
+      await raiseDeliveryAlert({ ...base, reason: "CONSECUTIVE_FAILURES" });
     }
     throw err;
   }
+  delivery.pausedUntil = 0;
   if (delivery.alerted) log.info("EMAIL_DELIVERY_RECOVERED", { afterFailures: delivery.consecutiveFailures });
   delivery.consecutiveFailures = 0;
   delivery.alerted = false;
