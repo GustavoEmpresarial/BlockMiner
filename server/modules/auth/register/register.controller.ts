@@ -37,7 +37,7 @@ import { provisionFirstRoomTx } from "../../rooms/index.js";
 import { authBlockVpnProxy, evaluateAnonymousIp, getCachedIpIntelligence } from "../../ip-intelligence/index.js";
 import { loginClientIp } from "../login/login.anonymous-ip.js";
 import { buildDeviceFingerprint, getAuthIpContext, evaluateRegistrationAttempt, recordUserIpLog } from "./register.risk.js";
-import { signEmailVerificationToken, APP_URL } from "../auth.service.js";
+import { signEmailVerificationToken, APP_URL, EMAIL_VERIFICATION_TOKEN_TTL, ttlToMinutes } from "../auth.service.js";
 import { sendEmailVerificationEmail } from "../../../shared/security/mailer.js";
 import { isDisposableEmail } from "../../../shared/security/disposableEmail.js";
 import { evaluateReferralLinkFraud } from "../../referrals/referrals.anti-abuse.js";
@@ -262,7 +262,7 @@ export async function registerPost(req: Request, res: Response): Promise<void> {
     // do projeto — ver forgot-password/2FA).
     const verifyToken = signEmailVerificationToken(result.id);
     const verifyUrl = `${APP_URL.replace(/\/$/, "")}/verify-email?token=${encodeURIComponent(verifyToken)}`;
-    sendEmailVerificationEmail({ to: result.email, name: result.name, verifyUrl }).catch((sendErr: unknown) => {
+    sendEmailVerificationEmail({ to: result.email, name: result.name, verifyUrl, ttlMinutes: ttlToMinutes(EMAIL_VERIFICATION_TOKEN_TTL, 1440) }).catch((sendErr: unknown) => {
       reportError({
         code: "REGISTER_VERIFICATION_EMAIL_FAILED",
         category: "EXTERNAL_API",

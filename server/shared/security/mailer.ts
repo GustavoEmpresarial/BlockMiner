@@ -242,6 +242,83 @@ function getTransporter(): Transporter | null {
   return transporter;
 }
 
+/** 20 -> "20 minutes", 60 -> "1 hour", 1440 -> "24 hours", 4320 -> "3 days". */
+export function formatExpiry(minutes: number): string {
+  const m = Math.max(1, Math.round(Number(minutes) || 0));
+  const plural = (n: number, unit: string) => `${n} ${unit}${n === 1 ? "" : "s"}`;
+  if (m < 60) return plural(m, "minute");
+  if (m <= 48 * 60 || m % 1440 !== 0) return plural(Math.round(m / 60), "hour");
+  return plural(m / 1440, "day");
+}
+
+type EmailContent = {
+  title: string;
+  /** Inbox preview line (hidden in the body). */
+  preheader: string;
+  name: string;
+  lines: string[];
+  action?: { label: string; url: string };
+  code?: string;
+  expiry: string;
+  footnote: string;
+};
+
+/**
+ * One layout for every transactional email (English only). Everything user-controlled is escaped;
+ * the action URL is also printed as text so it still works where buttons are stripped.
+ */
+export function renderEmail(c: EmailContent): { html: string; text: string } {
+  const e = escapeHtml;
+  const greeting = `Hi ${c.name || "Miner"},`;
+  const button = c.action
+    ? `<tr><td style="padding:8px 0 20px 0;"><a href="${e(c.action.url)}" style="display:inline-block;background:#3b82f6;color:#ffffff;text-decoration:none;padding:13px 22px;border-radius:10px;font-weight:700;font-size:15px;">${e(c.action.label)}</a></td></tr>
+          <tr><td style="padding:0 0 18px 0;color:#94a3b8;font-size:12px;line-height:18px;">If the button does not work, copy this link into your browser:<br><a href="${e(c.action.url)}" style="color:#60a5fa;word-break:break-all;">${e(c.action.url)}</a></td></tr>`
+    : "";
+  const code = c.code
+    ? `<tr><td style="padding:4px 0 20px 0;"><div style="display:inline-block;background:#020617;border:1px solid #334155;border-radius:10px;padding:12px 20px;font-family:'Courier New',monospace;font-size:30px;letter-spacing:6px;font-weight:700;color:#f8fafc;">${e(c.code)}</div></td></tr>`
+    : "";
+  const body = c.lines.map((l) => `<tr><td style="padding:0 0 14px 0;color:#cbd5e1;font-size:15px;line-height:22px;">${e(l)}</td></tr>`).join("");
+  const html = `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><title>${e(c.title)}</title></head>
+<body style="margin:0;padding:0;background:#020617;">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">${e(c.preheader)}</div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#020617;padding:24px 12px;font-family:Arial,Helvetica,sans-serif;">
+    <tr><td align="center">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;">
+        <tr><td style="padding:0 0 16px 4px;font-size:20px;font-weight:800;color:#f8fafc;letter-spacing:0.5px;">Block<span style="color:#3b82f6;">Miner</span></td></tr>
+        <tr><td style="background:#0f172a;border:1px solid #1e293b;border-radius:16px;padding:28px 28px 20px 28px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+            <tr><td style="padding:0 0 16px 0;font-size:22px;font-weight:700;color:#f8fafc;">${e(c.title)}</td></tr>
+            <tr><td style="padding:0 0 14px 0;color:#cbd5e1;font-size:15px;">${e(greeting)}</td></tr>
+            ${body}
+            ${code}
+            ${button}
+            <tr><td style="padding:0 0 8px 0;color:#94a3b8;font-size:13px;">This ${c.code ? "code" : "link"} expires in ${e(c.expiry)}.</td></tr>
+            <tr><td style="padding:12px 0 0 0;border-top:1px solid #1e293b;color:#64748b;font-size:12px;line-height:18px;">${e(c.footnote)}</td></tr>
+          </table>
+        </td></tr>
+        <tr><td style="padding:16px 4px 0 4px;color:#475569;font-size:11px;line-height:16px;">This is an automated message from BlockMiner (blockminer.space). Please do not reply to this email. BlockMiner will never ask for your password.</td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`;
+  const text = [
+    c.title,
+    "",
+    greeting,
+    "",
+    ...c.lines,
+    ...(c.code ? ["", c.code] : []),
+    ...(c.action ? ["", `${c.action.label}: ${c.action.url}`] : []),
+    "",
+    `This ${c.code ? "code" : "link"} expires in ${c.expiry}.`,
+    c.footnote,
+    "",
+    "-- BlockMiner (blockminer.space). This is an automated message; please do not reply.",
+  ].join("\n");
+  return { html, text };
+}
+
 export async function sendPasswordResetEmail(input: {
   to: string;
   name: string;
@@ -253,37 +330,17 @@ export async function sendPasswordResetEmail(input: {
     log.warn("sendPasswordResetEmail called without SMTP configured — no-op", { to: maskEmail(input.to) });
     return;
   }
-
-  const safeName = input.name || "Miner";
-  const safeTtl = Number(input.ttlMinutes || 20);
-
-  const html = `
-  <div style="font-family:Arial,Helvetica,sans-serif;background:#020617;color:#e2e8f0;padding:24px;">
-    <div style="max-width:640px;margin:0 auto;background:#0f172a;border:1px solid #1e293b;border-radius:16px;padding:24px;">
-      <h2 style="margin:0 0 8px 0;color:#60a5fa;">BlockMiner - Redefinição de Senha</h2>
-      <p style="margin:0 0 16px 0;color:#cbd5e1;">Olá, ${escapeHtml(safeName)}.</p>
-      <p style="margin:0 0 16px 0;color:#cbd5e1;">Recebemos uma solicitação para redefinir sua senha.</p>
-      <p style="margin:0 0 20px 0;">
-        <a href="${input.resetUrl}" style="display:inline-block;background:#3b82f6;color:#fff;text-decoration:none;padding:12px 18px;border-radius:10px;font-weight:700;">Redefinir senha agora</a>
-      </p>
-      <p style="margin:0 0 6px 0;color:#94a3b8;">Este link expira em ${safeTtl} minutos.</p>
-      <p style="margin:0;color:#64748b;font-size:12px;">Se você não solicitou, ignore este e-mail.</p>
-    </div>
-  </div>`;
-
-  const text = [
-    "BlockMiner - Redefinição de Senha",
-    "",
-    `Olá, ${safeName}.`,
-    "Recebemos uma solicitação para redefinir sua senha.",
-    "",
-    `Abra este link: ${input.resetUrl}`,
-    "",
-    `Este link expira em ${safeTtl} minutos.`,
-    "Se você não solicitou, ignore este e-mail.",
-  ].join("\n");
-
-  await deliver(tx, { to: input.to, subject: "BlockMiner - Redefinição de Senha", text, html }, "Password reset");
+  const subject = "Reset your BlockMiner password";
+  const { html, text } = renderEmail({
+    title: subject,
+    preheader: "Use this link to choose a new password.",
+    name: input.name,
+    lines: ["We received a request to reset the password for your BlockMiner account. Click the button below to choose a new one. The link can only be used once."],
+    action: { label: "Reset password", url: input.resetUrl },
+    expiry: formatExpiry(input.ttlMinutes || 20),
+    footnote: "If you did not request a password reset, you can safely ignore this email. Your password will not change.",
+  });
+  await deliver(tx, { to: input.to, subject, text, html }, "Password reset");
 }
 
 /** item 95 Parte B: mesmo padrão de sendPasswordResetEmail — best-effort, no-op sem SMTP. */
@@ -291,42 +348,24 @@ export async function sendEmailVerificationEmail(input: {
   to: string;
   name: string;
   verifyUrl: string;
+  ttlMinutes?: number;
 }): Promise<void> {
   const tx = getTransporter();
   if (!tx) {
     log.warn("sendEmailVerificationEmail called without SMTP configured — no-op", { to: maskEmail(input.to) });
     return;
   }
-
-  const safeName = input.name || "Miner";
-
-  const html = `
-  <div style="font-family:Arial,Helvetica,sans-serif;background:#020617;color:#e2e8f0;padding:24px;">
-    <div style="max-width:640px;margin:0 auto;background:#0f172a;border:1px solid #1e293b;border-radius:16px;padding:24px;">
-      <h2 style="margin:0 0 8px 0;color:#60a5fa;">BlockMiner - Confirme seu e-mail</h2>
-      <p style="margin:0 0 16px 0;color:#cbd5e1;">Olá, ${escapeHtml(safeName)}.</p>
-      <p style="margin:0 0 16px 0;color:#cbd5e1;">Confirme seu e-mail pra liberar saques e o chat da plataforma.</p>
-      <p style="margin:0 0 20px 0;">
-        <a href="${input.verifyUrl}" style="display:inline-block;background:#3b82f6;color:#fff;text-decoration:none;padding:12px 18px;border-radius:10px;font-weight:700;">Confirmar e-mail agora</a>
-      </p>
-      <p style="margin:0 0 6px 0;color:#94a3b8;">Este link expira em 24 horas.</p>
-      <p style="margin:0;color:#64748b;font-size:12px;">Se você não criou uma conta no BlockMiner, ignore este e-mail.</p>
-    </div>
-  </div>`;
-
-  const text = [
-    "BlockMiner - Confirme seu e-mail",
-    "",
-    `Olá, ${safeName}.`,
-    "Confirme seu e-mail pra liberar saques e o chat da plataforma.",
-    "",
-    `Abra este link: ${input.verifyUrl}`,
-    "",
-    "Este link expira em 24 horas.",
-    "Se você não criou uma conta no BlockMiner, ignore este e-mail.",
-  ].join("\n");
-
-  await deliver(tx, { to: input.to, subject: "BlockMiner - Confirme seu e-mail", text, html }, "Email verification");
+  const subject = "Confirm your BlockMiner email";
+  const { html, text } = renderEmail({
+    title: subject,
+    preheader: "Confirm your email to unlock withdrawals and chat.",
+    name: input.name,
+    lines: ["Welcome to BlockMiner! Please confirm your email address to unlock withdrawals and the chat."],
+    action: { label: "Confirm email", url: input.verifyUrl },
+    expiry: formatExpiry(input.ttlMinutes || 1440),
+    footnote: "If you did not create a BlockMiner account, you can safely ignore this email.",
+  });
+  await deliver(tx, { to: input.to, subject, text, html }, "Email verification");
 }
 
 export async function sendLoginTwoFactorCodeEmail(input: {
@@ -340,33 +379,15 @@ export async function sendLoginTwoFactorCodeEmail(input: {
     log.warn("sendLoginTwoFactorCodeEmail called without SMTP configured — no-op", { to: maskEmail(input.to) });
     return;
   }
-
-  const safeName = input.name || "Miner";
-  const safeCode = String(input.code || "").trim();
-  const safeTtl = Number(input.ttlMinutes || 10);
-
-  const html = `
-  <div style="font-family:Arial,Helvetica,sans-serif;background:#020617;color:#e2e8f0;padding:24px;">
-    <div style="max-width:640px;margin:0 auto;background:#0f172a;border:1px solid #1e293b;border-radius:16px;padding:24px;">
-      <h2 style="margin:0 0 8px 0;color:#22c55e;">BlockMiner - Código de verificação de login</h2>
-      <p style="margin:0 0 16px 0;color:#cbd5e1;">Olá, ${escapeHtml(safeName)}.</p>
-      <p style="margin:0 0 16px 0;color:#cbd5e1;">Use o código abaixo pra concluir seu login:</p>
-      <p style="margin:0 0 18px 0;font-size:28px;letter-spacing:4px;font-weight:700;color:#f8fafc;">${safeCode}</p>
-      <p style="margin:0 0 6px 0;color:#94a3b8;">Este código expira em ${safeTtl} minutos.</p>
-      <p style="margin:0;color:#64748b;font-size:12px;">Se não foi você, ignore este e-mail e troque sua senha.</p>
-    </div>
-  </div>`;
-
-  const text = [
-    "BlockMiner - Código de verificação de login",
-    "",
-    `Olá, ${safeName}.`,
-    "Use este código pra concluir seu login:",
-    safeCode,
-    "",
-    `Este código expira em ${safeTtl} minutos.`,
-    "Se não foi você, ignore este e-mail e troque sua senha.",
-  ].join("\n");
-
-  await deliver(tx, { to: input.to, subject: "BlockMiner - Código de verificação de login", text, html }, "Login 2FA");
+  const subject = "Your BlockMiner login code";
+  const { html, text } = renderEmail({
+    title: subject,
+    preheader: "Enter this code to finish signing in.",
+    name: input.name,
+    lines: ["Enter the code below to finish signing in to BlockMiner. Never share this code with anyone."],
+    code: String(input.code || "").trim(),
+    expiry: formatExpiry(input.ttlMinutes || 10),
+    footnote: "If this was not you, ignore this email and change your password right away.",
+  });
+  await deliver(tx, { to: input.to, subject, text, html }, "Login 2FA");
 }

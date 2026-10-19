@@ -207,10 +207,17 @@ test("legacyPasswordResetPost: invalid resetToken responds 401", async () => {
 
 test("legacyPasswordResetPost: a real signed reset token updates the password hash", async () => {
   const user = await makeUser();
-  const resetToken = signPasswordResetToken(user.id);
+  const resetToken = signPasswordResetToken(user.id, user.passwordHash);
   const res = fakeRes();
   await controller.legacyPasswordResetPost(fakeReq({ resetToken, newPassword: "legacynewpass1" }), res);
   assert.equal(res.calls.json.ok, true, JSON.stringify(res.calls.json));
   const fresh = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
   assert.notEqual(fresh.passwordHash, user.passwordHash);
+
+  // The same link cannot be used a second time (it was bound to the old password).
+  const replay = fakeRes();
+  await controller.legacyPasswordResetPost(fakeReq({ resetToken, newPassword: "attackerpass1" }), replay);
+  assert.equal(replay.calls.status, 401);
+  const after = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
+  assert.equal(after.passwordHash, fresh.passwordHash);
 });
