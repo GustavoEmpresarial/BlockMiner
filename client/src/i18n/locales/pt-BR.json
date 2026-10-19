@@ -7296,7 +7296,12 @@
     "offer_title": "Licença de foto de perfil",
     "offer_description": "Mostre sua própria foto no cabeçalho, no chat, nos rankings e nos torneios por um ano.",
     "per_year": "/ ano",
-    "go_to_settings": "Enviar sua foto nas Configurações"
+    "go_to_settings": "Enviar sua foto nas Configurações",
+    "certificate_title": "Certificado de Licença",
+    "certificate_body": "Direito de usar foto de perfil própria no BlockMiner.",
+    "certificate_validity": "Válido por 1 ano",
+    "certificate_until": "Válido até {{date}}",
+    "certificate_your_name": "Seu nome aqui"
   },
   "contract": {
     "eyebrow": "BlockMiner • Termos de Uso",

@@ -7292,7 +7292,12 @@
     "offer_title": "Profile photo license",
     "offer_description": "Show your own photo in the header, chat, rankings and tournaments for one year.",
     "per_year": "/ year",
-    "go_to_settings": "Upload your photo in Settings"
+    "go_to_settings": "Upload your photo in Settings",
+    "certificate_title": "License Certificate",
+    "certificate_body": "Right to use your own profile photo on BlockMiner.",
+    "certificate_validity": "Valid for 1 year",
+    "certificate_until": "Valid until {{date}}",
+    "certificate_your_name": "Your name here"
   },
   "contract": {
     "eyebrow": "BlockMiner • Terms of Use",

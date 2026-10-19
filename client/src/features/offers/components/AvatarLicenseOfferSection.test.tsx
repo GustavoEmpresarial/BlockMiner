@@ -6,7 +6,10 @@ import { MemoryRouter } from 'react-router-dom';
 import { AvatarLicenseOfferSection } from './AvatarLicenseOfferSection';
 import { api } from '../../../shared/auth/auth.store';
 
-vi.mock('../../../shared/auth/auth.store', () => ({ api: { get: vi.fn(), post: vi.fn(), delete: vi.fn() } }));
+vi.mock('../../../shared/auth/auth.store', () => ({
+  api: { get: vi.fn(), post: vi.fn(), delete: vi.fn() },
+  useAuthStore: (sel: (s: { user: { username: string } }) => unknown) => sel({ user: { username: 'gugu' } }),
+}));
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'en' } }),
   initReactI18next: { type: '3rdParty', init: () => {} },
@@ -38,6 +41,7 @@ describe('AvatarLicenseOfferSection', () => {
     renderIt();
     await waitFor(() => expect(screen.getByTestId('avatar-license-offer')).toBeInTheDocument());
     expect(screen.getByTestId('avatar-offer-price')).toHaveTextContent('US$ 1');
+    expect(screen.getByTestId('license-certificate')).toHaveTextContent('profilePhoto.certificate_your_name');
     expect(screen.getByText('US$ 1.50')).toBeInTheDocument();
     expect(screen.getByTestId('avatar-amount')).toHaveTextContent('10.78000000 POL');
     fireEvent.click(screen.getByRole('button', { name: 'profilePhoto.buy' }));
@@ -51,6 +55,7 @@ describe('AvatarLicenseOfferSection', () => {
     renderIt();
     await waitFor(() => expect(screen.getByTestId('avatar-license-offer')).toHaveAttribute('data-state', 'active'));
     expect(screen.queryByRole('button', { name: 'profilePhoto.buy' })).toBeNull();
+    expect(screen.getByTestId('license-certificate')).toHaveTextContent('gugu');
     expect(screen.getByRole('link', { name: 'profilePhoto.go_to_settings' })).toHaveAttribute('href', '/settings');
   });
 
