@@ -56,6 +56,8 @@ services:
   # KRaft single-node Kafka (no ZooKeeper) — Stats earnings bus (bm.earnings.v1).
   # bitnami/kafka tags moved to bitnamilegacy/* (Aug 2025 catalog change).
   kafka:
+    # Optional: only started with `docker compose --profile kafka up -d` (see the app's KAFKA_ENABLED).
+    profiles: ["kafka"]
     container_name: blockminer-current-kafka
     image: bitnamilegacy/kafka:3.9.0-debian-12-r13
     logging: *default-logging
@@ -103,8 +105,6 @@ services:
     depends_on:
       redis:
         condition: service_healthy
-      kafka:
-        condition: service_healthy
     env_file:
       - .env.production
       - path: .env
@@ -121,6 +121,10 @@ services:
       # and silently picked up the local dev Redis port (127.0.0.1:6380) instead — found by
       # actually booting this stack end-to-end (docker-compose.yml + Dockerfile), not by unit tests.
       REDIS_URL: "redis://redis:6379"
+      # Kafka is off by default: the app applies event_outbox to the stats tables itself
+      # (events.outbox-publisher.ts). To bring the broker back: KAFKA_ENABLED "true" here and
+      # `docker compose --profile kafka up -d`.
+      KAFKA_ENABLED: "false"
       KAFKA_BROKERS: "kafka:9092"
       # Trust X-Forwarded-For do nginx — sem isso os rate limiters/fraud-signals usam o
       # IP do container do nginx, não o do usuário real (ver nginx/nginx.vm5000.conf).
@@ -145,7 +149,9 @@ services:
     restart: unless-stopped
 
   # Materializes bm.earnings.v1 into user_stats_earnings_* for GET /api/stats/earnings.
+  # Optional (profile "kafka"): by default the app materializes straight from event_outbox.
   stats-materializer:
+    profiles: ["kafka"]
     container_name: blockminer-current-stats-materializer
     logging: *default-logging
     image: blockminer-current-app:latest
