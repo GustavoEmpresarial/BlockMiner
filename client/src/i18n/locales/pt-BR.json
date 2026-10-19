@@ -2607,7 +2607,8 @@
       "network_protocol_fee": "Network protocol fee",
       "gas_covered": "Gas Covered by Pool"
     },
-    "tx_avatar_license": "Licença de foto de perfil ({{unit}})"
+    "tx_avatar_license": "Licença de foto de perfil ({{unit}})",
+    "tx_fan_purchase": "Compra de refrigeração ({{unit}})"
   },
   "faucet": {
     "title": "Faucet de Poder",

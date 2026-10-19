@@ -1077,6 +1077,8 @@ test("ranking routes success and error paths", async () => {
   await rootHandler(makeReq(), okRes);
   assert.equal(okRes.body.ok, true);
 
+  // With a warm cache a DB failure is masked (stale list served); cold cache -> 500.
+  (await import("../../server/modules/tournaments/ranking.service.ts")).__resetTopRankingCacheForTests();
   prismaMock.user.findMany = async () => {
     throw new Error("db down");
   };

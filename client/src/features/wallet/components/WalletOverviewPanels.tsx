@@ -263,21 +263,24 @@ export function WalletLedgerPanel({
             const isSwap = tx.type === "swap";
             const isMergeFee = tx.type === "merge_fee";
             const isAvatarLicense = tx.type === "avatar_license";
+            const isFanPurchase = tx.type === "fan_purchase";
             const isBlkConvert = tx.type === "blk_convert";
             const isBlkWithdraw = tx.type === "blk_withdrawal";
-            const isWithdrawal = tx.type === "withdrawal" || isBlkWithdraw || isMergeFee || isAvatarLicense;
+            const isWithdrawal = tx.type === "withdrawal" || isBlkWithdraw || isMergeFee || isAvatarLicense || isFanPurchase;
 
             let unit = "POL";
             if (isBlkConvert || isBlkWithdraw) {
               unit = "BLK";
-            } else if (isMergeFee || isAvatarLicense) {
+            } else if (isMergeFee || isAvatarLicense || isFanPurchase) {
               unit = tx.fromAsset ? tx.fromAsset.toUpperCase() : "BLK";
             } else if (isSwap) {
               unit = tx.fromAsset ? tx.fromAsset.toUpperCase() : (Number(tx.usdRateAtConfirmation || 0) < 0.001 ? "SHIB" : "POL");
             }
 
             let usdSub: string | null = null;
-            if (isMergeFee || isAvatarLicense) {
+            if (isFanPurchase) {
+              usdSub = null;
+            } else if (isMergeFee || isAvatarLicense) {
               const feeUsd = Number(tx.usdValueAtConfirmation ?? 0);
               usdSub = feeUsd > 0 ? `≈ $${feeUsd.toFixed(4)}` : null;
             } else if (isBlkConvert || isBlkWithdraw) {
@@ -289,7 +292,9 @@ export function WalletLedgerPanel({
               usdSub = `$${(Number(tx.amount) * polPrice).toFixed(2)}`;
             }
 
-            const label = isAvatarLicense
+            const label = isFanPurchase
+              ? t("wallet.tx_fan_purchase", { unit })
+              : isAvatarLicense
               ? t("wallet.tx_avatar_license", { unit })
               : isMergeFee
               ? `Taxa de Merge (${unit})`

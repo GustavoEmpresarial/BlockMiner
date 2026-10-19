@@ -27,7 +27,7 @@ export async function getTransactionsForUser(userId: number) {
       if (outputAmount == null && tx.usdValueAtConfirmation != null) {
         outputAmount = Number(tx.usdValueAtConfirmation);
       }
-    } else if (tx.type === "merge_fee" || tx.type === "avatar_license") {
+    } else if (tx.type === "merge_fee" || tx.type === "avatar_license" || tx.type === "fan_purchase") {
       try {
         const parsed = tx.rawTx ? JSON.parse(tx.rawTx) : null;
         if (parsed && typeof parsed.asset === "string") fromAsset = parsed.asset.toUpperCase();

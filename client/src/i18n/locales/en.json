@@ -2606,7 +2606,8 @@
     },
     "connect_required": "Please connect your wallet first.",
     "switch_network": "Please switch to the Polygon network.",
-    "tx_avatar_license": "Profile photo license ({{unit}})"
+    "tx_avatar_license": "Profile photo license ({{unit}})",
+    "tx_fan_purchase": "Cooling purchase ({{unit}})"
   },
   "faucet": {
     "title": "Power Faucet",

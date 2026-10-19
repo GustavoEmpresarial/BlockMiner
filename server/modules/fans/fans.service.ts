@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import prisma from "../../core/database/prisma.js";
 import { miningEngine } from "../mining/index.js";
 import {
@@ -58,33 +59,51 @@ export async function purchaseFansForUser(
   }
 
   const unitPrice = channel === "offer" ? readFanOfferPrice() : readFanShopPrice();
-  const totalPrice = unitPrice * qty;
+  // Decimal math: 0.1 * 3 in floats is 0.30000000000000004.
+  const total = new Prisma.Decimal(unitPrice).mul(qty).toDecimalPlaces(8, Prisma.Decimal.ROUND_UP);
+  const totalPrice = total.toNumber();
   const creditsGranted = catalogItem.creditsPerUnit * qty;
 
   return prisma.$transaction(async (tx) => {
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(${userId}::int, hashtext(${`fan:${normalizedSku}:${channel}`})::int)`;
+    // One lock per user for every fan purchase: it used to be per sku+channel, so a shop and an
+    // offer purchase at the same time both passed the balance check.
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(${userId}::int, hashtext('fan-purchase')::int)`;
 
-    const userRow = await tx.user.findUnique({
+    const debited = await tx.user.updateMany({
+      where: { id: userId, blkBalance: { gte: total } },
+      data: { blkBalance: { decrement: total }, fanCredits: { increment: creditsGranted } },
+    });
+    if (debited.count !== 1) {
+      throw new Error(FAN_ERROR_MESSAGE.INSUFFICIENT_BALANCE);
+    }
+    const updated = await tx.user.findUnique({
       where: { id: userId },
       select: { blkBalance: true, fanCredits: true },
     });
-    const balanceBefore = Number(userRow?.blkBalance ?? 0);
-    if (!userRow || balanceBefore < totalPrice) {
-      throw new Error(FAN_ERROR_MESSAGE.INSUFFICIENT_BALANCE);
-    }
 
-    const updated = await tx.user.update({
-      where: { id: userId },
+    // Purchase history (wallet ledger + audit): fan purchases left no record before.
+    await tx.transaction.create({
       data: {
-        blkBalance: { decrement: totalPrice },
-        fanCredits: { increment: creditsGranted },
+        userId,
+        type: "fan_purchase",
+        amount: total,
+        rawTx: JSON.stringify({
+          asset: "blk",
+          sku: normalizedSku,
+          channel,
+          quantity: qty,
+          unitPrice,
+          creditsGranted,
+          creditsAfter: Number(updated?.fanCredits ?? 0),
+        }),
+        status: "completed",
+        completedAt: new Date(),
       },
-      select: { blkBalance: true, fanCredits: true },
     });
 
     return {
-      newBalance: Number(updated.blkBalance ?? 0),
-      fanCredits: Math.max(0, Number(updated.fanCredits ?? 0)),
+      newBalance: Number(updated?.blkBalance ?? 0),
+      fanCredits: Math.max(0, Number(updated?.fanCredits ?? 0)),
       sku: normalizedSku,
       quantity: qty,
       totalPrice,

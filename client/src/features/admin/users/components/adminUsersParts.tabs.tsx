@@ -48,6 +48,17 @@ function swapFromAsset(tx: unknown): string {
   return Number(row.usdRateAtConfirmation || 0) < 0.001 ? 'SHIB' : 'POL';
 }
 
+function fanPurchaseQty(tx: unknown): number {
+  try {
+    const raw = (tx as Record<string, unknown>).rawTx;
+    const parsed = typeof raw === 'string' ? JSON.parse(raw) : null;
+    const q = Number(parsed?.quantity);
+    return Number.isFinite(q) && q > 0 ? q : 1;
+  } catch {
+    return 1;
+  }
+}
+
 function mergeFeeAsset(tx: unknown): string {
   const row = tx as Record<string, unknown>;
   if (typeof row.fromAsset === 'string' && row.fromAsset) return row.fromAsset.toUpperCase();
@@ -176,6 +187,8 @@ export function TransactionsTab({
                   <td className="p-3">
                     {tx.type === 'merge_fee' ? (
                       <span className="font-semibold text-amber-400">taxa de merge ({mergeFeeAsset(tx)})</span>
+                    ) : tx.type === 'fan_purchase' ? (
+                      <span className="font-semibold text-sky-400">compra de refrigeração ({fanPurchaseQty(tx)}x)</span>
                     ) : tx.type === 'swap' ? (
                       <span className="font-semibold text-violet-400">
                         swap ({swapFromAsset(tx)} → BLK)
@@ -185,7 +198,7 @@ export function TransactionsTab({
                     )}
                   </td>
                   <td className="p-3 text-amber-300 font-mono">
-                    {Number(tx.amount || 0).toLocaleString()} {tx.type === 'merge_fee' ? mergeFeeAsset(tx) : tx.type === 'swap' ? swapFromAsset(tx) : 'POL'}
+                    {Number(tx.amount || 0).toLocaleString()} {tx.type === 'merge_fee' || tx.type === 'fan_purchase' ? mergeFeeAsset(tx) : tx.type === 'swap' ? swapFromAsset(tx) : 'POL'}
                   </td>
                   <td className="p-3">{tx.status}</td>
                   <td className="p-3">
