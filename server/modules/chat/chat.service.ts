@@ -7,12 +7,24 @@ import { readChatConversationScanLimit } from "./chat.config.js";
 import * as chatRepo from "./chat.repository.js";
 import { buildChatUserSearchArgs, toChatUserHit } from "./chat.search.js";
 import { escapeHtml, sanitizeChatPlainText } from "../../shared/utils/htmlEscape.js";
+import { resolveAvatarUrl, type AvatarRow } from "../avatar/avatar.rules.js";
 
 export { escapeHtml, sanitizeChatPlainText };
 
+/** Public shape: the author's visible photo (or null) instead of the raw avatar row. */
+function withAvatarUrl<T extends { user?: { name: string; username: string | null; avatar?: AvatarRow } | null }>(msg: T, now: Date) {
+  const { user, ...rest } = msg;
+  return {
+    ...rest,
+    user: user ? { name: user.name, username: user.username } : null,
+    avatarUrl: resolveAvatarUrl(user?.avatar, now),
+  };
+}
+
 export async function listMessages() {
   const messages = await chatRepo.listRecentChatMessages(50);
-  return messages.reverse();
+  const now = new Date();
+  return messages.reverse().map((m) => withAvatarUrl(m, now));
 }
 
 export async function searchChatUsers(selfId: number, rawQuery: unknown) {
@@ -35,13 +47,14 @@ export async function sendPublicMessage(args: {
   if (!sanitized) {
     throw Object.assign(new Error("EMPTY_CHAT_MESSAGE"), { code: "EMPTY_CHAT_MESSAGE" });
   }
-  return chatRepo.createChatMessage({
+  const created = await chatRepo.createChatMessage({
     userId: args.userId,
     username: args.username,
     message: sanitized,
     replyToId: args.replyToId ?? null,
     createdAt: new Date(),
   });
+  return withAvatarUrl(created, new Date());
   // socket chat:new-message — skipped (no core/socket)
 }
 

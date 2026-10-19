@@ -36,6 +36,7 @@ import { boostsRouter } from "../modules/boosts/index.js";
 import { autoMiningRouter, autoMiningAdminRouter } from "../modules/auto-mining/index.js";
 import { inventoryRouter } from "../modules/inventory/index.js";
 import { shopRouter } from "../modules/shop/index.js";
+import { avatarRouter, avatarAdminRouter, startAvatarExpiryReminderCron } from "../modules/avatar/index.js";
 import { partsRouter } from "../modules/parts/index.js";
 import { gamesRouter } from "../modules/games/index.js";
 import { checkinRouter, checkinAdminRouter } from "../modules/checkin/index.js";
@@ -149,6 +150,8 @@ export function createApp() {
     // calls next("router") for non-digit ids.
     app.use("/api/inventory", inventoryRouter);
     app.use("/api/shop", shopRouter);
+    app.use("/api/avatar", avatarRouter);
+    app.use("/api/admin", avatarAdminRouter);
     app.use("/api/parts", partsRouter);
     app.use("/api/games", gamesRouter);
     app.use("/api/checkin", checkinRouter);
@@ -348,6 +351,7 @@ async function main() {
     const userCountSnapshotCron = startJob(jobsEnabled, startUserCountSnapshotCron);
     const eventOutboxPublisherCron = startJob(jobsEnabled, startEventOutboxPublisherCronFromBootstrap);
     const backupCron = startJob(jobsEnabled, startBackupCron);
+    const avatarReminderCron = startJob(jobsEnabled, startAvatarExpiryReminderCron);
     // Under the compose stop_grace_period (180s) with room to spare; env-tunable.
     const shutdownDrainMs = Number(process.env.SHUTDOWN_DRAIN_MS || 25_000);
     let shuttingDown = false;
@@ -373,6 +377,7 @@ async function main() {
         eventOutboxRetentionCron.stop();
         supportRetentionCron.stop();
         expiredPowersCleanupCron.stop();
+        avatarReminderCron.stop();
         userCountSnapshotCron.stop();
         eventOutboxPublisherCron.stop();
         backupCron.stop();

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Lock, MessageSquare, X } from 'lucide-react';
 import IconBadge from '../../../shared/components/IconBadge';
 import TabPills from '../../../shared/components/TabPills';
+import UserAvatar from '../../../shared/components/UserAvatar';
 import { useAuthStore } from '../../../shared/auth/auth.store';
 import { useGameStore } from '../lib/game.store';
 import { buildChatTimeline, formatChatTime } from './chatDisplay';
@@ -208,14 +209,22 @@ export default function ChatPanel() {
                   {item.label}
                 </p>
               ) : (
-                <div key={item.key} className="space-y-1">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                    {publicChatDisplayName(item.message, t('chat.unknown_user'))}
-                    <span className="ml-2 font-medium normal-case tracking-normal text-slate-500">
-                      {formatChatTime(item.message.createdAt, locale)}
-                    </span>
-                  </p>
-                  <p className="whitespace-pre-wrap break-words text-sm text-slate-200">{chatBodyText(item.message.message)}</p>
+                <div key={item.key} className="flex items-start gap-2">
+                  <UserAvatar
+                    url={item.message.avatarUrl}
+                    name={publicChatDisplayName(item.message, t('chat.unknown_user'))}
+                    className="mt-0.5 h-7 w-7 rounded-full border border-slate-700 bg-slate-800"
+                    letterClassName="text-[10px] font-bold text-white"
+                  />
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      {publicChatDisplayName(item.message, t('chat.unknown_user'))}
+                      <span className="ml-2 font-medium normal-case tracking-normal text-slate-500">
+                        {formatChatTime(item.message.createdAt, locale)}
+                      </span>
+                    </p>
+                    <p className="whitespace-pre-wrap break-words text-sm text-slate-200">{chatBodyText(item.message.message)}</p>
+                  </div>
                 </div>
               ),
             )

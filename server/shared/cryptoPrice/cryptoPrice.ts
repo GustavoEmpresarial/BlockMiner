@@ -109,6 +109,21 @@ export async function getBtcUsdPrice() {
 export async function getEthUsdPrice() {
     return getCachedPrice("ETH", () => fetchCoinGeckoPrice("ethereum"));
 }
+/** How old a provider-fetched price may be and still count as "fresh" for charging users. */
+export const FRESH_PRICE_MAX_AGE_MS = 10 * 60 * 1000;
+
+/**
+ * USD price only when it came from a provider within FRESH_PRICE_MAX_AGE_MS; null otherwise.
+ * The getters above fall back to a stale cache or a hard-coded price to keep displays working,
+ * which is fine for showing balances but not for computing what to charge.
+ */
+export async function getFreshUsdPrice(asset: "POL" | "SHIB" | "BTC" | "ETH"): Promise<number | null> {
+    const getter = { POL: getPolUsdPrice, SHIB: getShibUsdPrice, BTC: getBtcUsdPrice, ETH: getEthUsdPrice }[asset];
+    await getter();
+    const entry = priceCache.get(asset);
+    if (!entry || Date.now() - entry.timestamp > FRESH_PRICE_MAX_AGE_MS) return null;
+    return Number.isFinite(entry.price) && entry.price > 0 ? entry.price : null;
+}
 function toHistoryDateParam(timestampSec: number): string {
     const d = new Date(timestampSec * 1000);
     const day = String(d.getUTCDate()).padStart(2, "0");

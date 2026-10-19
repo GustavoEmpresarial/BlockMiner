@@ -12,6 +12,7 @@ import prisma from "../../core/database/prisma.js";
 import { logger as rootLogger } from "../../core/logger/index.js";
 import { getRedis, getRedisUrl } from "../../core/redis/index.js";
 import { LEADERBOARD_ORDER } from "./tournaments.prize-resolution.js";
+import { withLeaderboardAvatars } from "../avatar/avatar.lookup.js";
 
 const logger = rootLogger.child("TournamentRealtime");
 
@@ -106,11 +107,12 @@ export async function buildLeaderboardSlice(
       where: { tournamentId },
       orderBy: [...LEADERBOARD_ORDER],
       take: LEADERBOARD_LIMIT,
-      include: { user: { select: { id: true, username: true, name: true } } },
+      // Public room payload: id + username only — never the real name.
+      include: { user: { select: { id: true, username: true } } },
     }),
     prisma.tournamentEntry.count({ where: { tournamentId } }),
   ]);
-  return { top, participantCount };
+  return { top: await withLeaderboardAvatars(top), participantCount };
 }
 
 /** Emit a `tournament:update` immediately (bypasses the dirty coalescing). */

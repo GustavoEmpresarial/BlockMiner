@@ -42,6 +42,7 @@ import {
   type PrizeGrant,
   type PrizeRow,
 } from "./tournaments.prize-resolution.js";
+import { withLeaderboardAvatars } from "../avatar/avatar.lookup.js";
 
 const log = logger.child("tournaments.service");
 
@@ -662,6 +663,8 @@ export async function getTournamentWithLeaderboard(tournamentId: number, userId?
   if (tournament.metric === "DEPOSITS_USD" && top && top.length > 0) {
     top = await enrichDepositLeaderboardWithPolTotals(top, tournament.startsAt, upperBound);
   }
+  // Photos are attached per request, not cached with the board: an expired license disappears at once.
+  if (top && top.length > 0) top = await withLeaderboardAvatars(top);
 
   let myEntry: TournamentEntry | null = null;
   let myRankLive: number | null = null;

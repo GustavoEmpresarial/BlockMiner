@@ -12,6 +12,7 @@ import { snapWindowForType } from "./tournament-window.js";
 import { formatUtcWindowLabel } from "./tournaments.scoring-config.js";
 import { getMetricScorer, registerTournamentMetricScorers } from "./tournaments.scorers.js";
 import { LEADERBOARD_LIMIT } from "./tournaments.service.js";
+import { withLeaderboardAvatars } from "../avatar/avatar.lookup.js";
 
 type PreviewType = "DAILY" | "WEEKLY" | "MONTHLY";
 
@@ -188,6 +189,7 @@ export async function getPreviewTournamentWithLeaderboard(tournamentId: number, 
     rewardGranted: false,
     user: nameById.get(uid) ?? { id: uid, username: `#${uid}` },
   }));
+  const topWithAvatars = await withLeaderboardAvatars(top);
 
   let myEntry: { score: number; rank: number; rewardGranted: boolean } | null = null;
   let myRankLive: number | null = null;
@@ -206,7 +208,7 @@ export async function getPreviewTournamentWithLeaderboard(tournamentId: number, 
     offerwallRules: null,
     myOfferwallBreakdown: null,
     tournament,
-    top,
+    top: topWithAvatars,
     myEntry,
     myRankLive,
     myPrize,

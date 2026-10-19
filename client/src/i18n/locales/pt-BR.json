@@ -2606,7 +2606,8 @@
       "you_receive": "Você recebe",
       "network_protocol_fee": "Network protocol fee",
       "gas_covered": "Gas Covered by Pool"
-    }
+    },
+    "tx_avatar_license": "Licença de foto de perfil ({{unit}})"
   },
   "faucet": {
     "title": "Faucet de Poder",
@@ -7247,5 +7248,44 @@
     "error_status": "Erro {{status}} ao enviar imagem.",
     "error_no_response": "Erro ao enviar imagem (sem resposta).",
     "error_generic": "Erro no upload."
+  },
+  "profilePhoto": {
+    "title": "Foto de perfil",
+    "subtitle": "Mostre sua própria foto no cabeçalho, no chat, nos rankings e nos torneios.",
+    "license_price": "Licença anual: US$ 1",
+    "license_hint": "Paga uma vez por ano com seu saldo em cripto (qualquer moeda, menos BLK). A renovação é manual.",
+    "pay_with": "Pagar com",
+    "amount": "Valor",
+    "your_balance": "Seu saldo",
+    "price_unavailable": "Cotação indisponível agora",
+    "buy": "Comprar licença",
+    "renew": "Renovar por mais 1 ano",
+    "buying": "Processando...",
+    "active_until": "Licença ativa até {{date}}",
+    "expired_on": "Licença vencida em {{date}}. Sua foto fica oculta até você renovar.",
+    "expires_soon": "Sua licença vence em {{date}}. Renove agora para manter a foto.",
+    "upload": "Enviar foto",
+    "change": "Trocar foto",
+    "remove": "Remover foto",
+    "uploading": "Enviando...",
+    "upload_hint": "PNG, JPEG, WebP ou GIF de até 2 MB. A imagem é recortada em quadrado.",
+    "blocked": "O envio de foto de perfil foi desativado para esta conta pela moderação.",
+    "purchased": "Licença ativa! Agora envie sua foto.",
+    "uploaded": "Foto de perfil atualizada.",
+    "removed": "Foto de perfil removida.",
+    "confirm_buy": "Pagar {{amount}} {{currency}} por 1 ano de foto de perfil?",
+    "errors": {
+      "AVATAR_LICENSE_REQUIRED": "Você precisa de uma licença ativa para enviar foto.",
+      "AVATAR_CURRENCY_NOT_ALLOWED": "Esta moeda não pode ser usada.",
+      "AVATAR_PRICE_UNAVAILABLE": "Cotação indisponível no momento. Tente de novo em um minuto.",
+      "AVATAR_QUOTE_CHANGED": "A cotação mudou. Confira o novo valor e tente de novo.",
+      "AVATAR_INSUFFICIENT_BALANCE": "Saldo insuficiente nesta moeda.",
+      "AVATAR_LICENSE_ALREADY_ACTIVE": "Sua licença ainda está ativa. Você pode renovar nos últimos 30 dias.",
+      "AVATAR_UPLOAD_INVALID": "Envie uma imagem PNG, JPEG, WebP ou GIF.",
+      "AVATAR_UPLOAD_TOO_LARGE": "Imagem grande demais (máx. 2 MB).",
+      "AVATAR_UPLOAD_BLOCKED": "O envio de foto está bloqueado para esta conta.",
+      "AVATAR_RATE_LIMITED": "Muitos envios. Tente mais tarde.",
+      "generic": "Algo deu errado. Tente de novo."
+    }
   }
 }

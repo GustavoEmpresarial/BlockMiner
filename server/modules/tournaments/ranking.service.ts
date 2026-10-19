@@ -1,17 +1,19 @@
 import { buildRankingRows } from "./ranking.hashrate.js";
 import * as rankingRepo from "./ranking.repository.js";
+import { withAvatarUrls } from "../avatar/avatar.lookup.js";
 
 export { buildRankingRows } from "./ranking.hashrate.js";
 
 export async function getTopRanking(limit = 50, includeAutoMiningV2: boolean) {
   const now = new Date();
   const users = await rankingRepo.listRankableUsers(now, includeAutoMiningV2);
-  return buildRankingRows(users)
+  const top = buildRankingRows(users)
     .slice(0, limit)
     .map((entry, index) => ({
       ...entry,
       rank: index + 1,
     }));
+  return withAvatarUrls(top, now);
 }
 
 export async function getUserRoomRankingProfile(username: string) {

@@ -21,6 +21,7 @@ import { resolveApiErrorMessage, resolveApiPayloadMessage } from '../../shared/u
 import { useWalletLink } from '../wallet/lib/useWalletLink';
 import IconBadge from '../../shared/components/IconBadge';
 import SectionHeader from '../../shared/components/SectionHeader';
+import ProfilePhotoCard from './components/ProfilePhotoCard';
 
 export default function Settings() {
     const { t } = useTranslation();
@@ -212,6 +213,13 @@ export default function Settings() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Account Info & Wallet */}
                 <div className="space-y-8">
+                    <ProfilePhotoCard
+                        displayName={String(
+                            (typeof user?.username === 'string' && user.username) ||
+                                (typeof user?.name === 'string' && user.name) ||
+                                '',
+                        )}
+                    />
                     <div className="bg-slate-900/60 border-2 border-slate-800 rounded-3xl p-6 sm:p-8 shadow-[4px_4px_0px_#000000] space-y-6">
                         <SectionHeader icon={User} iconVariant="sky" title={t('accountSettings.profile_title')} />
 

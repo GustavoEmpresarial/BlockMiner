@@ -17,6 +17,7 @@ import {
   DEFAULT_MINER_IMAGE_URL,
 } from './lib/ranking.utils';
 import { sanitizeMachineImageSrc } from './lib/ranking.utils';
+import UserAvatar from '../../shared/components/UserAvatar';
 
 interface RoomMiner {
   slotIndex?: number;
@@ -52,6 +53,7 @@ interface RankingEntry {
   totalHashRate?: number | string;
   baseHashRate?: number | string;
   gameHashRate?: number | string;
+  avatarUrl?: string | null;
 }
 
 interface RankingListApiResponse {
@@ -361,9 +363,12 @@ export default function Ranking() {
                   </td>
                   <td className="px-3 py-3 sm:px-6 sm:py-4 md:px-8 md:py-5">
                     <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gray-800 flex items-center justify-center text-[10px] font-bold text-white border border-gray-700 shrink-0">
-                        {entry.username.charAt(0).toUpperCase()}
-                      </div>
+                      <UserAvatar
+                        url={entry.avatarUrl}
+                        name={entry.username}
+                        className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gray-800 border border-gray-700"
+                        letterClassName="text-[10px] font-bold text-white"
+                      />
                       <span className="text-white font-bold truncate max-w-[80px] sm:max-w-none">{entry.username}</span>
                     </div>
                   </td>

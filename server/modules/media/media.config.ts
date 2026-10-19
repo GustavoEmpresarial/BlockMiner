@@ -31,6 +31,8 @@ export const MEDIA_CATEGORIES = [
   "parts",
   "icons",
   "brand",
+  /** User profile photos (256x256 WebP, server-named). */
+  "avatars",
   /** 3D / binary scene assets (e.g. Antminer GLB for transparency hardware). */
   "models",
 ] as const;

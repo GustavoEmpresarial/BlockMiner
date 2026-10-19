@@ -192,6 +192,8 @@ model User {
   offerwallGgCallbacks          OfferwallGgCallback[]
   partStacks                    UserPartStack[]
   partGrants                    PartGrant[]
+  avatar                        UserAvatar?
+  avatarLicenses                AvatarLicense[]
   youtuberProfile               YoutuberProfile?
   videoSubmissions              YoutubeVideoSubmission[]
   videoVotes                    YoutubeVideoVote[]
@@ -3433,4 +3435,39 @@ model UserStatsEarningsTotal {
   @@unique([userId, source])
   @@index([userId])
   @@map("user_stats_earnings_total")
+}
+
+/// Profile photo. Shown only while licenseExpiresAt is in the future and uploads are not blocked.
+/// Kept off the users table on purpose: users is the most contended table at block close.
+model UserAvatar {
+  userId           Int       @id @map("user_id")
+  path             String?
+  licenseExpiresAt DateTime? @map("license_expires_at")
+  uploadBlocked    Boolean   @default(false) @map("upload_blocked")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([licenseExpiresAt])
+  @@map("user_avatars")
+}
+
+/// One row per US$ 1 annual profile-photo license purchase (paid from an internal crypto balance, never BLK).
+model AvatarLicense {
+  id             Int      @id @default(autoincrement())
+  userId         Int      @map("user_id")
+  currency       String
+  amount         Decimal  @db.Decimal(30, 8)
+  usdRate        Decimal  @map("usd_rate") @db.Decimal(30, 12)
+  usdPrice       Decimal  @default(1) @map("usd_price") @db.Decimal(10, 2)
+  startsAt       DateTime @map("starts_at")
+  expiresAt      DateTime @map("expires_at")
+  idempotencyKey String   @map("idempotency_key")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, idempotencyKey])
+  @@index([userId, expiresAt])
+  @@map("avatar_licenses")
 }

@@ -2605,7 +2605,8 @@
       "gas_covered": "Gas Covered by Pool"
     },
     "connect_required": "Please connect your wallet first.",
-    "switch_network": "Please switch to the Polygon network."
+    "switch_network": "Please switch to the Polygon network.",
+    "tx_avatar_license": "Profile photo license ({{unit}})"
   },
   "faucet": {
     "title": "Power Faucet",
@@ -7243,5 +7244,44 @@
     "error_status": "Error {{status}} while uploading the image.",
     "error_no_response": "Image upload failed (no response).",
     "error_generic": "Upload failed."
+  },
+  "profilePhoto": {
+    "title": "Profile photo",
+    "subtitle": "Show your own photo in the header, chat, rankings and tournaments.",
+    "license_price": "Annual license: US$ 1",
+    "license_hint": "Paid once a year from your crypto balance (any currency except BLK). Renewal is manual.",
+    "pay_with": "Pay with",
+    "amount": "Amount",
+    "your_balance": "Your balance",
+    "price_unavailable": "Price unavailable right now",
+    "buy": "Buy license",
+    "renew": "Renew for 1 more year",
+    "buying": "Processing...",
+    "active_until": "License active until {{date}}",
+    "expired_on": "License expired on {{date}}. Your photo is hidden until you renew.",
+    "expires_soon": "Your license expires on {{date}}. Renew now to keep your photo.",
+    "upload": "Upload photo",
+    "change": "Change photo",
+    "remove": "Remove photo",
+    "uploading": "Uploading...",
+    "upload_hint": "PNG, JPEG, WebP or GIF up to 2 MB. It will be cropped to a square.",
+    "blocked": "Profile photo uploads were disabled for this account by moderation.",
+    "purchased": "License active! Now upload your photo.",
+    "uploaded": "Profile photo updated.",
+    "removed": "Profile photo removed.",
+    "confirm_buy": "Pay {{amount}} {{currency}} for 1 year of profile photo?",
+    "errors": {
+      "AVATAR_LICENSE_REQUIRED": "You need an active license to upload a photo.",
+      "AVATAR_CURRENCY_NOT_ALLOWED": "This currency cannot be used.",
+      "AVATAR_PRICE_UNAVAILABLE": "Price is temporarily unavailable. Try again in a minute.",
+      "AVATAR_QUOTE_CHANGED": "The price changed. Check the new amount and try again.",
+      "AVATAR_INSUFFICIENT_BALANCE": "Insufficient balance in this currency.",
+      "AVATAR_LICENSE_ALREADY_ACTIVE": "Your license is still active. You can renew in the last 30 days.",
+      "AVATAR_UPLOAD_INVALID": "Send a PNG, JPEG, WebP or GIF image.",
+      "AVATAR_UPLOAD_TOO_LARGE": "Image too large (max 2 MB).",
+      "AVATAR_UPLOAD_BLOCKED": "Photo uploads are blocked for this account.",
+      "AVATAR_RATE_LIMITED": "Too many uploads. Try again later.",
+      "generic": "Something went wrong. Try again."
+    }
   }
 }

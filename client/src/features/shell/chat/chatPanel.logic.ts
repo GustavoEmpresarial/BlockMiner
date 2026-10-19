@@ -1,3 +1,4 @@
+import { isSafeAvatarUrl } from '../../../shared/components/UserAvatar';
 import { decodeLegacyChatEntities } from './chatDisplay';
 
 /** Default body of `createRateLimiter` when chat send hits 429. */
@@ -30,6 +31,7 @@ export type PublicChatRow = {
   username?: string | null;
   message?: unknown;
   user?: { name?: string | null; username?: string | null } | null;
+  avatarUrl?: string | null;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -48,6 +50,7 @@ export function toPublicChatRow(value: unknown): PublicChatRow | null {
         : null,
     username: typeof value.username === 'string' ? value.username : null,
     message: value.message,
+    avatarUrl: isSafeAvatarUrl(value.avatarUrl) ? value.avatarUrl : null,
     user: user
       ? {
           name: typeof user.name === 'string' ? user.name : null,

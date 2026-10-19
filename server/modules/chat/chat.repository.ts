@@ -1,11 +1,12 @@
 import prisma from "../../core/database/prisma.js";
+import { AVATAR_SELECT } from "../avatar/avatar.rules.js";
 
 export async function listRecentChatMessages(take: number) {
   return prisma.chatMessage.findMany({
     take,
     orderBy: { createdAt: "desc" },
     include: {
-      user: { select: { name: true, username: true } },
+      user: { select: { name: true, username: true, ...AVATAR_SELECT } },
       replyTo: { select: { id: true, username: true, message: true } },
     },
   });
@@ -20,7 +21,10 @@ export async function createChatMessage(data: {
 }) {
   return prisma.chatMessage.create({
     data,
-    include: { replyTo: { select: { id: true, username: true, message: true } } },
+    include: {
+      user: { select: { name: true, username: true, ...AVATAR_SELECT } },
+      replyTo: { select: { id: true, username: true, message: true } },
+    },
   });
 }
 

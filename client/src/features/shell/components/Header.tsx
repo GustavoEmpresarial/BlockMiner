@@ -25,6 +25,8 @@ import { useOfferwallTimerStore } from '../../offerwall/lib/offerwallTimer.store
 import LanguageSwitcher from '../../../shared/components/LanguageSwitcher';
 import { NOTIFICATION_PANEL_WIDTH_PX, useAnchoredFixedMenu } from '../../../shared/hooks/anchoredMenuPosition';
 import { formatUtcTime } from '../../../shared/utils/utcTime';
+import UserAvatar from '../../../shared/components/UserAvatar';
+import { useMyAvatar } from '../../../shared/hooks/useMyAvatar';
 
 function headerActionGhost(active = false): string {
   return `inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
@@ -198,6 +200,12 @@ export default function Header() {
   const markNotificationRead = useGameStore((state) => state.markNotificationRead);
   const fetchNotifications = useGameStore((state) => state.fetchNotifications);
   const user = useAuthStore((state) => state.user);
+  const myAvatarUrl = useMyAvatar((s) => s.avatarUrl);
+  const loadMyAvatar = useMyAvatar((s) => s.load);
+  const userIdForAvatar = typeof user?.id === 'number' ? user.id : null;
+  useEffect(() => {
+    if (userIdForAvatar != null) void loadMyAvatar(userIdForAvatar);
+  }, [userIdForAvatar, loadMyAvatar]);
 
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const notificationButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -431,9 +439,12 @@ export default function Header() {
                 {t('header.level', { n: 1 })}
               </span>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white font-black border-2 border-slate-800 shadow-[2px_2px_0px_#000000] overflow-hidden">
-              {initial}
-            </div>
+            <UserAvatar
+              url={myAvatarUrl}
+              name={displayUser || initial}
+              className="w-10 h-10 rounded-xl bg-slate-900 border-2 border-slate-800 shadow-[2px_2px_0px_#000000]"
+              letterClassName="text-white font-black"
+            />
           </div>
         </div>
       </div>

@@ -2605,7 +2605,8 @@
       "gas_covered": "Gas Covered by Pool"
     },
     "connect_required": "Conecta tu billetera primero.",
-    "switch_network": "Cambia a la red Polygon."
+    "switch_network": "Cambia a la red Polygon.",
+    "tx_avatar_license": "Licencia de foto de perfil ({{unit}})"
   },
   "faucet": {
     "title": "Faucet de poder",
@@ -7233,5 +7234,44 @@
     "error_status": "Error {{status}} al subir la imagen.",
     "error_no_response": "Error al subir la imagen (sin respuesta).",
     "error_generic": "Error en la subida."
+  },
+  "profilePhoto": {
+    "title": "Foto de perfil",
+    "subtitle": "Muestra tu propia foto en el encabezado, el chat, los rankings y los torneos.",
+    "license_price": "Licencia anual: US$ 1",
+    "license_hint": "Se paga una vez al año con tu saldo en cripto (cualquier moneda excepto BLK). La renovación es manual.",
+    "pay_with": "Pagar con",
+    "amount": "Monto",
+    "your_balance": "Tu saldo",
+    "price_unavailable": "Cotización no disponible ahora",
+    "buy": "Comprar licencia",
+    "renew": "Renovar por 1 año más",
+    "buying": "Procesando...",
+    "active_until": "Licencia activa hasta {{date}}",
+    "expired_on": "Licencia vencida el {{date}}. Tu foto queda oculta hasta que renueves.",
+    "expires_soon": "Tu licencia vence el {{date}}. Renueva ahora para mantener tu foto.",
+    "upload": "Subir foto",
+    "change": "Cambiar foto",
+    "remove": "Quitar foto",
+    "uploading": "Subiendo...",
+    "upload_hint": "PNG, JPEG, WebP o GIF de hasta 2 MB. Se recorta en cuadrado.",
+    "blocked": "La moderación desactivó la subida de foto de perfil para esta cuenta.",
+    "purchased": "¡Licencia activa! Ahora sube tu foto.",
+    "uploaded": "Foto de perfil actualizada.",
+    "removed": "Foto de perfil eliminada.",
+    "confirm_buy": "¿Pagar {{amount}} {{currency}} por 1 año de foto de perfil?",
+    "errors": {
+      "AVATAR_LICENSE_REQUIRED": "Necesitas una licencia activa para subir una foto.",
+      "AVATAR_CURRENCY_NOT_ALLOWED": "Esta moneda no se puede usar.",
+      "AVATAR_PRICE_UNAVAILABLE": "Cotización no disponible por ahora. Inténtalo en un minuto.",
+      "AVATAR_QUOTE_CHANGED": "La cotización cambió. Revisa el nuevo monto e inténtalo de nuevo.",
+      "AVATAR_INSUFFICIENT_BALANCE": "Saldo insuficiente en esta moneda.",
+      "AVATAR_LICENSE_ALREADY_ACTIVE": "Tu licencia sigue activa. Puedes renovar en los últimos 30 días.",
+      "AVATAR_UPLOAD_INVALID": "Envía una imagen PNG, JPEG, WebP o GIF.",
+      "AVATAR_UPLOAD_TOO_LARGE": "Imagen demasiado grande (máx. 2 MB).",
+      "AVATAR_UPLOAD_BLOCKED": "La subida de fotos está bloqueada para esta cuenta.",
+      "AVATAR_RATE_LIMITED": "Demasiadas subidas. Inténtalo más tarde.",
+      "generic": "Algo salió mal. Inténtalo de nuevo."
+    }
   }
 }
