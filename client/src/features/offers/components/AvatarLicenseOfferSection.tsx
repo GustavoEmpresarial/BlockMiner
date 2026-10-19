@@ -47,8 +47,9 @@ export function AvatarLicenseOfferSection() {
         <h2 className="text-lg sm:text-xl font-black text-white uppercase italic tracking-tight">{t('profilePhoto.offer_title')}</h2>
         <StatusPill variant="success" label={t('offers.live', { defaultValue: 'Ao Vivo' })} />
       </div>
-      <div className="grid grid-cols-1 gap-6 rounded-3xl border-2 border-sky-500/40 bg-slate-900/80 p-6 shadow-[4px_4px_0px_#000000] md:grid-cols-[200px_1fr_1fr]">
+      <div className="grid grid-cols-1 gap-6 rounded-3xl border-2 border-sky-500/40 bg-slate-900/80 p-6 shadow-[4px_4px_0px_#000000] md:grid-cols-[1fr_1fr_200px]">
         <LicenseCertificate
+          className="md:order-last"
           holder={state === 'active' || state === 'expiring' ? String(user?.username || user?.name || '') || null : null}
           validUntil={state === 'active' || state === 'expiring' ? until : null}
         />
