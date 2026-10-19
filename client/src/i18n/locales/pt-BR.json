@@ -3202,7 +3202,9 @@
       "games": "Minijogos",
       "checkin_bonus": "Bónus check-in",
       "youtube": "YouTube",
-      "auto_mining": "Auto Mining"
+      "auto_mining": "Auto Mining",
+      "cooling": "Refrigeração",
+      "shortlinks": "Shortlinks"
     },
     "charts_loading": "Gráficos carregando"
   },

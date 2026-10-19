@@ -1,11 +1,12 @@
 import prisma from "../../core/database/prisma.js";
-import { rankingUserSelect } from "./ranking.hashrate.js";
+import { attachFanBonus, rankingUserSelect } from "./ranking.hashrate.js";
 
 export async function listRankableUsers(now: Date, includeAutoMiningV2: boolean) {
-  return prisma.user.findMany({
+  const users = await prisma.user.findMany({
     where: { isBanned: false },
     select: rankingUserSelect(now, { includeAutoMiningV2 }),
   });
+  return attachFanBonus(users);
 }
 
 export async function findUserRoomProfile(username: string, now: Date) {

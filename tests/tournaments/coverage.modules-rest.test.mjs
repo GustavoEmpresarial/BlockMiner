@@ -20,6 +20,8 @@ process.env.TOURNAMENT_OFFERWALL_AUTOCORRECT = "1";
 
 /** @type {Record<string, unknown>} */
 const prismaMock = {
+  userVisualFanPlacement: { findMany: async () => [] },
+  userRack: { findMany: async () => [] },
   tournament: {
     findUnique: async () => null,
     findMany: async () => [],

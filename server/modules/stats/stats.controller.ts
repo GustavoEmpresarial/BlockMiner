@@ -20,6 +20,7 @@ import {
 } from "../tournaments/index.js";
 import { isAutoMiningV2SchemaAvailable } from "../auto-mining/index.js";
 import { getBlkCyclePublicSnapshot } from "../mining/index.js";
+import { computeFanBonusHashRate } from "../mining/mining.repository.js";
 import { logger } from "../../core/logger/index.js";
 import { getUserEarningsStats, parseEarningsPeriod } from "./stats.earnings.service.js";
 import { listUserActivityHistory } from "./stats.history.service.js";
@@ -67,11 +68,18 @@ export async function getPowerStats(req: Request, res: Response): Promise<void> 
       statsRepo.listUserMinersWithRack(userId),
     ]);
 
-    const [gamePowers, ytPowers, gpuPowers, ytHistory] = await Promise.all([
+    const [gamePowers, ytPowers, gpuPowers, ytHistory, shortlinkPowers, fanBonusHashRate] = await Promise.all([
       statsRepo.listActiveGamePowers(userId, now),
       statsRepo.listActiveYoutubePowers(userId, now),
       statsRepo.listActiveGpuPowers(userId, now),
       statsRepo.listRecentYoutubeHistory(userId, YT_HISTORY_LIMIT),
+      statsRepo.listActiveShortlinkPowers(userId, now),
+      computeFanBonusHashRate(userId).catch((fanErr: unknown) => {
+        log.warn("powerStats.fan_bonus_degraded", {
+          message: fanErr instanceof Error ? fanErr.message : String(fanErr),
+        });
+        return 0;
+      }),
     ]);
 
     const [miningLogs, blkCycles, streak, activeUsers24h, sortedRank] = await Promise.all([
@@ -118,6 +126,8 @@ export async function getPowerStats(req: Request, res: Response): Promise<void> 
         ytPowers,
         gpuAccess: gpuPowers,
         autoMiningV2Grants: gpuV2Powers,
+        shortlinkPowers,
+        fanBonusHashRate,
       },
       { onlyActiveMiners: true },
     );
@@ -262,11 +272,13 @@ export async function getPowerStats(req: Request, res: Response): Promise<void> 
         permanentPercent: Math.round(permPct * 10) / 10,
         temporaryPercent: Math.round(tempPct * 10) / 10,
         breakdown: {
-          machines: agg.permanentHashrate,
+          machines: agg.machineHashrate,
+          cooling: agg.fanBonusHashrate,
           gamesMinigame: agg.temporaryMinigameHashrate,
           gamesCheckin: agg.temporaryCheckinHashrate,
           youtube: agg.temporaryYoutubeHashrate,
           autoMining: agg.temporaryAutoMiningHashrate,
+          shortlinks: agg.temporaryShortlinkHashrate,
         },
         miningPayoutMode: payoutMode,
         nextExpirations: expirations.slice(0, 12),

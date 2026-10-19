@@ -25,6 +25,7 @@ import {
   buildReferralEarningsRows,
 } from "./mining.referral-settlement.js";
 import { buildEarningsPolCreditedOutboxRow, enqueueOutboxManyTx } from "../events/index.js";
+import { loadFanBonusByUser } from "./mining.fan-bonus.js";
 
 const SETTLEMENT_WRITE_CHUNK_SIZE = 500;
 
@@ -34,40 +35,9 @@ function chunkRows<T>(rows: T[], size: number): T[][] {
   return out;
 }
 
-/**
- * 1% bonus on total machine hashrate for each visual rack that has a cooling fan installed.
- * Each fan (UserVisualFanPlacement) is mounted under a specific visual rack in a room.
- * The rack has 8 slots (position: visualIndex * 8 .. visualIndex * 8 + 7).
- */
+/** 1% fan cooling bonus per rack with a fan — see mining.fan-bonus.ts (shared with ranking). */
 export async function computeFanBonusHashRate(userId: number): Promise<number> {
-  const fans = await prisma.userVisualFanPlacement.findMany({
-    where: { userId },
-    select: { roomId: true, visualIndex: true },
-  });
-  if (fans.length === 0) return 0;
-
-  const fanSet = new Set(fans.map((f) => `${f.roomId}:${f.visualIndex}`));
-  const occupiedSlots = await prisma.userRack.findMany({
-    where: {
-      userId,
-      userMiner: { isActive: true },
-    },
-    select: {
-      roomId: true,
-      position: true,
-      userMiner: { select: { hashRate: true } },
-    },
-  });
-
-  let bonus = 0;
-  for (const slot of occupiedSlots) {
-    const visualIndex = Math.floor(slot.position / 8);
-    if (fanSet.has(`${slot.roomId}:${visualIndex}`)) {
-      bonus += (slot.userMiner?.hashRate || 0) * 0.01;
-    }
-  }
-
-  return bonus;
+  return (await loadFanBonusByUser([userId])).get(userId) ?? 0;
 }
 
 /**

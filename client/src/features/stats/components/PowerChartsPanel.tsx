@@ -22,7 +22,9 @@ const COLORS = {
   gamesMinigame: '#f97316',
   gamesCheckin: '#eab308',
   youtube: '#ef4444',
-  autoMining: '#a855f7'
+  autoMining: '#a855f7',
+  cooling: '#38bdf8',
+  shortlinks: '#14b8a6'
 } as const;
 
 type PieSliceKey = keyof typeof COLORS;
@@ -47,7 +49,9 @@ export default function PowerChartsPanel({
       { key: 'gamesMinigame', name: t('powerStats.source.games'), value: Number(b.gamesMinigame) || 0 },
       { key: 'gamesCheckin', name: t('powerStats.source.checkin_bonus'), value: Number(b.gamesCheckin) || 0 },
       { key: 'youtube', name: t('powerStats.source.youtube'), value: Number(b.youtube) || 0 },
-      { key: 'autoMining', name: t('powerStats.source.auto_mining'), value: Number(b.autoMining) || 0 }
+      { key: 'autoMining', name: t('powerStats.source.auto_mining'), value: Number(b.autoMining) || 0 },
+      { key: 'cooling', name: t('powerStats.source.cooling'), value: Number(b.cooling) || 0 },
+      { key: 'shortlinks', name: t('powerStats.source.shortlinks'), value: Number(b.shortlinks) || 0 }
     ];
     return rows.filter((r) => r.value > 0);
   }, [overview, t]);

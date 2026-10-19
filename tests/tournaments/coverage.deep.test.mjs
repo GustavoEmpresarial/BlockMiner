@@ -35,6 +35,8 @@ const prismaFlags = {
 
 /** @type {Record<string, unknown>} */
 const prismaMock = {
+  userVisualFanPlacement: { findMany: async () => [] },
+  userRack: { findMany: async () => [] },
   tournament: {
     findUnique: async ({ where } = {}) => {
       if (prismaFlags.findUniqueThrowId != null && where?.id === prismaFlags.findUniqueThrowId) {

@@ -21,6 +21,8 @@ export type PowerStatsOverview = {
     gamesCheckin: number;
     youtube: number;
     autoMining: number;
+    cooling?: number;
+    shortlinks?: number;
   };
   miningPayoutMode: 'pol' | 'blk';
   nextExpirations: PowerExpirationRow[];
