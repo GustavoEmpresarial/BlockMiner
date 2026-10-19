@@ -19,7 +19,8 @@ import { attachSocketIO } from "../core/socket/index.js";
 import { mediaAdminRouter, mediaRootDir, MEDIA_PUBLIC_PREFIX, seedBundledMedia, projectRoot, createMediaStaticHeadersMiddleware } from "../modules/media/index.js";
 import { resolveClientDistPaths, createSpaIndexProbe, attachClientDistStatic, attachSpaFallback, renderSpaIndex, sendSpaReadiness, } from "../shared/http/spaStatic.js";
 import { logger } from "../core/logger/index.js";
-import prisma from "../core/database/prisma.js";
+import prisma, { pgPoolBusyCount } from "../core/database/prisma.js";
+import { drainAndClose, trackInFlightRequests } from "./shutdown.js";
 import { shutdownRedis } from "../core/redis/index.js";
 import { authRouter, authAdminRouter } from "../modules/auth/index.js";
 import { sessionRouter } from "../modules/session/index.js";
@@ -87,6 +88,7 @@ import { startShortlinksPasteadExpireCron } from "../cron/shortlinks-pastead-exp
 import { startShortlinksAdlinkflyExpireCron } from "../cron/shortlinks-adlinkfly-expire.cron.js";
 import { startSecurityArtifactCleanupCron } from "../cron/security-artifact-cleanup.cron.js";
 import { startNotificationsRetentionCron } from "../cron/notifications-retention.cron.js";
+import { startIndexMaintenanceCron } from "../cron/index-maintenance.cron.js";
 import { startEventOutboxRetentionCron } from "../cron/event-outbox-retention.cron.js";
 import { startSupportRetentionCron } from "../cron/support-retention.cron.js";
 import { startExpiredPowersCleanupCron } from "../cron/expired-powers-cleanup.cron.js";
@@ -314,9 +316,10 @@ async function main() {
     }
     const app = createApp();
     const httpServer = http.createServer(app);
+    const inFlight = trackInFlightRequests(httpServer);
     // Socket.IO core + miner/support/tournament/games realtime handlers (12c, 12i, 12j —
     // games.socket.ts covers memory/match-3/block-stack/sky-runner/cart-rush, all wired).
-    attachSocketIO(httpServer);
+    const io = attachSocketIO(httpServer);
     const port = Number(process.env.PORT || 3000);
     const server = httpServer.listen(port, () => {
         log.info(`Server listening on port ${port}`);
@@ -338,14 +341,17 @@ async function main() {
     const shortlinksAdlinkflyExpireCron = startJob(jobsEnabled, startShortlinksAdlinkflyExpireCron);
     const securityArtifactCleanupCron = startJob(jobsEnabled, startSecurityArtifactCleanupCron);
     const notificationsRetentionCron = startJob(jobsEnabled, startNotificationsRetentionCron);
+    const indexMaintenanceCron = startJob(jobsEnabled, startIndexMaintenanceCron);
     const eventOutboxRetentionCron = startJob(jobsEnabled, startEventOutboxRetentionCron);
     const supportRetentionCron = startJob(jobsEnabled, startSupportRetentionCron);
     const expiredPowersCleanupCron = startJob(jobsEnabled, startExpiredPowersCleanupCron);
     const userCountSnapshotCron = startJob(jobsEnabled, startUserCountSnapshotCron);
     const eventOutboxPublisherCron = startJob(jobsEnabled, startEventOutboxPublisherCronFromBootstrap);
     const backupCron = startJob(jobsEnabled, startBackupCron);
-    async function shutdown(signal) {
-        log.info(`Received ${signal}, shutting down`);
+    // Under the compose stop_grace_period (180s) with room to spare; env-tunable.
+    const shutdownDrainMs = Number(process.env.SHUTDOWN_DRAIN_MS || 25_000);
+    let shuttingDown = false;
+    function stopJobs() {
         miningCron.stop();
         blkRewardCron.stop();
         energyTaxCron.stop();
@@ -363,14 +369,30 @@ async function main() {
         shortlinksAdlinkflyExpireCron.stop();
         securityArtifactCleanupCron.stop();
         notificationsRetentionCron.stop();
+        indexMaintenanceCron.stop();
         eventOutboxRetentionCron.stop();
         supportRetentionCron.stop();
         expiredPowersCleanupCron.stop();
         userCountSnapshotCron.stop();
         eventOutboxPublisherCron.stop();
         backupCron.stop();
-        server.close(() => log.info("HTTP server closed"));
-        await prisma.$disconnect().catch(() => undefined);
+    }
+    async function shutdown(signal) {
+        if (shuttingDown)
+            return;
+        shuttingDown = true;
+        log.info(`Received ${signal}, shutting down`);
+        // Clients reconnect on their own; socket handlers still writing are covered by dbBusy.
+        io.disconnectSockets(true);
+        await drainAndClose({
+            server,
+            tracker: inFlight,
+            stopJobs,
+            dbBusy: pgPoolBusyCount,
+            disconnect: () => prisma.$disconnect(),
+            log,
+            timeoutMs: shutdownDrainMs,
+        });
         await shutdownRedis().catch(() => undefined);
         process.exit(0);
     }
