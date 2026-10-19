@@ -7244,7 +7244,7 @@
     "title": "Foto de perfil",
     "subtitle": "Muestra tu propia foto en el encabezado, el chat, los rankings y los torneos.",
     "license_price": "Licencia anual: {{price}}",
-    "license_hint": "Se paga una vez al año con tu saldo en cripto (cualquier moneda excepto BLK). La renovación es manual.",
+    "license_hint": "Se paga una vez al año con tu saldo en POL o SHIB. La renovación es manual.",
     "pay_with": "Pagar con",
     "amount": "Monto",
     "your_balance": "Tu saldo",
@@ -7276,7 +7276,12 @@
       "AVATAR_UPLOAD_TOO_LARGE": "Imagen demasiado grande (máx. 2 MB).",
       "AVATAR_UPLOAD_BLOCKED": "La subida de fotos está bloqueada para esta cuenta.",
       "AVATAR_RATE_LIMITED": "Demasiadas subidas. Inténtalo más tarde.",
-      "generic": "Algo salió mal. Inténtalo de nuevo."
+      "generic": "Algo salió mal. Inténtalo de nuevo.",
+      "AVATAR_CERT_NAME_INVALID": "Usa de 2 a 24 letras, números, espacios o . ' _ -",
+      "AVATAR_CERT_LIMIT_REACHED": "Ya usaste las generaciones de esta licencia.",
+      "AVATAR_CERT_BUSY": "El certificado ya se está generando. Espera un poco.",
+      "AVATAR_CERT_PROVIDER_FAILED": "No se pudo generar el certificado. Inténtalo de nuevo.",
+      "AVATAR_CERT_NOT_CONFIGURED": "La generación de certificados no está disponible ahora."
     },
     "cheaper_in_offers": "Más barato en Ofertas: {{price}} por año. Cómprala allí →",
     "offer_title": "Licencia de foto de perfil",
@@ -7287,7 +7292,12 @@
     "certificate_body": "Derecho a usar tu propia foto de perfil en BlockMiner.",
     "certificate_validity": "Válido por 1 año",
     "certificate_until": "Válido hasta {{date}}",
-    "certificate_your_name": "Tu nombre aquí"
+    "certificate_your_name": "Tu nombre aquí",
+    "certificate_name_label": "Nombre en el certificado",
+    "certificate_generate": "Generar certificado ({{count}} restantes)",
+    "certificate_generating": "Generando tu certificado... tarda menos de 1 minuto.",
+    "certificate_download": "Descargar certificado",
+    "certificate_redo_hint": "¿Salió mal? Aún puedes generarlo de nuevo ({{count}})."
   },
   "contract": {
     "eyebrow": "BlockMiner • Términos de Uso",

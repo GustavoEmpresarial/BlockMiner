@@ -194,6 +194,7 @@ model User {
   partGrants                    PartGrant[]
   avatar                        UserAvatar?
   avatarLicenses                AvatarLicense[]
+  avatarCertificates            AvatarCertificate[]
   termsAcceptances              UserTermsAcceptance[]
   youtuberProfile               YoutuberProfile?
   videoSubmissions              YoutubeVideoSubmission[]
@@ -3466,7 +3467,8 @@ model AvatarLicense {
   idempotencyKey String   @map("idempotency_key")
   createdAt      DateTime @default(now()) @map("created_at")
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  certificate  AvatarCertificate?
 
   @@unique([userId, idempotencyKey])
   @@index([userId, expiresAt])
@@ -3484,4 +3486,25 @@ model UserTermsAcceptance {
 
   @@id([userId, termsVersion])
   @@map("user_terms_acceptances")
+}
+
+/// AI-generated, personalized certificate for one license (the player types the name after paying).
+model AvatarCertificate {
+  licenseId   Int      @id @map("license_id")
+  userId      Int      @map("user_id")
+  holderName  String   @map("holder_name")
+  language    String
+  status      String   @default("pending") // pending | ready | failed
+  path        String?
+  attempts    Int      @default(0)
+  errorCode   String?  @map("error_code")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  license AvatarLicense @relation(fields: [licenseId], references: [id], onDelete: Cascade)
+  user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status, updatedAt])
+  @@map("avatar_certificates")
 }

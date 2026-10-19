@@ -7254,7 +7254,7 @@
     "title": "Profile photo",
     "subtitle": "Show your own photo in the header, chat, rankings and tournaments.",
     "license_price": "Annual license: {{price}}",
-    "license_hint": "Paid once a year from your crypto balance (any currency except BLK). Renewal is manual.",
+    "license_hint": "Paid once a year from your POL or SHIB balance. Renewal is manual.",
     "pay_with": "Pay with",
     "amount": "Amount",
     "your_balance": "Your balance",
@@ -7286,7 +7286,12 @@
       "AVATAR_UPLOAD_TOO_LARGE": "Image too large (max 2 MB).",
       "AVATAR_UPLOAD_BLOCKED": "Photo uploads are blocked for this account.",
       "AVATAR_RATE_LIMITED": "Too many uploads. Try again later.",
-      "generic": "Something went wrong. Try again."
+      "generic": "Something went wrong. Try again.",
+      "AVATAR_CERT_NAME_INVALID": "Use 2 to 24 letters, numbers, spaces or . ' _ -",
+      "AVATAR_CERT_LIMIT_REACHED": "You have used this license's generations.",
+      "AVATAR_CERT_BUSY": "The certificate is already being generated. Please wait.",
+      "AVATAR_CERT_PROVIDER_FAILED": "Could not generate the certificate. Try again.",
+      "AVATAR_CERT_NOT_CONFIGURED": "Certificate generation is not available right now."
     },
     "cheaper_in_offers": "Cheaper on the Offers page: {{price}} per year. Buy it there →",
     "offer_title": "Profile photo license",
@@ -7297,7 +7302,12 @@
     "certificate_body": "Right to use your own profile photo on BlockMiner.",
     "certificate_validity": "Valid for 1 year",
     "certificate_until": "Valid until {{date}}",
-    "certificate_your_name": "Your name here"
+    "certificate_your_name": "Your name here",
+    "certificate_name_label": "Name on the certificate",
+    "certificate_generate": "Generate certificate ({{count}} left)",
+    "certificate_generating": "Generating your certificate... takes less than a minute.",
+    "certificate_download": "Download certificate",
+    "certificate_redo_hint": "Came out wrong? You can still generate it again ({{count}})."
   },
   "contract": {
     "eyebrow": "BlockMiner • Terms of Use",

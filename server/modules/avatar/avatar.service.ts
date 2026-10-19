@@ -14,6 +14,7 @@ import { invalidateAuthUserCache } from "../../shared/security/authUser.js";
 import { mediaDiskDir } from "../media/media.config.js";
 import { AvatarError } from "./avatar.errors.js";
 import { getAvatarUsdRate } from "./avatar.pricing.js";
+import { getCertificateView } from "./avatar.certificate.js";
 import {
   AVATAR_BALANCE_COLUMN,
   AVATAR_CURRENCIES,
@@ -49,12 +50,13 @@ async function readAvatarRow(userId: number) {
 }
 
 export async function getAvatarStatus(userId: number, now = new Date()) {
-  const [row, balances] = await Promise.all([
+  const [row, balances, certificate] = await Promise.all([
     readAvatarRow(userId),
     prisma.user.findUnique({
       where: { id: userId },
-      select: { polBalance: true, usdtBalance: true, usdcBalance: true, btcBalance: true, ethBalance: true, shibBalance: true },
+      select: { polBalance: true, shibBalance: true },
     }),
+    getCertificateView(userId, now).catch(() => null),
   ]);
   const quotes = await Promise.all(
     AVATAR_CURRENCIES.map(async (currency) => {
@@ -81,6 +83,7 @@ export async function getAvatarStatus(userId: number, now = new Date()) {
     canRenew: nextLicenseExpiry(now, expiresAt) != null,
     uploadBlocked: Boolean(row?.uploadBlocked),
     avatarUrl: resolveAvatarUrl(row, now),
+    certificate,
     quotes,
   };
 }

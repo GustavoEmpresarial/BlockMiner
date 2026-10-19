@@ -11,6 +11,11 @@ export const AVATAR_ERRORS = {
   AVATAR_UPLOAD_TOO_LARGE: { status: 400, message: "Image too large (max 2 MB)." },
   AVATAR_UPLOAD_BLOCKED: { status: 403, message: "Profile photo uploads are blocked for this account." },
   AVATAR_RATE_LIMITED: { status: 429, message: "Too many uploads. Try again later." },
+  AVATAR_CERT_NAME_INVALID: { status: 400, message: "Use 2 to 24 letters, numbers, spaces or . ' _ -" },
+  AVATAR_CERT_LIMIT_REACHED: { status: 409, message: "No certificate generations left for this license." },
+  AVATAR_CERT_BUSY: { status: 429, message: "The certificate is already being generated. Try again shortly." },
+  AVATAR_CERT_PROVIDER_FAILED: { status: 502, message: "Certificate generation failed. Try again." },
+  AVATAR_CERT_NOT_CONFIGURED: { status: 503, message: "Certificate generation is not available right now." },
 } as const;
 
 export type AvatarErrorCode = keyof typeof AVATAR_ERRORS;

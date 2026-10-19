@@ -7,14 +7,12 @@ import AvatarLicensePurchase from '../../settings/components/AvatarLicensePurcha
 import { formatUsd, profilePhotoState } from '../../settings/components/ProfilePhotoCard';
 import { fetchAvatarStatus, type AvatarStatus } from '../../settings/lib/avatar.api';
 import { useMyAvatar } from '../../../shared/hooks/useMyAvatar';
-import { useAuthStore } from '../../../shared/auth/auth.store';
-import { LicenseCertificate } from './LicenseCertificate';
+import { LicenseCertificatePanel } from './LicenseCertificatePanel';
 
 /** Profile-photo license at the Offers price (US$ 1); Settings sells it at US$ 1.50. */
 export function AvatarLicenseOfferSection() {
   const { t, i18n } = useTranslation();
   const setMyAvatar = useMyAvatar((s) => s.setAvatarUrl);
-  const user = useAuthStore((s) => s.user);
   const [status, setStatus] = useState<AvatarStatus | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -48,11 +46,9 @@ export function AvatarLicenseOfferSection() {
         <StatusPill variant="success" label={t('offers.live', { defaultValue: 'Ao Vivo' })} />
       </div>
       <div className="grid grid-cols-1 gap-6 rounded-3xl border-2 border-sky-500/40 bg-slate-900/80 p-6 shadow-[4px_4px_0px_#000000] md:grid-cols-[1fr_1fr_200px]">
-        <LicenseCertificate
-          className="md:order-last"
-          holder={state === 'active' || state === 'expiring' ? String(user?.username || user?.name || '') || null : null}
-          validUntil={state === 'active' || state === 'expiring' ? until : null}
-        />
+        <div className="md:order-last">
+          <LicenseCertificatePanel status={status} licensed={state === 'active' || state === 'expiring'} onRefresh={refresh} />
+        </div>
         <div className="space-y-3">
           <p className="text-sm text-slate-300">{t('profilePhoto.offer_description')}</p>
           <div className="flex items-baseline gap-3">

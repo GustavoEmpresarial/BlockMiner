@@ -5,9 +5,9 @@ import assert from "node:assert/strict";
 const r = await import("../../server/modules/avatar/avatar.rules.ts");
 const DAY = 86_400_000;
 
-test("currencies: crypto balances only — never BLK, never ZER (no USD price)", () => {
-  for (const c of ["POL", "USDT", "USDC", "BTC", "ETH", "SHIB"]) assert.equal(r.isAvatarCurrency(c), true, c);
-  for (const c of ["BLK", "ZER", "pol", "", null, "POL; DROP TABLE users"]) assert.equal(r.isAvatarCurrency(c), false, String(c));
+test("currencies: POL or SHIB only", () => {
+  for (const c of ["POL", "SHIB"]) assert.equal(r.isAvatarCurrency(c), true, c);
+  for (const c of ["BLK", "ZER", "USDT", "USDC", "BTC", "ETH", "pol", "", null, "POL; DROP TABLE users"]) assert.equal(r.isAvatarCurrency(c), false, String(c));
   assert.deepEqual(Object.keys(r.AVATAR_BALANCE_COLUMN).sort(), [...r.AVATAR_CURRENCIES].sort());
   for (const col of Object.values(r.AVATAR_BALANCE_COLUMN)) assert.match(col, /^[a-z_]+_balance$/);
 });

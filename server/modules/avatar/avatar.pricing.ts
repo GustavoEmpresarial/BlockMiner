@@ -6,7 +6,6 @@ import type { AvatarCurrency } from "./avatar.rules.js";
 const log = logger.child("AvatarPricing");
 
 export async function getAvatarUsdRate(currency: AvatarCurrency): Promise<number | null> {
-  if (currency === "USDT" || currency === "USDC") return 1;
   const rate = await getFreshUsdPrice(currency);
   if (rate == null) log.warn("AVATAR_PRICE_UNAVAILABLE", { currency });
   return rate;

@@ -23,3 +23,8 @@ avatarRouter.get("/", requireAuth, readLimiter, avatarController.getStatus);
 avatarRouter.post("/license", requireAuth, writeLimiter, validateBody(avatarPurchaseSchema), avatarController.purchaseLicense);
 avatarRouter.post("/photo", requireAuth, writeLimiter, avatarController.uploadGate, avatarController.avatarUploadMiddleware, avatarController.uploadPhoto);
 avatarRouter.delete("/photo", requireAuth, writeLimiter, avatarController.deletePhoto);
+
+export const avatarCertificateSchema = z
+  .object({ name: z.string().max(60), language: z.string().max(10).optional() })
+  .strict();
+avatarRouter.post("/certificate", requireAuth, writeLimiter, validateBody(avatarCertificateSchema), avatarController.createCertificate);

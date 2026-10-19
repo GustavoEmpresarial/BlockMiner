@@ -123,15 +123,15 @@ test("insufficient balance: nothing charged, no license", async () => {
 });
 
 test("no fresh price: no sale (never charged at a fallback price)", async () => {
-  reset(4, { btc_balance: 1 });
+  reset(4, { shib_balance: 1_000_000 });
   const saved = price;
-  price = { ...price, BTC: null };
+  price = { ...price, SHIB: null };
   try {
-    await assert.rejects(buy(4, "BTC", "0.00001"), (e) => e.code === "AVATAR_PRICE_UNAVAILABLE");
+    await assert.rejects(buy(4, "SHIB", "200000"), (e) => e.code === "AVATAR_PRICE_UNAVAILABLE");
   } finally {
     price = saved;
   }
-  assert.equal(db.balances.get(4).btc_balance, 1);
+  assert.equal(db.balances.get(4).shib_balance, 1_000_000);
 });
 
 test("price moved more than 2% above the confirmed amount: asks again, charges nothing", async () => {
@@ -140,17 +140,18 @@ test("price moved more than 2% above the confirmed amount: asks again, charges n
   assert.equal(db.balances.get(5).pol_balance, 100);
 });
 
-test("stablecoins are 1:1 and need no price feed", async () => {
-  reset(6, { usdt_balance: 3 });
-  const saved = price;
-  price = {};
-  try {
-    const r = await buy(6, "USDT", "1");
-    assert.equal(r.amount, "1.00000000");
-  } finally {
-    price = saved;
+test("only POL and SHIB pay: stablecoins, BTC and ETH are refused", async () => {
+  reset(6, { usdt_balance: 3, btc_balance: 1, eth_balance: 1 });
+  for (const c of ["USDT", "USDC", "BTC", "ETH"]) {
+    await assert.rejects(buy(6, c, "1"), (e) => e.code === "AVATAR_CURRENCY_NOT_ALLOWED", c);
   }
-  assert.equal(db.balances.get(6).usdt_balance, 2);
+  assert.equal(db.balances.get(6).usdt_balance, 3);
+});
+
+test("SHIB pays at its USD price", async () => {
+  reset(14, { shib_balance: 1_000_000 });
+  const r = await buy(14, "SHIB", "181818.19");
+  assert.equal(r.amount, "181818.18181819");
 });
 
 test("same Idempotency-Key twice (retry, double click): one charge, same license back", async () => {

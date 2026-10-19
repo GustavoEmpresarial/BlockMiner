@@ -24,11 +24,7 @@ vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 const DAY = 86_400_000;
 const quotes: AvatarStatus['quotes'] = [
   { currency: 'POL', amount: '7.50000000', amounts: { offers: '5.00000000', settings: '7.50000000' }, balance: '10.00000000' },
-  { currency: 'USDT', amount: '1.50000000', amounts: { offers: '1.00000000', settings: '1.50000000' }, balance: '0.50000000' },
-  { currency: 'USDC', amount: '1.00000000', balance: '0.00000000' },
-  { currency: 'BTC', amount: null, balance: '0.00000000' },
-  { currency: 'ETH', amount: '0.00025000', balance: '0.00000000' },
-  { currency: 'SHIB', amount: '181818.18181819', balance: '0.00000000' },
+  { currency: 'SHIB', amount: '272727.27272728', amounts: { offers: '181818.18181819', settings: '272727.27272728' }, balance: '0.00000000' },
 ];
 const base: AvatarStatus = { priceUsd: 1.5, prices: { offers: 1, settings: 1.5 }, licenseActive: false, licenseExpiresAt: null, canRenew: true, uploadBlocked: false, avatarUrl: null, quotes };
 const getMock = api.get as unknown as ReturnType<typeof vi.fn>;
@@ -72,13 +68,12 @@ describe('ProfilePhotoCard', () => {
     expect(toast.success).toHaveBeenCalledWith('profilePhoto.purchased');
   });
 
-  it('insufficient balance or no price: the buy button is disabled', async () => {
+  it('only POL and SHIB are offered; insufficient balance disables the buy button', async () => {
     render(<ProfilePhotoCard displayName="ana" />);
     await waitFor(() => expect(screen.getByTestId('profile-photo-card')).toHaveAttribute('data-state', 'no_license'));
-    fireEvent.change(screen.getByLabelText('profilePhoto.pay_with'), { target: { value: 'USDT' } });
-    expect(screen.getByRole('button', { name: 'profilePhoto.buy' })).toBeDisabled();
-    fireEvent.change(screen.getByLabelText('profilePhoto.pay_with'), { target: { value: 'BTC' } });
-    expect(screen.getByTestId('avatar-amount')).toHaveTextContent('profilePhoto.price_unavailable');
+    const options = Array.from(screen.getByLabelText('profilePhoto.pay_with').querySelectorAll('option')).map((o) => o.textContent);
+    expect(options).toEqual(['POL', 'SHIB']);
+    fireEvent.change(screen.getByLabelText('profilePhoto.pay_with'), { target: { value: 'SHIB' } });
     expect(screen.getByRole('button', { name: 'profilePhoto.buy' })).toBeDisabled();
   });
 

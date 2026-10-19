@@ -55,7 +55,7 @@ describe('AvatarLicenseOfferSection', () => {
     renderIt();
     await waitFor(() => expect(screen.getByTestId('avatar-license-offer')).toHaveAttribute('data-state', 'active'));
     expect(screen.queryByRole('button', { name: 'profilePhoto.buy' })).toBeNull();
-    expect(screen.getByTestId('license-certificate')).toHaveTextContent('gugu');
+    expect(screen.getByTestId('certificate-form')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'profilePhoto.go_to_settings' })).toHaveAttribute('href', '/settings');
   });
 

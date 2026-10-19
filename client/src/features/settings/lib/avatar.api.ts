@@ -1,7 +1,8 @@
 import { isAxiosError } from 'axios';
 import { api } from '../../../shared/auth/auth.store';
 
-export const AVATAR_CURRENCIES = ['POL', 'USDT', 'USDC', 'BTC', 'ETH', 'SHIB'] as const;
+/** The license is paid in POL or SHIB only. */
+export const AVATAR_CURRENCIES = ['POL', 'SHIB'] as const;
 export type AvatarCurrency = (typeof AVATAR_CURRENCIES)[number];
 
 export type AvatarChannel = 'offers' | 'settings';
@@ -27,8 +28,29 @@ export type AvatarStatus = {
   canRenew: boolean;
   uploadBlocked: boolean;
   avatarUrl: string | null;
+  /** Null when there is no license in force. */
+  certificate?: AvatarCertificate | null;
   quotes: AvatarQuote[];
 };
+
+export type AvatarCertificate = {
+  status: 'none' | 'pending' | 'ready' | 'failed';
+  holderName: string | null;
+  url: string | null;
+  attemptsLeft: number;
+  errorCode: string | null;
+};
+
+/** Mirrors the server rule: letters, digits, space and . ' _ - , 2 to 24 characters. */
+export function isValidHolderName(v: string): boolean {
+  const name = v.replace(/ {2,}/g, ' ').trim();
+  return /^[\p{L}\p{N}][\p{L}\p{N} .'_-]{0,22}[\p{L}\p{N}.]$/u.test(name);
+}
+
+export async function requestAvatarCertificate(name: string, language: string): Promise<AvatarCertificate> {
+  const res = await api.post<{ ok: boolean; certificate: AvatarCertificate }>('/avatar/certificate', { name: name.trim(), language });
+  return res.data.certificate;
+}
 
 export async function fetchAvatarStatus(): Promise<AvatarStatus> {
   const res = await api.get<{ ok: boolean } & AvatarStatus>('/avatar');

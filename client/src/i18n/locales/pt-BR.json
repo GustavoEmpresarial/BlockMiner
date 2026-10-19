@@ -7258,7 +7258,7 @@
     "title": "Foto de perfil",
     "subtitle": "Mostre sua própria foto no cabeçalho, no chat, nos rankings e nos torneios.",
     "license_price": "Licença anual: {{price}}",
-    "license_hint": "Paga uma vez por ano com seu saldo em cripto (qualquer moeda, menos BLK). A renovação é manual.",
+    "license_hint": "Paga uma vez por ano com seu saldo em POL ou SHIB. A renovação é manual.",
     "pay_with": "Pagar com",
     "amount": "Valor",
     "your_balance": "Seu saldo",
@@ -7290,7 +7290,12 @@
       "AVATAR_UPLOAD_TOO_LARGE": "Imagem grande demais (máx. 2 MB).",
       "AVATAR_UPLOAD_BLOCKED": "O envio de foto está bloqueado para esta conta.",
       "AVATAR_RATE_LIMITED": "Muitos envios. Tente mais tarde.",
-      "generic": "Algo deu errado. Tente de novo."
+      "generic": "Algo deu errado. Tente de novo.",
+      "AVATAR_CERT_NAME_INVALID": "Use de 2 a 24 letras, números, espaços ou . ' _ -",
+      "AVATAR_CERT_LIMIT_REACHED": "Você já usou as gerações desta licença.",
+      "AVATAR_CERT_BUSY": "O certificado já está sendo gerado. Aguarde um pouco.",
+      "AVATAR_CERT_PROVIDER_FAILED": "Não deu para gerar o certificado. Tente de novo.",
+      "AVATAR_CERT_NOT_CONFIGURED": "A geração de certificados não está disponível agora."
     },
     "cheaper_in_offers": "Mais barato em Ofertas: {{price}} por ano. Compre lá →",
     "offer_title": "Licença de foto de perfil",
@@ -7301,7 +7306,12 @@
     "certificate_body": "Direito de usar foto de perfil própria no BlockMiner.",
     "certificate_validity": "Válido por 1 ano",
     "certificate_until": "Válido até {{date}}",
-    "certificate_your_name": "Seu nome aqui"
+    "certificate_your_name": "Seu nome aqui",
+    "certificate_name_label": "Nome no certificado",
+    "certificate_generate": "Gerar certificado ({{count}} restantes)",
+    "certificate_generating": "Gerando seu certificado... leva menos de 1 minuto.",
+    "certificate_download": "Baixar certificado",
+    "certificate_redo_hint": "Saiu errado? Você ainda pode gerar de novo ({{count}})."
   },
   "contract": {
     "eyebrow": "BlockMiner • Termos de Uso",

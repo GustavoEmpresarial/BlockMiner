@@ -1,6 +1,5 @@
 /**
- * Pure rules for the US$ 1 annual profile-photo license: which balances can pay (never BLK; ZER has
- * no USD price), how much to charge, when a renewal is allowed, and when a photo may be shown.
+ * Pure rules for the profile-photo license: which balances can pay (POL or SHIB), how much to charge, when a renewal is allowed, and when a photo may be shown.
  */
 import { Prisma } from "@prisma/client";
 import { mediaPublicPath } from "../media/media.config.js";
@@ -23,16 +22,13 @@ export const AVATAR_RENEW_WINDOW_DAYS = 30;
 export const AVATAR_QUOTE_TOLERANCE = 0.02;
 export const AVATAR_MEDIA_CATEGORY = "avatars";
 
-export const AVATAR_CURRENCIES = ["POL", "USDT", "USDC", "BTC", "ETH", "SHIB"] as const;
+/** Owner decision: the license is paid in POL or SHIB only. */
+export const AVATAR_CURRENCIES = ["POL", "SHIB"] as const;
 export type AvatarCurrency = (typeof AVATAR_CURRENCIES)[number];
 
 /** Balance column per currency. Fixed map: the SQL identifier never comes from the request. */
 export const AVATAR_BALANCE_COLUMN: Record<AvatarCurrency, string> = {
   POL: "pol_balance",
-  USDT: "usdt_balance",
-  USDC: "usdc_balance",
-  BTC: "btc_balance",
-  ETH: "eth_balance",
   SHIB: "shib_balance",
 };
 

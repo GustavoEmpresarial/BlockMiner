@@ -5,6 +5,7 @@ import { slidingWindowAllow } from "../../core/http/middleware/distributedRateLi
 import { logger } from "../../core/logger/index.js";
 import { AvatarError } from "./avatar.errors.js";
 import * as avatarService from "./avatar.service.js";
+import { requestCertificate } from "./avatar.certificate.js";
 
 const log = logger.child("AvatarController");
 
@@ -98,5 +99,19 @@ export async function deletePhoto(req: Request, res: Response): Promise<void> {
     res.json({ ok: true, avatarUrl: null });
   } catch (err) {
     sendAvatarError(res, err, req, "delete");
+  }
+}
+
+/** Starts the AI certificate for the current license; answers at once, the client polls GET /api/avatar. */
+export async function createCertificate(req: Request, res: Response): Promise<void> {
+  const user = requireSessionUser(req, res);
+  if (!user) return;
+  try {
+    const { name, language } = req.body as { name?: unknown; language?: unknown };
+    const { view, job } = await requestCertificate(user.id, { name, language });
+    void job;
+    res.status(202).json({ ok: true, certificate: view });
+  } catch (err) {
+    sendAvatarError(res, err, req, "certificate");
   }
 }
