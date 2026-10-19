@@ -121,7 +121,7 @@ export async function emitTournamentUpdateNow(tournamentId: number): Promise<voi
     const { top, participantCount } = await buildLeaderboardSlice(tournamentId);
     const payload = { tournamentId, top, participantCount, timestamp: Date.now() };
     ioRef.to(roomName(tournamentId)).emit("tournament:update", payload);
-    logger.info("tournament.realtime.emitted", {
+    logger.debug("tournament.realtime.emitted", {
       tournamentId,
       participants: participantCount,
       topCount: Array.isArray(top) ? top.length : 0,

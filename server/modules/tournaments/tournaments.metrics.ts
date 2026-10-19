@@ -60,7 +60,7 @@ export async function touchEngineStatsOnContribution(
     },
   });
 
-  log.info("tournament.engine_stats.updated", {
+  log.debug("tournament.engine_stats.updated", {
     tournamentId,
     userId,
     participants: engineStats.participants,

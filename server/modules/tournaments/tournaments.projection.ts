@@ -18,7 +18,7 @@ export async function applyContribution(
   const t0 = Date.now();
   let applied = false;
   try {
-    log.info("tournament.score.received", {
+    log.debug("tournament.score.received", {
       tournamentId,
       userId: delta.userId,
       sourceType: delta.sourceType,
@@ -38,7 +38,7 @@ export async function applyContribution(
         return false;
       }
       await applyScoreDelta(tournamentId, delta.userId, delta.metricValue, delta.eventAt, tx);
-      log.info("tournament.score.persisted", {
+      log.debug("tournament.score.persisted", {
         tournamentId,
         userId: delta.userId,
         metricValue: delta.metricValue,
@@ -60,6 +60,15 @@ export async function applyContribution(
     return { applied: false, reason: "duplicate" };
   }
 
+  // The leaderboard cache is in-process; engine stats + cache version are batched per tournament.
+  dropCachedLeaderboard(tournamentId);
+  log.debug("tournament.cache.invalidated", { tournamentId });
+  queueContributionStats(tournamentId, delta.userId, delta.metricValue, delta.eventAt);
+
+  notifyTournamentDirty(tournamentId);
+  log.debug("tournament.ranking.update_scheduled", { tournamentId, userId: delta.userId });
+
+  // The one INFO line per contribution (the steps above are DEBUG): 6 lines each was ~330 MB/day.
   log.info("tournament.contribution.applied", {
     tournamentId,
     userId: delta.userId,
@@ -67,17 +76,6 @@ export async function applyContribution(
     sourceId: delta.sourceId,
     metricValue: delta.metricValue,
     eventAt: delta.eventAt.toISOString(),
-  });
-
-  // The leaderboard cache is in-process; engine stats + cache version are batched per tournament.
-  dropCachedLeaderboard(tournamentId);
-  log.info("tournament.cache.invalidated", { tournamentId });
-  queueContributionStats(tournamentId, delta.userId, delta.metricValue, delta.eventAt);
-
-  notifyTournamentDirty(tournamentId);
-  log.info("tournament.ranking.update_scheduled", {
-    tournamentId,
-    userId: delta.userId,
     totalMs: Date.now() - t0,
   });
 

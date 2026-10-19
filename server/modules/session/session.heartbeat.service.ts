@@ -41,12 +41,13 @@ export function fingerprintTimestampValid(ts: unknown): boolean {
   return true;
 }
 
-export type HeartbeatResult = { throttled: true } | { throttled: false; credited: number };
+/** `balanceSeconds` is what the beat left in the ledger, so the page can show verified time without a stats fetch. */
+export type HeartbeatResult = { throttled: true } | { throttled: false; credited: number; balanceSeconds: number };
 
 async function findHeartbeatClocks(userId: number) {
   return prisma.user.findUnique({
     where: { id: userId },
-    select: { ytLastHeartbeatAt: true, autoMiningLastHeartbeatAt: true },
+    select: { ytLastHeartbeatAt: true, autoMiningLastHeartbeatAt: true, ytSecondsBalance: true, autoMiningSecondsBalance: true },
   });
 }
 
@@ -104,5 +105,9 @@ export async function processHeartbeatForUser(userId: number, type: "youtube" | 
 
   // Report what was actually applied — reporting `credit` after a capped no-op told the client it
   // had banked seconds the ledger never received.
-  return { throttled: false, credited: creditedCount === 0 ? 0 : credit };
+  const credited = creditedCount === 0 ? 0 : credit;
+  // Derived from the read above instead of a second query: a claim landing between the read and
+  // the increment makes it 60s high for one beat, and the client re-syncs from /stats after claims.
+  const previousBalance = Number(user?.[balanceField] ?? 0);
+  return { throttled: false, credited, balanceSeconds: previousBalance + credited };
 }

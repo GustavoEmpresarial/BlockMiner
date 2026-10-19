@@ -8,6 +8,8 @@ export const DEFAULT_USER_ACTIVITY_IGNORED_PREFIXES = ["/api/admin"];
 export const DEFAULT_USER_ACTIVITY_IGNORED_PATHS = new Set([
   "/api/session/heartbeat",
   "/api/auth/mark-adblock",
+  // Background beacon (~40/min); antibot keeps its own evidence and player history hides these rows.
+  "/api/antibot/telemetry",
 ]);
 
 const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);

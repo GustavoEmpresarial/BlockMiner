@@ -45,7 +45,7 @@ export async function processHeartbeat(req, res) {
         }
         maybeRenewAccessCookie(req, res);
         authDebug("HEARTBEAT_OK", req, { userId, type, credit: result.credited });
-        res.json({ ok: true, credited: result.credited });
+        res.json({ ok: true, credited: result.credited, balanceSeconds: result.balanceSeconds });
     }
     catch (e) {
         log.error("Heartbeat error", { message: e instanceof Error ? e.message : String(e) });

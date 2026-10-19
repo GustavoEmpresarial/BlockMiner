@@ -3,6 +3,7 @@ import { requireAdminAuth, requireAdminPermission } from "../admin/index.js";
 import { createDistributedRateLimiter } from "../../core/http/middleware/distributedRateLimit.js";
 import { getClientIp } from "../../shared/http/clientIp.js";
 import * as adminOffer from "./offer-events.admin.controller.js";
+import { invalidateActiveOfferEventsCache } from "./offer-events.service.js";
 
 /** Mount under `/api/admin` — paths include `/offer-events...` (legacy layout). */
 export const offerEventsAdminRouter = Router();
@@ -17,6 +18,11 @@ const adminLimiter = createDistributedRateLimiter({
 
 offerEventsAdminRouter.use(requireAdminAuth);
 offerEventsAdminRouter.use(adminLimiter);
+// Any admin write to events/miners must show up on the next sidebar poll, not after the cache TTL.
+offerEventsAdminRouter.use("/offer-events", (req, res, next) => {
+  if (req.method !== "GET") res.on("finish", invalidateActiveOfferEventsCache);
+  next();
+});
 
 const viewGuard = requireAdminPermission("events.view", "events");
 const manageGuard = requireAdminPermission("events");

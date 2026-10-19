@@ -42,6 +42,7 @@ const log = logger.child("offer-events.service");
 export async function deactivateExpiredOfferEvents(): Promise<number> {
   const result = await repo.deactivateExpiredOfferEventsWhere(new Date());
   if (result.count > 0) {
+    invalidateActiveOfferEventsCache();
     log.info(`Deactivated ${result.count} expired offer event(s).`);
   }
   return result.count;
@@ -199,30 +200,53 @@ async function recordEventPurchases(
   }
 }
 
+/** Shared event list TTL. Every open sidebar polls /offer-events/active once a minute and the list
+ *  is identical for everyone; stock shown can lag by this much, purchases re-check it in the tx. */
+export const ACTIVE_OFFER_EVENTS_CACHE_MS = 15_000;
+
+type ActiveOfferEventRows = Awaited<ReturnType<typeof repo.listActiveOfferEvents>>;
+let activeEventsCache: { at: number; rows: Promise<ActiveOfferEventRows> } | null = null;
+
+/** Drop the shared list; called after purchases, admin writes and the expiry cron. */
+export function invalidateActiveOfferEventsCache(): void {
+  activeEventsCache = null;
+}
+
+function loadActiveOfferEventRows(now: Date): Promise<ActiveOfferEventRows> {
+  const at = Date.now();
+  if (activeEventsCache && at - activeEventsCache.at < ACTIVE_OFFER_EVENTS_CACHE_MS) return activeEventsCache.rows;
+  // The promise itself is cached so concurrent misses share one query instead of stampeding.
+  const rows = repo.listActiveOfferEvents({ deletedAt: null, isActive: true, endsAt: { gte: now } });
+  const entry = { at, rows };
+  activeEventsCache = entry;
+  rows.catch(() => {
+    if (activeEventsCache === entry) activeEventsCache = null;
+  });
+  return rows;
+}
+
 export async function listActiveOfferEventsForUser(userId?: number) {
   const now = new Date();
-  const events = await repo.listActiveOfferEvents({
-    deletedAt: null,
-    isActive: true,
-    endsAt: { gte: now },
-  });
+  // An event that ends inside the TTL can linger for a few seconds; drop it here, not in SQL.
+  const events = (await loadActiveOfferEventRows(now)).filter((e) => e.endsAt >= now);
 
   let claimMap: Record<number, number> = {};
   let pendingDeliveryAt: Record<number, string> = {};
   let unlockedRoomCount: number | undefined;
   if (userId) {
     const allMinerIds = events.flatMap((e) => e.miners.map((m) => m.id));
-    if (allMinerIds.length > 0) {
-      const claimCounts = await repo.groupEventPurchaseClaimCounts(userId, allMinerIds);
-      claimMap = Object.fromEntries(claimCounts.map((row) => [row.eventMinerId, row._count.id]));
-      const pending = await repo.listPendingDeliveryAts(userId, allMinerIds);
-      pendingDeliveryAt = Object.fromEntries(
-        pending
-          .filter((row) => row._min.deliverAt)
-          .map((row) => [row.eventMinerId, row._min.deliverAt!.toISOString()]),
-      );
-    }
-    unlockedRoomCount = await countUnlockedRoomsForUser(userId);
+    const [claimCounts, pending, rooms] = await Promise.all([
+      allMinerIds.length > 0 ? repo.groupEventPurchaseClaimCounts(userId, allMinerIds) : [],
+      allMinerIds.length > 0 ? repo.listPendingDeliveryAts(userId, allMinerIds) : [],
+      countUnlockedRoomsForUser(userId),
+    ]);
+    claimMap = Object.fromEntries(claimCounts.map((row) => [row.eventMinerId, row._count.id]));
+    pendingDeliveryAt = Object.fromEntries(
+      pending
+        .filter((row) => row._min.deliverAt)
+        .map((row) => [row.eventMinerId, row._min.deliverAt!.toISOString()]),
+    );
+    unlockedRoomCount = rooms;
   }
 
   return {
@@ -383,6 +407,7 @@ export async function purchaseEventMinerForUser(
     });
 
     const { minerName, eventTitle, isFree, deliverAt, deliveryDelayDays, updatedUser } = result;
+    invalidateActiveOfferEventsCache(); // soldCount moved
 
     // applyUserBalanceDelta skipped — DB balance is source of truth (no miningRuntime).
 

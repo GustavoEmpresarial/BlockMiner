@@ -66,7 +66,7 @@ function installApiMock() {
   api.post.mockImplementation(async (url: string) => {
     if (url === '/session/heartbeat') {
       server.ytSecondsBalance += HEARTBEAT_CREDIT_SEC;
-      return { data: { ok: true } };
+      return { data: { ok: true, credited: HEARTBEAT_CREDIT_SEC, balanceSeconds: server.ytSecondsBalance } };
     }
     if (url === '/youtube/claim') {
       if (server.ytSecondsBalance >= MIN_SECONDS_TO_CLAIM) {
@@ -243,6 +243,57 @@ describe('YouTubeWatchPage smoke test (real component, fake player + backend, re
     expect(claimCalls).toBeGreaterThan(0);
     expect(claimCalls).toBeLessThan(10); // real cadence is ~1/min; a flood would be ~130
     expect(heartbeatCalls).toBeGreaterThan(5); // heartbeat must still be firing near the end
+  });
+
+  it('takes verified time from the heartbeat reply instead of refetching /youtube/stats every beat', { timeout: 20_000 }, async () => {
+    await mountPage();
+    await loadVideo();
+    const player = lastPlayer!;
+    act(() => player.triggerStateChange(YTState.PLAYING));
+    const statsCalls = () => api.get.mock.calls.filter(([url]) => String(url).startsWith('/youtube/stats')).length;
+    const before = statsCalls();
+
+    for (let i = 0; i < 130; i += 1) {
+      // eslint-disable-next-line no-await-in-loop
+      await act(async () => {
+        vi.advanceTimersByTime(1000);
+        await Promise.resolve();
+      });
+    }
+
+    const heartbeats = api.post.mock.calls.filter(([url]) => url === '/session/heartbeat').length;
+    const claims = api.post.mock.calls.filter(([url]) => url === '/youtube/claim').length;
+    const during = statsCalls() - before;
+    expect(heartbeats).toBeGreaterThan(10);
+    // One refresh after each claim plus one per minute — not one per heartbeat (was ~13 here).
+    expect(during).toBeLessThanOrEqual(claims + 3);
+    // The shown balance is the server's latest heartbeat figure, not a stale stats snapshot.
+    expect(screen.getAllByText(`${server.ytSecondsBalance}s`).length).toBeGreaterThan(0);
+  });
+
+  it('falls back to refetching stats each beat when the server does not send balanceSeconds', { timeout: 20_000 }, async () => {
+    const base = api.post.getMockImplementation()!;
+    api.post.mockImplementation(async (url: string, ...rest: unknown[]) => {
+      if (url === '/session/heartbeat') {
+        server.ytSecondsBalance += HEARTBEAT_CREDIT_SEC;
+        return { data: { ok: true } };
+      }
+      return base(url, ...rest);
+    });
+    await mountPage();
+    await loadVideo();
+    act(() => lastPlayer!.triggerStateChange(YTState.PLAYING));
+    const statsCalls = () => api.get.mock.calls.filter(([url]) => String(url).startsWith('/youtube/stats')).length;
+    const before = statsCalls();
+    for (let i = 0; i < 35; i += 1) {
+      // eslint-disable-next-line no-await-in-loop
+      await act(async () => {
+        vi.advanceTimersByTime(1000);
+        await Promise.resolve();
+      });
+    }
+    const heartbeats = api.post.mock.calls.filter(([url]) => url === '/session/heartbeat').length;
+    expect(statsCalls() - before).toBeGreaterThanOrEqual(heartbeats - 1);
   });
 
   it('recovers heartbeat/claims after a real pause + resume triggered from inside the iframe itself (not the app resume button)', { timeout: 20_000 }, async () => {

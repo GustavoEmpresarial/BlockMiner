@@ -49,7 +49,7 @@ export async function recordTournamentAction(
 
   await publishTournamentActionOutbox(payload);
 
-  log.info("tournament.action.dispatch.inline_outbox", {
+  log.debug("tournament.action.dispatch.inline_outbox", {
     provider: payload.provider,
     providerEventId: payload.sourceId,
   });
