@@ -1,4 +1,5 @@
-import { useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
+import { lazyWithRetry } from '../shared/utils/lazyWithRetry';
 import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { useAuthStore } from '../shared/auth/auth.store';
 import { startSiteIntegrityMonitoring } from '../features/antibot';
@@ -6,62 +7,75 @@ import CookieConsentBanner from '../shared/components/CookieConsentBanner';
 import ScrollToTopOnNav from '../shared/components/ScrollToTopOnNav';
 import { LandingPage } from '../features/landing/index';
 import { LoginPage, RegisterPage } from '../features/auth';
-import { ForgotPasswordPage } from '../features/forgot-password';
-import { VerifyEmailPage } from '../features/verify-email';
-import { TermsOfUsePage, PrivacyPolicyPage, CookiePolicyPage } from '../features/legal';
-import { RankingPage } from '../features/ranking/index';
-import { PublicRoomPage } from '../features/public-room/index';
-import { SocialPage } from '../features/social/index';
-import { CreatorPage } from '../features/creator/index';
-import { ReferralsPage } from '../features/referrals/index';
-import { ManualPage } from '../features/manual/index';
-import { CalculatorPage } from '../features/calculator/index';
-import { RoadmapPage } from '../features/roadmap/index';
-import { TransparencyPage } from '../features/transparency/index';
 import TransparencyErrorBoundary from '../shared/components/TransparencyErrorBoundary';
 import { DashboardPage } from '../features/dashboard/index';
-import { VaultPage } from '../features/machines/index';
-import { Inventory2Page } from '../features/inventory2/index';
-import { MergePage } from '../features/parts/index';
-import { StatsPage } from '../features/stats/index';
-import { InventarioPage } from '../features/inventario/index';
-import { ShopPage } from '../features/shop/index';
-import { OffersPage } from '../features/offers/index';
-import { WalletPage } from '../features/wallet/index';
-import { TaxesPage, PowerBoostDocsPage } from '../features/taxes/index';
-import { SupportPage } from '../features/support/index';
-import { SettingsPage } from '../features/settings/index';
-import { CheckinPage } from '../features/checkin/index';
-import { TasksPage } from '../features/tasks/index';
-import { MiniPassPage } from '../features/mini-pass/index';
-import { TournamentsPage } from '../features/tournaments/index';
-import { GamesPage, GameSessionPage, Game2048Page, GameVerifyPage } from '../features/games/index';
-import { FaucetPage } from '../features/faucet/index';
-import { InternalOfferwallPage } from '../features/internal-offerwall/index';
-import { OfferwallPage } from '../features/offerwall/index';
-import { PtcViewPage, PtcCampaignsPage } from '../features/ptc/index';
-import {
-  ShortlinksPage,
-  ShortlinkStepPage,
-  PasteadDonePage,
-  PasteadFailedPage,
-  AdlinkflyDonePage,
-  AdlinkflyFailedPage,
-} from '../features/shortlinks/index';
-import { ReadEarnPage } from '../features/read-earn/index';
-import { YouTubeWatchPage } from '../features/youtube/index';
-import { AutoMiningPage } from '../features/auto-mining/index';
-import { BurnEventsPage } from '../features/burn-events/index';
 import { ProtectedLayout, ProtectedNoLayout } from '../features/shell/index';
-import { AdminLoginPage } from '../features/admin-auth/index';
-import {
-  AdminLayout,
-  AdminOverviewPage,
-  AdminAnalyticsPage,
-  AdminTrafficStatsPage,
-  AdminMetricsPage,
-  adminFeatureRoutes,
-} from '../features/admin/index';
+import { AdminLayout, adminFeatureRoutes } from '../features/admin/index';
+
+// Pages load on demand (the entry chunk was 765 KB gzip with all 40+ pages and the whole admin).
+// Entry points a visitor lands on first stay in the main bundle.
+const ForgotPasswordPage = lazyWithRetry(() => import('../features/forgot-password').then((m) => ({ default: m.ForgotPasswordPage })));
+const VerifyEmailPage = lazyWithRetry(() => import('../features/verify-email').then((m) => ({ default: m.VerifyEmailPage })));
+const TermsOfUsePage = lazyWithRetry(() => import('../features/legal').then((m) => ({ default: m.TermsOfUsePage })));
+const PrivacyPolicyPage = lazyWithRetry(() => import('../features/legal').then((m) => ({ default: m.PrivacyPolicyPage })));
+const CookiePolicyPage = lazyWithRetry(() => import('../features/legal').then((m) => ({ default: m.CookiePolicyPage })));
+const RankingPage = lazyWithRetry(() => import('../features/ranking/index').then((m) => ({ default: m.RankingPage })));
+const PublicRoomPage = lazyWithRetry(() => import('../features/public-room/index').then((m) => ({ default: m.PublicRoomPage })));
+const SocialPage = lazyWithRetry(() => import('../features/social/index').then((m) => ({ default: m.SocialPage })));
+const CreatorPage = lazyWithRetry(() => import('../features/creator/index').then((m) => ({ default: m.CreatorPage })));
+const ReferralsPage = lazyWithRetry(() => import('../features/referrals/index').then((m) => ({ default: m.ReferralsPage })));
+const ManualPage = lazyWithRetry(() => import('../features/manual/index').then((m) => ({ default: m.ManualPage })));
+const CalculatorPage = lazyWithRetry(() => import('../features/calculator/index').then((m) => ({ default: m.CalculatorPage })));
+const RoadmapPage = lazyWithRetry(() => import('../features/roadmap/index').then((m) => ({ default: m.RoadmapPage })));
+const TransparencyPage = lazyWithRetry(() => import('../features/transparency/index').then((m) => ({ default: m.TransparencyPage })));
+const VaultPage = lazyWithRetry(() => import('../features/machines/index').then((m) => ({ default: m.VaultPage })));
+const Inventory2Page = lazyWithRetry(() => import('../features/inventory2/index').then((m) => ({ default: m.Inventory2Page })));
+const MergePage = lazyWithRetry(() => import('../features/parts/index').then((m) => ({ default: m.MergePage })));
+const StatsPage = lazyWithRetry(() => import('../features/stats/index').then((m) => ({ default: m.StatsPage })));
+const InventarioPage = lazyWithRetry(() => import('../features/inventario/index').then((m) => ({ default: m.InventarioPage })));
+const ShopPage = lazyWithRetry(() => import('../features/shop/index').then((m) => ({ default: m.ShopPage })));
+const OffersPage = lazyWithRetry(() => import('../features/offers/index').then((m) => ({ default: m.OffersPage })));
+const WalletPage = lazyWithRetry(() => import('../features/wallet/index').then((m) => ({ default: m.WalletPage })));
+const TaxesPage = lazyWithRetry(() => import('../features/taxes/index').then((m) => ({ default: m.TaxesPage })));
+const PowerBoostDocsPage = lazyWithRetry(() => import('../features/taxes/index').then((m) => ({ default: m.PowerBoostDocsPage })));
+const SupportPage = lazyWithRetry(() => import('../features/support/index').then((m) => ({ default: m.SupportPage })));
+const SettingsPage = lazyWithRetry(() => import('../features/settings/index').then((m) => ({ default: m.SettingsPage })));
+const CheckinPage = lazyWithRetry(() => import('../features/checkin/index').then((m) => ({ default: m.CheckinPage })));
+const TasksPage = lazyWithRetry(() => import('../features/tasks/index').then((m) => ({ default: m.TasksPage })));
+const MiniPassPage = lazyWithRetry(() => import('../features/mini-pass/index').then((m) => ({ default: m.MiniPassPage })));
+const TournamentsPage = lazyWithRetry(() => import('../features/tournaments/index').then((m) => ({ default: m.TournamentsPage })));
+const GamesPage = lazyWithRetry(() => import('../features/games/index').then((m) => ({ default: m.GamesPage })));
+const GameSessionPage = lazyWithRetry(() => import('../features/games/index').then((m) => ({ default: m.GameSessionPage })));
+const Game2048Page = lazyWithRetry(() => import('../features/games/index').then((m) => ({ default: m.Game2048Page })));
+const GameVerifyPage = lazyWithRetry(() => import('../features/games/index').then((m) => ({ default: m.GameVerifyPage })));
+const FaucetPage = lazyWithRetry(() => import('../features/faucet/index').then((m) => ({ default: m.FaucetPage })));
+const InternalOfferwallPage = lazyWithRetry(() => import('../features/internal-offerwall/index').then((m) => ({ default: m.InternalOfferwallPage })));
+const OfferwallPage = lazyWithRetry(() => import('../features/offerwall/index').then((m) => ({ default: m.OfferwallPage })));
+const PtcViewPage = lazyWithRetry(() => import('../features/ptc/index').then((m) => ({ default: m.PtcViewPage })));
+const PtcCampaignsPage = lazyWithRetry(() => import('../features/ptc/index').then((m) => ({ default: m.PtcCampaignsPage })));
+const ShortlinksPage = lazyWithRetry(() => import('../features/shortlinks/index').then((m) => ({ default: m.ShortlinksPage })));
+const ShortlinkStepPage = lazyWithRetry(() => import('../features/shortlinks/index').then((m) => ({ default: m.ShortlinkStepPage })));
+const PasteadDonePage = lazyWithRetry(() => import('../features/shortlinks/index').then((m) => ({ default: m.PasteadDonePage })));
+const PasteadFailedPage = lazyWithRetry(() => import('../features/shortlinks/index').then((m) => ({ default: m.PasteadFailedPage })));
+const AdlinkflyDonePage = lazyWithRetry(() => import('../features/shortlinks/index').then((m) => ({ default: m.AdlinkflyDonePage })));
+const AdlinkflyFailedPage = lazyWithRetry(() => import('../features/shortlinks/index').then((m) => ({ default: m.AdlinkflyFailedPage })));
+const ReadEarnPage = lazyWithRetry(() => import('../features/read-earn/index').then((m) => ({ default: m.ReadEarnPage })));
+const YouTubeWatchPage = lazyWithRetry(() => import('../features/youtube/index').then((m) => ({ default: m.YouTubeWatchPage })));
+const AutoMiningPage = lazyWithRetry(() => import('../features/auto-mining/index').then((m) => ({ default: m.AutoMiningPage })));
+const BurnEventsPage = lazyWithRetry(() => import('../features/burn-events/index').then((m) => ({ default: m.BurnEventsPage })));
+const AdminLoginPage = lazyWithRetry(() => import('../features/admin-auth/index').then((m) => ({ default: m.AdminLoginPage })));
+const AdminOverviewPage = lazyWithRetry(() => import('../features/admin/index').then((m) => ({ default: m.AdminOverviewPage })));
+const AdminAnalyticsPage = lazyWithRetry(() => import('../features/admin/index').then((m) => ({ default: m.AdminAnalyticsPage })));
+const AdminTrafficStatsPage = lazyWithRetry(() => import('../features/admin/index').then((m) => ({ default: m.AdminTrafficStatsPage })));
+const AdminMetricsPage = lazyWithRetry(() => import('../features/admin/index').then((m) => ({ default: m.AdminMetricsPage })));
+
+function RouteFallback() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background">
+      <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+    </div>
+  );
+}
 
 function ShortlinkStepRoute() {
   const { step } = useParams();
@@ -85,6 +99,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <ScrollToTopOnNav />
+      <Suspense fallback={<RouteFallback />}>
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
@@ -178,6 +193,7 @@ export default function App() {
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </Suspense>
       <CookieConsentBanner />
     </BrowserRouter>
   );
