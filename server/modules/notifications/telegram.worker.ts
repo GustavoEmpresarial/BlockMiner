@@ -214,6 +214,21 @@ export function buildGenericEventMessage(event: TelegramOutboxEvent): string {
   const payload = payloadOf(event);
   const username = esc(payload.username || event.usernameSnapshot || `user-${event.userId || "?"}`);
 
+  if (event.type === TELEGRAM_EVENT_TYPES.EMAIL_DELIVERY_FAILING) {
+    return [
+      "🚨 <b>E-mail fora do ar</b>",
+      "",
+      `Falhas seguidas: <b>${Number(payload.consecutiveFailures || 0)}</b>`,
+      payload.responseCode ? `Resposta SMTP: <code>${esc(String(payload.responseCode))}</code>` : null,
+      `Último tipo: ${esc(String(payload.lastKind || "?"))}`,
+      `📅 ${esc(formatTelegramDate(event.createdAt))}`,
+      "",
+      "Verificação de cadastro, reset de senha e 2FA por e-mail não estão chegando.",
+    ]
+      .filter(Boolean)
+      .join("\n");
+  }
+
   if (event.type === TELEGRAM_EVENT_TYPES.PTC_CAMPAIGN_SUBMITTED) {
     const url = cleanString(payload.url);
     const targetViews = Number(payload.targetViews || 0);
@@ -356,6 +371,7 @@ const GENERIC_EVENT_TYPES: readonly string[] = [
   TELEGRAM_EVENT_TYPES.PUBLIC_GUEST_MESSAGE_NEW,
   TELEGRAM_EVENT_TYPES.VIDEO_SUBMISSION_NEW,
   TELEGRAM_EVENT_TYPES.PTC_CAMPAIGN_SUBMITTED,
+  TELEGRAM_EVENT_TYPES.EMAIL_DELIVERY_FAILING,
 ];
 
 

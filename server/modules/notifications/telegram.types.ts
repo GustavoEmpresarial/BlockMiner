@@ -23,6 +23,8 @@ export const TELEGRAM_EVENT_TYPES = Object.freeze({
   PUBLIC_GUEST_MESSAGE_NEW: "public_guest_message_new",
   VIDEO_SUBMISSION_NEW: "video_submission_new",
   PTC_CAMPAIGN_SUBMITTED: "ptc_campaign_submitted",
+  // Ops alert from the mailer: consecutive SMTP failures (e.g. provider disabled sending).
+  EMAIL_DELIVERY_FAILING: "email_delivery_failing",
 } as const);
 
 
