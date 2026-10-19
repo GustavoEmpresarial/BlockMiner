@@ -44,9 +44,11 @@ describe('AvatarLicenseOfferSection', () => {
     expect(screen.getByTestId('license-certificate')).toHaveTextContent('profilePhoto.certificate_your_name');
     expect(screen.getByText('US$ 1.50')).toBeInTheDocument();
     expect(screen.getByTestId('avatar-amount')).toHaveTextContent('10.78000000 POL');
+    postMock.mockResolvedValue({ data: { ok: true, certificate: { status: 'pending', holderName: 'Gugu', url: null, attemptsLeft: 1, errorCode: null } } });
     fireEvent.click(screen.getByRole('button', { name: 'profilePhoto.buy' }));
-    fireEvent.click(screen.getByRole('button', { name: 'common.confirm' }));
-    await waitFor(() => expect(postMock).toHaveBeenCalledTimes(1));
+    fireEvent.change(screen.getByLabelText('profilePhoto.certificate_name_label'), { target: { value: 'Gugu' } });
+    fireEvent.click(screen.getByRole('button', { name: 'profilePhoto.modal_confirm' }));
+    await waitFor(() => expect(postMock).toHaveBeenCalledTimes(2));
     expect(postMock.mock.calls[0][1]).toEqual({ currency: 'POL', expectedAmount: '10.78000000', channel: 'offers' });
   });
 

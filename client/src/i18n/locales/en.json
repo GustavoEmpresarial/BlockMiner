@@ -7307,7 +7307,15 @@
     "certificate_generate": "Generate certificate ({{count}} left)",
     "certificate_generating": "Generating your certificate... takes less than a minute.",
     "certificate_download": "Download certificate",
-    "certificate_redo_hint": "Came out wrong? You can still generate it again ({{count}})."
+    "certificate_redo_hint": "Came out wrong? You can still generate it again ({{count}}).",
+    "modal_title": "Confirm purchase",
+    "modal_done_title": "Your certificate",
+    "modal_intro": "Type the name for your certificate. After paying, it is generated right away.",
+    "modal_item": "Item",
+    "modal_validity": "Validity",
+    "modal_confirm": "Confirm and pay {{amount}} {{currency}}",
+    "modal_done_text": "License active! Now upload your profile photo in Settings.",
+    "modal_generate_later": "Could not generate the certificate now. You can generate it on the Offers page, in the license card."
   },
   "contract": {
     "eyebrow": "BlockMiner • Terms of Use",

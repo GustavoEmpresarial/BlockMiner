@@ -7311,7 +7311,15 @@
     "certificate_generate": "Gerar certificado ({{count}} restantes)",
     "certificate_generating": "Gerando seu certificado... leva menos de 1 minuto.",
     "certificate_download": "Baixar certificado",
-    "certificate_redo_hint": "Saiu errado? Você ainda pode gerar de novo ({{count}})."
+    "certificate_redo_hint": "Saiu errado? Você ainda pode gerar de novo ({{count}}).",
+    "modal_title": "Confirmar compra",
+    "modal_done_title": "Seu certificado",
+    "modal_intro": "Digite o nome que vai no seu certificado. Depois de pagar, ele é gerado na hora.",
+    "modal_item": "Item",
+    "modal_validity": "Validade",
+    "modal_confirm": "Confirmar e pagar {{amount}} {{currency}}",
+    "modal_done_text": "Licença ativa! Agora envie sua foto de perfil nas Configurações.",
+    "modal_generate_later": "Não deu para gerar o certificado agora. Você pode gerar em Ofertas, no card da licença."
   },
   "contract": {
     "eyebrow": "BlockMiner • Termos de Uso",

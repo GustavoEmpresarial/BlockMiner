@@ -49,8 +49,12 @@ describe('profilePhotoState', () => {
 });
 
 describe('ProfilePhotoCard', () => {
-  it('no license: buying needs a confirm step and sends the shown amount with an idempotency key', async () => {
-    postMock.mockResolvedValue({ data: { ok: true, expiresAt: '2027-10-19T00:00:00.000Z' } });
+  it('no license: Buy opens the popup with the certificate; typing the name, paying and generating', async () => {
+    postMock.mockImplementation(async (url: string) =>
+      url === '/avatar/license'
+        ? { data: { ok: true, expiresAt: '2027-10-19T00:00:00.000Z' } }
+        : { data: { ok: true, certificate: { status: 'pending', holderName: 'Ana Lima', url: null, attemptsLeft: 1, errorCode: null } } },
+    );
     render(<ProfilePhotoCard displayName="ana" />);
     await waitFor(() => expect(screen.getByTestId('profile-photo-card')).toHaveAttribute('data-state', 'no_license'));
     expect(screen.getByTestId('avatar-amount')).toHaveTextContent('7.50000000 POL');
@@ -58,14 +62,19 @@ describe('ProfilePhotoCard', () => {
     expect(screen.getByTestId('avatar-offers-link')).toHaveAttribute('href', '/offers');
     fireEvent.click(screen.getByRole('button', { name: 'profilePhoto.buy' }));
     expect(postMock).not.toHaveBeenCalled();
-    expect(screen.getByTestId('avatar-confirm')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'common.confirm' }));
-    await waitFor(() => expect(postMock).toHaveBeenCalledTimes(1));
+    const modal = screen.getByTestId('license-purchase-modal');
+    expect(screen.getByTestId('license-modal-amount')).toHaveTextContent('7.50000000 POL');
+    expect(screen.getByRole('button', { name: 'profilePhoto.modal_confirm' })).toBeDisabled();
+    fireEvent.change(screen.getByLabelText('profilePhoto.certificate_name_label'), { target: { value: 'Ana Lima' } });
+    expect(screen.getByTestId('certificate-holder')).toHaveTextContent('Ana Lima');
+    fireEvent.click(screen.getByRole('button', { name: 'profilePhoto.modal_confirm' }));
+    await waitFor(() => expect(postMock).toHaveBeenCalledTimes(2));
     const [url, body, cfg] = postMock.mock.calls[0];
     expect(url).toBe('/avatar/license');
     expect(body).toEqual({ currency: 'POL', expectedAmount: '7.50000000', channel: 'settings' });
     expect(cfg.headers['Idempotency-Key']).toMatch(/^[a-f0-9]{32}$/);
-    expect(toast.success).toHaveBeenCalledWith('profilePhoto.purchased');
+    expect(postMock.mock.calls[1]).toEqual(['/avatar/certificate', { name: 'Ana Lima', language: 'en' }]);
+    await waitFor(() => expect(modal).toHaveAttribute('data-step', 'generating'));
   });
 
   it('only POL and SHIB are offered; insufficient balance disables the buy button', async () => {
@@ -77,13 +86,16 @@ describe('ProfilePhotoCard', () => {
     expect(screen.getByRole('button', { name: 'profilePhoto.buy' })).toBeDisabled();
   });
 
-  it('a server error code is shown translated', async () => {
+  it('a payment error is shown in the popup, translated, and nothing is generated', async () => {
     postMock.mockRejectedValue(Object.assign(new Error('x'), { isAxiosError: true, response: { status: 409, data: { code: 'AVATAR_QUOTE_CHANGED' } } }));
     render(<ProfilePhotoCard displayName="ana" />);
     await waitFor(() => expect(screen.getByTestId('profile-photo-card')).toHaveAttribute('data-state', 'no_license'));
     fireEvent.click(screen.getByRole('button', { name: 'profilePhoto.buy' }));
-    fireEvent.click(screen.getByRole('button', { name: 'common.confirm' }));
-    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('profilePhoto.errors.AVATAR_QUOTE_CHANGED'));
+    fireEvent.change(screen.getByLabelText('profilePhoto.certificate_name_label'), { target: { value: 'Ana' } });
+    fireEvent.click(screen.getByRole('button', { name: 'profilePhoto.modal_confirm' }));
+    await waitFor(() => expect(screen.getByText('profilePhoto.errors.AVATAR_QUOTE_CHANGED')).toBeInTheDocument());
+    expect(postMock).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId('license-purchase-modal')).toHaveAttribute('data-step', 'confirm');
   });
 
   it('active license: upload control shown, oversized file rejected before any request', async () => {

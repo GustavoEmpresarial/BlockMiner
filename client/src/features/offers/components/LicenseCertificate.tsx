@@ -1,48 +1,61 @@
 import { useTranslation } from 'react-i18next';
 
 type Props = {
-  /** Holder name once the license is active; omitted on the "for sale" card. */
+  /** Name drawn on the signature line; a dashed placeholder when empty. */
   holder?: string | null;
-  validUntil?: string | null;
   className?: string;
+  /** Bigger text for the purchase popup. */
+  size?: 'sm' | 'lg';
 };
 
-/** Small parchment certificate for the profile-photo license (art in /contract, text in HTML). */
-export function LicenseCertificate({ holder, validUntil, className = '' }: Props) {
+/**
+ * Preview of the license certificate, laid out like the AI-generated one: parchment, two-line
+ * serif title, "valid for 1 year", the holder name in calligraphy on a signature line, wax seal
+ * bottom-right. Art in /contract, fonts self-hosted.
+ */
+export function LicenseCertificate({ holder, className = '', size = 'sm' }: Props) {
   const { t } = useTranslation();
-  const issued = Boolean(holder);
+  const lg = size === 'lg';
+  const name = holder?.trim() || null;
+  const [titleFirst, ...titleWords] = String(t('profilePhoto.certificate_title')).split(' ');
+  const titleRest = titleWords.join(' ');
   return (
     <div
-      className={`relative mx-auto aspect-[3/4] w-full max-w-[220px] select-none rounded-lg shadow-[4px_4px_0px_#000000] ${className}`}
+      className={`relative mx-auto aspect-[3/4] w-full select-none overflow-hidden rounded-lg shadow-[4px_4px_0px_#000000] ${lg ? 'max-w-[300px]' : 'max-w-[220px]'} ${className}`}
       style={{ backgroundImage: 'url(/contract/contract-parchment.webp)', backgroundSize: '100% 100%' }}
       data-testid="license-certificate"
       role="img"
-      aria-label={t('profilePhoto.certificate_title')}
+      aria-label={`${t('profilePhoto.certificate_title')}${name ? ` — ${name}` : ''}`}
     >
-      <div className="absolute inset-x-[13%] top-[17%] bottom-[30%] flex flex-col items-center text-center text-[#3b2a17]">
-        <p className="text-[8px] font-black uppercase tracking-[0.25em] text-[#7a5a32]">BlockMiner</p>
-        <p className="mt-1 font-serif text-base font-black leading-tight">{t('profilePhoto.certificate_title')}</p>
-        <div className="my-2 h-px w-3/4 bg-[#a8875a]/60" />
-        <p className="text-[10px] font-semibold leading-snug">{t('profilePhoto.certificate_body')}</p>
-        <p className="mt-2 text-[10px] font-black uppercase tracking-wider text-[#7a5a32]">{t('profilePhoto.certificate_validity')}</p>
-        {issued ? (
-          <div className="mt-auto w-full">
-            <p className="truncate font-serif text-sm font-black italic" title={holder ?? ''}>{holder}</p>
-            <div className="mx-auto h-px w-4/5 bg-[#3b2a17]/50" />
-            {validUntil ? <p className="mt-0.5 text-[9px] font-bold text-[#5c4326]">{t('profilePhoto.certificate_until', { date: validUntil })}</p> : null}
-          </div>
+      <div className="absolute inset-x-[10%] top-[22%] flex flex-col items-center text-center text-[#4a2c17]">
+        {/* First word alone on the first line, like the generated art. */}
+        <p className={`leading-[1.02] ${lg ? 'text-[40px]' : 'text-[29px]'}`} style={{ fontFamily: "'Cert Serif', Georgia, serif", fontWeight: 700 }}>
+          <span className="block">{titleFirst}</span>
+          <span className="block">{titleRest}</span>
+        </p>
+        <p className={`mt-3 ${lg ? 'text-[15px]' : 'text-[11px]'}`} style={{ fontFamily: "'Cert Serif', Georgia, serif", fontWeight: 700 }}>
+          {t('profilePhoto.certificate_validity')}
+        </p>
+      </div>
+      <div className="absolute inset-x-[16%] top-[64%] flex flex-col items-center text-[#4a2c17]">
+        {name ? (
+          <p
+            className={`max-w-full truncate leading-none ${lg ? 'text-[34px]' : 'text-[24px]'}`}
+            style={{ fontFamily: "'Cert Script', 'Brush Script MT', cursive" }}
+            data-testid="certificate-holder"
+          >
+            {name}
+          </p>
         ) : (
-          <div className="mt-auto w-full">
-            <div className="mx-auto h-px w-4/5 border-b border-dashed border-[#3b2a17]/50" />
-            <p className="mt-0.5 text-[9px] font-bold text-[#7a5a32]">{t('profilePhoto.certificate_your_name')}</p>
-          </div>
+          <p className={`font-bold text-[#7a5a32] ${lg ? 'text-xs' : 'text-[9px]'}`}>{t('profilePhoto.certificate_your_name')}</p>
         )}
+        <div className="mt-1 h-px w-full bg-[#4a2c17]/60" />
       </div>
       <img
         src="/contract/contract-seal.webp"
         alt=""
         draggable={false}
-        className={`absolute bottom-[7%] right-[10%] h-[18%] w-auto drop-shadow-md ${issued ? '' : 'opacity-40 grayscale'}`}
+        className={`absolute bottom-[7%] right-[10%] h-[16%] w-auto drop-shadow-md ${name ? '' : 'opacity-50 grayscale'}`}
       />
     </div>
   );

@@ -60,9 +60,9 @@ export function buildCertificatePrompt(name: string, lang: CertLanguage): string
   return [
     "Turn this blank parchment into an elegant official certificate for a crypto-mining video game.",
     "Keep the parchment, its ornate border and the corner mining decorations exactly as they are.",
-    `Write, centered, in dark brown ink: at the top the title "${t.title}" in a classic serif,`,
-    `and below it "${t.validity}" in small capitals.`,
-    `In the lower-middle area, on a thin signature line, write the holder name "${name}" in large flowing calligraphy, spelled exactly like that, letter by letter.`,
+    `Layout (same as the site preview): starting about one quarter from the top, centered, the title "${t.title}" in a large bold classic serif (Cormorant Garamond style), dark brown ink, on two lines;`,
+    `right below it, smaller, "${t.validity}" in the same serif.`,
+    `At about 60% of the height, centered, on a thin horizontal signature line, the holder name "${name}" in large elegant script calligraphy (Great Vibes style), spelled exactly like that, letter by letter.`,
     "Do NOT draw any seal, stamp, badge, ribbon or wax; leave the bottom-right corner plain parchment. No other text, no logos, no watermark.",
   ].join(" ");
 }
