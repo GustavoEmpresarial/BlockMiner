@@ -37,6 +37,7 @@ import { autoMiningRouter, autoMiningAdminRouter } from "../modules/auto-mining/
 import { inventoryRouter } from "../modules/inventory/index.js";
 import { shopRouter } from "../modules/shop/index.js";
 import { avatarRouter, avatarAdminRouter, startAvatarExpiryReminderCron } from "../modules/avatar/index.js";
+import { termsRouter } from "../modules/terms/index.js";
 import { partsRouter } from "../modules/parts/index.js";
 import { gamesRouter } from "../modules/games/index.js";
 import { checkinRouter, checkinAdminRouter } from "../modules/checkin/index.js";
@@ -151,6 +152,7 @@ export function createApp() {
     app.use("/api/inventory", inventoryRouter);
     app.use("/api/shop", shopRouter);
     app.use("/api/avatar", avatarRouter);
+    app.use("/api/terms", termsRouter);
     app.use("/api/admin", avatarAdminRouter);
     app.use("/api/parts", partsRouter);
     app.use("/api/games", gamesRouter);

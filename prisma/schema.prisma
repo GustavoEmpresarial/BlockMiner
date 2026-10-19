@@ -194,6 +194,7 @@ model User {
   partGrants                    PartGrant[]
   avatar                        UserAvatar?
   avatarLicenses                AvatarLicense[]
+  termsAcceptances              UserTermsAcceptance[]
   youtuberProfile               YoutuberProfile?
   videoSubmissions              YoutubeVideoSubmission[]
   videoVotes                    YoutubeVideoVote[]
@@ -3470,4 +3471,17 @@ model AvatarLicense {
   @@unique([userId, idempotencyKey])
   @@index([userId, expiresAt])
   @@map("avatar_licenses")
+}
+
+/// "Miner's Contract": the player stamped every key clause of the Terms of Use and signed this version.
+model UserTermsAcceptance {
+  userId       Int      @map("user_id")
+  termsVersion String   @map("terms_version")
+  clauseCount  Int      @map("clause_count")
+  acceptedAt   DateTime @default(now()) @map("accepted_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, termsVersion])
+  @@map("user_terms_acceptances")
 }

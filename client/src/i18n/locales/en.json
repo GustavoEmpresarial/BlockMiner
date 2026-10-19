@@ -7293,5 +7293,53 @@
     "offer_description": "Show your own photo in the header, chat, rankings and tournaments for one year.",
     "per_year": "/ year",
     "go_to_settings": "Upload your photo in Settings"
+  },
+  "contract": {
+    "eyebrow": "BlockMiner • Terms of Use",
+    "title": "Miner's Contract",
+    "subtitle": "Read and stamp each clause. Then hold the seal to sign.",
+    "progress": "{{count}}/{{total}} clauses stamped",
+    "full_terms": "Read the full Terms of Use",
+    "hold_to_sign": "Hold the seal to sign",
+    "stamp_all_first": "Stamp the remaining clauses ({{left}})",
+    "sign_failed": "Could not sign right now. Try again.",
+    "later": "Read later",
+    "signed_title": "Contract signed!",
+    "signed_text": "Certificate {{certificate}}. Welcome to the mine, miner.",
+    "lets_mine": "Let's mine",
+    "clauses": {
+      "age": {
+        "title": "I am an adult and I own this account",
+        "text": "I am of legal age in my jurisdiction and I control this account's password and email."
+      },
+      "game": {
+        "title": "This is a game, not an investment",
+        "text": "BlockMiner is a simulation game. Rewards, estimates and calculators are illustrative and do not guarantee earnings."
+      },
+      "bots": {
+        "title": "No bots",
+        "text": "I do not use scripts, bots or automation to play."
+      },
+      "rules": {
+        "title": "Rules may change",
+        "text": "Rules, rewards, multipliers and game parameters can be adjusted at any time."
+      },
+      "onchain": {
+        "title": "Blockchain has no undo",
+        "text": "On-chain transactions are irreversible: the wrong network, token or address can lose the funds."
+      },
+      "withdrawals": {
+        "title": "Withdrawals are reviewed",
+        "text": "Withdrawals go through anti-fraud review and may take time; balances can be frozen during an investigation."
+      },
+      "conduct": {
+        "title": "Respect in chat",
+        "text": "No harassment, hate speech, spam or scams in chat or in anything I post."
+      },
+      "security": {
+        "title": "Account security is on me",
+        "text": "I protect my password and email. The team never asks for my password."
+      }
+    }
   }
 }

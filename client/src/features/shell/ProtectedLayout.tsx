@@ -10,6 +10,7 @@ import ShortlinkBackgroundRunner from '../shortlinks/components/ShortlinkBackgro
 import SiteFooter from '../../shared/components/SiteFooter';
 import EmailVerifyBanner from '../verify-email/EmailVerifyBanner';
 import ChatPanel from './chat/ChatPanel';
+import MinerContractModal from '../terms-contract/MinerContractModal';
 import { useNewBuildNotice } from '../../shared/hooks/useNewBuildNotice';
 
 export default function ProtectedLayout() {
@@ -66,6 +67,7 @@ export default function ProtectedLayout() {
       </div>
       <BroadcastPopup />
       <ChatPanel />
+      <MinerContractModal />
       <PtcSessionManager />
       <ShortlinkBackgroundRunner />
     </div>

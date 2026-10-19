@@ -7297,5 +7297,53 @@
     "offer_description": "Mostre sua própria foto no cabeçalho, no chat, nos rankings e nos torneios por um ano.",
     "per_year": "/ ano",
     "go_to_settings": "Enviar sua foto nas Configurações"
+  },
+  "contract": {
+    "eyebrow": "BlockMiner • Termos de Uso",
+    "title": "Contrato do Minerador",
+    "subtitle": "Leia e carimbe cada cláusula. Depois segure o selo para assinar.",
+    "progress": "{{count}}/{{total}} cláusulas carimbadas",
+    "full_terms": "Ler os Termos de Uso completos",
+    "hold_to_sign": "Segure o selo para assinar",
+    "stamp_all_first": "Carimbe as cláusulas que faltam ({{left}})",
+    "sign_failed": "Não deu para assinar agora. Tente de novo.",
+    "later": "Ler depois",
+    "signed_title": "Contrato assinado!",
+    "signed_text": "Certificado {{certificate}}. Bem-vindo à mina, minerador.",
+    "lets_mine": "Bora minerar",
+    "clauses": {
+      "age": {
+        "title": "Sou maior de idade e dono da conta",
+        "text": "Tenho a maioridade na minha jurisdição e sou eu quem controla a senha e o e-mail desta conta."
+      },
+      "game": {
+        "title": "Isto é um jogo, não um investimento",
+        "text": "O BlockMiner é um jogo de simulação. Recompensas, estimativas e calculadoras são ilustrativas e não garantem ganhos."
+      },
+      "bots": {
+        "title": "Nada de bots",
+        "text": "Não uso scripts, bots ou automação para jogar."
+      },
+      "rules": {
+        "title": "As regras podem mudar",
+        "text": "Regras, recompensas, multiplicadores e parâmetros do jogo podem ser ajustados a qualquer momento."
+      },
+      "onchain": {
+        "title": "Blockchain não tem volta",
+        "text": "Transações on-chain são irreversíveis: rede, token ou endereço errado pode fazer os fundos se perderem."
+      },
+      "withdrawals": {
+        "title": "Saques são revisados",
+        "text": "Saques passam por revisão antifraude e podem demorar; saldos podem ser congelados durante uma investigação."
+      },
+      "conduct": {
+        "title": "Respeito no chat",
+        "text": "Sem assédio, discurso de ódio, spam ou golpes no chat e em qualquer conteúdo que eu publicar."
+      },
+      "security": {
+        "title": "A segurança da conta é minha",
+        "text": "Protejo minha senha e meu e-mail. A equipe nunca pede minha senha."
+      }
+    }
   }
 }

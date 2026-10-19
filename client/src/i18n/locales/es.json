@@ -7283,5 +7283,53 @@
     "offer_description": "Muestra tu propia foto en el encabezado, el chat, los rankings y los torneos durante un año.",
     "per_year": "/ año",
     "go_to_settings": "Sube tu foto en Configuración"
+  },
+  "contract": {
+    "eyebrow": "BlockMiner • Términos de Uso",
+    "title": "Contrato del Minero",
+    "subtitle": "Lee y sella cada cláusula. Luego mantén pulsado el sello para firmar.",
+    "progress": "{{count}}/{{total}} cláusulas selladas",
+    "full_terms": "Leer los Términos de Uso completos",
+    "hold_to_sign": "Mantén pulsado el sello para firmar",
+    "stamp_all_first": "Sella las cláusulas que faltan ({{left}})",
+    "sign_failed": "No se pudo firmar ahora. Inténtalo de nuevo.",
+    "later": "Leer después",
+    "signed_title": "¡Contrato firmado!",
+    "signed_text": "Certificado {{certificate}}. Bienvenido a la mina, minero.",
+    "lets_mine": "A minar",
+    "clauses": {
+      "age": {
+        "title": "Soy mayor de edad y dueño de la cuenta",
+        "text": "Tengo la mayoría de edad en mi jurisdicción y controlo la contraseña y el correo de esta cuenta."
+      },
+      "game": {
+        "title": "Esto es un juego, no una inversión",
+        "text": "BlockMiner es un juego de simulación. Recompensas, estimaciones y calculadoras son ilustrativas y no garantizan ganancias."
+      },
+      "bots": {
+        "title": "Nada de bots",
+        "text": "No uso scripts, bots ni automatización para jugar."
+      },
+      "rules": {
+        "title": "Las reglas pueden cambiar",
+        "text": "Reglas, recompensas, multiplicadores y parámetros del juego pueden ajustarse en cualquier momento."
+      },
+      "onchain": {
+        "title": "La blockchain no tiene vuelta atrás",
+        "text": "Las transacciones on-chain son irreversibles: red, token o dirección equivocados pueden hacer perder los fondos."
+      },
+      "withdrawals": {
+        "title": "Los retiros se revisan",
+        "text": "Los retiros pasan por revisión antifraude y pueden tardar; los saldos pueden congelarse durante una investigación."
+      },
+      "conduct": {
+        "title": "Respeto en el chat",
+        "text": "Sin acoso, discurso de odio, spam ni estafas en el chat ni en lo que publique."
+      },
+      "security": {
+        "title": "La seguridad de la cuenta es mía",
+        "text": "Protejo mi contraseña y mi correo. El equipo nunca pide mi contraseña."
+      }
+    }
   }
 }
