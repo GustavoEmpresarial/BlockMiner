@@ -5769,7 +5769,9 @@
     "chat_view_room": "Ver Sala",
     "chat_today": "Hoje",
     "chat_yesterday": "Ontem",
-    "chat_too_long": "Mensagem muito longa (máx. {{max}} caracteres)."
+    "chat_too_long": "Mensagem muito longa (máx. {{max}} caracteres).",
+    "new_version_message": "Uma nova versão do BlockMiner está disponível.",
+    "new_version_reload": "Recarregar"
   },
   "admin": {
     "metrics_title": "Métricas do Servidor",

@@ -193,6 +193,17 @@ async function fetchServerBuildId(): Promise<string | null> {
 }
 
 /**
+ * Build id the server is serving now, when it is confirmed DIFFERENT from the running shell;
+ * null when it is the same build or nothing can be proven (error page, timeout, no meta).
+ */
+export async function getNewServerBuildId(): Promise<string | null> {
+  const loaded = getLoadedBuildId();
+  if (!loaded) return null;
+  const server = await fetchServerBuildId();
+  return server && server !== loaded ? server : null;
+}
+
+/**
  * The ONLY correct trigger for an automatic reload: the server has published a
  * DIFFERENT build than the one we're running. A dynamic import can fail for two
  * very different reasons — a genuinely stale post-deploy chunk (reload fixes it)

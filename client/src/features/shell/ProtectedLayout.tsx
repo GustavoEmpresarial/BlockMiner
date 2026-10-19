@@ -10,6 +10,7 @@ import ShortlinkBackgroundRunner from '../shortlinks/components/ShortlinkBackgro
 import SiteFooter from '../../shared/components/SiteFooter';
 import EmailVerifyBanner from '../verify-email/EmailVerifyBanner';
 import ChatPanel from './chat/ChatPanel';
+import { useNewBuildNotice } from '../../shared/hooks/useNewBuildNotice';
 
 export default function ProtectedLayout() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -18,6 +19,7 @@ export default function ProtectedLayout() {
   const initSocket = useGameStore((s) => s.initSocket);
   const location = useLocation();
   const fullWidth = location.pathname === '/inventory';
+  useNewBuildNotice();
 
   useEffect(() => {
     void checkSession({ silent: true });
