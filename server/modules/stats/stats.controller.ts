@@ -20,8 +20,10 @@ import {
 } from "../tournaments/index.js";
 import { isAutoMiningV2SchemaAvailable } from "../auto-mining/index.js";
 import { getBlkCyclePublicSnapshot } from "../mining/index.js";
+import { computeFanBonusHashRate } from "../mining/mining.repository.js";
 import { logger } from "../../core/logger/index.js";
 import { getUserEarningsStats, parseEarningsPeriod } from "./stats.earnings.service.js";
+import { listUserActivityHistory } from "./stats.history.service.js";
 
 const log = logger.child("stats.controller");
 
@@ -66,11 +68,18 @@ export async function getPowerStats(req: Request, res: Response): Promise<void> 
       statsRepo.listUserMinersWithRack(userId),
     ]);
 
-    const [gamePowers, ytPowers, gpuPowers, ytHistory] = await Promise.all([
+    const [gamePowers, ytPowers, gpuPowers, ytHistory, shortlinkPowers, fanBonusHashRate] = await Promise.all([
       statsRepo.listActiveGamePowers(userId, now),
       statsRepo.listActiveYoutubePowers(userId, now),
       statsRepo.listActiveGpuPowers(userId, now),
       statsRepo.listRecentYoutubeHistory(userId, YT_HISTORY_LIMIT),
+      statsRepo.listActiveShortlinkPowers(userId, now),
+      computeFanBonusHashRate(userId).catch((fanErr: unknown) => {
+        log.warn("powerStats.fan_bonus_degraded", {
+          message: fanErr instanceof Error ? fanErr.message : String(fanErr),
+        });
+        return 0;
+      }),
     ]);
 
     const [miningLogs, blkCycles, streak, activeUsers24h, sortedRank] = await Promise.all([
@@ -117,6 +126,8 @@ export async function getPowerStats(req: Request, res: Response): Promise<void> 
         ytPowers,
         gpuAccess: gpuPowers,
         autoMiningV2Grants: gpuV2Powers,
+        shortlinkPowers,
+        fanBonusHashRate,
       },
       { onlyActiveMiners: true },
     );
@@ -261,11 +272,13 @@ export async function getPowerStats(req: Request, res: Response): Promise<void> 
         permanentPercent: Math.round(permPct * 10) / 10,
         temporaryPercent: Math.round(tempPct * 10) / 10,
         breakdown: {
-          machines: agg.permanentHashrate,
+          machines: agg.machineHashrate,
+          cooling: agg.fanBonusHashrate,
           gamesMinigame: agg.temporaryMinigameHashrate,
           gamesCheckin: agg.temporaryCheckinHashrate,
           youtube: agg.temporaryYoutubeHashrate,
           autoMining: agg.temporaryAutoMiningHashrate,
+          shortlinks: agg.temporaryShortlinkHashrate,
         },
         miningPayoutMode: payoutMode,
         nextExpirations: expirations.slice(0, 12),
@@ -387,5 +400,37 @@ export async function getEarningsStats(req: Request, res: Response): Promise<voi
   } catch (e: unknown) {
     log.error("getEarningsStats", { error: e instanceof Error ? e.message : String(e) });
     res.status(500).json({ ok: false, message: "Não foi possível carregar os ganhos agora." });
+  }
+}
+
+/**
+ * GET /api/stats/activity-history?page=1&pageSize=15&category=all&q=
+ * Activity log and history for the authenticated user.
+ */
+export async function getUserActivityHistory(req: Request, res: Response): Promise<void> {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ ok: false, message: "Session invalid." });
+      return;
+    }
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const pageSize = Math.min(50, Math.max(5, Number(req.query.pageSize) || 15));
+    const category = typeof req.query.category === "string" ? req.query.category : "all";
+    const q = typeof req.query.q === "string" ? req.query.q : undefined;
+    const days = Number(req.query.days) || undefined;
+
+    const result = await listUserActivityHistory({
+      userId,
+      page,
+      pageSize,
+      category,
+      q,
+      days,
+    });
+    res.json(result);
+  } catch (e: unknown) {
+    log.error("getUserActivityHistory", { error: e instanceof Error ? e.message : String(e) });
+    res.status(500).json({ ok: false, message: "Não foi possível carregar o histórico de atividades." });
   }
 }

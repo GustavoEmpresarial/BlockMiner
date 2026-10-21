@@ -3,6 +3,7 @@ import { Cpu, TrendingUp } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { TransparencyHardwareAsset } from './transparency.base';
 import { formatSatoshi } from './transparency.base';
+import { formatUtcDate } from '../../../shared/utils/utcTime';
 
 const MODEL_VIEWER_SCRIPT =
   'https://cdn.jsdelivr.net/npm/@google/model-viewer@3.5.0/dist/model-viewer.min.js';
@@ -151,11 +152,7 @@ function HardwareAssetCard({ asset }: { asset: TransparencyHardwareAsset }) {
   };
 
   const fmtDate = (iso: string) => {
-    try {
-      return new Date(iso).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' });
-    } catch {
-      return iso;
-    }
+    return formatUtcDate(iso, { day: '2-digit', month: 'short', year: 'numeric', fallback: iso });
   };
 
   return (

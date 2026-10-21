@@ -4,6 +4,7 @@
 import type { Request, Response } from "express";
 import { logger } from "../../core/logger/index.js";
 import { consumeOfferwallPass, extractPassToken } from "../bm-captcha/index.js";
+import { getCallbackSourceIp } from "../ip-intelligence/index.js";
 import * as moneyrainService from "./moneyrain.service.js";
 
 const log = logger.child("moneyrain.controller");
@@ -14,7 +15,7 @@ export async function moneyRainCallback(req: Request, res: Response): Promise<vo
   const rawBody = (req as Request & { rawBody?: Buffer }).rawBody;
   const signatureHeader = String(req.headers["x-moneyrain-signature"] ?? "");
   const timestampHeader = String(req.headers["x-moneyrain-timestamp"] ?? "");
-  const clientIp = String(req.headers["cf-connecting-ip"] ?? req.ip ?? "").replace("::ffff:", "");
+  const clientIp = getCallbackSourceIp(req);
   try {
     const result = await moneyrainService.processMoneyRainCallback(
       rawBody,

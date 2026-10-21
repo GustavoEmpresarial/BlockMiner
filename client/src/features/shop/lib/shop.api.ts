@@ -2,6 +2,7 @@ import { api } from '../../../shared/auth/auth.store';
 import type {
   ShopCatalogFan,
   ShopCatalogMiner,
+  ShopCatalogPart,
   ShopCatalogRack,
   ShopMinersResponse,
   ShopPurchaseResponse,
@@ -24,3 +25,9 @@ export function postShopPurchaseFan(body: { sku: string; quantity: number; idemp
 export function postShopPurchaseRack(body: { sku: string; quantity: number; idempotencyKey?: string }) {
   return api.post<ShopPurchaseResponse & { rackCredits?: number }>('/shop/purchase-rack', body);
 }
+
+export function postShopPurchasePart(body: { slug: string; rarity: string; quantity: number; idempotencyKey?: string }) {
+  return api.post<ShopPurchaseResponse & { totalOwnedQuantity?: number }>('/shop/purchase-part', body);
+}
+
+export type { ShopCatalogPart };

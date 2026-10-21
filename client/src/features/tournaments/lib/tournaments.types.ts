@@ -30,6 +30,8 @@ export interface TournamentSummary {
   endsAt: string;
   windowUtc?: { start: string; end: string };
   status: 'SCHEDULED' | 'ACTIVE' | 'ENDED' | 'CANCELLED';
+  /** Dev-only preview: ranked live, never finalized or paid. */
+  preview?: boolean;
   prizes: TournamentPrize[];
   _count: { entries: number };
 }
@@ -40,7 +42,7 @@ export interface LeaderboardEntry {
   /** POL deposited in window — informational when metric is DEPOSITS_USD */
   scorePol?: number | null;
   rank?: number;
-  user: { id: number; username: string; avatarUrl?: string };
+  user: { id: number; username: string; avatarUrl?: string | null };
 }
 
 export interface TournamentDetail {
@@ -53,6 +55,38 @@ export interface TournamentDetail {
   myDepositBreakdown?: {
     breakdown: { total: number; txCount: number; totalUsd?: number | null; totalPol?: number };
   } | null;
+  offerwallRules?: OfferwallRules | null;
+  myOfferwallBreakdown?: OfferwallBreakdown | null;
+}
+
+export type OfferwallSourceKey =
+  | 'internal'
+  | 'offerwallMe'
+  | 'moneyRain'
+  | 'multiwall'
+  | 'offerwallGg'
+  | 'zerads';
+
+export interface OfferwallRules {
+  zeradsMaxPerUtcDay: number;
+  tieBreak: 'first_to_reach';
+  sources: Array<{
+    key: OfferwallSourceKey;
+    rule: 'per_completion' | 'per_credit' | 'per_view' | 'per_click_daily_cap';
+    scoringFrom: string | null;
+  }>;
+}
+
+export interface OfferwallBreakdown {
+  internal: number;
+  offerwallMe: number;
+  moneyRain: number;
+  multiwall: number;
+  offerwallGg: number;
+  zeradsRaw: number;
+  zeradsCredited: number;
+  total: number;
+  reachedAt: string | null;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────

@@ -1,11 +1,25 @@
-export const TASK_TYPES = ['LOGIN_DAY', 'MINE_BLK', 'PLAY_GAMES', 'WATCH_YOUTUBE', 'INTERNAL_OFFERWALL'] as const;
+import { fromUtcInputValue, toUtcInputValue } from '../../../../shared/utils/utcTime';
+export const TASK_TYPES = [
+  'LOGIN_DAY',
+  'MINE_BLK',
+  'PLAY_GAMES',
+  'WATCH_YOUTUBE',
+  'INTERNAL_OFFERWALL',
+  'COMPLETE_OFFERS',
+  'CLAIM_FAUCET',
+  'COMPLETE_SHORTLINKS',
+  'AUTO_MINING_CLAIMS',
+  'MERGE_MACHINES',
+  'BURN_CLAIMS',
+  'QUALIFIED_REFERRALS',
+] as const;
 
 export const REWARD_KINDS = ['BLK', 'POL', 'HASHRATE_TEMP', 'SHOP_MINER', 'EVENT_MINER'] as const;
 
 export const RESET_CADENCES = ['DAILY', 'WEEKLY', 'MONTHLY'] as const;
 
 /** Task types where target is a whole number of actions per reset period (not BLK amount). */
-const COUNT_TASK_TYPES = new Set<string>(['LOGIN_DAY', 'PLAY_GAMES', 'WATCH_YOUTUBE', 'INTERNAL_OFFERWALL']);
+const COUNT_TASK_TYPES = new Set<string>(TASK_TYPES.filter((tt) => tt !== 'MINE_BLK'));
 
 export function isCountTaskType(tt: string): boolean {
   return COUNT_TASK_TYPES.has(String(tt || '').toUpperCase());
@@ -261,13 +275,9 @@ export function formatRewardSummary(r: AdminDailyTaskDefinitionRow): string {
   }
 }
 
-/** Convert a date value to the format expected by <input type="datetime-local"> */
+/** Convert a date value to the UTC format expected by <input type="datetime-local"> */
 export function toDatetimeLocal(v: string | Date | null | undefined): string {
-  if (!v) return '';
-  const d = typeof v === 'string' ? new Date(v) : v;
-  if (isNaN(d.getTime())) return '';
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return toUtcInputValue(v);
 }
 
 export type EditFormState = {
@@ -351,8 +361,8 @@ export function buildEditBody(f: EditFormState): EditDefinitionBody {
     internalOfferwallOfferId: String(f.internalOfferwallOfferId).trim()
       ? parseInt(String(f.internalOfferwallOfferId).trim(), 10)
       : null,
-    validFrom: f.validFrom.trim() || null,
-    validUntil: f.validUntil.trim() || null,
+    validFrom: fromUtcInputValue(f.validFrom) ?? (f.validFrom.trim() || null),
+    validUntil: fromUtcInputValue(f.validUntil) ?? (f.validUntil.trim() || null),
   };
   if (f.rewardKind === 'BLK') body.rewardBlkAmount = parseFloat(String(f.rewardBlkAmount).replace(',', '.'));
   if (f.rewardKind === 'POL') body.rewardPolAmount = parseFloat(String(f.rewardPolAmount).replace(',', '.'));

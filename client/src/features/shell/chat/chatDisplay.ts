@@ -1,3 +1,4 @@
+import { addUtcDays, formatUtcDate, formatUtcTime, isSameUtcDay, utcDateKey } from '../../../shared/utils/utcTime';
 /**
  * Chat display helpers — day bucketing + safe decode of legacy entity-encoded rows.
  * Messages are always rendered as React text nodes (never dangerouslySetInnerHTML).
@@ -16,21 +17,15 @@ export function decodeLegacyChatEntities(text: string): string {
     .replace(/&amp;/gi, '&');
 }
 
-function startOfLocalDay(d: Date): number {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-}
-
-export function sameLocalDay(a: Date, b: Date): boolean {
-  return startOfLocalDay(a) === startOfLocalDay(b);
+/** Chat day separators follow UTC calendar days (product rule: whole site in UTC). */
+export function sameUtcDay(a: Date, b: Date): boolean {
+  return isSameUtcDay(a, b);
 }
 
 export function dayBucketKey(isoOrDate: string | number | Date | null | undefined): string {
   const d = new Date(isoOrDate ?? 0);
   if (Number.isNaN(d.getTime())) return 'invalid';
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
+  return utcDateKey(d);
 }
 
 export function formatChatDayLabel(
@@ -41,15 +36,15 @@ export function formatChatDayLabel(
   const d = new Date(isoOrDate ?? 0);
   if (Number.isNaN(d.getTime())) return '';
   const now = new Date();
-  if (sameLocalDay(d, now)) return labels.today;
-  const yday = new Date(now);
-  yday.setDate(yday.getDate() - 1);
-  if (sameLocalDay(d, yday)) return labels.yesterday;
-  return d.toLocaleDateString(locale || undefined, {
+  if (sameUtcDay(d, now)) return labels.today;
+  if (sameUtcDay(d, addUtcDays(-1, now))) return labels.yesterday;
+  return formatUtcDate(d, {
+    locale: locale || undefined,
+    fallback: '',
     weekday: 'short',
     day: 'numeric',
     month: 'short',
-    year: d.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
+    year: d.getUTCFullYear() !== now.getUTCFullYear() ? 'numeric' : undefined,
   });
 }
 
@@ -59,7 +54,7 @@ export function formatChatTime(
 ): string {
   const d = new Date(isoOrDate ?? 0);
   if (Number.isNaN(d.getTime())) return '';
-  return d.toLocaleTimeString(locale || undefined, { hour: '2-digit', minute: '2-digit' });
+  return formatUtcTime(d, { locale: locale || undefined, fallback: '' });
 }
 
 export type ChatTimelineItem<T> =

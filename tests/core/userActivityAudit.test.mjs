@@ -76,3 +76,37 @@ test("shouldAuditUserRequest respects USER_ACTIVITY_LOG_READS=0 for GET", () => 
     else process.env.USER_ACTIVITY_LOG_READS = prev;
   }
 });
+
+function withReadsEnv(value, fn) {
+  const prev = process.env.USER_ACTIVITY_LOG_READS;
+  if (value === undefined) delete process.env.USER_ACTIVITY_LOG_READS;
+  else process.env.USER_ACTIVITY_LOG_READS = value;
+  try {
+    fn();
+  } finally {
+    if (prev === undefined) delete process.env.USER_ACTIVITY_LOG_READS;
+    else process.env.USER_ACTIVITY_LOG_READS = prev;
+  }
+}
+
+// Every authenticated GET (mostly UI polling) used to insert an audit_logs row: ~6 rows/s on the
+// remote database, 31M rows / 14 GB, and the only reader (player history) filters them out.
+test("GET is not audited unless USER_ACTIVITY_LOG_READS=1; writes always are", () => {
+  const get = { method: "GET", originalUrl: "/api/offer-events/active", user: { id: 1 } };
+  const head = { method: "HEAD", originalUrl: "/api/wallet/balance", user: { id: 1 } };
+  const post = { method: "POST", originalUrl: "/api/shop/buy", user: { id: 1 } };
+  const ok = { statusCode: 200 };
+  withReadsEnv(undefined, () => {
+    assert.equal(shouldAuditUserRequest(get, ok), false);
+    assert.equal(shouldAuditUserRequest(head, ok), false);
+    assert.equal(shouldAuditUserRequest(post, ok), true);
+    assert.equal(shouldAuditUserRequest({ ...post, method: "DELETE" }, ok), true);
+  });
+  withReadsEnv("1", () => {
+    assert.equal(shouldAuditUserRequest(get, ok), true);
+  });
+  withReadsEnv("true", () => {
+    assert.equal(shouldAuditUserRequest(get, ok), false, "only the literal 1 turns read auditing back on");
+  });
+  assert.equal(shouldAuditUserRequest(get, ok, { auditReads: true }), true, "explicit option still wins");
+});

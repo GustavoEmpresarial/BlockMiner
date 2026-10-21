@@ -2,6 +2,8 @@ import type { Request, Response } from "express";
 import {
   requireSessionUser,
   readErrorCode,
+  readHttpStatus,
+  readErrorMessage,
 } from "../../shared/errors/httpStatusError.js";
 import {
   resolveCriticalMutation,
@@ -21,6 +23,7 @@ import {
 } from "./shop.schemas.js";
 import { purchaseFansForUser, FAN_ERROR_MESSAGE, readFanMaxBulkQuantity } from "../fans/index.js";
 import { purchaseRacksForUser, RACK_ERROR_MESSAGE, readRackMaxBulkQuantity } from "../racks/index.js";
+import { purchasePartForUser } from "../parts/index.js";
 
 export { readShopMaxBulkQuantity };
 
@@ -38,7 +41,7 @@ export async function listMiners(req: Request, res: Response): Promise<void> {
     const page = parsedQuery.success ? parsedQuery.data.page : 1;
     const pageSize = parsedQuery.success ? parsedQuery.data.pageSize : 24;
 
-    const { items, total, currency, fans, racks, fanSalesAvailableAt, rackSalesAvailableAt } =
+    const { items, total, currency, fans, racks, parts, fanSalesAvailableAt, rackSalesAvailableAt } =
       await shopServiceRef.listMinersForShop(page, pageSize, user.id);
 
     res.json({
@@ -50,6 +53,7 @@ export async function listMiners(req: Request, res: Response): Promise<void> {
       miners: items,
       fans,
       racks,
+      parts,
       fanSalesAvailableAt,
       rackSalesAvailableAt,
     });
@@ -548,3 +552,48 @@ export async function purchaseRack(req: Request, res: Response): Promise<void> {
     });
   }
 }
+
+export async function purchasePart(req: Request, res: Response): Promise<void> {
+  try {
+    const user = requireSessionUser(req, res);
+    if (!user) return;
+
+    const { slug, rarity, quantity } = req.body ?? {};
+
+    const idem = await resolveCriticalMutation(req, res);
+    if (!idem) return;
+    const { lease, ci } = idem;
+
+    try {
+      const result = await purchasePartForUser({
+        userId: user.id,
+        slug,
+        rarity,
+        quantity,
+        channel: "shop",
+      });
+
+      const payload = {
+        messageKey: "parts.purchase_success",
+        message: "Peça comprada com sucesso!",
+        ...result,
+      };
+
+      await finalizeCriticalMutationSuccess(lease, {
+        requestHash: ci.requestHash,
+        responseJson: payload,
+      });
+
+      res.json(payload);
+    } catch (error) {
+      await cancelCriticalMutation(lease);
+      const status = readHttpStatus(error) ?? 400;
+      const code = readErrorCode(error) ?? "PART_PURCHASE_ERROR";
+      const message = readErrorMessage(error) || "Erro ao comprar peça.";
+      res.status(status).json({ ok: false, code, message });
+    }
+  } catch (error) {
+    res.status(500).json({ ok: false, code: "FATAL_ERROR", message: "Erro interno." });
+  }
+}
+

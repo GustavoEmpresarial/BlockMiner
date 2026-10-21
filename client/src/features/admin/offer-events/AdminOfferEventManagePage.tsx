@@ -47,6 +47,7 @@ import {
   updateAdminOfferEventMiner,
 } from './adminOfferEvents.api';
 import { resolveThumb } from './offerEvents.helpers';
+import { formatUtcDateTime, fromUtcInputValue, toUtcInputValue } from '../../../shared/utils/utcTime';
 
 /* ── constants ───────────────────────────────────────────────────────── */
 
@@ -56,14 +57,7 @@ const TAB_KEYS: AdminOfferEventManageTab[] = ['event', 'miners', 'sales'];
 /* ── helpers ──────────────────────────────────────────────────────────── */
 
 function fmtDate(d: string | Date): string {
-  return new Date(d).toLocaleString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: 'UTC',
-  }) + ' UTC';
+  return formatUtcDateTime(d, { locale: 'pt-BR' });
 }
 
 /* ── default form states ─────────────────────────────────────────────── */
@@ -492,8 +486,8 @@ export default function AdminOfferEventManage() {
           title: e.title || '',
           description: e.description || '',
           imageUrl: e.imageUrl || '',
-          startsAt: e.startsAt ? new Date(e.startsAt).toISOString().slice(0, 16) : '',
-          endsAt: e.endsAt ? new Date(e.endsAt).toISOString().slice(0, 16) : '',
+          startsAt: toUtcInputValue(e.startsAt),
+          endsAt: toUtcInputValue(e.endsAt),
           isActive: !!e.isActive,
         });
       }
@@ -543,8 +537,8 @@ export default function AdminOfferEventManage() {
         title: eventForm.title,
         description: eventForm.description,
         imageUrl: eventForm.imageUrl || null,
-        startsAt: new Date(eventForm.startsAt).toISOString(),
-        endsAt: new Date(eventForm.endsAt).toISOString(),
+        startsAt: fromUtcInputValue(eventForm.startsAt) ?? new Date(eventForm.startsAt).toISOString(),
+        endsAt: fromUtcInputValue(eventForm.endsAt) ?? new Date(eventForm.endsAt).toISOString(),
         isActive: eventForm.isActive,
       };
       if (isNew) {

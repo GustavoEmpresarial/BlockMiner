@@ -143,7 +143,7 @@ export async function processTournamentOutboxBatch(): Promise<number> {
         where: { id: row.id as never, status: "processing" },
         data: { status: "completed", lastError: null },
       });
-      log.info("tournament.outbox.processed", {
+      log.debug("tournament.outbox.processed", {
         outboxId: row.id,
         eventType: row.eventType,
         idempotencyKey: row.idempotencyKey,

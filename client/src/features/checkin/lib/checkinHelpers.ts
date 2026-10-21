@@ -6,6 +6,7 @@ import type {
   CheckinPeriodInfo,
   CheckinStatusPayload,
 } from './checkin.types';
+import { currentUtcLocale, formatUtcDateTime } from '../../../shared/utils/utcTime';
 
 /** Polygon tx hash (0x + 64 hex). */
 export const POLYGON_TX_HASH_RE = /^0x[0-9a-fA-F]{64}$/;
@@ -113,16 +114,13 @@ export function balanceCoversWeiCost(polBalance: number, costWeiStr: string): bo
 type CheckinT = (key: string, opts?: Record<string, unknown>) => string;
 
 function formatPeriodInstant(iso: string, timezone?: string): string {
+  const opts = { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' } as const;
+  const tz = timezone || 'UTC';
+  if (tz.toUpperCase() === 'UTC') return formatUtcDateTime(iso, { ...opts, fallback: iso });
   try {
-    return new Date(iso).toLocaleString(undefined, {
-      timeZone: timezone || undefined,
-      day: '2-digit',
-      month: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    return `${new Intl.DateTimeFormat(currentUtcLocale(), { ...opts, timeZone: tz }).format(new Date(iso))} ${tz}`;
   } catch {
-    return new Date(iso).toLocaleString();
+    return formatUtcDateTime(iso, { ...opts, fallback: iso });
   }
 }
 
@@ -154,6 +152,8 @@ export function normalizeMilestoneRewardType(raw: unknown): CheckinMilestoneRewa
     case 'pol':
     case 'balance':
       return 'pol';
+    case 'blk':
+      return 'blk';
     case 'temporary_power':
     case 'hashrate':
       return 'temporary_power';
@@ -234,6 +234,9 @@ export function milestoneRewardLine(t: CheckinT, m: CheckinMilestone): string {
   const amount = formatPositiveNumber(m.rewardValue ?? m.amount);
   if (rewardType === 'pol' && amount) {
     return String(t('checkin.milestone_reward_pol', { value: amount }));
+  }
+  if (rewardType === 'blk' && amount) {
+    return String(t('checkin.milestone_reward_blk', { value: amount }));
   }
   if (rewardType === 'temporary_power' && amount) {
     const duration = formatMilestoneDurationHours(t, m.durationHours) || '—';

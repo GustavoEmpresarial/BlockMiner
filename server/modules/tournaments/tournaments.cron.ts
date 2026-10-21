@@ -5,7 +5,7 @@ import {
   finalizeTournament,
   alignActiveTournamentWindows,
 } from "./tournaments.service.js";
-import { isTournamentIncrementalScoringEnabled } from "./tournaments.flags.js";
+import { isTournamentCronEnabled, isTournamentIncrementalScoringEnabled } from "./tournaments.flags.js";
 import { reconcileAllActive, reconcileLegacyBatchTournament } from "./tournaments.engine.js";
 import { backfillMinigameTournamentFromLogs } from "./tournaments.minigame-backfill.js";
 import {
@@ -53,6 +53,9 @@ const INCREMENTAL_METRICS = new Set([
   "DEPOSITS_USD",
   "DEPOSITS_POL",
   ...MINIGAME_INCREMENTAL_METRICS,
+  "REFERRALS",
+  "MERGES",
+  "BURNS",
 ]);
 
 /** Offerwall always batch-recomputes from ZeradsCallback / offerwall.me / internal (source of truth). */
@@ -84,6 +87,13 @@ async function runOutbox(): Promise<void> {
 
 export function startTournamentsCron() {
   registerTournamentMetricScorers();
+
+  // A second process on the same database (the dev VM points at production)
+  // would rescore, finalize and pay prizes in parallel with the real one.
+  if (!isTournamentCronEnabled()) {
+    log.warn("tournaments.cron.disabled", { reason: "TOURNAMENT_CRON_ENABLED=0" });
+    return { stop: () => undefined };
+  }
 
   // Built once and shared between the interval and the startup kick, so the
   // immediate run and the first tick cannot overlap each other either.
@@ -211,6 +221,13 @@ async function runReconcile() {
       if (!INCREMENTAL_METRICS.has(t.metric) && !OUTBOX_METRICS.has(t.metric)) {
         await reconcileLegacyBatchTournament(t.id);
       }
+    }
+
+    try {
+      const { reconcilePendingReferralsBatch } = await import("../referrals/referrals.qualification.js");
+      await reconcilePendingReferralsBatch(100);
+    } catch (refErr) {
+      log.warn("referral.reconcile_batch.failed", { error: String(refErr) });
     }
   } catch (err) {
     reportError({

@@ -76,6 +76,20 @@ test("notifyDailyTaskLoginDay: increments progress and marks completed once targ
   assert.equal(row.rewardClaimedAt, null);
 });
 
+test("notifyDailyTaskLoginDay: two users on the same day both count", async () => {
+  const first = await makeUser();
+  const second = await makeUser();
+  const def = await makeDefinition({ taskType: "LOGIN_DAY", targetValue: "1" });
+
+  await tasksService.notifyDailyTaskLoginDay(first.id, TODAY_KEY);
+  await tasksService.notifyDailyTaskLoginDay(second.id, TODAY_KEY);
+
+  const firstRow = await tasksRepo.findProgressUnique(first.id, def.id, TODAY_KEY);
+  const secondRow = await tasksRepo.findProgressUnique(second.id, def.id, TODAY_KEY);
+  assert.equal(Number(firstRow?.currentValue), 1);
+  assert.equal(Number(secondRow?.currentValue), 1);
+});
+
 test("notifyDailyTaskLoginDay: same dedupeKey (checkinDateKey) does not double-count", async () => {
   const user = await makeUser();
   const def = await makeDefinition({ taskType: "LOGIN_DAY", targetValue: "5" });

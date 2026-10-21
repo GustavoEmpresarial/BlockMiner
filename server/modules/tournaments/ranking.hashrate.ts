@@ -3,6 +3,7 @@
  * Ported from legacy networkHashrateService (subset).
  */
 import prisma from "../../core/database/prisma.js";
+import { loadFanBonusByUser } from "../mining/mining.fan-bonus.js";
 
 export const CHECKIN_BONUS_GAME_SLUG = "checkin-streak-bonus";
 
@@ -17,6 +18,9 @@ type HashrateUser = {
   ytPowers?: Array<{ hashRate?: unknown }>;
   gpuAccess?: Array<{ gpuHashRate?: unknown }>;
   autoMiningV2Grants?: Array<{ hashRate?: unknown }>;
+  shortlinkPowers?: Array<{ hashRate?: unknown }>;
+  /** Cooling-fan bonus (mining.fan-bonus.ts), attached by `attachFanBonus`. */
+  fanBonusHashRate?: number;
 };
 
 export function aggregateUserHashrates(
@@ -44,15 +48,24 @@ export function aggregateUserHashrates(
   const v2GpuHr = (user.autoMiningV2Grants || []).reduce((s, g) => s + (Number(g.hashRate) || 0), 0);
   const gpuHr = legacyGpuHr + v2GpuHr;
 
-  const temporaryHr = gameMinigameHr + gameCheckinHr + ytHr + gpuHr;
-  const totalHr = machineHr + temporaryHr;
+  const shortlinkHr = (user.shortlinkPowers || []).reduce((s, p) => s + (Number(p.hashRate) || 0), 0);
+  const fanHr = Math.max(0, Number(user.fanBonusHashRate) || 0);
+
+  // Must match mining.repository computeBaseHashRate (what the engine pays): machines + fan
+  // bonus are permanent; games, check-in, YouTube, GPU and shortlinks are temporary.
+  const permanentHr = machineHr + fanHr;
+  const temporaryHr = gameMinigameHr + gameCheckinHr + ytHr + gpuHr + shortlinkHr;
+  const totalHr = permanentHr + temporaryHr;
 
   return {
-    permanentHashrate: machineHr,
+    machineHashrate: machineHr,
+    fanBonusHashrate: fanHr,
+    permanentHashrate: permanentHr,
     temporaryMinigameHashrate: gameMinigameHr,
     temporaryCheckinHashrate: gameCheckinHr,
     temporaryYoutubeHashrate: ytHr,
     temporaryAutoMiningHashrate: gpuHr,
+    temporaryShortlinkHashrate: shortlinkHr,
     temporaryHashrate: temporaryHr,
     totalHashrate: totalHr,
   };
@@ -85,6 +98,10 @@ export function rankingUserSelect(now: Date, opts: { includeAutoMiningV2?: boole
       where: { isClaimed: true, expiresAt: { gt: now } },
       select: { gpuHashRate: true },
     },
+    shortlinkPowers: {
+      where: { expiresAt: { gt: now } },
+      select: { hashRate: true },
+    },
   } as const;
 
   if (!includeV2) return base;
@@ -95,6 +112,12 @@ export function rankingUserSelect(now: Date, opts: { includeAutoMiningV2?: boole
       select: { hashRate: true },
     },
   };
+}
+
+/** Adds `fanBonusHashRate` to each user (two batched queries for the whole list). */
+export async function attachFanBonus<T extends { id: number }>(users: T[]): Promise<Array<T & { fanBonusHashRate: number }>> {
+  const bonus = await loadFanBonusByUser(users.map((u) => u.id));
+  return users.map((u) => ({ ...u, fanBonusHashRate: bonus.get(u.id) ?? 0 }));
 }
 
 export function buildRankingRows(users: HashrateUser[]) {
@@ -124,7 +147,7 @@ export async function loadUsersForHashrateTournament(
   v2SchemaOk: boolean,
 ): Promise<HashrateUser[]> {
   const activeSince = new Date(now.getTime() - POWER_STATS_RANKING_ACTIVE_MS);
-  return prisma.user.findMany({
+  const users = await prisma.user.findMany({
     where: {
       isBanned: false,
       OR: [{ lastHeartbeatAt: { gte: activeSince } }, { lastLoginAt: { gte: activeSince } }],
@@ -132,7 +155,8 @@ export async function loadUsersForHashrateTournament(
     orderBy: [{ lastHeartbeatAt: "desc" }, { id: "asc" }],
     take: POWER_STATS_RANKING_USER_CAP,
     select: rankingUserSelect(now, { includeAutoMiningV2: v2SchemaOk }),
-  }) as Promise<HashrateUser[]>;
+  });
+  return attachFanBonus(users) as Promise<HashrateUser[]>;
 }
 
 export type RankingRow = ReturnType<typeof buildRankingRows>[number];

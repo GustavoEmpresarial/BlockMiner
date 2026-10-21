@@ -24,6 +24,9 @@ import { usePtcSessionStore } from '../../ptc/lib/ptcSession.store';
 import { useOfferwallTimerStore } from '../../offerwall/lib/offerwallTimer.store';
 import LanguageSwitcher from '../../../shared/components/LanguageSwitcher';
 import { NOTIFICATION_PANEL_WIDTH_PX, useAnchoredFixedMenu } from '../../../shared/hooks/anchoredMenuPosition';
+import { formatUtcTime } from '../../../shared/utils/utcTime';
+import UserAvatar from '../../../shared/components/UserAvatar';
+import { useMyAvatar } from '../../../shared/hooks/useMyAvatar';
 
 function headerActionGhost(active = false): string {
   return `inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
@@ -197,6 +200,12 @@ export default function Header() {
   const markNotificationRead = useGameStore((state) => state.markNotificationRead);
   const fetchNotifications = useGameStore((state) => state.fetchNotifications);
   const user = useAuthStore((state) => state.user);
+  const myAvatarUrl = useMyAvatar((s) => s.avatarUrl);
+  const loadMyAvatar = useMyAvatar((s) => s.load);
+  const userIdForAvatar = typeof user?.id === 'number' ? user.id : null;
+  useEffect(() => {
+    if (userIdForAvatar != null) void loadMyAvatar(userIdForAvatar);
+  }, [userIdForAvatar, loadMyAvatar]);
 
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const notificationButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -388,10 +397,7 @@ export default function Header() {
                             </p>
                             <p className="text-[11px] text-gray-500 leading-normal line-clamp-2">{n.message}</p>
                             <p className="text-[9px] text-slate-400 font-medium">
-                              {new Date(n.createdAt ?? 0).toLocaleTimeString([], {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })}
+                              {formatUtcTime(n.createdAt ?? 0)}
                             </p>
                           </div>
                         </div>
@@ -424,18 +430,22 @@ export default function Header() {
             <Settings className="w-5 h-5" />
           </Link>
 
-          <div className="flex items-center gap-3 pl-3 ml-2 border-l border-slate-800">
-            <div className="flex flex-col items-end hidden sm:flex">
-              <span className="text-sm font-black text-white leading-none tracking-tighter uppercase italic">
+          <div className="flex min-w-0 items-center gap-3 pl-3 ml-2 border-l border-slate-800">
+            {/* Long usernames (up to 24 chars) used to push the avatar off-screen below ~1440px. */}
+            <div className="hidden min-w-0 max-w-[11rem] flex-col items-end sm:flex">
+              <span className="block max-w-full truncate text-sm font-black text-white leading-none tracking-tighter uppercase italic" title={displayUser}>
                 {displayUser}
               </span>
               <span className="text-[9px] font-bold text-primary uppercase tracking-[0.2em] mt-1">
                 {t('header.level', { n: 1 })}
               </span>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white font-black border-2 border-slate-800 shadow-[2px_2px_0px_#000000] overflow-hidden">
-              {initial}
-            </div>
+            <UserAvatar
+              url={myAvatarUrl}
+              name={displayUser || initial}
+              className="w-10 h-10 rounded-xl bg-slate-900 border-2 border-slate-800 shadow-[2px_2px_0px_#000000]"
+              letterClassName="text-white font-black"
+            />
           </div>
         </div>
       </div>

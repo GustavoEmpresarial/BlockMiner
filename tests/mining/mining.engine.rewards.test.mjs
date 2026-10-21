@@ -27,6 +27,31 @@ test("MiningEngine.distributeRewards distributes proportionally", async () => {
   assert.equal(engine.lastReward, 0.3);
 });
 
+test("MiningEngine.distributeRewards pays no POL or SHIB to blk-mode miners", async () => {
+  const engine = new MiningEngine();
+  engine.setPersistBlockRewardsCallback(async () => {});
+  const polMiner = engine.createOrGetMiner({
+    userId: 501,
+    username: "pol_mode",
+    profile: { rigs: 1, baseHashRate: 10, miningPayoutMode: "pol" },
+  });
+  const blkMiner = engine.createOrGetMiner({
+    userId: 502,
+    username: "blk_mode",
+    profile: { rigs: 1, baseHashRate: 10, miningPayoutMode: "blk", miningAllocationPolBps: 10000 },
+  });
+
+  engine.roundWork.set(polMiner.id, 100);
+  engine.roundWork.set(blkMiner.id, 100);
+  engine.activeMiners = 2;
+
+  await settle(engine);
+
+  assert.ok(Math.abs(polMiner.balance - 0.3) < 1e-12, "POL pool stays with POL-mode miners");
+  assert.equal(blkMiner.balance, 0);
+  assert.equal(blkMiner.shibBalance, 0);
+});
+
 test("MiningEngine.distributeRewards handles zero-work round", async () => {
   const engine = new MiningEngine();
   engine.setPersistBlockRewardsCallback(async () => {});

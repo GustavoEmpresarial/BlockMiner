@@ -1,6 +1,7 @@
+import { lazyWithRetry } from '../../shared/utils/lazyWithRetry';
 export { default as AdminLayout } from './AdminLayout';
-export { default as AdminOverviewPage } from './overview/AdminOverviewPage';
-export { default as AdminAnalyticsPage } from './analytics/AdminAnalyticsPage';
-export { default as AdminTrafficStatsPage } from './traffic/AdminTrafficStatsPage';
-export { default as AdminMetricsPage } from './metrics/AdminMetricsPage';
+export const AdminOverviewPage = lazyWithRetry(() => import('./overview/AdminOverviewPage'));
+export const AdminAnalyticsPage = lazyWithRetry(() => import('./analytics/AdminAnalyticsPage'));
+export const AdminTrafficStatsPage = lazyWithRetry(() => import('./traffic/AdminTrafficStatsPage'));
+export const AdminMetricsPage = lazyWithRetry(() => import('./metrics/AdminMetricsPage'));
 export { adminFeatureRoutes } from './admin.routes';

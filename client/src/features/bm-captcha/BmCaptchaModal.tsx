@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../../shared/auth/auth.store';
 import type { BmCaptchaChallenge, BmCaptchaProvider, BmCaptchaTile } from './bm-captcha.types';
 
@@ -72,7 +73,11 @@ type Props = {
   onCancel: () => void;
 };
 
+/** Known server codes get a friendly message; anything else falls back to the generic one. */
+const KNOWN_CAPTCHA_ERRORS = new Set(['SOLUTION_WRONG', 'INVALID_SOLUTION', 'TOO_FAST', 'TOO_MANY_ATTEMPTS', 'RATE_LIMITED', 'CHALLENGE_EXPIRED', 'CHALLENGE_NOT_FOUND', 'ALREADY_SOLVED']);
+
 export function BmCaptchaModal({ provider, onSuccess, onCancel }: Props) {
+  const { t } = useTranslation();
   const [challenge, setChallenge] = useState<BmCaptchaChallenge | null>(null);
   const [dialDeg, setDialDeg] = useState(0);
   const [tileId, setTileId] = useState<number | null>(null);
@@ -151,17 +156,17 @@ export function BmCaptchaModal({ provider, onSuccess, onCancel }: Props) {
         <div className="flex items-start justify-between gap-3 mb-3">
           <div>
             <p className="text-[11px] tracking-[0.14em] uppercase text-cyan-300 font-bold">BlockMiner</p>
-            <h2 className="text-lg font-bold text-white">Verificação humana</h2>
+            <h2 className="text-lg font-bold text-white">{t('bmCaptcha.title')}</h2>
           </div>
           <button type="button" onClick={onCancel} className="text-slate-400 hover:text-white text-xl leading-none">
             ×
           </button>
         </div>
         <p className="text-sm text-slate-400 mb-4">
-          Gire o cristal até ficar em pé, escolha a peça igual e confirme.
+          {t('bmCaptcha.instructions')}
         </p>
         {!challenge ? (
-          <p className="text-sm text-slate-500 py-10 text-center">Carregando…</p>
+          <p className="text-sm text-slate-500 py-10 text-center">{t('bmCaptcha.loading')}</p>
         ) : (
           <div className="space-y-3">
             <div className="flex flex-col items-center">
@@ -175,7 +180,7 @@ export function BmCaptchaModal({ provider, onSuccess, onCancel }: Props) {
                 className="w-full accent-cyan-400 mt-2"
               />
             </div>
-            <p className="text-xs text-slate-300 font-semibold">Qual peça é igual a esta?</p>
+            <p className="text-xs text-slate-300 font-semibold">{t('bmCaptcha.which_tile')}</p>
             <div className="flex justify-center">
               <TileGlyph tile={challenge.targetTilePreview} size={72} />
             </div>
@@ -193,14 +198,18 @@ export function BmCaptchaModal({ provider, onSuccess, onCancel }: Props) {
             </div>
           </div>
         )}
-        {error ? <p className="text-xs text-rose-400 mt-3">{error}</p> : null}
+        {error ? (
+          <p className="text-xs text-rose-400 mt-3" data-error-code={error}>
+            {t(KNOWN_CAPTCHA_ERRORS.has(error) ? `bmCaptcha.errors.${error}` : 'bmCaptcha.errors.generic')}
+          </p>
+        ) : null}
         <div className="flex gap-2 mt-4">
           <button
             type="button"
             onClick={onCancel}
             className="flex-1 rounded-xl border border-slate-700 py-2.5 text-slate-200 font-semibold"
           >
-            Cancelar
+            {t('bmCaptcha.cancel')}
           </button>
           <button
             type="button"
@@ -208,7 +217,7 @@ export function BmCaptchaModal({ provider, onSuccess, onCancel }: Props) {
             onClick={() => void submit()}
             className="flex-[1.4] rounded-xl bg-gradient-to-r from-cyan-600 to-violet-600 py-2.5 text-white font-bold disabled:opacity-50"
           >
-            {busy ? 'Validando…' : 'Confirmar'}
+            {busy ? t('bmCaptcha.validating') : t('bmCaptcha.confirm')}
           </button>
         </div>
       </div>

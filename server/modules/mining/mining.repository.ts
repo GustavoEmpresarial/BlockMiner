@@ -25,6 +25,7 @@ import {
   buildReferralEarningsRows,
 } from "./mining.referral-settlement.js";
 import { buildEarningsPolCreditedOutboxRow, enqueueOutboxManyTx } from "../events/index.js";
+import { loadFanBonusByUser } from "./mining.fan-bonus.js";
 
 const SETTLEMENT_WRITE_CHUNK_SIZE = 500;
 
@@ -34,29 +35,26 @@ function chunkRows<T>(rows: T[], size: number): T[][] {
   return out;
 }
 
+/** 1% fan cooling bonus per rack with a fan — see mining.fan-bonus.ts (shared with ranking). */
+export async function computeFanBonusHashRate(userId: number): Promise<number> {
+  return (await loadFanBonusByUser([userId])).get(userId) ?? 0;
+}
+
 /**
  * Sum of hashrate from every source the mining engine understands: installed rack machines
- * (permanent) + every active temporary power grant (games, YouTube, shortlinks, auto-mining
- * GPU legacy + v2). Ported for real from legacy's `getOrCreateMinerProfile`/
- * `syncUserBaseHashRate` (models/minerProfileModel.ts).
- *
- * Real bug fixed 12/08/2026 (PROGRESSO.txt item 74): this used to be a documented, deliberate
- * stub ("none of those [temp-power] modules exist in current/ yet") — true when written, but
- * every one of those modules (games, YouTube, shortlinks, auto-mining v2) was built later this
- * same session and nobody came back to extend this function per its own TODO. Every user with
- * active temporary power (which is most active users, most of the time) had their real
- * contribution to the block silently capped at just their installed machines — visible as
- * "poder total não contabiliza jogos/auto/YouTube" in production.
+ * (permanent) + fan cooling bonus (1% per rack with fan) + every active temporary power grant
+ * (games, YouTube, shortlinks, auto-mining GPU legacy + v2).
  */
 async function computeBaseHashRate(userId: number): Promise<number> {
   const now = new Date();
-  const [activeMiners, gamePowers, ytPowers, shortlinkPowers, gpuPowers, v2Grants] = await Promise.all([
+  const [activeMiners, gamePowers, ytPowers, shortlinkPowers, gpuPowers, v2Grants, fanBonusHashRate] = await Promise.all([
     prisma.userMiner.findMany({ where: { userId, isActive: true }, select: { hashRate: true } }),
     prisma.userPowerGame.findMany({ where: { userId, expiresAt: { gt: now } }, select: { hashRate: true } }),
     prisma.youtubeWatchPower.findMany({ where: { userId, expiresAt: { gt: now } }, select: { hashRate: true } }),
     prisma.shortlinkPower.findMany({ where: { userId, expiresAt: { gt: now } }, select: { hashRate: true } }),
     prisma.autoMiningGpu.findMany({ where: { userId, isClaimed: true, expiresAt: { gt: now } }, select: { gpuHashRate: true } }),
     prisma.autoMiningV2PowerGrant.findMany({ where: { userId, expiresAt: { gt: now } }, select: { hashRate: true } }),
+    computeFanBonusHashRate(userId),
   ]);
 
   const machineHashRate = activeMiners.reduce((sum, m) => sum + (m.hashRate || 0), 0);
@@ -66,7 +64,7 @@ async function computeBaseHashRate(userId: number): Promise<number> {
   const legacyGpuHashRate = gpuPowers.reduce((sum, p) => sum + (p.gpuHashRate || 0), 0);
   const v2GpuHashRate = v2Grants.reduce((sum, g) => sum + (Number(g.hashRate) || 0), 0);
 
-  return machineHashRate + gameHashRate + ytHashRate + shortlinkHashRate + legacyGpuHashRate + v2GpuHashRate;
+  return machineHashRate + fanBonusHashRate + gameHashRate + ytHashRate + shortlinkHashRate + legacyGpuHashRate + v2GpuHashRate;
 }
 
 export type MinerProfileRow = {
@@ -194,8 +192,8 @@ export async function persistMinerBalanceDelta(
 export type BlockRewardsWriteResult = { blockWasAlreadyPersisted: boolean };
 
 /**
- * The DB write half of a block settlement: one bulk balance UPDATE, chunked MiningRewardsLog
- * inserts, and the BlockDistribution + BlockMinerReward rows. Ported from legacy
+ * The DB write half of a block settlement: chunked MiningRewardsLog inserts, the
+ * BlockDistribution + BlockMinerReward rows, and one bulk balance UPDATE last. Ported from legacy
  * `persistBlockRewardsWrite`, scoped to what mining itself owns (see file-level deviation note).
  */
 export async function persistBlockRewards(payload: PersistBlockRewardsPayload): Promise<BlockRewardsWriteResult> {
@@ -265,22 +263,7 @@ export async function persistBlockRewards(payload: PersistBlockRewardsPayload): 
   let blockWasAlreadyPersisted = false;
   try {
     await prisma.$transaction(async (tx) => {
-      // 1) Credit every balance (mineradores + comissões de referral) in ONE statement, as the
-      // transaction's FIRST write — a single, deterministic, sub-second operation that takes
-      // every row lock up-front so no later statement has to upgrade one (deadlock partner).
-      // `lifetime_mined_pol` usa a coluna própria do delta (0 pros indicadores), não `v.pol`.
-      if (balanceRows.length > 0) {
-        await tx.$executeRaw`
-          UPDATE users AS u
-             SET pol_balance        = u.pol_balance        + v.pol,
-                 shib_balance       = u.shib_balance       + v.shib,
-                 lifetime_mined_pol = u.lifetime_mined_pol + v.lifetime
-            FROM (VALUES ${Prisma.join(balanceRows)}) AS v(id, pol, shib, lifetime)
-           WHERE u.id = v.id
-        `;
-      }
-
-      // 2) Bulk-insert the per-miner reward log rows (POL + SHIB), chunked so a single huge
+      // 1) Bulk-insert the per-miner reward log rows (POL + SHIB), chunked so a single huge
       // createMany does not serialise (and block the loop) all at once.
       for (const chunk of chunkRows(sortedRewards, SETTLEMENT_WRITE_CHUNK_SIZE)) {
         await tx.miningRewardsLog.createMany({
@@ -301,7 +284,7 @@ export async function persistBlockRewards(payload: PersistBlockRewardsPayload): 
         });
       }
 
-      // 3) Block distribution + per-block miner reward rows (POL + SHIB), via explicit
+      // 2) Block distribution + per-block miner reward rows (POL + SHIB), via explicit
       // createMany rather than nested `create` (which would be one INSERT per row).
       const distribution = await tx.blockDistribution.create({
         data: {
@@ -347,6 +330,25 @@ export async function persistBlockRewards(payload: PersistBlockRewardsPayload): 
       // hundreds of round-trips here and was what pushed this transaction past its 15s
       // budget (P2028 "expired transaction", 15/09/2026 block 24628 retried 12x).
       await enqueueOutboxManyTx(tx, outboxRows, SETTLEMENT_WRITE_CHUNK_SIZE);
+
+      // 3) Credit every balance (mineradores + comissões de referral) in ONE statement, as the
+      // transaction's LAST write. The row locks on users are held from here to COMMIT only:
+      // with ~2k miners the inserts above take ~12s, and when this ran first every heartbeat
+      // (UPDATE users ... last_heartbeat_at) of every miner queued behind it for seconds. The
+      // inserts only take FOR KEY SHARE on users (FK checks), which does not conflict with
+      // this UPDATE's FOR NO KEY UPDATE, so moving it last adds no lock-upgrade deadlock.
+      // Rows stay in userId order, so the locks are still taken monotonically.
+      // `lifetime_mined_pol` usa a coluna própria do delta (0 pros indicadores), não `v.pol`.
+      if (balanceRows.length > 0) {
+        await tx.$executeRaw`
+          UPDATE users AS u
+             SET pol_balance        = u.pol_balance        + v.pol,
+                 shib_balance       = u.shib_balance       + v.shib,
+                 lifetime_mined_pol = u.lifetime_mined_pol + v.lifetime
+            FROM (VALUES ${Prisma.join(balanceRows)}) AS v(id, pol, shib, lifetime)
+           WHERE u.id = v.id
+        `;
+      }
     });
   } catch (error: unknown) {
     if (!isDuplicateBlockError(error)) throw error;

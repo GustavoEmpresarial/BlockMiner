@@ -23,6 +23,7 @@ import { adminFinanceApi } from './adminFinance.api';
 import { readAxiosResponseMessage } from '../lib/admin.api';
 import type { AdminHotWalletStatus, AdminWithdrawalRow } from './adminFinance.types';
 import { HotWalletStatusPanel } from './components/HotWalletStatusPanel';
+import { formatUtcDateTime } from '../../../shared/utils/utcTime';
 
 const QUEUE_STATUSES = new Set(['pending', 'approved', 'processing']);
 const HISTORY_STATUSES = new Set(['completed', 'failed', 'rejected']);
@@ -84,29 +85,8 @@ function parseDate(iso?: string | null): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-function formatDateLocal(d: Date): string {
-  return d.toLocaleString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  });
-}
-
 function formatDateUtc(d: Date): string {
-  return (
-    d.toLocaleString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      timeZone: 'UTC',
-    }) + ' UTC'
-  );
+  return formatUtcDateTime(d, { locale: 'pt-BR', seconds: true });
 }
 
 function formatRelativeTime(d: Date, now = Date.now()): string {
@@ -407,7 +387,7 @@ export default function AdminFinancePage() {
             </div>
           </div>
 
-          {/* Lado Direito: Detalhes de Data/Hora (Local e UTC) */}
+          {/* Lado Direito: Detalhes de Data/Hora (UTC) */}
           {reqDate && (
             <div className="flex flex-col rounded-xl border border-white/5 bg-slate-950/60 p-3 sm:text-right">
               <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400 sm:justify-end">
@@ -415,9 +395,6 @@ export default function AdminFinancePage() {
                 <span>Solicitado em:</span>
               </div>
               <p className="mt-1 font-mono text-xs font-black text-white">
-                {formatDateLocal(reqDate)}
-              </p>
-              <p className="font-mono text-[11px] text-slate-400">
                 {formatDateUtc(reqDate)}
               </p>
             </div>
@@ -695,9 +672,6 @@ export default function AdminFinancePage() {
                             {reqDate ? (
                               <div>
                                 <p className="font-mono font-bold text-slate-200">
-                                  {formatDateLocal(reqDate)}
-                                </p>
-                                <p className="font-mono text-[10px] text-slate-500">
                                   {formatDateUtc(reqDate)}
                                 </p>
                               </div>
@@ -708,7 +682,7 @@ export default function AdminFinancePage() {
                           <td className="whitespace-nowrap px-4 py-3 text-xs">
                             {finDate ? (
                               <span className="font-mono text-slate-300">
-                                {formatDateLocal(finDate)}
+                                {formatDateUtc(finDate)}
                               </span>
                             ) : (
                               <span className="text-slate-600">—</span>

@@ -20,9 +20,10 @@ export {
 
 const log = logger.child("UserActivity");
 
-/** Best-effort structured log + AuditLog row. Never throws — an audit failure must not break the request. */
+/** Best-effort AuditLog row. Never throws — an audit failure must not break the request. */
 function logUserActivity(activityType: string, req: Request, details: Record<string, unknown>): void {
-  log.info(activityType, details, req);
+  // DEBUG only: the http_request line already logs this request (method, path, status, user, requestId).
+  log.debug(activityType, details, req);
 
   if (process.env.NODE_ENV === "test") return;
   if (String(activityType).startsWith("AUTH_") && activityType !== "AUTH_LOCKOUT_DENIED") return;
@@ -44,7 +45,14 @@ function logUserActivity(activityType: string, req: Request, details: Record<str
         detailsJson: JSON.stringify(details),
       },
     })
-    .catch(() => undefined);
+    .catch((err: unknown) => {
+      log.warn(
+        "USER_ACTIVITY_AUDIT_WRITE_FAILED",
+        // Code/name only: Prisma messages echo the row (IP, user agent) back.
+        { action: activityType, userId, errorCode: (err as { code?: string })?.code ?? (err instanceof Error ? err.name : "unknown") },
+        req,
+      );
+    });
 }
 
 export function createUserActivityAuditMiddleware(options: UserActivityAuditOptions = {}): RequestHandler {

@@ -23,6 +23,7 @@ import {
   WALLETS_MAX_RETRIES,
 } from './transparency.base';
 import { useTranslation } from 'react-i18next';
+import { formatUtcTime } from '../../../shared/utils/utcTime';
 
 export function WalletCard({ wallet, loading }: { wallet: TrackedWalletEntry; loading: boolean }) {
   const { t } = useTranslation();
@@ -104,7 +105,7 @@ export function WalletCard({ wallet, loading }: { wallet: TrackedWalletEntry; lo
             </span>
             {!isManualValue && mode === 'current_balance' && wallet.fetchedAt && (
               <span className="text-slate-400 normal-case tracking-normal font-medium">
-                · {t('transparency.wallets.updated')} {new Date(wallet.fetchedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                · {t('transparency.wallets.updated')} {formatUtcTime(wallet.fetchedAt)}
               </span>
             )}
             {isManualValue && (
@@ -135,13 +136,13 @@ export function WalletCard({ wallet, loading }: { wallet: TrackedWalletEntry; lo
                         {isInvestment && investmentBreakdown && (
                           <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
                             <div className="rounded-xl bg-slate-900/70 border border-slate-800 px-3 py-2 shadow-[2px_2px_0px_#000000]">
-                              <p className="text-[10px] uppercase tracking-wider font-extrabold text-slate-400">Saldo Líquido</p>
+                              <p className="text-[10px] uppercase tracking-wider font-extrabold text-slate-400">{t('transparency.wallets.liquid_balance')}</p>
                               <p className="text-sm font-black text-white font-mono">
                                 ${investmentBreakdown.liquidUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               </p>
                             </div>
                             <div className="rounded-xl bg-slate-900/70 border border-slate-800 px-3 py-2 shadow-[2px_2px_0px_#000000]">
-                              <p className="text-[10px] uppercase tracking-wider font-extrabold text-slate-400">LPs Ativas</p>
+                              <p className="text-[10px] uppercase tracking-wider font-extrabold text-slate-400">{t('transparency.wallets.active_lps')}</p>
                               <p className="text-sm font-black text-white font-mono">
                                 ${investmentBreakdown.lpUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               </p>
@@ -333,7 +334,7 @@ export function LiquidityPoolsPanel({ wallets }: { wallets: TrackedWalletEntry[]
                       </p>
                     )}
                     <div className="rounded-xl bg-black/20 px-3 py-2">
-                      <p className="text-[10px] uppercase tracking-widest text-violet-200/40 mb-1">Wallet</p>
+                      <p className="text-[10px] uppercase tracking-widest text-violet-200/40 mb-1">{t('transparency.wallets.wallet_label')}</p>
                       <p className="text-[11px] text-violet-200/55 truncate font-mono">{nft.walletAddress}</p>
                     </div>
                   </div>

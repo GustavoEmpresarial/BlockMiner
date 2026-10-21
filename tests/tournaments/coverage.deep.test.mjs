@@ -2,6 +2,7 @@
  * Deep line coverage for tournaments package (mock prisma + selective deps).
  * Run: npx tsx --import ./tests/_env-test-overrides.mjs --test --experimental-test-module-mocks tests/tournaments/coverage.deep.test.mjs
  */
+import { withOfferwallFindMany } from "./_offerwall-mock-adapter.mjs";
 import test, { mock } from "node:test";
 import assert from "node:assert/strict";
 import { pathToFileURL } from "node:url";
@@ -34,6 +35,8 @@ const prismaFlags = {
 
 /** @type {Record<string, unknown>} */
 const prismaMock = {
+  userVisualFanPlacement: { findMany: async () => [] },
+  userRack: { findMany: async () => [] },
   tournament: {
     findUnique: async ({ where } = {}) => {
       if (prismaFlags.findUniqueThrowId != null && where?.id === prismaFlags.findUniqueThrowId) {
@@ -91,6 +94,8 @@ const prismaMock = {
   internalOfferwallAttempt: { groupBy: async () => [] },
   offerwallMeCallback: { groupBy: async () => [] },
   moneyRainCallback: { groupBy: async () => [] },
+  multiwallCallback: { groupBy: async () => [] },
+  offerwallGgCallback: { groupBy: async () => [] },
   zeradsCallback: { findMany: async () => [] },
   blockMinerReward: { groupBy: async () => [] },
   dailyCheckin: { groupBy: async () => [] },
@@ -111,7 +116,7 @@ const prismaMock = {
 
 const reportedErrors = [];
 
-mock.module(prismaSpec, { defaultExport: prismaMock });
+mock.module(prismaSpec, { defaultExport: withOfferwallFindMany(prismaMock) });
 mock.module(miningSpec, {
   namedExports: {
     miningEngine: { drainSettlements: async () => {} },
@@ -1072,6 +1077,8 @@ test("ranking routes success and error paths", async () => {
   await rootHandler(makeReq(), okRes);
   assert.equal(okRes.body.ok, true);
 
+  // With a warm cache a DB failure is masked (stale list served); cold cache -> 500.
+  (await import("../../server/modules/tournaments/ranking.service.ts")).__resetTopRankingCacheForTests();
   prismaMock.user.findMany = async () => {
     throw new Error("db down");
   };

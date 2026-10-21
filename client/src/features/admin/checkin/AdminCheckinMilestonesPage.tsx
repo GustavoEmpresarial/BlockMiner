@@ -58,7 +58,7 @@ export default function AdminCheckinMilestonesPage() {
 
   // Form state
   const [formDayThreshold, setFormDayThreshold] = useState<number>(7);
-  const [formRewardType, setFormRewardType] = useState<'pol' | 'temporary_power' | 'machine'>('pol');
+  const [formRewardType, setFormRewardType] = useState<'pol' | 'blk' | 'temporary_power' | 'machine'>('pol');
   const [formRewardValue, setFormRewardValue] = useState<number>(1);
   const [formDurationHours, setFormDurationHours] = useState<number>(24);
   const [formMinerId, setFormMinerId] = useState<number | null>(null);
@@ -137,7 +137,7 @@ export default function AdminCheckinMilestonesPage() {
   const openEditModal = (m: AdminCheckinMilestone) => {
     setEditingMilestone(m);
     setFormDayThreshold(m.dayThreshold);
-    const rt = m.rewardType === 'temporary_power' || m.rewardType === 'machine' ? m.rewardType : 'pol';
+    const rt = m.rewardType === 'temporary_power' || m.rewardType === 'machine' || m.rewardType === 'blk' ? m.rewardType : 'pol';
     setFormRewardType(rt);
     setFormRewardValue(m.rewardValue);
     const hours = m.metadataJson?.durationHours ?? (m.validityDays ? m.validityDays * 24 : 24);
@@ -168,7 +168,7 @@ export default function AdminCheckinMilestonesPage() {
       toast.error('O dia do marco deve ser no mínimo 1.');
       return;
     }
-    if (formRewardType === 'pol' && formRewardValue <= 0) {
+    if ((formRewardType === 'pol' || formRewardType === 'blk') && formRewardValue <= 0) {
       toast.error('O valor da recompensa em POL deve ser maior que zero.');
       return;
     }
@@ -429,7 +429,8 @@ export default function AdminCheckinMilestonesPage() {
               </thead>
               <tbody className="divide-y divide-slate-800/60 text-slate-300">
                 {filteredMilestones.map((m) => {
-                  const isPol = m.rewardType === 'pol';
+                  const isPol = m.rewardType === 'pol' || m.rewardType === 'blk';
+                  const coinUnit = m.rewardType === 'blk' ? 'BLK' : 'POL';
                   const isMachine = m.rewardType === 'machine';
                   const isPower = m.rewardType === 'temporary_power';
                   const durationHours = m.metadataJson?.durationHours ?? (m.validityDays ? m.validityDays * 24 : 24);
@@ -446,7 +447,7 @@ export default function AdminCheckinMilestonesPage() {
                       <td className="px-4 py-3">
                         {isPol ? (
                           <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 text-[10px] font-bold text-amber-400">
-                            <Coins className="h-3 w-3" /> POL
+                            <Coins className="h-3 w-3" /> {coinUnit}
                           </span>
                         ) : isMachine ? (
                           <span className="inline-flex items-center gap-1 rounded-md bg-cyan-500/10 border border-cyan-500/20 px-2 py-0.5 text-[10px] font-bold text-cyan-400">
@@ -465,7 +466,7 @@ export default function AdminCheckinMilestonesPage() {
 
                       <td className="px-4 py-3 font-semibold text-white">
                         {isPol ? (
-                          <span>{m.rewardValue} POL</span>
+                          <span>{m.rewardValue} {coinUnit}</span>
                         ) : isMachine ? (
                           <div className="flex items-center gap-2">
                             {m.minerImageUrl ? (
@@ -580,6 +581,7 @@ export default function AdminCheckinMilestonesPage() {
                     className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white focus:border-amber-500 focus:outline-none"
                   >
                     <option value="pol">Saldo POL</option>
+                    <option value="blk">Saldo BLK</option>
                     <option value="temporary_power">Poder Temporário (H/s)</option>
                     <option value="machine">Máquina do Catálogo</option>
                   </select>
@@ -587,9 +589,9 @@ export default function AdminCheckinMilestonesPage() {
               </div>
 
               {/* Conditional Fields based on rewardType */}
-              {formRewardType === 'pol' ? (
+              {formRewardType === 'pol' || formRewardType === 'blk' ? (
                 <label className="space-y-1 block">
-                  <span className="font-semibold text-slate-400">Valor em POL</span>
+                  <span className="font-semibold text-slate-400">Valor em {formRewardType === 'blk' ? 'BLK' : 'POL'}</span>
                   <input
                     type="number"
                     step="0.001"

@@ -56,9 +56,6 @@ export function WalletHeader({
                         <span className="text-primary">{t('wallet.hero_terminal').toUpperCase()}</span>
                     </span>
                 </h1>
-                <p className="text-slate-400 font-bold uppercase tracking-[0.2em] text-[10px] pl-1">
-                    {t('wallet.hero_subtitle')}
-                </p>
             </div>
 
             <div className="flex items-center gap-2 sm:gap-3 flex-wrap justify-end">

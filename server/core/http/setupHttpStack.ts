@@ -13,6 +13,7 @@ import cookieParser from "cookie-parser";
 import { createCsrfMiddleware } from "./middleware/csrf.js";
 import { createCspMiddleware } from "./middleware/csp.js";
 import { createHttpsEnforcementMiddleware } from "./middleware/httpsEnforcement.js";
+import { createOriginAuthMiddleware } from "./middleware/originAuth.js";
 import { createRequestContextMiddleware } from "./middleware/requestContext.js";
 import { createHttpRequestLogger } from "./middleware/httpRequestLogger.js";
 import { createUserActivityAuditMiddleware } from "./middleware/userActivityAudit.js";
@@ -39,6 +40,7 @@ export function setupHttpStack(app: Express): void {
   // so Axios polling does not treat 304 as failure (see wallet balance card incident).
   app.set("etag", false);
 
+  app.use(createOriginAuthMiddleware());
   app.use(createHttpsEnforcementMiddleware());
 
   app.use((_req: Request, res: Response, next: NextFunction) => {

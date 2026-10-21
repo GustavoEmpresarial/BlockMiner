@@ -13,6 +13,7 @@ import { Shield, Youtube } from 'lucide-react';
 import IconBadge from '../../shared/components/IconBadge';
 import StatusPill from '../../shared/components/StatusPill';
 import { api } from '../../shared/auth/auth.store';
+import { formatPartDropNotice, type PartDropNotice } from '../parts/lib/partDropNotice';
 import PowerBoostBanner from '../../shared/components/PowerBoostBanner';
 import PausedTimerBanner from '../../shared/components/PausedTimerBanner';
 import { usePowerBoostActive } from '../../shared/hooks/usePowerBoostActive';
@@ -54,6 +55,9 @@ type YoutubeStatsResponse = YoutubeStatsPayload & {
   claimsTotal?: number;
   hashGrantedTotal?: number;
 };
+
+/** Full stats refresh cadence while watching; the heartbeat keeps verified time current in between. */
+const STATS_REFRESH_MS = 60_000;
 
 export default function YouTubeWatchPage() {
   const { t } = useTranslation();
@@ -200,7 +204,9 @@ export default function YouTubeWatchPage() {
     }
   }, []);
 
+  const statsLoadedAtRef = useRef(0);
   const loadStats = useCallback(async () => {
+    statsLoadedAtRef.current = Date.now();
     try {
       const res = await api.get<YoutubeStatsResponse>('/youtube/stats');
       if (res.data.ok) setStats(res.data);
@@ -390,7 +396,7 @@ export default function YouTubeWatchPage() {
     let retryMs = 0;
 
     try {
-      const res = await api.post<{ ok?: boolean; rewardGh?: number; message?: string }>(
+      const res = await api.post<{ ok?: boolean; rewardGh?: number; message?: string; part?: PartDropNotice | null }>(
         '/youtube/claim',
         { videoId },
       );
@@ -402,6 +408,8 @@ export default function YouTubeWatchPage() {
         } else {
           toast.success(res.data.message || '+1 ponto de torneio registrado!');
         }
+        const notice = formatPartDropNotice(res.data.part, t);
+        if (notice) toast.success(notice);
         await loadStatus();
         await loadStats();
         resetClaimCycle();
@@ -452,12 +460,24 @@ export default function YouTubeWatchPage() {
   useEffect(() => {
     if (!presenceActive) return undefined;
 
+    // The heartbeat reply carries the verified-seconds balance, which is the only stat that moves
+    // between claims; the full /youtube/stats (4 DB queries) refreshes after claims and once a minute.
+    const applyHeartbeat = async (data: { balanceSeconds?: unknown } | undefined) => {
+      const balance = data?.balanceSeconds;
+      if (typeof balance !== 'number' || !Number.isFinite(balance)) {
+        await loadStats(); // server without balanceSeconds: keep the old per-beat refresh
+        return;
+      }
+      setStats((prev) => (prev ? { ...prev, watchSecondsBalance: balance } : prev));
+      if (Date.now() - statsLoadedAtRef.current >= STATS_REFRESH_MS) await loadStats();
+    };
+
     const sendHeartbeat = async () => {
       try {
         const security = generateSecurityPayload();
-        await api.post('/session/heartbeat', { type: 'youtube', security });
+        const res = await api.post('/session/heartbeat', { type: 'youtube', security });
         heartbeatFailuresRef.current = 0;
-        await loadStats();
+        await applyHeartbeat(res?.data);
       } catch (err) {
         heartbeatFailuresRef.current += 1;
         if (heartbeatFailuresRef.current === 3) {
@@ -479,8 +499,8 @@ export default function YouTubeWatchPage() {
           if (code === 'FINGERPRINT_STALE' || code === 'FINGERPRINT_DECODE_FAILED') {
             try {
               const security = generateSecurityPayload();
-              await api.post('/session/heartbeat', { type: 'youtube', security });
-              await loadStats();
+              const res = await api.post('/session/heartbeat', { type: 'youtube', security });
+              await applyHeartbeat(res?.data);
             } catch {
               /* ignore */
             }
@@ -537,14 +557,20 @@ export default function YouTubeWatchPage() {
           <IconBadge icon={Youtube} variant="red" size="lg" />
           <div>
             <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">{t('youtube.title')}</h1>
-            <p className="text-slate-400 text-xs sm:text-sm font-medium">{t('youtube.subtitle')}</p>
           </div>
         </div>
         <StatusPill variant="primary" icon={Shield} label={t('youtube.protocol_active')} />
       </div>
 
       {dailyReset?.localDate ? (
-        <YoutubeDailyResetBanner dailyReset={dailyReset} t={t} onResetElapsed={loadStats} />
+        <YoutubeDailyResetBanner
+          dailyReset={dailyReset}
+          t={t}
+          onResetElapsed={async () => {
+            claimBlockedUntilRef.current = 0;
+            await Promise.all([loadStats(), loadStatus()]);
+          }}
+        />
       ) : null}
 
       <PausedTimerBanner

@@ -19,7 +19,7 @@ test("normalizeMilestoneRewardType — maps legacy aliases", () => {
   assert.equal(normalizeMilestoneRewardType("pol"), REWARD_POL);
 });
 
-test("isAllowedMilestoneRewardType — only pol/temporary_power/machine allowed", () => {
+test("isAllowedMilestoneRewardType — only pol/blk/temporary_power/machine allowed", () => {
   assert.equal(isAllowedMilestoneRewardType("pol"), true);
   assert.equal(isAllowedMilestoneRewardType("temporary_power"), true);
   assert.equal(isAllowedMilestoneRewardType("machine"), true);

@@ -287,6 +287,9 @@ test("ACTION_INCREMENTAL_METRICS is the union of every incremental family", () =
     ...providers.AUTO_MINING_INCREMENTAL_METRICS,
     ...providers.YOUTUBE_INCREMENTAL_METRICS,
     ...providers.CHECKIN_INCREMENTAL_METRICS,
+    ...providers.REFERRAL_INCREMENTAL_METRICS,
+    ...providers.MERGE_INCREMENTAL_METRICS,
+    ...providers.BURN_INCREMENTAL_METRICS,
     ...providers.ALL_ACTIVITIES_INCREMENTAL_METRICS,
   ];
   assert.deepEqual([...providers.ACTION_INCREMENTAL_METRICS], union);

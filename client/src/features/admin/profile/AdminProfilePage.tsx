@@ -43,6 +43,7 @@ import type {
   AdminSessionItem,
   AdminAuditLogRow,
 } from '../lib/admin.types';
+import { formatUtcDateTime } from '../../../shared/utils/utcTime';
 
 type ActiveTab = 'overview' | 'security' | 'sessions' | 'activity';
 
@@ -79,13 +80,7 @@ function parseUserAgent(ua: string | null): ParsedUa {
 function formatDate(iso: string | null | undefined): string {
   if (!iso) return '—';
   try {
-    return new Date(iso).toLocaleString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    return formatUtcDateTime(iso, { locale: 'pt-BR' });
   } catch {
     return String(iso);
   }

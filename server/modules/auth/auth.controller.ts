@@ -2,11 +2,11 @@
 import prisma from "../../core/database/prisma.js";
 import { logger } from "../../core/logger/index.js";
 import { isAdminKeyedPasswordResetApiEnabled } from "../../shared/security/adminPasswordResetPolicy.js";
-import { isSmtpConfigured, sendPasswordResetEmail, sendEmailVerificationEmail } from "../../shared/security/mailer.js";
+import { isSmtpConfigured, maskEmail, sendPasswordResetEmail, sendEmailVerificationEmail } from "../../shared/security/mailer.js";
 import { timingSafeAdminSecretEqual } from "../../shared/security/cookies.js";
 import { unknownErrorMessage } from "../../shared/errors/prismaHttpErrors.js";
 import { requireSessionUser } from "../../shared/errors/httpStatusError.js";
-import { APP_URL, PASSWORD_RESET_TOKEN_TTL, comparePassword, hashPassword, signPasswordResetToken, verifyPasswordResetToken, signEmailVerificationToken, verifyEmailVerificationToken, } from "./auth.service.js";
+import { APP_URL, PASSWORD_RESET_TOKEN_TTL, EMAIL_VERIFICATION_TOKEN_TTL, ttlToMinutes, isPasswordResetTokenCurrent, comparePassword, hashPassword, signPasswordResetToken, verifyPasswordResetToken, signEmailVerificationToken, verifyEmailVerificationToken, } from "./auth.service.js";
 import { findUserByIdentifier, normalizeEmail } from "./auth.repository.js";
 const log = logger.child("AuthController");
 export async function legacyPasswordResetPost(req, res) {
@@ -23,12 +23,22 @@ export async function legacyPasswordResetPost(req, res) {
             return;
         }
         const user = await prisma.user.findUnique({ where: { id: Number(payload.sub) } });
-        if (!user) {
-            res.status(404).json({ ok: false, message: "Usuário não encontrado." });
+        // Same answer for "user gone" and "token already used / password changed since": the
+        // link is simply no longer valid. A used link cannot be replayed for the rest of its TTL.
+        if (!user || !isPasswordResetTokenCurrent(payload, user.passwordHash)) {
+            log.warn("PASSWORD_RESET_TOKEN_STALE", { userId: user?.id ?? null, reason: user ? "PASSWORD_CHANGED_OR_USED" : "USER_NOT_FOUND" });
+            res.status(401).json({ ok: false, message: "Token de reset inválido ou expirado." });
             return;
         }
         const newPasswordHash = await hashPassword(String(newPassword), 10);
-        await prisma.user.update({ where: { id: user.id }, data: { passwordHash: newPasswordHash } });
+        // Conditional on the hash the token was bound to: two concurrent submits of the same link
+        // cannot both win.
+        const updated = await prisma.user.updateMany({ where: { id: user.id, passwordHash: user.passwordHash }, data: { passwordHash: newPasswordHash } });
+        if (updated.count !== 1) {
+            log.warn("PASSWORD_RESET_TOKEN_STALE", { userId: user.id, reason: "CONCURRENT_USE" });
+            res.status(401).json({ ok: false, message: "Token de reset inválido ou expirado." });
+            return;
+        }
         log.info("Legacy password reset completed", { userId: user.id, ip: req.ip });
         res.json({ ok: true, message: "Sua senha foi atualizada com sucesso. Agora você já pode logar!" });
     }
@@ -80,12 +90,12 @@ export async function forgotPasswordPost(req, res) {
                 // Do not reveal whether the account exists.
             }
             else {
-                log.warn("Password reset requested but SMTP is not configured; no email sent.", { normalizedEmail });
+                log.warn("Password reset requested but SMTP is not configured; no email sent.", { to: maskEmail(normalizedEmail) });
             }
             res.json({ ok: true, message: "Se o email existe, você receberá instruções de redefinição." });
             return;
         }
-        const resetToken = signPasswordResetToken(user.id);
+        const resetToken = signPasswordResetToken(user.id, user.passwordHash);
         const resetUrl = `${APP_URL.replace(/\/$/, "")}/forgot-password?token=${encodeURIComponent(resetToken)}`;
         // item 95 (pentest A1): uma falha de envio (SMTP fora do ar, etc.) AQUI DENTRO não pode
         // vazar como 500 pro chamador — antes isso criava um oráculo de enumeração (email
@@ -96,12 +106,12 @@ export async function forgotPasswordPost(req, res) {
                 to: user.email,
                 name: user.name,
                 resetUrl,
-                ttlMinutes: Number(String(PASSWORD_RESET_TOKEN_TTL).replace(/[^0-9]/g, "")) || 20,
+                ttlMinutes: ttlToMinutes(PASSWORD_RESET_TOKEN_TTL, 20),
             });
-            log.info(`Password reset requested for email: ${normalizedEmail}`);
+            log.info("Password reset requested", { to: maskEmail(normalizedEmail) });
         }
         catch (sendError) {
-            log.error("Password reset email send failed", { normalizedEmail, error: unknownErrorMessage(sendError) });
+            log.error("Password reset email send failed", { to: maskEmail(normalizedEmail), errorCode: sendError?.code ?? null, error: unknownErrorMessage(sendError) });
         }
         res.json({ ok: true, message: "Se o email existe, você receberá instruções de redefinição." });
     }
@@ -136,7 +146,7 @@ export async function adminForcePasswordResetPost(req, res) {
         }
         const newPasswordHash = await hashPassword(String(newPassword), 10);
         await prisma.user.update({ where: { id: user.id }, data: { passwordHash: newPasswordHash } });
-        log.info(`[ADMIN] Force password reset completed for email: ${normalizedEmail}`);
+        log.info("[ADMIN] Force password reset completed", { to: maskEmail(normalizedEmail) });
         res.json({ ok: true, message: "Senha redefinida com sucesso." });
     }
     catch (error) {
@@ -189,6 +199,9 @@ export async function verifyEmailPost(req, res) {
         if (!user.emailVerifiedAt) {
             await prisma.user.update({ where: { id: userId }, data: { emailVerifiedAt: new Date() } });
             log.security("AUTH_EMAIL_VERIFIED", { userId }, req);
+            import("../referrals/referrals.qualification.js")
+              .then(({ checkAndQualifyReferral }) => checkAndQualifyReferral(userId))
+              .catch((err) => log.warn("referral.qualify_on_email_verify.failed", { error: String(err) }));
         }
         res.json({ ok: true, message: "E-mail confirmado com sucesso." });
     }
@@ -225,9 +238,13 @@ export async function resendVerificationPost(req, res) {
         const verifyToken = signEmailVerificationToken(user.id);
         const verifyUrl = `${APP_URL.replace(/\/$/, "")}/verify-email?token=${encodeURIComponent(verifyToken)}`;
         try {
-            await sendEmailVerificationEmail({ to: user.email, name: user.name, verifyUrl });
+            await sendEmailVerificationEmail({ to: user.email, name: user.name, verifyUrl, ttlMinutes: ttlToMinutes(EMAIL_VERIFICATION_TOKEN_TTL, 1440) });
         } catch (sendErr) {
-            log.error("Resend verification email send failed", { error: unknownErrorMessage(sendErr), userId: user.id });
+            if (sendErr?.code === "EMAIL_RECIPIENT_RATE_LIMITED") {
+                res.status(429).json({ ok: false, code: "EMAIL_RECIPIENT_RATE_LIMITED", message: "Muitos e-mails enviados para este endereço. Tente novamente em uma hora." });
+                return;
+            }
+            log.error("Resend verification email send failed", { errorCode: sendErr?.code ?? null, error: unknownErrorMessage(sendErr), userId: user.id });
             res.status(503).json({
                 ok: false,
                 code: "EMAIL_SEND_FAILED",

@@ -1,3 +1,5 @@
+import type { PartDropPayload } from "../parts/parts.grant.js";
+
 /** Ported from legacy/server/modules/shortlinks (application/shortlinks.service.ts + repository). */
 export const TOTAL_STEPS = 3;
 export const MAX_DAILY_RUNS = 1;
@@ -31,11 +33,18 @@ export type StartShortlinkOutcome =
   | { ok: false; reason: "daily_limit" | "server_error" };
 
 export type CompleteStepOutcome =
-  | { ok: true; completed: true; rewardMessage: string; hashRate: number }
-  | { ok: true; completed: false; nextStep: number; sessionToken: string }
+  | {
+      ok: true;
+      step: number;
+      runCompleted: boolean;
+      sessionToken: string | null;
+      rewardMessage: string | null;
+      part: PartDropPayload | null;
+    }
+  | { ok: false; reason: "detected"; incidents: string[] }
   | {
       ok: false;
-      reason: "no_session" | "daily_limit" | "detected" | "invalid_step" | "too_fast" | "server_error";
+      reason: "no_session" | "daily_limit" | "invalid_step" | "too_fast" | "server_error";
     };
 
 export type PasteadStatusPayload = {
@@ -65,7 +74,7 @@ export type MarkPasteadDoneOutcome =
   | { ok: false; reason: "disabled" | "no_session" | "expired" };
 
 export type ClaimPasteadOutcome =
-  | { ok: true; rewardMessage: string; hashRate: number }
+  | { ok: true; rewardMessage: string; hashRate: number; part: PartDropPayload | null }
   | {
       ok: false;
       reason: "disabled" | "no_session" | "not_completed" | "too_fast" | "expired" | "daily_limit";

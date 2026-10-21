@@ -27,16 +27,13 @@ import {
   updateAdminOfferEvent,
 } from './adminOfferEvents.api';
 import { resolveThumb } from './offerEvents.helpers';
+import { formatUtcDate, fromUtcInputValue } from '../../../shared/utils/utcTime';
 
 /* ── helpers ──────────────────────────────────────────────────────────── */
 
 function fmtUtcRange(startsAt: string | Date, endsAt: string | Date): string {
   const fmt = (d: string | Date) =>
-    new Date(d).toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: 'short',
-      timeZone: 'UTC',
-    });
+    formatUtcDate(d, { locale: 'pt-BR', day: '2-digit', month: 'short' });
   return `${fmt(startsAt)} – ${fmt(endsAt)} UTC`;
 }
 
@@ -238,8 +235,8 @@ function CreateSlideOver({
         title: form.title,
         description: form.description,
         imageUrl: form.imageUrl || null,
-        startsAt: new Date(form.startsAt).toISOString(),
-        endsAt: new Date(form.endsAt).toISOString(),
+        startsAt: fromUtcInputValue(form.startsAt) ?? new Date(form.startsAt).toISOString(),
+        endsAt: fromUtcInputValue(form.endsAt) ?? new Date(form.endsAt).toISOString(),
         isActive: form.isActive,
       };
       const res = await createAdminOfferEvent(payload);

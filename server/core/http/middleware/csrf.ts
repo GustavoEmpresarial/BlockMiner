@@ -60,6 +60,22 @@ const CSRF_EXEMPT_PREFIXES = [
   "/api/offerwallgg/postback",
 ];
 
+const STATIC_FILE_EXTENSION =
+  /\.(?:js|mjs|css|map|png|jpe?g|gif|webp|avif|svg|ico|woff2?|ttf|otf|eot|glb|gltf|bin|ktx2|mp4|webm|mp3|ogg|wav)$/i;
+
+/**
+ * GET/HEAD of a static file never needs a fresh CSRF cookie: the HTML shell and every /api
+ * response still issue one. A Set-Cookie on /assets/*.js made Cloudflare answer BYPASS for the
+ * whole bundle, so every visitor pulled ~770 KB from the origin on each load.
+ * Only cookie ISSUANCE is skipped here — the token check below still runs for every method.
+ */
+export function isStaticFileRequest(method: string, url: string): boolean {
+  if (method !== "GET" && method !== "HEAD") return false;
+  const path = url.split("?")[0].split("#")[0];
+  if (path.startsWith("/api/") || path.startsWith("/socket.io/")) return false;
+  return STATIC_FILE_EXTENSION.test(path);
+}
+
 export function createCsrfMiddleware(): RequestHandler {
   return (req: Request, res: Response, next: NextFunction) => {
     const cookies = parseCookie(req.headers.cookie);
@@ -67,7 +83,9 @@ export function createCsrfMiddleware(): RequestHandler {
     let csrfToken = cookies[CSRF_COOKIE_NAME];
     if (!csrfToken || csrfToken.length < 16) {
       csrfToken = crypto.randomBytes(24).toString("base64url");
-      appendSetCookie(res, buildCsrfCookie(csrfToken));
+      if (!isStaticFileRequest(req.method.toUpperCase(), req.originalUrl || req.url)) {
+        appendSetCookie(res, buildCsrfCookie(csrfToken));
+      }
     }
     res.locals.csrfToken = csrfToken;
 

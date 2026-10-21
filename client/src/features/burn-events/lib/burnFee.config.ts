@@ -1,7 +1,7 @@
 export const BURN_FEE_RATES = {
-  SHIB: 20,
-  POL: 0.01,
-  BLK: 0.001,
+  SHIB: 1300,
+  POL: 0.07,
+  BLK: 0.007,
 } as const;
 
 export type BurnFeeCurrency = keyof typeof BURN_FEE_RATES;

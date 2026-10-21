@@ -1,6 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { AlertTriangle, Copy, ExternalLink, RefreshCw } from "lucide-react";
 import { reportClientCrash } from "../shared/utils/clientErrorTelemetry";
+import { safeT as tr } from "../shared/utils/safeT";
 
 /** Official community Telegram (same default as LandingPage / VITE_TELEGRAM_URL). */
 export const BM_SUPPORT_TELEGRAM_URL = "https://t.me/+KPgyUFtKCZ00Y2Vh";
@@ -96,7 +97,7 @@ export default class RootErrorBoundary extends Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
-      const msg = this.state.error?.message || "Erro desconhecido";
+      const msg = this.state.error?.message || tr("rootError.unknown", "Erro desconhecido");
       return (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950 p-6 overflow-y-auto">
           <div className="max-w-lg w-full rounded-2xl border border-primary/20 bg-primary/5 p-8 flex flex-col items-center gap-4 text-center my-6">
@@ -105,11 +106,10 @@ export default class RootErrorBoundary extends Component<Props, State> {
             </div>
             <div>
               <p className="text-sm font-black text-red-300 uppercase tracking-wide mb-1">
-                Algo deu errado
+                {tr("rootError.title", "Algo deu errado")}
               </p>
               <p className="text-xs text-gray-500">
-                Não foi possível carregar esta tela. Copie o erro, envie no Telegram oficial, limpe os
-                dados do navegador e recarregue — se continuar, tente outro navegador.
+                {tr("rootError.body", "Não foi possível carregar esta tela. Copie o erro, envie no Telegram oficial, limpe os dados do navegador e recarregue — se continuar, tente outro navegador.")}
               </p>
             </div>
 
@@ -128,7 +128,7 @@ export default class RootErrorBoundary extends Component<Props, State> {
                 className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 hover:bg-white/10 text-gray-300 rounded-xl text-xs font-bold uppercase tracking-widest transition-colors"
               >
                 <Copy className="w-3.5 h-3.5" aria-hidden="true" />
-                {this.state.copied ? "Copiado" : "Copiar erro"}
+                {this.state.copied ? tr("rootError.copied", "Copiado") : tr("rootError.copy", "Copiar erro")}
               </button>
               <a
                 href={BM_SUPPORT_TELEGRAM_URL}
@@ -137,7 +137,7 @@ export default class RootErrorBoundary extends Component<Props, State> {
                 className="flex items-center gap-2 px-4 py-2 bg-[#229ED9]/90 hover:bg-[#229ED9] text-white rounded-xl text-xs font-bold uppercase tracking-widest transition-colors no-underline"
               >
                 <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
-                Telegram oficial
+                {tr("rootError.telegram", "Telegram oficial")}
               </a>
               <button
                 type="button"
@@ -145,23 +145,19 @@ export default class RootErrorBoundary extends Component<Props, State> {
                 className="flex items-center gap-2 px-4 py-2 bg-primary/20 border border-primary/30 hover:bg-primary/30 text-primary rounded-xl text-xs font-bold uppercase tracking-widest transition-colors"
               >
                 <RefreshCw className="w-3.5 h-3.5" aria-hidden="true" />
-                Recarregar
+                {tr("rootError.reload", "Recarregar")}
               </button>
             </div>
 
             <div className="text-[10px] text-slate-500 max-w-sm space-y-2 text-left">
               <p>
-                <span className="text-slate-300 font-bold">1.</span> Limpe os dados do site / cache (
-                <kbd className="font-mono bg-slate-900 px-1 rounded">Ctrl+Shift+Del</kbd>
-                no PC, ou Configurações → Dados de navegação no celular) e abra de novo.
+                <span className="text-slate-300 font-bold">1.</span> {tr("rootError.step1", "Limpe os dados do site / cache (Ctrl+Shift+Del no PC, ou Configurações → Dados de navegação no celular) e abra de novo.")}
               </p>
               <p>
-                <span className="text-slate-300 font-bold">2.</span> Se ainda falhar, tente outro
-                navegador (Chrome, Edge, Firefox) ou uma janela anônima.
+                <span className="text-slate-300 font-bold">2.</span> {tr("rootError.step2", "Se ainda falhar, tente outro navegador (Chrome, Edge, Firefox) ou uma janela anônima.")}
               </p>
               <p>
-                <span className="text-slate-300 font-bold">3.</span> Cole o erro copiado no Telegram
-                oficial e avise um admin.
+                <span className="text-slate-300 font-bold">3.</span> {tr("rootError.step3", "Cole o erro copiado no Telegram oficial e avise um admin.")}
               </p>
             </div>
           </div>

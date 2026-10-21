@@ -25,6 +25,7 @@ import type {
   MutateCampaignResponse,
   SaveCampaignBody,
 } from '../../read-earn/read-earn.types';
+import { formatUtcDate, formatUtcDateTime, fromUtcInputValue, toUtcInputValue } from '../../../shared/utils/utcTime';
 
 const MS_PER_DAY = 86_400_000;
 const DEFAULT_CAMPAIGN_DURATION_DAYS = 30;
@@ -64,17 +65,13 @@ function adminReadEarnErrMessage(errLike: unknown, t: TFunction, fallbackKey: st
 }
 
 
+/** datetime-local values are UTC wall-clock. */
 function toLocalInput(iso: string | undefined | null): string {
-  if (!iso) return '';
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return toUtcInputValue(iso);
 }
 
 function fromLocalInput(s: string | undefined | null): string {
-  if (!s) return new Date().toISOString();
-  const d = new Date(s);
-  return Number.isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+  return fromUtcInputValue(s) ?? new Date().toISOString();
 }
 
 function defaultForm(): ReadEarnFormState {
@@ -418,7 +415,7 @@ export default function AdminReadEarn() {
             )}
             <label className="block space-y-1">
               <span className="text-xs text-slate-500 uppercase font-bold">
-                {t('adminReadEarn.field_starts', 'Início da campanha')}
+                {t('adminReadEarn.field_starts', 'Início da campanha')} (UTC)
               </span>
               <input
                 type="datetime-local"
@@ -429,7 +426,7 @@ export default function AdminReadEarn() {
             </label>
             <label className="block space-y-1">
               <span className="text-xs text-slate-500 uppercase font-bold">
-                {t('adminReadEarn.field_expires', 'Fim da campanha')}
+                {t('adminReadEarn.field_expires', 'Fim da campanha')} (UTC)
               </span>
               <input
                 type="datetime-local"
@@ -515,7 +512,7 @@ export default function AdminReadEarn() {
                 <tr key={r.id} className="hover:bg-slate-900/50">
                   <td className="px-4 py-3 font-medium text-white max-w-[200px] truncate">{r.title}</td>
                   <td className="px-4 py-3 text-slate-500 text-xs whitespace-nowrap">
-                    {new Date(r.startsAt).toLocaleDateString()} → {new Date(r.expiresAt).toLocaleDateString()}
+                    {formatUtcDate(r.startsAt)} → {formatUtcDate(r.expiresAt)}
                   </td>
                   <td className="px-4 py-3 text-slate-400">{r.rewardType}</td>
                   <td className="px-4 py-3">
@@ -590,7 +587,7 @@ export default function AdminReadEarn() {
                       {t('adminReadEarn.user', 'Jogador')}: {x.username || x.email || `#${x.userId}`}
                     </span>
                     <span className="text-slate-500 text-xs">
-                      {t('adminReadEarn.redeemed_at', 'Resgatado em')}: {new Date(x.redeemedAt).toLocaleString()}
+                      {t('adminReadEarn.redeemed_at', 'Resgatado em')}: {formatUtcDateTime(x.redeemedAt)}
                     </span>
                   </li>
                 ))}

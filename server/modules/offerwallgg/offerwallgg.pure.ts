@@ -40,7 +40,8 @@ export function isIpAllowed(allowed: Set<string>, ip: string): boolean {
 
 export function buildOfferwallGgEmbedUrl(args: {
   publicKey: string;
-  userId: number;
+  /** Numeric id or signed subid from `signOfferwallSubId`. */
+  userId: number | string;
   baseUrl?: string;
 }): string | null {
   const publicKey = String(args.publicKey ?? "").trim();

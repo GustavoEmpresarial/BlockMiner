@@ -4,8 +4,10 @@ import { toast } from 'sonner';
 import { useAuthStore } from '../../shared/auth/auth.store';
 import { Loader2, Zap, TrendingUp, CheckCircle2, AlertTriangle, X, Sparkles, Calendar, Clock, Minus, Plus, Package, DoorOpen, Wind, Boxes } from 'lucide-react';
 import { IconBadge, StatusPill } from '../../shared/components';
-import { getActiveOfferEvents, postOfferEventPurchase, postOfferFanPurchase, postOfferRackPurchase, readActiveOffersCache, writeActiveOffersCache, clearActiveOffersCache, hasLiveRoomOffers, hasLiveGearOffers, OFFER_PURCHASE_MAX_QUANTITY, readGearMaxBulkQuantity, readOfferPurchaseError } from './lib/offers.api';
-import type { OfferEventDTO, OfferEventMinerDTO, RoomOffersDTO, FanOffersDTO, FanOfferItemDTO, RackOffersDTO } from './lib/offers.api';
+import { getActiveOfferEvents, postOfferEventPurchase, postOfferFanPurchase, postOfferRackPurchase, postOfferPartPurchase, postOfferPartPackPurchase, readActiveOffersCache, writeActiveOffersCache, clearActiveOffersCache, hasLiveRoomOffers, hasLiveGearOffers, hasLivePartOffers, OFFER_PURCHASE_MAX_QUANTITY, PART_OFFER_MAX_QUANTITY, readGearMaxBulkQuantity, readOfferPurchaseError } from './lib/offers.api';
+import type { OfferEventDTO, OfferEventMinerDTO, RoomOffersDTO, FanOffersDTO, FanOfferItemDTO, RackOffersDTO, PartOffersDTO, PartOfferItemDTO, PartPackDTO } from './lib/offers.api';
+import { PartOffersSection } from './components/PartOffersSection';
+import { AvatarLicenseOfferSection } from './components/AvatarLicenseOfferSection';
 import { OfferMinerModel } from './components/OfferMinerModel';
 import { ShowcaseRoomOnlyNotice } from '../machines/components/ShowcaseRoomOnlyNotice';
 import { CoolingFanUnit } from '../inventory2/components/CoolingFanUnit';
@@ -188,6 +190,10 @@ export default function OffersPage() {
     const [roomOffers, setRoomOffers] = useState<RoomOffersDTO | null>(() => cached?.roomOffers ?? null);
     const [fanOffers, setFanOffers] = useState<FanOffersDTO | null>(() => cached?.fanOffers ?? null);
     const [rackOffers, setRackOffers] = useState<RackOffersDTO | null>(() => cached?.rackOffers ?? null);
+    const [partOffers, setPartOffers] = useState<PartOffersDTO | null>(() => cached?.partOffers ?? null);
+    const [partModal, setPartModal] = useState<
+        { kind: 'part'; item: PartOfferItemDTO } | { kind: 'pack'; pack: PartPackDTO } | null
+    >(null);
     // Never blank the page on sidebar remount when we already have a successful cache.
     const [loading, setLoading] = useState(() => cached == null);
     const [modal, setModal] = useState<{ event: OfferEventDTO; miner: OfferEventMinerDTO } | null>(null);
@@ -215,6 +221,7 @@ export default function OffersPage() {
             let nextRooms = body.roomOffers ?? null;
             const nextFans = body.fanOffers ?? null;
             const nextRacks = body.rackOffers ?? null;
+            const nextParts = body.partOffers ?? null;
             // Soft refresh must not wipe live room cards on a flaky null; buy/unlock uses replaceRooms.
             if (!opts?.replaceRooms && nextRooms == null) {
                 const prevRooms = readActiveOffersCache(userId)?.roomOffers ?? null;
@@ -224,7 +231,8 @@ export default function OffersPage() {
             setRoomOffers(nextRooms);
             setFanOffers(nextFans);
             setRackOffers(nextRacks);
-            writeActiveOffersCache({ events: nextEvents, roomOffers: nextRooms, fanOffers: nextFans, rackOffers: nextRacks }, userId);
+            setPartOffers(nextParts);
+            writeActiveOffersCache({ events: nextEvents, roomOffers: nextRooms, fanOffers: nextFans, rackOffers: nextRacks, partOffers: nextParts }, userId);
             hasLoadedRef.current = true;
         } catch (e) {
             if (requestId !== requestIdRef.current) return;
@@ -264,6 +272,7 @@ export default function OffersPage() {
             setRoomOffers(null);
             setFanOffers(null);
             setRackOffers(null);
+            setPartOffers(null);
             setLoading(false);
             return;
         }
@@ -328,6 +337,55 @@ export default function OffersPage() {
         }
     };
 
+    const openPartModal = (item: PartOfferItemDTO) => {
+        setQuantity(1);
+        setPartModal({ kind: 'part', item });
+    };
+
+    const openPackModal = (pack: PartPackDTO) => {
+        setQuantity(1);
+        setPartModal({ kind: 'pack', pack });
+    };
+
+    const confirmPartBuy = async () => {
+        if (!partModal || buying) return;
+        try {
+            setBuying(true);
+            const res =
+                partModal.kind === 'part'
+                    ? await postOfferPartPurchase({ slug: partModal.item.slug, rarity: partModal.item.rarity, quantity })
+                    : await postOfferPartPackPurchase({ packId: partModal.pack.id });
+            if (res.data.ok) {
+                const messageKey = res.data.messageKey;
+                toast.success(
+                    typeof messageKey === 'string' && messageKey
+                        ? t(messageKey)
+                        : res.data.message || t('offers.purchase_ok'),
+                );
+                fetchAll();
+                setPartModal(null);
+            }
+        } catch (err: unknown) {
+            toast.error(readOfferPurchaseError(err, t('common.error'), t));
+        } finally {
+            setBuying(false);
+        }
+    };
+
+    const partModalTitle = partModal
+        ? partModal.kind === 'part'
+            ? `${t(partModal.item.nameKey, { defaultValue: partModal.item.slug })} · ${t(`parts.rarity.${partModal.item.rarity}`, { defaultValue: partModal.item.rarity })}`
+            : t(partModal.pack.nameKey)
+        : '';
+    const partModalTotal = partModal
+        ? partModal.kind === 'part'
+            ? partModal.item.price * quantity
+            : partModal.pack.price
+        : 0;
+    const partModalCurrency = partModal
+        ? partModal.kind === 'part' ? partModal.item.currency : partModal.pack.currency
+        : 'BLK';
+
     const GearArt = gearModal ? GEAR[gearModal.kind].Art : FanOfferArt;
     const sectionMaxQty = gearModal
         ? readGearMaxBulkQuantity(gearModal.kind === 'fan' ? fanOffers : rackOffers)
@@ -343,9 +401,6 @@ export default function OffersPage() {
             <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">
                 {t('offers.title')}
             </h1>
-            <p className="max-w-3xl text-xs sm:text-sm text-slate-400 font-medium">
-                {t('offers.subtitle')}
-            </p>
         </div>
     );
 
@@ -368,6 +423,10 @@ export default function OffersPage() {
             <GearOffersSection kind="fan" offers={fanOffers} locale={offerDateLocale} buying={buying} onBuy={openGearModal} />
 
             <GearOffersSection kind="rack" offers={rackOffers} locale={offerDateLocale} buying={buying} onBuy={openGearModal} />
+
+            <PartOffersSection offers={partOffers} buying={buying} onBuyPart={openPartModal} onBuyPack={openPackModal} />
+
+            <AvatarLicenseOfferSection />
 
             {hasLiveRoomOffers(roomOffers) && (
                 <div className="space-y-6">
@@ -668,7 +727,7 @@ export default function OffersPage() {
                 </div>
             ))}
 
-            {events.length === 0 && !hasLiveRoomOffers(roomOffers) && !hasLiveGearOffers(fanOffers) && !hasLiveGearOffers(rackOffers) && (
+            {events.length === 0 && !hasLiveRoomOffers(roomOffers) && !hasLiveGearOffers(fanOffers) && !hasLiveGearOffers(rackOffers) && !hasLivePartOffers(partOffers) && (
                 <div className="rounded-3xl border-2 border-dashed border-slate-800 bg-slate-900/40 p-16 text-center text-slate-400 font-medium">
                     {t('offers.empty')}
                 </div>
@@ -871,6 +930,84 @@ export default function OffersPage() {
                                 <button
                                     type="button"
                                     onClick={() => setGearModal(null)}
+                                    disabled={buying}
+                                    className="w-full py-2.5 text-slate-400 hover:text-white font-bold text-xs uppercase tracking-wider disabled:opacity-40 transition-colors"
+                                >
+                                    {t('common.cancel')}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
+
+            {partModal && createPortal(
+                <div
+                    className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200"
+                    onClick={() => { if (!buying) setPartModal(null); }}
+                >
+                    <div
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label={t('offers.confirm_title')}
+                        className="bg-slate-900 border-2 border-slate-800 rounded-3xl w-full max-w-md overflow-hidden shadow-[4px_4px_0px_#000000] animate-in zoom-in-95 duration-200 relative"
+                        onClick={(ev) => ev.stopPropagation()}
+                    >
+                        <div className="absolute top-0 right-0 p-5 z-10">
+                            <button
+                                type="button"
+                                onClick={() => setPartModal(null)}
+                                disabled={buying}
+                                aria-label={t('common.cancel')}
+                                className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors disabled:opacity-40"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div className="p-7 sm:p-8 text-center space-y-6">
+                            <div className="space-y-1.5">
+                                <h3 className="text-xl font-black text-white uppercase italic tracking-tight">{t('offers.confirm_title')}</h3>
+                                <p className="text-slate-400 text-xs sm:text-sm font-medium">{partModalTitle}</p>
+                            </div>
+                            <div className="space-y-4 bg-slate-950/60 rounded-2xl p-5 border border-slate-800">
+                                {partModal.kind === 'part' && (
+                                    <>
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t('offers.quantity')}</span>
+                                            <div className="flex items-center gap-2">
+                                                <button type="button" aria-label="-" disabled={buying || quantity <= 1} onClick={() => setQuantity((q) => Math.max(1, q - 1))} className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center disabled:opacity-30 transition-colors">
+                                                    <Minus className="w-3.5 h-3.5" />
+                                                </button>
+                                                <span className="w-8 text-center font-black text-white text-sm">{quantity}</span>
+                                                <button type="button" aria-label="+" disabled={buying || quantity >= PART_OFFER_MAX_QUANTITY} onClick={() => setQuantity((q) => Math.min(PART_OFFER_MAX_QUANTITY, q + 1))} className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center disabled:opacity-30 transition-colors">
+                                                    <Plus className="w-3.5 h-3.5" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div className="h-[1px] bg-slate-800 w-full" />
+                                    </>
+                                )}
+                                <div className="flex justify-between items-center">
+                                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t('offers.total')}</span>
+                                    <span className="text-xl font-black text-white italic font-mono">
+                                        {formatPrice(partModalTotal)}{' '}
+                                        <span className="text-xs font-bold text-slate-400 not-italic uppercase">{partModalCurrency}</span>
+                                    </span>
+                                </div>
+                            </div>
+                            <div className="flex flex-col gap-2.5">
+                                <button
+                                    type="button"
+                                    onClick={() => void confirmPartBuy()}
+                                    disabled={buying}
+                                    className="w-full py-3.5 bg-primary hover:bg-primary-hover text-white rounded-xl font-black text-xs uppercase tracking-wider transition-all shadow-[2px_2px_0px_#000000] flex items-center justify-center gap-2 active:translate-x-0.5 active:translate-y-0.5 disabled:opacity-50 outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                                >
+                                    {buying ? <Loader2 className="w-4 h-4 animate-spin" /> : t('offers.confirm_payment')}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setPartModal(null)}
                                     disabled={buying}
                                     className="w-full py-2.5 text-slate-400 hover:text-white font-bold text-xs uppercase tracking-wider disabled:opacity-40 transition-colors"
                                 >

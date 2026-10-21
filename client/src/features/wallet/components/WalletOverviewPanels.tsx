@@ -6,6 +6,7 @@ import {
   Clock,
   ExternalLink,
   QrCode,
+  RefreshCw,
   ShieldCheck,
   Wallet as WalletIcon,
 } from "lucide-react";
@@ -13,6 +14,7 @@ import type { WalletTFunction } from "../lib/wallet.i18n";
 import type { WalletTransactionRow } from "../lib/wallet.types";
 import Card from "../../../shared/components/Card";
 import SectionHeader from "../../../shared/components/SectionHeader";
+import { formatUtcDateTime } from '../../../shared/utils/utcTime';
 
 export function WalletStatusBadge({ status, t }: { status: string; t: WalletTFunction }) {
   const config: Record<string, { color: string; label: string }> = {
@@ -258,23 +260,53 @@ export function WalletLedgerPanel({
                   ? tx.created_at
                   : null) ??
               `${tx.type}-${tx.amount}-${i}`;
+            const isSwap = tx.type === "swap";
+            const isMergeFee = tx.type === "merge_fee";
+            const isAvatarLicense = tx.type === "avatar_license";
+            const isFanPurchase = tx.type === "fan_purchase";
             const isBlkConvert = tx.type === "blk_convert";
             const isBlkWithdraw = tx.type === "blk_withdrawal";
-            const isWithdrawal = tx.type === "withdrawal" || isBlkWithdraw;
-            const unit = isBlkConvert || isBlkWithdraw ? "BLK" : "POL";
-            const usdSub =
-              isBlkConvert || isBlkWithdraw
-                ? `≈ $${Number(tx.amount).toFixed(2)}`
-                : polPrice > 0
-                  ? `$${(Number(tx.amount) * polPrice).toFixed(2)}`
-                  : null;
-            const label = isBlkConvert
+            const isWithdrawal = tx.type === "withdrawal" || isBlkWithdraw || isMergeFee || isAvatarLicense || isFanPurchase;
+
+            let unit = "POL";
+            if (isBlkConvert || isBlkWithdraw) {
+              unit = "BLK";
+            } else if (isMergeFee || isAvatarLicense || isFanPurchase) {
+              unit = tx.fromAsset ? tx.fromAsset.toUpperCase() : "BLK";
+            } else if (isSwap) {
+              unit = tx.fromAsset ? tx.fromAsset.toUpperCase() : (Number(tx.usdRateAtConfirmation || 0) < 0.001 ? "SHIB" : "POL");
+            }
+
+            let usdSub: string | null = null;
+            if (isFanPurchase) {
+              usdSub = null;
+            } else if (isMergeFee || isAvatarLicense) {
+              const feeUsd = Number(tx.usdValueAtConfirmation ?? 0);
+              usdSub = feeUsd > 0 ? `≈ $${feeUsd.toFixed(4)}` : null;
+            } else if (isBlkConvert || isBlkWithdraw) {
+              usdSub = `≈ $${Number(tx.amount).toFixed(2)}`;
+            } else if (isSwap) {
+              const blkOut = tx.outputAmount ?? Number(tx.usdValueAtConfirmation ?? 0);
+              usdSub = blkOut > 0 ? `+${blkOut.toFixed(8)} BLK` : null;
+            } else if (polPrice > 0) {
+              usdSub = `$${(Number(tx.amount) * polPrice).toFixed(2)}`;
+            }
+
+            const label = isFanPurchase
+              ? t("wallet.tx_fan_purchase", { unit })
+              : isAvatarLicense
+              ? t("wallet.tx_avatar_license", { unit })
+              : isMergeFee
+              ? `Taxa de Merge (${unit})`
+              : isBlkConvert
               ? t("wallet.tx_pol_to_blk")
               : isBlkWithdraw
                 ? t("wallet.tx_blk_legacy")
-                : isWithdrawal
-                  ? t("wallet.tx_outflow")
-                  : t("wallet.tx_inflow");
+                : isSwap
+                  ? `Swap (${unit} → BLK)`
+                  : isWithdrawal
+                    ? t("wallet.tx_outflow")
+                    : t("wallet.tx_inflow");
             return (
               <div
                 key={txKey}
@@ -282,10 +314,16 @@ export function WalletLedgerPanel({
               >
                 <div
                   className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 shadow-lg ${
-                    isWithdrawal ? "bg-red-500/10 text-red-500" : "bg-emerald-500/10 text-emerald-500"
+                    isSwap
+                      ? "bg-violet-500/10 text-violet-400"
+                      : isWithdrawal
+                        ? "bg-red-500/10 text-red-500"
+                        : "bg-emerald-500/10 text-emerald-500"
                   }`}
                 >
-                  {isBlkConvert ? (
+                  {isSwap ? (
+                    <RefreshCw className="w-6 h-6" />
+                  ) : isBlkConvert ? (
                     <Banknote className="w-6 h-6" />
                   ) : isWithdrawal ? (
                     <ArrowUpCircle className="w-6 h-6" />
@@ -301,17 +339,19 @@ export function WalletLedgerPanel({
                   </div>
                   <div className="flex justify-between items-end">
                     <p className="text-[10px] font-bold text-slate-500 font-mono">
-                      {new Date(tx.createdAt ?? tx.created_at ?? 0).toLocaleDateString(undefined, {
+                      {formatUtcDateTime(tx.createdAt ?? tx.created_at ?? 0, {
                         month: "short",
                         day: "numeric",
                         hour: "2-digit",
                         minute: "2-digit",
                       })}
                     </p>
-                    <p className={`text-sm font-black italic tracking-tighter ${isWithdrawal ? "text-red-400" : "text-emerald-400"}`}>
-                      {isWithdrawal ? "-" : "+"}
-                      {Number(tx.amount).toFixed(4)} {unit}
-                      {usdSub && <span className="block text-[8px] opacity-50 not-italic text-right">{usdSub}</span>}
+                    <p className={`text-sm font-black italic tracking-tighter ${
+                      isSwap ? "text-violet-300" : isWithdrawal ? "text-red-400" : "text-emerald-400"
+                    }`}>
+                      {isWithdrawal || isSwap ? "-" : "+"}
+                      {unit === "SHIB" ? Math.round(Number(tx.amount)).toLocaleString() : Number(tx.amount).toFixed(4)} {unit}
+                      {usdSub && <span className="block text-[8px] opacity-70 not-italic text-right">{usdSub}</span>}
                     </p>
                   </div>
                 </div>

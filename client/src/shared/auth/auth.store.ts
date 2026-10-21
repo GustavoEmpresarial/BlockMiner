@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import axios, { isAxiosError, type AxiosError, type AxiosResponse } from 'axios';
 import { API_TIMEOUT_MS_AUTH, API_TIMEOUT_MS_SESSION, resolveApiTimeoutMs } from '../utils/apiTimeout';
-import { readAuthErrorMessage } from './auth.errors';
+import { loginFailedMessage, readAuthErrorMessage } from './auth.errors';
+import { safeT } from '../utils/safeT';
 import { generateSecurityPayload } from '../utils/security';
 import { captureCsrfFromPayload, resolveCsrfTokenForRequest } from './csrfMemory';
 import { parseAuthUserPayload } from './parseAuthUser';
@@ -292,7 +293,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
             status && status >= 500
               ? readAxiosResponseMessage(
                   axiosError?.response,
-                  'Não foi possível verificar sua sessão agora. Tente novamente.',
+                  safeT('auth.client_errors.session_check_failed', 'Não foi possível verificar sua sessão agora. Tente novamente.'),
                 )
               : null;
           set({ user: null, isAuthenticated: false, isLoading: false, error: message });
@@ -316,7 +317,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
       set({ user, isAuthenticated: Boolean(user), isLoading: false });
       return { success: true as const };
     } catch (error: unknown) {
-      const fallback = 'Não foi possível entrar. Verifique os dados e tente novamente.';
+      const fallback = loginFailedMessage();
       const message = isAxiosError(error) ? readAuthErrorMessage(error, fallback) : fallback;
       set({ error: message, isLoading: false });
       return {
@@ -345,9 +346,8 @@ export const useAuthStore = create<AuthState>()((set) => ({
           : '');
       const msgStr = typeof rawMsg === 'string' ? rawMsg : '';
       const looksTechnical = /Invalid `prisma\.|PrismaClient|prisma\.|PANIC/i.test(msgStr);
-      const safeMessage = looksTechnical
-        ? 'Falha no cadastro. Tente novamente.'
-        : msgStr || 'Falha no cadastro. Tente novamente.';
+      const registerFailed = safeT('auth.client_errors.register_failed', 'Falha no cadastro. Tente novamente.');
+      const safeMessage = looksTechnical ? registerFailed : msgStr || registerFailed;
       let code: string | undefined =
         typeof responseData === 'object' && responseData !== null && 'code' in responseData
           ? String((responseData as { code?: unknown }).code || '')

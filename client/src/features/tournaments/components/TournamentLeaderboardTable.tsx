@@ -3,6 +3,7 @@ import type { LeaderboardEntry, TournamentDetail, TournamentPrize } from '../lib
 import { scoreColumnI18nKey } from '../lib/tournamentMetricDisplay';
 import { TournamentScore } from './TournamentScore';
 import { TournamentPrizeInline } from './TournamentPrizeDisplay';
+import UserAvatar from '../../../shared/components/UserAvatar';
 
 function rankBadgeRowClass(index: number): string {
   if (index === 0) return 'bg-amber-500 text-slate-950';
@@ -16,11 +17,13 @@ function findPrizeForRank(prizes: TournamentPrize[], rank: number): TournamentPr
 }
 
 function AvatarInitial({ entry }: { entry: LeaderboardEntry }) {
-  const letter = entry.user.username.charAt(0).toUpperCase();
   return (
-    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-slate-800 flex items-center justify-center text-[10px] font-bold text-white border border-slate-700 shrink-0">
-      {letter}
-    </div>
+    <UserAvatar
+      url={entry.user.avatarUrl}
+      name={entry.user.username}
+      className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-slate-800 border border-slate-700"
+      letterClassName="text-[10px] font-bold text-white"
+    />
   );
 }
 

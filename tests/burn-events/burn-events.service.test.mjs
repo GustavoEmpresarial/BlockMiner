@@ -142,7 +142,7 @@ test("startBurnEvent: destroys machines inside the start transaction before crea
   };
   burnService.repoRef.findUserBalancesTx = async () => ({
     id: 1,
-    shibBalance: 100,
+    shibBalance: 2000,
     polBalance: 1,
     blkBalance: 1,
   });
@@ -181,9 +181,9 @@ test("startBurnEvent: destroys machines inside the start transaction before crea
   }
 });
 
-test("startBurnEvent: validates fee rates and balance checks (SHIB: 20, POL: 0.01, BLK: 0.001)", async () => {
+test("startBurnEvent: validates fee rates and balance checks (SHIB: 1300, POL: 0.07, BLK: 0.007)", async () => {
   const { BURN_FEE_RATES } = await import("../../server/modules/burn-events/burn-events.config.ts");
-  assert.equal(BURN_FEE_RATES.SHIB, 20);
-  assert.equal(BURN_FEE_RATES.POL, 0.01);
-  assert.equal(BURN_FEE_RATES.BLK, 0.001);
+  assert.equal(BURN_FEE_RATES.SHIB, 1300);
+  assert.equal(BURN_FEE_RATES.POL, 0.07);
+  assert.equal(BURN_FEE_RATES.BLK, 0.007);
 });

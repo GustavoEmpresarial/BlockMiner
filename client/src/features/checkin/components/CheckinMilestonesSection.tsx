@@ -57,7 +57,8 @@ function MilestoneCard({ milestone: m }: { milestone: CheckinMilestone }) {
         : 'bg-slate-950 text-slate-500 border border-slate-800';
 
   const showMachineImage = rewardKind === 'machine' && m.minerImageUrl;
-  const showPolBadge = rewardKind === 'pol';
+  const coinBadge = rewardKind === 'pol' ? 'POL' : rewardKind === 'blk' ? 'BLK' : null;
+  const showPolBadge = coinBadge != null;
   const machinePower = Number(m.minerBaseHashRate ?? m.powerAmount);
 
   return (
@@ -70,7 +71,7 @@ function MilestoneCard({ milestone: m }: { milestone: CheckinMilestone }) {
         <div
           className={`w-12 h-12 rounded-xl shrink-0 flex items-center justify-center font-black text-xs font-mono shadow-[2px_2px_0px_#000000] ${iconBg}`}
         >
-          POL
+          {coinBadge}
         </div>
       ) : (
         <div className={`p-3 rounded-xl shrink-0 shadow-[2px_2px_0px_#000000] ${iconBg}`}>

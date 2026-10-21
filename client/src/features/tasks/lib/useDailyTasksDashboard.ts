@@ -76,5 +76,7 @@ export function useDailyTasksDashboard() {
     [load, t],
   );
 
-  return { t, loading, loadFailed, tasks, tasksByCadence, nextResetLabel, claimingId, load, claim };
+  const preview = data?.preview === true;
+
+  return { t, loading, loadFailed, tasks, tasksByCadence, nextResetLabel, claimingId, load, claim, preview };
 }

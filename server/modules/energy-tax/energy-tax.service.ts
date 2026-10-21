@@ -47,7 +47,7 @@ export { ACTIVITY_DISCOUNT_THRESHOLD };
 const log = logger.child("energy-tax.service");
 
 /** Rate constants — see legacy TaxesPage spec.
- *  • FULL_WEEK_RATE  = 15% — automatic Monday 21h charge (penalty for letting it accumulate)
+ *  • FULL_WEEK_RATE  = 15% — automatic Monday (UTC) charge (penalty for letting it accumulate)
  *  • DAILY_WEEK_RATE = 5%  — pay once/day (7 days straight) → big savings
  */
 export const FULL_WEEK_RATE = 0.15;
@@ -55,7 +55,7 @@ export const DAILY_WEEK_RATE = 0.05;
 export const DAILY_PER_DAY_RATE = DAILY_WEEK_RATE / 7;
 export const AUTO_PER_DAY_RATE = FULL_WEEK_RATE / 7;
 
-/** Feature flag — energy tax starts 29/06/2026 21:00 BRT. No charge (manual or cron) before this. */
+/** Feature flag — energy tax starts 2026-06-30 00:00 UTC. No charge (manual or cron) before this. */
 const DEFAULT_STARTS_AT_ISO = "2026-06-30T00:00:00.000Z";
 export const ENERGY_TAX_STARTS_AT = new Date(process.env.ENERGY_TAX_STARTS_AT_ISO || DEFAULT_STARTS_AT_ISO);
 
@@ -147,9 +147,56 @@ export async function countTodayActivities(userId: number, periodStart: Date): P
   };
 }
 
+/*
+ * Closed-period cache for the summary only. Every open sidebar polls /energy-tax/summary and each
+ * call re-aggregated 7 big tables for every day of the week (~60-110 queries). A period that ended
+ * more than the grace ago no longer changes, so the summary reuses it. payDailyTax and the sweep
+ * never go through this — what is charged is always read fresh.
+ */
+const CLOSED_PERIOD_CACHE_MS = Number(process.env.ENERGY_TAX_CLOSED_PERIOD_CACHE_MS ?? 30 * 60_000);
+const CLOSED_PERIOD_GRACE_MS = 5 * 60_000;
+const CLOSED_PERIOD_CACHE_MAX = 20_000;
+const closedPeriodCache = new Map<string, { at: number; value: Promise<unknown> }>();
+
+export function clearClosedPeriodCache(): void {
+  closedPeriodCache.clear();
+}
+
+function cachedClosedPeriod<T>(kind: string, userId: number, periodStart: Date, now: Date, load: () => Promise<T>): Promise<T> {
+  if (nextMiningPeriodStart(periodStart).getTime() > now.getTime() - CLOSED_PERIOD_GRACE_MS) return load();
+  const key = `${kind}:${userId}:${periodStart.getTime()}`;
+  const at = Date.now();
+  const hit = closedPeriodCache.get(key);
+  if (hit && at - hit.at < CLOSED_PERIOD_CACHE_MS) return hit.value as Promise<T>;
+  const value = load();
+  const entry = { at, value: value as Promise<unknown> };
+  closedPeriodCache.delete(key);
+  closedPeriodCache.set(key, entry);
+  value.catch(() => {
+    if (closedPeriodCache.get(key) === entry) closedPeriodCache.delete(key);
+  });
+  if (closedPeriodCache.size > CLOSED_PERIOD_CACHE_MAX) {
+    // Map keeps insertion order: drop the oldest entries first.
+    for (const k of closedPeriodCache.keys()) {
+      if (closedPeriodCache.size <= CLOSED_PERIOD_CACHE_MAX * 0.9) break;
+      closedPeriodCache.delete(k);
+    }
+  }
+  return value;
+}
+
+function summaryMining(userId: number, periodStart: Date, now: Date): Promise<MiningBreakdown> {
+  return cachedClosedPeriod("mining", userId, periodStart, now, () => getMiningRewardsForPeriod(userId, periodStart));
+}
+
+function summaryActivities(userId: number, periodStart: Date, now: Date): Promise<TodayActivities> {
+  return cachedClosedPeriod("activity", userId, periodStart, now, () => countTodayActivities(userId, periodStart));
+}
+
 export async function computeConsecutiveUnpaidMiningDays(
   userId: number,
   now: Date = new Date(),
+  opts: { useSummaryCache?: boolean } = {},
 ): Promise<{ consecutiveUnpaid: number }> {
   const days = lastSevenUtcDays(now);
   const currentPeriodStart = miningPeriodStart(now);
@@ -162,11 +209,15 @@ export async function computeConsecutiveUnpaidMiningDays(
     const dayStart = days[i]!;
     if (dayStart.getTime() === currentPeriodStart.getTime()) continue;
 
-    const rewards = await rewardsForUtcDay(userId, dayStart);
+    const rewards = opts.useSummaryCache
+      ? (await summaryMining(userId, dayStart, now)).total
+      : await rewardsForUtcDay(userId, dayStart);
     if (rewards <= 0) break;
     if (paidKeys.has(dayStart.getTime())) break;
 
-    const act = await countTodayActivities(userId, dayStart);
+    const act = opts.useSummaryCache
+      ? await summaryActivities(userId, dayStart, now)
+      : await countTodayActivities(userId, dayStart);
     if (act.exempt) break;
 
     consecutiveUnpaid++;
@@ -197,7 +248,9 @@ export async function computeWeekSummary(userId: number, now: Date = new Date())
   const chargeByDay = new Map<number, (typeof existingCharges)[number]>();
   for (const c of existingCharges) chargeByDay.set(c.periodDayStartsAt.getTime(), c);
 
-  const rewardsByDay = await Promise.all(days.map((d) => rewardsForUtcDay(userId, d)));
+  const miningByDay = await Promise.all(days.map((d) => summaryMining(userId, d, now)));
+  const rewardsByDay = miningByDay.map((m) => m.total);
+  const dayIndex = (start: Date) => days.findIndex((d) => d.getTime() === start.getTime());
 
   let totalRewards7d = 0;
   let paidPol = 0;
@@ -217,17 +270,19 @@ export async function computeWeekSummary(userId: number, now: Date = new Date())
     }
   }
   const closedCharge = chargeByDay.get(closedStart.getTime()) ?? null;
-  const closedRewards = await rewardsForUtcDay(userId, closedStart);
+  const closedIdx = dayIndex(closedStart);
+  const closedRewards = closedIdx >= 0 ? rewardsByDay[closedIdx]! : (await summaryMining(userId, closedStart, now)).total;
   const todayRewards = rewardsByDay[6]!;
   const yesterdayRewards = closedRewards;
   const todayDailyCharge = Number((closedRewards * DAILY_PER_DAY_RATE).toFixed(8));
 
+  const currentIdx = dayIndex(currentStart);
   const [todayAct, todayMining] = await Promise.all([
     countTodayActivities(userId, currentStart),
-    getMiningRewardsForPeriod(userId, currentStart),
+    currentIdx >= 0 ? miningByDay[currentIdx]! : getMiningRewardsForPeriod(userId, currentStart),
   ]);
 
-  const { consecutiveUnpaid: unpaidDays } = await computeConsecutiveUnpaidMiningDays(userId, now);
+  const { consecutiveUnpaid: unpaidDays } = await computeConsecutiveUnpaidMiningDays(userId, now, { useSummaryCache: true });
 
   const periodEndKeys = Array.from({ length: 7 }, (_, i) => addDaysToUtcDayKey(currentEndKey, i - 6));
 
@@ -302,7 +357,7 @@ export async function computeWeekSummary(userId: number, now: Date = new Date())
 }
 
 /**
- * Manual daily payment. Idempotent: 1 charge per (userId, mined-BRT-day).
+ * Manual daily payment. Idempotent: 1 charge per (userId, mined UTC day).
  * "Pay today" settles the tax on yesterday's mining; periodDayStartsAt = yesterday.
  * `currency` chooses which wallet balance to debit (POL / BLK / SHIB); charge.amount
  * stays POL-denominated for reporting.

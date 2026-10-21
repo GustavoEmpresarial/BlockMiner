@@ -39,7 +39,7 @@ test("Offerwall Analytics Controller Smoke Test: End-to-end parameter handling a
     assert.ok(data?.totals);
     assert.ok(Array.isArray(data?.daily));
     assert.ok(data?.serverNow);
-    assert.ok(data?.serverNowBrt);
+    assert.ok(data?.serverNowUtc);
   });
 
   await t.test("Invalid date range (from > to) returns 400 Bad Request", async () => {

@@ -223,7 +223,8 @@
       "skipToContent": "Ir para o conteúdo legal",
       "backToHome": "Início",
       "scrollToTop": "Voltar ao topo",
-      "readCookiePolicy": "Ler Política de Cookies"
+      "readCookiePolicy": "Ler Política de Cookies",
+      "translationNotice": ""
     },
     "footer": {
       "description": "Informações legais públicas para usuários e visitantes do BlockMiner.",
@@ -692,7 +693,10 @@
       "shortlink_message": "Você saiu da etapa do shortlink, então o tempo parou. O contador continua de onde parou.",
       "youtube_message": "Você saiu da página do YouTube, então o tempo parou. O contador continua de onde parou.",
       "autoMining_message": "Você saiu do Auto Mining, então o tempo parou. O contador continua de onde parou."
-    }
+    },
+    "load_more": "Carregar mais",
+    "all": "Todas",
+    "clear": "Limpar"
   },
   "feature_gate": {
     "unavailable": "Esta página não está disponível."
@@ -769,7 +773,9 @@
       "forgot": "Esqueceu?",
       "create_account": "Criar Conta Agora",
       "or": "ou",
-      "email_placeholder": "seu@email.com"
+      "email_placeholder": "seu@email.com",
+      "two_factor_label": "Código 2FA",
+      "two_factor_email_label": "Código do e-mail"
     },
     "register": {
       "title": "Crie sua conta gratuita",
@@ -833,7 +839,9 @@
       "reset_submit": "Redefinir senha",
       "email_placeholder": "você@email.com",
       "new_password_placeholder": "Mínimo de 8 caracteres",
-      "confirm_password_placeholder": "Repita a nova senha"
+      "confirm_password_placeholder": "Repita a nova senha",
+      "new_password": "Nova senha",
+      "confirm_password": "Confirmar nova senha"
     },
     "verifyEmail": {
       "title": "Confirmar e-mail",
@@ -845,11 +853,22 @@
       "banner_body": "Confirme seu e-mail pra liberar saques e o chat.",
       "banner_resend": "Reenviar e-mail",
       "banner_sent": "E-mail reenviado! Confira sua caixa de entrada."
+    },
+    "client_errors": {
+      "gateway_busy": "O servidor está temporariamente indisponível. Não é problema com sua senha — tente entrar novamente em alguns segundos.",
+      "network": "Falha de conexão com o servidor. Verifique sua internet e tente novamente.",
+      "timeout": "O servidor demorou para responder. Aguarde alguns segundos e tente entrar novamente.",
+      "login_failed": "Não foi possível entrar. Verifique os dados e tente novamente.",
+      "session_check_failed": "Não foi possível verificar sua sessão agora. Tente novamente.",
+      "register_failed": "Falha no cadastro. Tente novamente."
     }
   },
   "sidebar": {
     "dashboard": "Dashboard Central",
     "machines": "Minhas Máquinas",
+    "parts": "Peças",
+    "parts_merge": "Peças & Merge",
+    "merge": "Merge",
     "vault": "Cofre",
     "shop": "Loja",
     "offers": "Ofertas",
@@ -907,7 +926,6 @@
   "taxes": {
     "title": "Impostos e Taxas",
     "coming_soon_desc": "Um sistema transparente de impostos e taxas está chegando ao BlockMiner. Aqui você poderá acompanhar custos de energia, próximas cobranças e seu histórico completo de taxas.",
-    "page_subtitle": "Acompanhe a Taxa de Energia sobre sua mineração, pague diariamente com 5% ou deixe acumular até segunda (15%).",
     "planned_features": "Funcionalidades planejadas",
     "feature_energy_tax": "Taxa de Energia",
     "feature_energy_tax_desc": "5% se você pagar todo dia (15% se deixar para segunda) sobre suas recompensas dos últimos 7 dias.",
@@ -920,7 +938,7 @@
       "header_title": "Taxa de Energia",
       "header_subtitle": "15% sobre suas recompensas POL dos últimos 7 dias — ou só 5% se você pagar manualmente todos os dias. Pague cedo e poupe 10%.",
       "starts_in_title": "Começa em {{date}}",
-      "starts_in_body": "A Taxa de Energia entra em vigor em <strong>{{datetime}}</strong> (horário de Brasília, 29/06 às 21h).",
+      "starts_in_body": "A Taxa de Energia entra em vigor em <strong>{{datetime}}</strong> (horário UTC).",
       "starts_in_countdown": "Faltam <strong>{{remaining}}</strong> para o primeiro ciclo — até lá nenhuma cobrança. Você pode acompanhar a simulação abaixo.",
       "bill_header": "Simulação de economia",
       "bill_daily_label": "Pagando todo dia (5% no total da semana)",
@@ -938,8 +956,8 @@
       "pay_button_pay": "Pagar {{amount}} agora",
       "pay_button_formula": "Base: {{rewards}} POL minerados ontem × 0,7143% = {{charge}} POL",
       "pay_already_settled": "Taxa do dia minerado {{day}} já quitada.",
-      "pay_tomorrow_hint": "Mineração do período atual ({{rewards}} POL) pode ser paga após as {{hour}}h BRT (~{{charge}} POL).",
-      "server_clock": "Servidor (BRT): {{datetime}}",
+      "pay_tomorrow_hint": "Mineração do período atual ({{rewards}} POL) pode ser paga após as {{hour}}:00 UTC (~{{charge}} POL).",
+      "server_clock": "Servidor (UTC): {{datetime}}",
       "week_status_header": "Status dos últimos 7 dias",
       "week_status_order_hint": "← mais antigo · hoje →",
       "week_status_paid_count": "{{paid}}/7 dias pagos",
@@ -985,11 +1003,11 @@
       "loading": "Carregando taxa de energia…",
       "how_title": "Como funciona",
       "how_step1_title": "Base de cálculo",
-      "how_step1_desc": "Contamos todas as suas recompensas POL mineradas nos últimos 7 dias (segunda a domingo, horário de Brasília). É sobre esse total que a taxa incide.",
+      "how_step1_desc": "Contamos todas as suas recompensas POL mineradas nos últimos 7 dias (segunda a domingo, em UTC). É sobre esse total que a taxa incide.",
       "how_step2_title": "Escolha sua taxa",
       "how_step2_desc": "Se você pagar manualmente todos os 7 dias da semana, a taxa total fica em apenas 5%. Isso significa ~0,71% por dia (5% ÷ 7). Pague cedo, pague menos — quem deixa acumular paga 3× mais.",
       "how_step3_title": "Cobrança automática (a multa)",
-      "how_step3_desc": "Toda segunda-feira às 21h BRT, qualquer dia da semana sem pagamento manual é cobrado automaticamente a 2,14% sobre o minerado daquele dia (totalizando 15% na semana). Deixar para a segunda custa 3× mais que pagar todo dia.",
+      "how_step3_desc": "Toda segunda-feira a partir das 00:00 UTC, qualquer dia da semana sem pagamento manual é cobrado automaticamente a 2,14% sobre o minerado daquele dia (totalizando 15% na semana). Deixar para a segunda custa 3× mais que pagar todo dia.",
       "bill_rate_note": "{{rate}}% do total das recompensas — {{label}}"
     },
     "recovery": {
@@ -1415,11 +1433,13 @@
     "edit_valid_from": "Válido a partir de",
     "edit_valid_until": "Válido até",
     "edit_is_active": "Tarefa ativa",
-    "edit_sort_order": "Ordem de exibição"
+    "edit_sort_order": "Ordem de exibição",
+    "create_desc": "Configure as metas, cadência de reset e prêmios para os jogadores.",
+    "presets": "Modelos Rápidos (Preenchimento Automático)",
+    "btn_create": "Criar Tarefa"
   },
   "miniPass": {
     "title": "Mini Pass",
-    "subtitle": "Missões sazonais, níveis de XP e recompensas exclusivas",
     "no_seasons": "Nenhuma temporada visível no momento.",
     "back": "Todas as temporadas",
     "level_label": "Nível",
@@ -1483,7 +1503,6 @@
     "empty": "Não há tarefas configuradas no momento.",
     "load_error_body": "Não foi possível carregar as tarefas no servidor. Verifique a conexão, atualize a página ou entre novamente se a sessão expirou.",
     "retry": "Tentar de novo",
-    "subtitle": "Complete objetivos com calendário diário, semanal ou mensal e resgate recompensas. Todas as tarefas ficam visíveis abaixo; os atalhos só saltam para cada grupo.",
     "period_label": "Hoje",
     "period": "Período",
     "earliest_reset": "Próximo reset mais cedo",
@@ -1501,7 +1520,7 @@
       "MONTHLY": "Mensal"
     },
     "progress": "{{current}} / {{target}}",
-    "claim": "Resgatar recompensa",
+    "claim": "Coletar",
     "claiming": "Resgatando…",
     "status": {
       "available": "Disponível",
@@ -1512,7 +1531,8 @@
     "reward": {
       "blk": "+{{amount}} BLK",
       "pol": "+{{amount}} POL",
-      "hashrate": "+{{hashRate}} H/s por {{days}}d"
+      "hashrate_one": "+{{hashRate}} H/s por {{count}} dia",
+      "hashrate_other": "+{{hashRate}} H/s por {{count}} dias"
     },
     "claim_ok": "Recompensa resgatada",
     "errors": {
@@ -1526,16 +1546,35 @@
     },
     "tasks": {
       "login": "Faça check-in neste período (confirme o check-in)",
-      "mine_blk": "Ganhe {{target}} BLK do pool BLK por tempo neste período",
-      "play_games": "Vença {{target}} minijogos neste período",
-      "watch_youtube": "Resgate {{target}} recompensa do YouTube neste período",
-      "internal_offerwall": "Conclua {{target}} tarefa(s) da offerwall interna neste período",
-      "custom": "Objetivo personalizado"
-    }
+      "mine_blk": "Ganhe {{target}} BLK minerando neste período",
+      "play_games_one": "Vença {{count}} minijogo neste período",
+      "play_games_other": "Vença {{count}} minijogos neste período",
+      "watch_youtube_one": "Resgate {{count}} recompensa do YouTube neste período",
+      "watch_youtube_other": "Resgate {{count}} recompensas do YouTube neste período",
+      "internal_offerwall_one": "Conclua {{count}} tarefa da offerwall interna neste período",
+      "internal_offerwall_other": "Conclua {{count}} tarefas da offerwall interna neste período",
+      "custom": "Objetivo personalizado",
+      "checkin_one": "Faça {{count}} check-in neste período",
+      "checkin_other": "Faça {{count}} check-ins neste período",
+      "faucet_one": "Colete o Faucet {{count}} vez neste período",
+      "faucet_other": "Colete o Faucet {{count}} vezes neste período",
+      "shortlinks_one": "Complete {{count}} shortlink neste período",
+      "shortlinks_other": "Complete {{count}} shortlinks neste período",
+      "offers_one": "Complete {{count}} oferta no Offerwall neste período",
+      "offers_other": "Complete {{count}} ofertas no Offerwall neste período",
+      "auto_mining_one": "Resgate {{count}} recompensa do Auto Mining neste período",
+      "auto_mining_other": "Resgate {{count}} recompensas do Auto Mining neste período",
+      "merge_one": "Faça {{count}} fusão no Merge neste período",
+      "merge_other": "Faça {{count}} fusões no Merge neste período",
+      "burn_one": "Resgate {{count}} queima neste período",
+      "burn_other": "Resgate {{count}} queimas neste período",
+      "referrals_one": "Tenha {{count}} indicação qualificada neste período",
+      "referrals_other": "Tenha {{count}} indicações qualificadas neste período"
+    },
+    "preview_notice": "Tarefas em teste no ambiente de desenvolvimento: dá pra coletar e o torneio conta, mas nenhuma recompensa é paga."
   },
   "internalOfferwallPage": {
     "title": "Offerwall interna",
-    "subtitle": "Conclua tarefas de parceiros gerenciadas pelo BlockMiner. Recompensas creditadas em BLK.",
     "disabled": "Esta seção está temporariamente indisponível.",
     "load_error": "Não foi possível carregar as ofertas.",
     "empty": "Não há tarefas de parceiros disponíveis no momento. Volte mais tarde.",
@@ -1566,7 +1605,7 @@
     "daily_limit": "Você atingiu o limite diário desta oferta.",
     "usage_progress": "{{completed}} / {{max}} concluídas",
     "daily_reset_title": "Reset diário · {{date}} (UTC)",
-    "daily_reset_body": "Ofertas com limite diário reiniciam à meia-noite no horário de Brasília — não às 00:00 UTC como o PTC.",
+    "daily_reset_body": "Ofertas com limite diário reiniciam à meia-noite UTC (00:00 UTC), igual ao PTC.",
     "daily_reset_next": "Próximo reset em",
     "available_in": "Disponível em {{time}}",
     "errors": {
@@ -1620,7 +1659,7 @@
     "form_min_view": "Segundos mínimos na página",
     "form_max_executions": "Máx. de execuções por período (por usuário)",
     "form_reset_type": "Tipo de reinício do limite",
-    "form_reset_daily": "Diário (dia calendário Brasil)",
+    "form_reset_daily": "Diário (dia calendário UTC)",
     "form_reset_cooldown": "Janela móvel (cooldown)",
     "form_cooldown_seconds": "Janela de tempo (segundos)",
     "form_reward_kind": "Tipo de recompensa",
@@ -1655,7 +1694,16 @@
     "validation_reward_hr_positive": "A recompensa em hashrate deve ser um número positivo.",
     "validation_reward_days_range": "Os dias de hashrate devem estar entre 1 e 365.",
     "validation_action_line_too_long": "Cada linha de ação obrigatória deve ter no máximo 500 caracteres.",
-    "validation_country_iso2": "Os códigos de país devem ser ISO 3166-1 alpha-2 (duas letras), separados por vírgula ou espaço."
+    "validation_country_iso2": "Os códigos de país devem ser ISO 3166-1 alpha-2 (duas letras), separados por vírgula ou espaço.",
+    "host_deactivated": "Host desativado com sucesso",
+    "saved": "Oferta atualizada",
+    "created": "Oferta criada",
+    "toggled": "Status atualizado",
+    "approve_ok": "Aprovado",
+    "reject_ok": "Rejeitado",
+    "offers_section": "Ofertas",
+    "review_section": "Fila de revisão",
+    "frame_hosts_section": "Hosts Permitidos no Iframe (CSP frame-src)"
   },
   "dashboard_crypto_stream": {
     "title": "BlockMiner — Painel crypto",
@@ -1671,7 +1719,6 @@
   },
   "readEarn": {
     "title": "Ler e ganhar",
-    "subtitle": "Abra os artigos dos parceiros, encontre o código secreto e resgate recompensas uma vez por campanha.",
     "load_error": "Não foi possível carregar as campanhas.",
     "empty": "Não há campanhas ativas no momento. Volte em breve.",
     "read_article": "Ler artigo",
@@ -1746,7 +1793,6 @@
   },
   "support_tickets": {
     "title": "Suporte",
-    "subtitle": "Abra um chamado e converse com a equipe em tempo real.",
     "refresh": "Atualizar",
     "new_ticket": "Novo chamado",
     "list_heading": "Seus chamados",
@@ -1933,7 +1979,6 @@
   },
   "dashboard": {
     "welcome": "Bem-vindo, {{name}}",
-    "subtitle": "Sua operação de mineração está ativa. Acompanhe os rendimentos do próximo bloco em tempo real.",
     "balance": "Seu Saldo",
     "speed": "Sua Velocidade",
     "network_power": "Poder da Rede",
@@ -1960,27 +2005,28 @@
     "activity_cta": "Ganhar mais hoje",
     "real_time_earnings": "Ganhos em Tempo Real",
     "mining_allocation_title": "Alocação de mineração",
-    "mining_allocation_description": "Divida seu hashrate entre POL e SHIB. BLK chega em breve. A mudança vale a partir do próximo bloco.",
+    "mining_allocation_description": "Divida seu hashrate entre POL e SHIB, ou ative a mineração de BLK (0.5 BLK/dia). A mudança vale a partir do próximo bloco.",
     "mining_allocation_pol_label": "POL",
     "mining_allocation_shib_label": "SHIB",
     "mining_allocation_blk_label": "BLK",
-    "mining_allocation_blk_soon": "Em breve",
-    "mining_allocation_blk_soon_hint": "Mineração em BLK ainda não está ativa — por enquanto o split fica só entre POL e SHIB.",
+    "mining_allocation_blk_soon": "Liberado",
+    "mining_allocation_blk_soon_hint": "Pool de 0.5 BLK por dia (~0.0035 BLK/bloco em 144 blocos diários).",
     "mining_allocation_applies_next_block": "Aplicado no próximo bloco",
     "mining_allocation_estimated_pol": "Bloco POL",
     "mining_allocation_estimated_shib": "Bloco SHIB",
+    "mining_allocation_estimated_blk": "Bloco BLK",
     "mining_allocation_saving": "Salvando…",
     "mining_allocation_saved": "Alocação atualizada",
     "mining_allocation_save_failed": "Falha ao salvar alocação",
     "mining_allocation_edit_split": "Editar split",
     "mining_allocation_modal_title": "Dividir poder de mineração",
-    "mining_allocation_modal_description": "Defina o percentual de hashrate destinado a cada moeda. A soma de POL + SHIB precisa ser 100%.",
+    "mining_allocation_modal_description": "Defina o destino do seu hashrate: ative a mineração da moeda BLK ou divida entre POL e SHIB.",
     "mining_allocation_modal_hint": "Valores arredondados para o múltiplo de 5% mais próximo ao salvar.",
     "mining_allocation_modal_cancel": "Cancelar",
     "mining_allocation_modal_save": "Salvar split",
     "mining_allocation_modal_error_invalid": "Digite números válidos.",
     "mining_allocation_modal_error_range": "Cada valor precisa estar entre 0 e 100.",
-    "mining_allocation_modal_error_sum": "A soma de POL + SHIB precisa ser exatamente 100%.",
+    "mining_allocation_modal_error_sum": "A soma de POL + SHIB precisa ser exatamente 100% (ou 100% BLK).",
     "balance_shib_label": "Saldo SHIB",
     "affiliate_description": "Convide seus amigos e ganhe bônus de mineração vitalícios sobre cada bloco que eles minerarem.",
     "affiliate_active_referrals": "Indicados Ativos",
@@ -2045,7 +2091,6 @@
   },
   "shop": {
     "title": "Expanda sua Operação",
-    "subtitle": "Adquira equipamentos de última geração e aumente seu HashRate para minerar blocos com mais eficiência.",
     "power": "Poder",
     "investment": "Investimento",
     "est_return": "Retorno Est.",
@@ -2086,11 +2131,14 @@
     "rack_badge": "Rack",
     "miners_section_title": "Mineradoras",
     "fan_badge": "Refrigeração",
-    "sales_opens_at": "Vendas abrem em"
+    "sales_opens_at": "Vendas abrem em",
+    "loading_error": "Nenhum equipamento disponível.",
+    "invalid_miner": "Este equipamento não está disponível para compra.",
+    "invalid_quantity": "Quantidade inválida."
   },
   "fans": {
     "cooling_system_name": "Sistema de refrigeração",
-    "cooling_system_desc": "Bandeja com ventiladores — instale embaixo de um rack no inventário.",
+    "cooling_system_desc": "Sistema de refrigeração — instale embaixo de um rack no inventário para ganhar +1% de bônus sobre todo o poder daquele rack.",
     "purchase_success": "Compra realizada!",
     "purchase_success_detail": "{{count}} sistema(s) de refrigeração adicionado(s) ao inventário!",
     "errors": {
@@ -2122,7 +2170,6 @@
   },
   "inventory": {
     "title": "Sala de Mineração",
-    "subtitle": "Gerencie seus equipamentos e maximize seu HashRate.",
     "active_machines": "MÁQUINAS ATIVAS",
     "in_inventory": "NO INVENTÁRIO",
     "expires": "Expira",
@@ -2267,6 +2314,9 @@
     "fan_no_credits": "Você não tem ventiladores disponíveis. Compre na loja ou ofertas.",
     "rack_no_credits": "Você não tem racks disponíveis. Compre na loja ou ofertas.",
     "fan_need_rack": "Coloque um rack antes do ventilador.",
+    "fan_bonus_tooltip": "Sistema de refrigeração ativo: +1% de bônus sobre as máquinas deste rack (+{{bonus}}).",
+    "fan_bonus_total_tooltip": "Bônus total de refrigeração ativo: +{{bonus}} somado ao hashrate das salas.",
+    "fan_active_status": "Refrigeração ativa (+1%)",
     "drag_fan_aria": "Arrastar ventilador",
     "rack_picker_title": "Escolher rack",
     "rack_picker_hint": "Selecione um rack guardado para colocar neste espaço.",
@@ -2289,7 +2339,6 @@
     "maintenance_btn_reload": "Atualizar Página",
     "hero_wallet": "Carteira",
     "hero_terminal": "Terminal",
-    "hero_subtitle": "Operações financeiras Web3 seguras",
     "network_status": "Estado da rede",
     "network_polygon": "Polygon",
     "ledger_title": "Extrato / atividade",
@@ -2478,7 +2527,14 @@
       "link_failed": "Falha ao vincular carteira.",
       "unlink_failed": "Não foi possível desvincular a carteira.",
       "wallet_linked_success": "Carteira vinculada com sucesso!",
-      "wallet_unlinked": "Carteira desvinculada."
+      "wallet_unlinked": "Carteira desvinculada.",
+      "loading_wallet": "Carregando carteira…",
+      "wallet_linked": "Vinculada",
+      "change_wallet": "Trocar carteira",
+      "unlink_wallet": "Desvincular",
+      "linking_wallet": "Vinculando…",
+      "save_link_wallet": "Salvar / vincular carteira",
+      "connect_browser_wallet": "Conectar carteira"
     },
     "express_mode_note": "EXPRESS: associe a carteira para assinar transferências na Polygon. O saldo atualiza após {{n}} confirmações de bloco.",
     "shib": {
@@ -2550,11 +2606,12 @@
       "you_receive": "Você recebe",
       "network_protocol_fee": "Network protocol fee",
       "gas_covered": "Gas Covered by Pool"
-    }
+    },
+    "tx_avatar_license": "Licença de foto de perfil ({{unit}})",
+    "tx_fan_purchase": "Compra de refrigeração ({{unit}})"
   },
   "faucet": {
     "title": "Faucet de Poder",
-    "subtitle": "Ganhe Poder de Mineração Temporário a cada 60 minutos. Complete o passo do parceiro para desbloquear seu bônus.",
     "loading": "Carregando faucet…",
     "reward_permanent": "Não expira",
     "reward_temporary": "Poder temporário · {{duration}}",
@@ -2585,7 +2642,6 @@
   },
   "shortlinks": {
     "title": "Shortlinks",
-    "subtitle": "Complete links encurtados para ganhar poder de mineração extra.",
     "verified_links": "Links Verificados",
     "reward": "Recompensa",
     "status_label": "Status",
@@ -2605,7 +2661,6 @@
     "what_is_shortlink": "O que são Shortlinks?",
     "shortlink_msg": "Shortlinks são links de terceiros que geram receita para o pool, permitindo que distribuamos mineradoras gratuitas. Você deve passar por algumas páginas de verificação (captchas) para completar o link. Ao finalizar, o poder de mineração é adicionado instantaneamente ao seu inventário.",
     "step_title": "Etapa de verificação {{step}} de {{total}}",
-    "step_subtitle": "Validação de URL única ativa",
     "step_syncing": "Sincronizando conexão...",
     "step_verified": "Protocolo verificado",
     "step_continue": "Continuar para próxima página",
@@ -2656,7 +2711,6 @@
     "title": "Check-in",
     "offchain_without_wallet_hint": "A carteira é opcional. Você pode fazer check-in com o POL do jogo, ou vincular uma carteira pra pagamento on-chain.",
     "subtitle": "Um check-in diário: paga 0,03 POL do saldo interno do jogo (débito imediato, sem gas). Sem carteira externa.",
-    "subtitle_balance_only": "Um check-in diário: paga 0,03 POL do saldo interno do jogo (débito imediato, sem gas). Simples e sem depender de carteira externa.",
     "claim_button": "Resgatar Recompensa Diária",
     "claimed": "Já Resgatado",
     "claimed_period": "Já resgatado neste período",
@@ -2752,6 +2806,10 @@
         "unknown": {
           "title": "Recompensa do dia {{day}}",
           "description": "Recompensa especial de check-in."
+        },
+        "blk": {
+          "title": "{{amount}} BLK — dia {{day}}",
+          "description": "Bônus em BLK creditado na sequência de check-in."
         }
       }
     },
@@ -2775,7 +2833,7 @@
       "daily": "Diário",
       "daily_hint": "Um check-in por dia civil (America/São Paulo). Conta para a sequência.",
       "weekly": "Semanal",
-      "weekly_hint": "Um check-in por semana ISO (segunda a domingo, data no calendário Brasil).",
+      "weekly_hint": "Um check-in por semana ISO (segunda a domingo, data no calendário UTC).",
       "monthly": "Mensal",
       "monthly_hint": "Um check-in por mês civil (America/São Paulo)."
     },
@@ -2833,7 +2891,8 @@
       "current_streak": "Sequência atual: {{days}} dias",
       "longest_streak": "Maior sequência: {{days}} dias",
       "streak_reset_warning": "Faltar um dia irá resetar sua sequência para 0"
-    }
+    },
+    "milestone_reward_blk": "{{value}} BLK"
   },
   "powerBoost": {
     "title": "Power Boost — Recompensas de 7 Dias",
@@ -2875,7 +2934,6 @@
     "docs": {
       "title": "Power Boost — Documentação",
       "back": "Voltar para Impostos e Taxas",
-      "intro": "Tudo o que você precisa saber sobre o benefício premium de recompensas de 7 dias.",
       "duration_title": "Duração por sistema",
       "examples_title": "Exemplos",
       "example_today": "Hoje → pagou → tudo conquistado hoje dura 7 dias.",
@@ -2892,7 +2950,6 @@
   },
   "powerStats": {
     "title": "Estatísticas e poder",
-    "subtitle": "Dashboard profissional da tua conta: resumo rápido, ganhos, poder e detalhes organizados por abas.",
     "refresh": "Atualizar",
     "export_csv": "Exportar CSV",
     "load_error": "Não foi possível carregar as estatísticas. Tenta de novo.",
@@ -2909,6 +2966,40 @@
       "overview": "Visão geral",
       "temporary": "Temporário",
       "calculator": "Calculadora"
+    },
+    "history_log": {
+      "title": "Registro de Atividades da Conta",
+      "subtitle": "Consulte todas as ações realizadas na sua conta em tempo real com pesquisa e filtros.",
+      "search_placeholder": "Pesquisar por ação, máquina, vídeo, valor ou detalhe...",
+      "cat_all": "Todas",
+      "cat_machines": "Máquinas & Racks",
+      "cat_finance": "Carteira & Taxas",
+      "cat_games": "Jogos",
+      "cat_account": "Conta",
+      "col_datetime": "Data / Hora",
+      "col_category": "Categoria",
+      "col_activity": "Ação & Detalhes",
+      "col_ip": "Origem",
+      "empty_title": "Nenhuma atividade encontrada",
+      "empty_desc": "Não há registros de atividades recentes para a categoria selecionada.",
+      "empty_search": "Nenhum resultado corresponde à sua pesquisa. Tente palavras diferentes ou limpe o filtro.",
+      "showing": "Mostrando",
+      "per_page": "Por página:",
+      "export_csv": "Exportar log em CSV",
+      "cat_purchases": "Compras",
+      "cat_youtube": "YouTube",
+      "cat_faucet": "Faucet",
+      "cat_shortlinks": "Shortlinks",
+      "cat_ptc": "PTC",
+      "cat_offerwall": "Offerwall",
+      "cat_auto_mining": "Auto Mining",
+      "cat_checkin": "Check-in",
+      "cat_boosts": "Boosts & Recompensas",
+      "cat_general": "Outros",
+      "period_label": "Período",
+      "period_1d": "24h",
+      "period_7d": "7 dias",
+      "period_30d": "30 dias"
     },
     "dashboard": {
       "financial_summary": "Resumo financeiro",
@@ -3112,13 +3203,14 @@
       "games": "Minijogos",
       "checkin_bonus": "Bónus check-in",
       "youtube": "YouTube",
-      "auto_mining": "Auto Mining"
+      "auto_mining": "Auto Mining",
+      "cooling": "Refrigeração",
+      "shortlinks": "Shortlinks"
     },
     "charts_loading": "Gráficos carregando"
   },
   "youtube": {
     "title": "Recompensas YouTube",
-    "subtitle": "Assista vídeos da nossa comunidade e ganhe HashRate ou POL.",
     "watch_button": "Assistir e Ganhar",
     "watching": "Assistindo...",
     "claim": "Resgatar Prêmio",
@@ -3179,7 +3271,6 @@
   },
   "offers": {
     "title": "Ofertas e Eventos",
-    "subtitle": "Ofertas e eventos limitados de mineradores e equipamentos.",
     "empty": "Nenhuma oferta ativa no momento. Volte em breve.",
     "live": "Ao vivo",
     "coming_soon": "Em breve",
@@ -3222,7 +3313,6 @@
   },
   "calculator": {
     "title": "Calculadora de Ganhos",
-    "subtitle": "Estime seus ganhos com base no hash rate e na rede atual",
     "auto_banner_title": "Dados do seu inventário detectados",
     "auto_banner_desc": "Hash rate atual: {{hashRate}} · Rede: {{networkRate}}",
     "auto_fill_btn": "Preencher automaticamente",
@@ -3482,7 +3572,6 @@
   "autoMiningGpuPage": {
     "loading": "Sincronizando sessão…",
     "title": "Auto Mining GPU",
-    "subtitle": "Ganhe hashrate temporário a cada minuto. O servidor valida o tempo — mantenha esta página aberta para melhores resultados.",
     "secure_badge": "Sessão validada no servidor",
     "mode_title": "Modo de mineração",
     "mode_hint": "Escolha uma vez por sessão. Pare a sessão para mudar o modo.",
@@ -3555,7 +3644,6 @@
   },
   "transparency": {
     "page_title": "Portal de Transparência",
-    "page_subtitle": "BlockMiner — Custos operacionais e investimentos",
     "page_description": "Todos os gastos do site abertos à comunidade: infraestrutura, ferramentas, marketing e onde o dinheiro está investido.",
     "badge_title": "100% Transparente",
     "badge_updated": "Atualizado: {{date}}",
@@ -3820,9 +3908,61 @@
       "deprecated_badge": "Desativada — Não usamos mais",
       "deprecated_description": "Esta carteira foi desativada. Depósitos para este endereço não são mais processados. Por favor, utilize apenas o endereço de depósito ativo atual exibido na plataforma.",
       "off_chain_badge": "Off-chain",
-      "manual_value_label": "Valor declarado"
+      "manual_value_label": "Valor declarado",
+      "liquid_balance": "Saldo Líquido",
+      "active_lps": "LPs Ativas",
+      "wallet_label": "Carteira"
     },
-    "wallet_link": "Carteira"
+    "wallet_link": "Carteira",
+    "ai_models": {
+      "title": "Modelos 3D de IA & Infraestrutura",
+      "badge_interactive": ".GLB Interativo",
+      "active_subscription": "Assinatura Ativa",
+      "monthly_subscription": "Assinatura Mensal",
+      "per_month": "/mês",
+      "audited": "Auditado no balanço",
+      "loading_3d": "Carregando 3D...",
+      "controls_hint": "Arraste para girar em 3D · scroll para zoom",
+      "download_glb": "Download .glb",
+      "items": {
+        "claude": {
+          "name": "Claude Code (Clawd)",
+          "category": "Ferramentas de IA",
+          "description": "Clawd — O mascote oficial do Claude Code pela Anthropic em 3D. IA utilizada no desenvolvimento, testes de segurança e arquitetura do BlockMiner.",
+          "tags": [
+            "Mascote Clawd 3D",
+            "Claude 3.7 Sonnet",
+            "Anthropic PBC"
+          ]
+        },
+        "gemini": {
+          "name": "Gemini Pro",
+          "category": "Ferramentas de IA",
+          "description": "IA multimodal da Google aplicada em suporte de raciocínio, prototipagem, automação e design de assets da plataforma.",
+          "tags": [
+            "Gemini 1.5 Pro",
+            "Google LLC",
+            "IA Multimodal"
+          ]
+        },
+        "contabo": {
+          "name": "Servidor Cloud VPS",
+          "category": "Infraestrutura",
+          "description": "Instância de servidor em nuvem com alta capacidade dedicada à execução do backend em Node.js, containers Docker, banco PostgreSQL e Redis.",
+          "tags": [
+            "Cloud VPS Hosting",
+            "Datacenter Contabo",
+            "Uptime 99.9%"
+          ]
+        }
+      }
+    },
+    "aria": {
+      "monthly_distribution": "Valores da Distribuição Mensal",
+      "nav": "Navegação de Transparência",
+      "sections": "Seções do Portal de Transparência",
+      "kpi_summary": "Resumo de Indicadores Financeiros"
+    }
   },
   "adminCheckinMilestones": {
     "title": "Check-in — Marcos de sequência",
@@ -3873,7 +4013,6 @@
   },
   "vault": {
     "title": "Cofre de Mineradores",
-    "subtitle": "Armazene seus mineradores com segurança longe da interface principal.",
     "nav_back_mining_room": "Voltar à Sala de Mineração",
     "empty_cta": "Ir para a Sala de Mineração",
     "machine_status_vault": "No cofre",
@@ -4101,12 +4240,19 @@
       "complete_pass_pol": "Preço do Passe Completo (POL)",
       "complete_pass_hint": "Custo em POL para comprar todos os níveis restantes de uma vez.",
       "is_active": "Temporada Ativa",
-      "is_active_hint": "Habilita a visibilidade e participação dos jogadores."
+      "is_active_hint": "Habilita a visibilidade e participação dos jogadores.",
+      "starts_at": "Início",
+      "starts_hint": "Quando a temporada abre para os jogadores.",
+      "ends_at": "Término",
+      "ends_hint": "Quando a temporada fecha; o progresso para de contar."
     },
     "placeholders": {
       "slug": "ex: season-1-cyber",
       "season_title": "Título da temporada...",
-      "subtitle": "Subtítulo explicativo..."
+      "subtitle": "Subtítulo explicativo...",
+      "reward_title_locale": "Título neste idioma",
+      "mission_title": "Ex.: Jogue 5 partidas no Arcade",
+      "mission_description": "Instruções claras para o jogador..."
     },
     "locale": {
       "en": "Inglês (EN)",
@@ -4168,7 +4314,28 @@
       "col_title": "Título",
       "col_sort": "Ordem",
       "col_actions": "Ações",
-      "empty": "Nenhuma recompensa configurada para esta temporada."
+      "empty": "Nenhuma recompensa configurada para esta temporada.",
+      "add_title": "Adicionar recompensa de nível",
+      "form_help": "Escolha o nível e o tipo de prêmio; os campos abaixo mudam conforme o tipo.",
+      "payload_heading": "Conteúdo do prêmio",
+      "shop_miner_id": "ID da máquina da loja",
+      "shop_miner_hint": "ID da máquina no catálogo da Loja.",
+      "event_miner_id": "ID da máquina de evento",
+      "event_miner_hint": "ID da máquina exclusiva de evento.",
+      "hash_rate": "Hashrate (H/s)",
+      "hash_rate_hint": "Poder temporário somado ao perfil do jogador.",
+      "hash_days": "Duração (dias)",
+      "hash_days_hint": "Por quantos dias o hashrate fica ativo.",
+      "blk_amount": "Quantidade em BLK",
+      "pol_amount": "Quantidade em POL",
+      "token_amount_hint": "Valor creditado no saldo do jogador.",
+      "optional_titles": "Títulos (opcional)",
+      "optional_titles_hint": "Nome exibido do prêmio por idioma; vazio usa o nome padrão.",
+      "add_button": "Salvar recompensa",
+      "table_level": "Nível",
+      "table_kind": "Tipo",
+      "table_amount": "Prêmio",
+      "table_actions": "Ações"
     },
     "reward_kinds": {
       "NONE": "Sem Recompensa",
@@ -4216,7 +4383,20 @@
       "col_title": "Título",
       "col_sort": "Ordem",
       "col_actions": "Ações",
-      "empty": "Nenhuma missão configurada para esta temporada."
+      "empty": "Nenhuma missão configurada para esta temporada.",
+      "form_title": "Adicionar missão",
+      "form_help": "Defina a regra, a meta e o XP; depois escreva o título que o jogador vai ver.",
+      "group_rules": "Regra",
+      "group_numbers": "Números",
+      "xp_hint": "XP concedido ao completar a meta.",
+      "sort_hint": "Ordem na lista de missões (menor primeiro).",
+      "group_copy": "Textos",
+      "titles_required": "Títulos (obrigatório)",
+      "titles_field_hint": "Preencha pelo menos um idioma.",
+      "descriptions_optional": "Descrições (opcional)",
+      "descriptions_field_hint": "Instruções extras exibidas abaixo do título.",
+      "add_button": "Salvar missão",
+      "line_meta": "Meta {{target}} · {{xp}} XP"
     },
     "cadences": {
       "EVENT": "Temporada Inteira (Única)",
@@ -4262,7 +4442,12 @@
       "mission_game_slug_format": "Slug do jogo inválido.",
       "mission_xp_range": "O XP da missão deve estar entre 1 e 1.000.000.",
       "mission_description_en_required": "A descrição em inglês é obrigatória quando fornecida descrição."
-    }
+    },
+    "warnings": {
+      "missing_reward_levels_one": "{{count}} nível ainda está sem recompensa.",
+      "missing_reward_levels_other": "{{count}} níveis ainda estão sem recompensa."
+    },
+    "delete": "Excluir"
   },
   "inventario": {
     "title": "Inventário",
@@ -4274,7 +4459,6 @@
     "install_cta": "Instalar no Rack",
     "load_error": "Erro ao carregar inventário.",
     "inbox_title": "Caixa de Entrada de Recompensas",
-    "inbox_subtitle": "Colete aqui; máquinas vão para Minhas Máquinas (Sala de Mineração)",
     "pending_count": "{{count}} recompensa(s) pendente(s)",
     "collect_all": "Coletar Tudo",
     "collect": "Coletar",
@@ -4298,7 +4482,6 @@
   },
   "zerads": {
     "title": "Zerads PTC",
-    "subtitle": "Clique em anúncios e ganhe BLK",
     "how_it_works_title": "Como funciona",
     "how_it_works_body": "Abra a página de anúncios da Zerads, clique nos ads e os prêmios em BLK são creditados automaticamente em até ~5 minutos.",
     "exchange_rate": "{{rate}} BLK por clique — créditos automáticos a cada ~5 minutos.",
@@ -4328,7 +4511,6 @@
   },
   "moneyrain": {
     "title": "MoneyRain",
-    "subtitle": "Assista anúncios e complete ofertas pra ganhar BLK",
     "how_it_works_body": "Abra a página de anúncios do MoneyRain, assista/complete ofertas e os prêmios são creditados automaticamente em BLK (0,0005 BLK por clique) após a confirmação.",
     "start_earning": "Abrir MoneyRain & Ganhar",
     "credits_delay_note": "O crédito é processado automaticamente logo após a confirmação da oferta.",
@@ -4354,7 +4536,6 @@
     "back": "Voltar ao Offerwall"
   },
   "offerwall": {
-    "subtitle": "Ganhe BLK com anúncios e ofertas externas",
     "panel": {
       "back": "Voltar ao Offerwall",
       "tab_stats": "Estatísticas",
@@ -4401,7 +4582,6 @@
       "history_recent_one": "Último {{count}}",
       "history_recent_other": "Últimos {{count}}",
       "back": "Voltar ao Offerwall",
-      "tagline": "Complete ofertas e ganhe BLK — 0,0005 BLK por oferta",
       "new_tab": "Nova aba",
       "stat_total_usd": "Total USD",
       "stat_total_pol": "Total BLK",
@@ -4451,7 +4631,6 @@
     "multiwall": {
       "back": "Voltar ao Offerwall",
       "loading": "Abrindo Multiwall Ads…",
-      "tagline": "Ofertas Offerwall PRO",
       "maintenance_badge": "Manutenção",
       "maintenance_msg": "Multiwall Ads está temporariamente em manutenção. Voltamos em breve.",
       "tab_stats": "Estatísticas",
@@ -4478,8 +4657,7 @@
     },
     "offerwallgg": {
       "back": "Voltar ao Offerwall",
-      "loading": "Abrindo Offerwall.GG…",
-      "tagline": "Ofertas Offerwall.GG"
+      "loading": "Abrindo Offerwall.GG…"
     },
     "access": "Acessar"
   },
@@ -4487,7 +4665,6 @@
     "header": {
       "title": "Torneios",
       "titleWithCategory": "Torneios · {{category}}",
-      "subtitle": "Compete, sobe no ranking e ganhe recompensas",
       "back": "Voltar",
       "refresh": "Atualizar",
       "loading": "Carregando torneios..."
@@ -4497,9 +4674,14 @@
       "deposit": "Depósito",
       "mining": "Mineração",
       "activity": "Atividade",
+      "youtube": "YouTube",
+      "referral": "Indicações",
       "engagement": "Engajamento",
       "games": "Minigames",
-      "other": "Outros"
+      "other": "Outros",
+      "forge": "Forja",
+      "burn": "Queima",
+      "tasks": "Tarefas"
     },
     "types": {
       "DAILY": "Diário",
@@ -4523,7 +4705,10 @@
       "SHORTLINK": "Shortlinks concluídos",
       "AUTO_MINING": "Sessões Auto-Mining",
       "ALL_ACTIVITIES": "Todas as Atividades (Geral)",
-      "YOUTUBE": "Recompensas do YouTube"
+      "YOUTUBE": "Recompensas do YouTube",
+      "REFERRALS": "Indicações Qualificadas",
+      "MERGES": "Pontos de Forja",
+      "BURNS": "Hashrate queimado"
     },
     "scores_live_hint": "Totais auditáveis · só entram eventos dentro do período UTC abaixo",
     "period_utc": "Período UTC: {{start}} → {{end}}",
@@ -4535,10 +4720,20 @@
     "activity_auto_mining": "Auto-Mining",
     "activity_minigames": "Minigames",
     "activity_youtube": "YouTube",
+    "activity_youtube_points": "+1 pt / claim (sem teto)",
     "activity_checkin": "Check-in Diário",
     "activity_tasks": "Missões Diárias",
     "activity_offers_ptc": "Ofertas & PTC",
     "offerwall_scoring_hint": "Cada número é real e auditável: oferta interna concluída = 1, OfferwallMe creditado = 1, clique PTC Zerads = 1 (máx. {{max}}/dia UTC).",
+    "youtube_scoring_title": "Como pontuar no Torneio de YouTube",
+    "youtube_scoring_hint": "Cada claim de vídeo vale +1 ponto, inclusive depois do teto diário de 1.000 H/s. O teto só limita o poder de mineração até a meia-noite UTC; os pontos continuam contando aqui e no Torneio Geral.",
+    "youtube_scoring_hint_short": "1 claim = 1 ponto, mesmo depois do teto de 1.000 H/s. O teto não trava pontos de torneio.",
+    "referral_scoring_title": "Como pontuar no Torneio de Indicações",
+    "referral_scoring_hint": "Cada amigo indicado que confirmar o e-mail e realizar pelo menos 10 atividades reais na plataforma qualifica como indicação ativa e soma exatamente +1 ponto para você no torneio.",
+    "referral_scoring_hint_short": "1 indicação qualificada = 1 ponto · e-mail confirmado + 10 atividades · período UTC",
+    "referral_anti_fraud_note": "Proteção antifraude ativa: auto-indicações, mesma rede/dispositivo ou contas de bot/VPN são desqualificadas automaticamente.",
+    "referrals_total": "Indicações qualificadas",
+    "referrals_column": "Indicações válidas",
     "minigame_scoring_title": "Como pontua neste torneio",
     "minigame_scoring_hint": "Contam somente minigames concluídos com sucesso dentro do período UTC: é preciso terminar a missão e receber o boost de hashrate. Cada vitória válida vale 1 ponto. Derrotas, partidas abandonadas e jogos invalidados pelo anti-cheat não entram no ranking.",
     "minigame_scoring_hint_short": "Só vitórias concluídas com reward · 1 vitória = 1 ponto · período UTC",
@@ -4660,11 +4855,75 @@
       "place_1": "🥇 1º lugar",
       "place_2": "🥈 2º lugar",
       "place_3": "🥉 3º lugar"
-    }
+    },
+    "offerwall_scoring": {
+      "title": "Como pontuar no Torneio de Offerwall",
+      "each_point": "1 conclusão = 1 ponto",
+      "rule_per_completion": "+1 pt por oferta concluída",
+      "rule_per_credit": "+1 pt por oferta creditada",
+      "rule_per_view": "+1 pt por anúncio creditado",
+      "rule_per_click_daily_cap": "+1 pt por clique · máx. {{cap}}/dia UTC",
+      "counts_from": "conta a partir de {{date}}",
+      "your_points_from": "Seus pontos em {{source}}",
+      "your_total": "Seus pontos no período",
+      "zerads_over_cap": "{{count}} clique(s) do Zerads passaram do limite de {{cap}}/dia e não contam.",
+      "reached_at": "Você chegou a essa pontuação em {{date}}.",
+      "rule_tie": "Empate: fica na frente quem chegou primeiro à pontuação.",
+      "rule_credit_only": "Só conta o que foi creditado. Estorno (chargeback) não pontua, e contas banidas ficam fora do ranking.",
+      "rule_window": "Vale o horário UTC do crédito: um crédito exatamente no fim do período conta no período seguinte. O prêmio é calculado das mesmas fontes que você vê aqui."
+    },
+    "series_name": {
+      "OFFERS_ALL": "Torneio de Offerwall",
+      "OFFERS_EXTERNAL": "Torneio de Offerwall",
+      "OFFERS_INTERNAL": "Torneio de Offerwall Interna",
+      "DEPOSITS_USD": "Torneio de Depósito",
+      "DEPOSITS_POL": "Torneio de Depósito",
+      "MINIGAME_WINS": "Torneio de Minigames",
+      "ALL_ACTIVITIES": "Torneio Geral - Todas as Atividades",
+      "YOUTUBE": "Torneio de YouTube",
+      "REFERRALS": "Torneio de Indicações",
+      "FAUCET": "Torneio de Faucet",
+      "SHORTLINK": "Torneio de Shortlinks",
+      "AUTO_MINING": "Torneio de Auto Mining",
+      "HASHRATE": "Torneio de Hashrate",
+      "BLOCKS_MINED": "Torneio de Blocos",
+      "CHECKINS": "Torneio de Check-in",
+      "TASKS_COMPLETED": "Torneio de Tarefas",
+      "MERGES": "Torneio da Forja",
+      "BURNS": "Torneio de Queima"
+    },
+    "series_description": {
+      "OFFERS_ALL": "Ranking por ofertas concluídas na Offerwall interna e nas externas (Zerads, MoneyRain, Multiwall, Offerwall.me, Offerwall.GG).",
+      "OFFERS_EXTERNAL": "Ranking por ofertas concluídas nas offerwalls externas (Zerads, MoneyRain, Multiwall, Offerwall.me, Offerwall.GG).",
+      "OFFERS_INTERNAL": "Ranking por ofertas concluídas na Offerwall interna.",
+      "DEPOSITS_USD": "Ranking pelo valor depositado em dólar.",
+      "DEPOSITS_POL": "Ranking pelo POL depositado.",
+      "MINIGAME_WINS": "Ranking por vitórias nos minigames.",
+      "ALL_ACTIVITIES": "Soma todas as atividades do site: Faucet, Shortlinks, Auto Mining, Minigames, Ofertas e PTC, YouTube, Check-in e Missões.",
+      "YOUTUBE": "Ranking por vídeos assistidos no YouTube (claims). Cada claim vale 1 ponto, mesmo depois do teto de 1.000 H/s.",
+      "REFERRALS": "Ranking por amigos indicados que se qualificaram (e-mail verificado + atividade confirmada no jogo).",
+      "MERGES": "Ranking por fusões feitas no Merge. Raridades maiores valem mais pontos.",
+      "BURNS": "Ranking pelo hashrate queimado nos eventos de Queima.",
+      "TASKS_COMPLETED": "Ranking por tarefas diárias coletadas no período."
+    },
+    "merge_scoring_title": "Como pontuar no Torneio da Forja",
+    "merge_scoring_hint": "Cada fusão no Merge soma pontos pela raridade da máquina que sai: Uncommon +1, Rare +3, Epic +8, Legendary +20. Só contam fusões concluídas dentro do período (UTC).",
+    "merge_scoring_hint_short": "Uncommon +1 · Rare +3 · Epic +8 · Legendary +20 · período UTC",
+    "merge_cta": "Ir para o Merge",
+    "burn_scoring_title": "Como pontuar no Torneio de Queima",
+    "burn_scoring_hint": "Cada queima resgatada soma o hashrate total das máquinas que você queimou. Ex.: queimar 3 máquinas de 100 H/s = 300 pontos. Conta na hora do resgate, dentro do período (UTC).",
+    "burn_scoring_hint_short": "1 H/s queimado = 1 ponto · conta no resgate · período UTC",
+    "burn_cta": "Ir para a Queima",
+    "tasks_scoring_title": "Como pontuar no Torneio de Tarefas",
+    "tasks_scoring_hint": "Cada tarefa diária que você conclui e coleta na aba Tarefas soma +1 ponto. Tarefa concluída e não coletada não conta. Volte todos os dias: no semanal e no mensal ganha quem for mais constante.",
+    "tasks_scoring_hint_short": "1 tarefa coletada = 1 ponto · só conta ao coletar · período UTC",
+    "tasks_cta": "Ir para as Tarefas",
+    "preview_notice": "Torneio em teste no ambiente de desenvolvimento: o ranking é real, mas nenhum prêmio é pago.",
+    "activity_pt_per_task": "+1 pt / tarefa",
+    "activity_pt_per_action": "+1 pt / ação"
   },
   "referrals": {
     "title": "Referrals",
-    "subtitle": "Indique amigos e ganhe {{rate}}% das recompensas de mineração deles.",
     "stats_since": "Estatísticas contabilizadas desde {{date}} (UTC).",
     "your_link": "Seu link de indicação",
     "copy_link": "Copiar link",
@@ -4818,7 +5077,6 @@
     "password_changed": "Senha alterada com sucesso!",
     "saved": "Configuração salva.",
     "title": "Configurações",
-    "subtitle": "Gerencie sua conta e segurança",
     "profile_title": "Perfil do Usuário",
     "username_label": "Nome de Usuário",
     "email_label": "E-mail",
@@ -4874,7 +5132,6 @@
     "status_completed": "Concluída",
     "disabled": "Sistema PTC temporariamente desabilitado",
     "campaigns_title": "Minhas Campanhas PTC",
-    "campaigns_subtitle": "Gerencie seus anúncios pagos por visualização",
     "new_campaign": "Nova Campanha",
     "field_title": "Título",
     "field_title_placeholder": "Nome da campanha",
@@ -4902,8 +5159,6 @@
     "add": "Adicionar",
     "extra_cost": "Custo adicional:",
     "view_title": "PTC — Ganhe SHIB",
-    "view_subtitle_before": "Visualize anúncios e ganhe",
-    "view_subtitle_after": "por cada view completa",
     "my_campaigns_link": "Minhas Campanhas",
     "badge_viewed_today": "Visto hoje",
     "badge_completed": "Concluído",
@@ -4968,7 +5223,6 @@
     "active_machines": "{{count}} máquina(s) ativa(s) · {{hashrate}}",
     "open_room": "Abrir Sala",
     "title": "Hall da Fama",
-    "subtitle": "Os mineradores mais poderosos da rede global.",
     "place_2": "2º LUGAR",
     "place_3": "3º LUGAR",
     "king": "REI DO BLOCO",
@@ -4983,13 +5237,11 @@
     "sort_total": "Poder total",
     "sort_room": "Só sala",
     "social": {
-      "feed_subtitle": "Vídeos dos criadores credenciados BlockMiner",
       "video_count_one": "{{count}} vídeo",
       "video_count_other": "{{count}} vídeos",
       "no_videos": "Nenhum vídeo publicado ainda.",
       "login_required": "Faça login para solicitar credenciamento.",
       "creator_area": "Área do Criador",
-      "creator_area_sub": "Solicite credenciamento e envie vídeos",
       "miner_static_title": "Câmera fixa",
       "miner_static_body": "Os ventiladores giram. A câmera fica parada.",
       "miner_orbit_title": "Gire a placa",
@@ -5052,7 +5304,6 @@
   "roadmap": {
     "title_road": "ROAD",
     "title_map": "MAP",
-    "subtitle": "Evolução da plataforma BlockMiner",
     "total_progress": "Progresso total",
     "launched_count": "{{count}} lançados",
     "planned_count": "{{count}} planejados",
@@ -5148,7 +5399,8 @@
       "renda": "Fontes de Renda",
       "torneios": "Torneios",
       "carteira": "Carteira",
-      "ranking": "Ranking"
+      "ranking": "Ranking",
+      "pecas": "Peças & Merge"
     },
     "cover_title": "Manual do Operador",
     "cover_body": "Guia de referência técnica, econômica e operacional do protocolo BlockMiner. Tudo que você precisa para maximizar sua operação de mineração.",
@@ -5358,7 +5610,7 @@
         "missions": {
           "title": "6. Missões Diárias",
           "body_html": "Todos os dias um conjunto de <strong class=\"text-white\">missões</strong> é gerado. Complete-as para receber recompensas (POL, BLK, mineradores ou boost de hashrate).",
-          "reset": "As missões reiniciam à meia-noite todos os dias",
+          "reset": "As missões reiniciam à meia-noite UTC todos os dias",
           "credit": "Cada missão concluída é creditada automaticamente no inventário",
           "tournaments_html": "Contam para a métrica dos <strong class=\"text-white\">Torneios de Tarefas</strong>"
         },
@@ -5499,6 +5751,15 @@
         "locked_rooms_value": "Exibidas com cadeado na sala pública"
       },
       "tip_html": "Para competir por <strong class=\"text-white\">prêmios de hashrate</strong> especificamente, participe dos <strong class=\"text-white\">Torneios</strong> — eles medem o hashrate em períodos fechados com distribuição automática de recompensas."
+    },
+    "parts": {
+      "title": "Peças & Merge",
+      "subtitle": "De onde vêm as peças e como usar para melhorar máquinas",
+      "step_drop": "Peças caem de graça enquanto você usa Faucet, PTC, Auto Mining, YouTube, Shortlinks e Offerwalls (chances abaixo).",
+      "step_fuse": "Toda peça cai comum. Na página de Merge, funda 5 peças iguais para criar 1 da raridade seguinte: Comum → Incomum → Raro → Épico → Lendário.",
+      "step_merge": "No Merge, junte 2 máquinas iguais com as peças pedidas e uma taxa para criar 1 máquina de nível maior, com mais hashrate.",
+      "step_buy": "Se faltar alguma peça, dá para comprar com desconto em Ofertas.",
+      "offerwall_tiers": "Offerwalls: abaixo de US$ 0,01 → 40% de chance; de US$ 0,01 a 0,10 → 75%; de US$ 0,10 a 0,50 → 1 peça garantida; de US$ 0,50 a 1 → 1 garantida + 50% de chance de uma 2ª; acima de US$ 1 → de 2 a 5 peças."
     }
   },
   "shell": {
@@ -5517,7 +5778,9 @@
     "chat_view_room": "Ver Sala",
     "chat_today": "Hoje",
     "chat_yesterday": "Ontem",
-    "chat_too_long": "Mensagem muito longa (máx. {{max}} caracteres)."
+    "chat_too_long": "Mensagem muito longa (máx. {{max}} caracteres).",
+    "new_version_message": "Uma nova versão do BlockMiner está disponível.",
+    "new_version_reload": "Recarregar"
   },
   "admin": {
     "metrics_title": "Métricas do Servidor",
@@ -5711,7 +5974,8 @@
     "active": "Ativo",
     "inactive": "Inativo",
     "empty": "Nenhum registro encontrado.",
-    "confirm_delete": "Excluir este registro?"
+    "confirm_delete": "Excluir este registro?",
+    "close": "Fechar"
   },
   "adminFinance": {
     "title": "Financeiro",
@@ -5854,7 +6118,6 @@
   },
   "burnEvents": {
     "title": "Queima",
-    "subtitle": "Queime máquinas pra ganhar uma máquina melhor.",
     "empty": "Nenhum evento de queima ativo.",
     "empty_hint": "Volte mais tarde — novos eventos aparecem aqui.",
     "load_error": "Erro ao carregar eventos.",
@@ -5905,7 +6168,7 @@
     "stock_label": "Estoque global",
     "your_claims": "Suas queimas",
     "fee_title": "Taxa da Queima (Escolha a moeda)",
-    "fee_description": "Taxa fixa cobrada por queima: 20 SHIB, 0.01 POL ou 0.001 BLK.",
+    "fee_description": "Taxa fixa cobrada por queima: 1300 SHIB, 0.07 POL ou 0.007 BLK.",
     "fee_available": "Disponível",
     "fee_insufficient": "Falta saldo",
     "fee_required_label": "Taxa",
@@ -6476,6 +6739,14 @@
     "preset_daily_youtube_hint": "Diário · YOUTUBE",
     "preset_weekly_youtube": "Torneio Semanal de YouTube",
     "preset_weekly_youtube_hint": "Semanal · YOUTUBE",
+    "preset_monthly_youtube": "Torneio Mensal de YouTube",
+    "preset_monthly_youtube_hint": "Mensal · YOUTUBE",
+    "preset_daily_referrals": "Torneio Diário de Indicações",
+    "preset_daily_referrals_hint": "Diário · REFERRALS",
+    "preset_weekly_referrals": "Torneio Semanal de Indicações",
+    "preset_weekly_referrals_hint": "Semanal · REFERRALS",
+    "preset_monthly_referrals": "Torneio Mensal de Indicações",
+    "preset_monthly_referrals_hint": "Mensal · REFERRALS",
     "preset_weekly_offerwall": "Weekly Offerwall",
     "preset_weekly_offerwall_hint": "Semanal · OFFERS_ALL",
     "preset_weekly_deposit": "Weekly Deposit",
@@ -6534,7 +6805,23 @@
     "finalized_short": "Torneio finalizado.",
     "cancelled": "Torneio cancelado.",
     "move_up": "Mover para cima",
-    "move_down": "Mover para baixo"
+    "move_down": "Mover para baixo",
+    "preset_daily_merges": "Torneio da Forja — Diário",
+    "preset_daily_merges_hint": "Diário · MERGES",
+    "preset_weekly_merges": "Torneio da Forja — Semanal",
+    "preset_weekly_merges_hint": "Semanal · MERGES",
+    "preset_monthly_merges": "Torneio da Forja — Mensal",
+    "preset_monthly_merges_hint": "Mensal · MERGES",
+    "preset_daily_burns": "Torneio de Queima — Diário",
+    "preset_daily_burns_hint": "Diário · BURNS",
+    "preset_weekly_burns": "Torneio de Queima — Semanal",
+    "preset_weekly_burns_hint": "Semanal · BURNS",
+    "preset_monthly_burns": "Torneio de Queima — Mensal",
+    "preset_monthly_burns_hint": "Mensal · BURNS",
+    "preset_weekly_tasks": "Torneio de Tarefas — Semanal",
+    "preset_weekly_tasks_hint": "Semanal · TASKS_COMPLETED",
+    "preset_monthly_tasks": "Torneio de Tarefas — Mensal",
+    "preset_monthly_tasks_hint": "Mensal · TASKS_COMPLETED"
   },
   "adminTransparencyInvestments": {
     "title": "Investimentos em outros sites",
@@ -6652,7 +6939,10 @@
     "hash_rate": "Hash rate base",
     "image_url": "URL da imagem",
     "cooldown_ms": "Intervalo (ms)",
-    "save": "Salvar configuração"
+    "save": "Salvar configuração",
+    "preview": "Pré-visualização do Jogador",
+    "preview_hint": "Como a recompensa da faucet é vista na página pública",
+    "inactive": "Inativa"
   },
   "adminSala": {
     "title": "Sala (RollerCoin)",
@@ -6679,10 +6969,407 @@
     "actions": "Ações",
     "toggle": "On/Off"
   },
+  "parts": {
+    "title": "Peças & Merge",
+    "subtitle": "Junte 2 placas da mesma raridade e forje mineradoras com +30% de Hashrate!",
+    "open_merge": "Abrir Merge",
+    "unified_title": "Oficina da Forja",
+    "unified_subtitle": "Junte 2 placas da mesma raridade e funda mineradoras exclusivas com +30% de Hashrate!",
+    "filter_ready_only": "Prontas para Fundir",
+    "filter_all_machines": "Todas as Máquinas",
+    "search_machines_placeholder": "Buscar máquina...",
+    "ready_count_badge": "{{count}} prontas para fundir",
+    "no_ready_machines": "Nenhuma máquina pronta para fundir no momento.",
+    "no_ready_machines_hint": "Você precisa de 2 placas da mesma raridade e saldo em BLK suficiente para pagar a taxa da forja.",
+    "go_to_offerwall": "Ir para o Offerwall",
+    "forge_station": "Bancada da Forja",
+    "your_plates_title": "Suas Placas & Componentes",
+    "select_to_forge": "Selecione uma máquina",
+    "ready_badge": "PRONTA",
+    "need_plates_badge": "Faltam placas",
+    "need_blk_badge": "Falta saldo BLK",
+    "power_boost_label": "+30% Hashrate",
+    "cost_fee_label": "Taxa da Forja (10%)",
+    "inventory_title": "Seu inventário",
+    "prices_title": "Preço das máquinas",
+    "prices_hint": "A fusão gasta 2 placas da mesma raridade, cobra {{feePercent}}% do valor base em BLK e entrega a máquina com {{boostPercent}}% a mais de hash.",
+    "empty_machines": "Nenhuma máquina da loja para precificar agora.",
+    "load_error": "Não foi possível carregar as peças.",
+    "loading": "Carregando peças...",
+    "quantity": "Quantidade",
+    "rarity": {
+      "common": "Comum",
+      "uncommon": "Incomum",
+      "rare": "Raro",
+      "epic": "Épico",
+      "legendary": "Lendário"
+    },
+    "cost_count": "{{owned}} / {{required}}",
+    "base_price": "Base {{price}} BLK",
+    "blk_balance": "Saldo {{balance}} BLK",
+    "merge": "Fundir",
+    "merging": "Fundindo...",
+    "merge_fee": "Taxa {{fee}} BLK",
+    "merge_result": "{{hash}} com o boost de {{boostPercent}}%",
+    "merge_need_parts": "Faltam peças.",
+    "merge_need_blk": "Saldo BLK insuficiente.",
+    "merge_need_machines": "Você precisa de 2 máquinas idênticas deste nível para fundir.",
+    "merge_max_level": "Esta máquina já atingiu o nível máximo (Lendário).",
+    "my_miners_title": "Suas Máquinas para Fusão",
+    "my_miners_desc": "Selecione uma mineradora que você possui. São necessárias 2 máquinas idênticas do mesmo nível + peças + taxa em BLK.",
+    "no_owned_miners": "Você ainda não possui mineradoras para fundir.",
+    "no_owned_miners_hint": "Compre mineradoras na Loja ou ganhe em eventos para começar a fundir!",
+    "merge_slot_machine": "Máquina {{n}} (Idêntica)",
+    "merge_level_upgrade": "Evolução: {{from}} ➔ {{to}}",
+    "rarity_tree_title": "Tabela de Raridades & Bônus",
+    "merge_rarity": "As duas placas precisam ser da mesma raridade.",
+    "merge_title": "Merge",
+    "merge_subtitle": "Junte 2 placas da mesma raridade. A taxa é {{feePercent}}% do valor base e a máquina sai com +{{boostPercent}}% de hash.",
+    "merge_cost_chip": "Custo {{feePercent}}%",
+    "merge_bonus_chip": "Bônus +{{boostPercent}}%",
+    "merge_bench": "Suas placas",
+    "merge_empty_bench": "Nenhuma placa ainda. Elas caem na faucet, shortlinks, auto-mining, YouTube, PTC e no offerwall.",
+    "drop_toast": "Peça: +{{quantity}} {{name}}",
+    "bag_subtitle": "Peças da faucet, shortlinks, auto-mining, YouTube, PTC e offerwall. Funda 5 peças iguais para criar 1 da raridade superior (5:1).",
+    "bag_empty_hint": "Resgate a faucet, shortlinks, auto-mining, YouTube, PTC ou tarefas do offerwall para ganhar peças comuns de fusão.",
+    "merge_slot": "Placa {{n}}",
+    "merge_slot_empty": "Vazia",
+    "merge_clear": "Tirar",
+    "merge_machines": "Máquina",
+    "merge_offer": "Oferta",
+    "merge_pick": "Escolha 2 placas da mesma raridade.",
+    "merge_success": "{{name}} fundida.",
+    "merge_error": "Não foi possível fundir esta máquina.",
+    "merge_unavailable": "Esta máquina não está disponível.",
+    "merge_limit": "Você já atingiu o limite desta máquina.",
+    "merge_stock": "Esta máquina está sem estoque.",
+    "band": {
+      "starter": "Inicial",
+      "mid": "Intermediária",
+      "high": "Avançada",
+      "elite": "Elite"
+    },
+    "items": {
+      "power_cable": "Cabo de força",
+      "asic_chip": "Chip",
+      "cooling_fan": "Ventoinha",
+      "hashboard": "Placa",
+      "power_supply": "Fonte",
+      "thermal_pad": "Pasta térmica"
+    },
+    "offers": {
+      "title": "Peças de Forja",
+      "desc": "Peças e kits com desconto promocional.",
+      "free_hint": "Também dá para ganhar peças de graça usando Faucet, PTC, Auto Mining, YouTube, Shortlinks e Offerwalls.",
+      "free_link": "Ver como"
+    },
+    "packs": {
+      "title": "Kits Promocionais",
+      "badge": "Kit Especial",
+      "starter_badge": "35% OFF",
+      "advanced_badge": "33% OFF",
+      "starter_name": "Kit Forja Comum",
+      "starter_desc": "30 peças comuns sortidas (5 de cada modelo).",
+      "advanced_name": "Kit Forja Incomum",
+      "advanced_desc": "15 peças incomuns sortidas.",
+      "included_items": "Itens inclusos:",
+      "purchase_success": "Pacote adquirido com sucesso!"
+    },
+    "shop_section_title": "Peças de Mineração",
+    "shop_section_desc": "Componentes para fusão e evolução de máquinas.",
+    "purchase_success": "Peça adquirida com sucesso!",
+    "singles_title": "Peças Avulsas",
+    "merge_need_balance": "Saldo insuficiente na moeda escolhida para pagar a taxa da forja.",
+    "merge_price_unavailable": "Cotação da cripto indisponível agora. Tente pagar em BLK.",
+    "free_guide": {
+      "title": "Como ganhar peças grátis",
+      "subtitle": "Toda vez que você usa uma destas áreas, tem chance de cair uma peça na sua bolsa.",
+      "per_claim": "{{pct}}% de chance por claim",
+      "per_offer": "de {{pct}}% a garantida, conforme o valor da oferta",
+      "how_it_works": "Toda peça cai comum, de um tipo sorteado. Junte 5 iguais para fundir 1 da raridade seguinte (5:1) e use as peças no merge de máquinas.",
+      "buy_hint": "Com pressa? Também dá para comprar peças com desconto.",
+      "buy_link": "Ver em Ofertas",
+      "sources": {
+        "faucet": "Faucet",
+        "ptc": "PTC",
+        "automining": "Auto Mining",
+        "youtube": "YouTube",
+        "shortlinks": "Shortlinks",
+        "internal_offerwall": "Offerwall interna",
+        "offerwall": "Offerwalls"
+      }
+    },
+    "page": {
+      "craft_success": "Fundido com sucesso: {{consumed}}x {{part}} ({{fromRarity}}) → {{crafted}}x {{toRarity}}!",
+      "craft_failed": "Falha ao fundir peças.",
+      "forge_badge": "Oficina de Fusão",
+      "kpi_blk": "Saldo BLK",
+      "kpi_parts": "Suas Peças",
+      "parts_count_one": "{{count}} peça",
+      "parts_count_other": "{{count}} peças",
+      "kpi_ready": "Prontas p/ Fusão",
+      "models_count_one": "{{count}} modelo",
+      "models_count_other": "{{count}} modelos",
+      "fee_rules_title": "Taxa da forja",
+      "fee_rule_blk": "do valor base em BLK",
+      "fee_rule_crypto": "em POL/SHIB",
+      "crypto_discount": "-{{pct}}% pagando em cripto",
+      "bench_title": "Bancada de Fusão",
+      "boost_range": "+30% a +200%",
+      "fee_chip": "Taxa: {{blk}}% em BLK · {{crypto}}% em POL/SHIB",
+      "step1": "1. Duas Máquinas Idênticas ({{tier}})",
+      "owned_label": "Possui:",
+      "level_tier": "Nível {{level}} · {{tier}}",
+      "missing_one_machine": "Falta 1 Máquina",
+      "get_another_copy": "Compre ou ganhe outra cópia",
+      "required_parts": "Peças Necessárias para a Fusão:",
+      "step2": "2. Resultado da Fusão ({{tier}})",
+      "combined_power": "Poder das 2 máquinas somadas",
+      "bonus_pct": "+{{pct}}% bônus",
+      "pay_fee_with": "Pagar taxa com",
+      "insufficient_asset": "Saldo de {{asset}} insuficiente",
+      "merge_paying": "Fundir pagando {{amount}} {{asset}}",
+      "select_below": "Selecione uma mineradora abaixo",
+      "select_below_hint": "Escolha uma mineradora que você possui para colocá-la na bancada da forja.",
+      "catalog_title": "Catálogo de Fusão",
+      "owned_title": "Suas Mineradoras para Merge",
+      "ready_badge_one": "{{count}} pronta para fundir",
+      "ready_badge_other": "{{count}} prontas para fundir",
+      "catalog_desc": "Todos os {{count}} modelos que podem ser fundidos (Loja + Ofertas). Junte 2 iguais para evoluir.",
+      "owned_desc": "Máquinas que você possui agrupadas por modelo e nível de raridade.",
+      "filter_ready": "Prontas para Fundir ({{count}})",
+      "filter_owned": "Todas as Suas ({{count}})",
+      "filter_catalog": "Catálogo de Fusão ({{count}})",
+      "src_all": "Todas ({{count}})",
+      "src_shop": "Loja ({{count}})",
+      "src_offers": "Ofertas ({{count}})",
+      "evolution": "Evolução:",
+      "ready_to_merge": "PRONTA PARA FUSÃO",
+      "not_owned_offers": "Você não tem · ver Ofertas",
+      "not_owned_shop": "Você não tem · ver Loja",
+      "missing_machines": "Falta {{missing}} máquina ({{owned}}/2)",
+      "missing_parts_short": "Faltam peças",
+      "missing_fee_balance": "Falta saldo p/ taxa",
+      "empty_ready": "Nenhuma máquina pronta para fundir agora.",
+      "empty_catalog": "Nenhuma máquina encontrada.",
+      "empty_owned": "Você não possui mineradoras para merge.",
+      "empty_ready_hint": "Para fundir, você precisa de pelo menos 2 máquinas idênticas do mesmo nível, peças da receita e saldo em BLK.",
+      "empty_owned_hint": "Adquira mineradoras na Loja ou ganhe em missões e eventos para começar a fundir!",
+      "view_catalog": "Ver Catálogo de Fusão ({{count}})",
+      "view_owned": "Ver todas as suas máquinas ({{count}})",
+      "bag_title": "Sua Bolsa de Peças & Oficina de Fusão",
+      "all_count": "Todas ({{count}})",
+      "craft_one_title": "Fundir 5 peças para 1 de raridade superior",
+      "craft_all_title": "Fundir tudo ({{from}}x → {{to}}x)",
+      "to_fuse": "{{qty}}/5 para fundir",
+      "bag_empty": "Sua bolsa de peças está vazia no momento.",
+      "col_level": "Nível",
+      "col_rarity": "Raridade",
+      "col_color": "Cor",
+      "col_requirement": "Requisito de Fusão",
+      "col_multiplier": "Multiplicador de Poder",
+      "col_fee": "Taxa da Forja",
+      "level_n": "Nível {{level}}",
+      "tier_fee": "{{blk}}% em BLK · {{crypto}}% em POL/SHIB",
+      "tier": {
+        "1": {
+          "name": "Common (Comum)",
+          "color": "Branco / Cinza",
+          "req": "Nível básico de fábrica",
+          "bonus": "1.0x (Poder Padrão)"
+        },
+        "2": {
+          "name": "Uncommon (Incomum)",
+          "color": "Verde",
+          "req": "2x Máquinas Comuns idênticas + peças comuns",
+          "bonus": "+30% Hashrate"
+        },
+        "3": {
+          "name": "Rare (Raro)",
+          "color": "Azul",
+          "req": "2x Máquinas Incomuns idênticas + peças incomuns",
+          "bonus": "+75% Hashrate"
+        },
+        "4": {
+          "name": "Epic (Épico)",
+          "color": "Roxo",
+          "req": "2x Máquinas Raras idênticas + peças raras",
+          "bonus": "+130% Hashrate"
+        },
+        "5": {
+          "name": "Legendary (Lendário)",
+          "color": "Dourado / Laranja",
+          "req": "2x Máquinas Épicas idênticas + peças épicas",
+          "bonus": "+200% Hashrate (Topo do Jogo)"
+        }
+      },
+      "parts_count_zero": "{{count}} peças",
+      "models_count_zero": "{{count}} modelos",
+      "ready_badge_zero": "{{count}} prontas para fundir"
+    }
+  },
   "cookieConsent": {
     "message": "Usamos cookies essenciais para manter sua sessão segura, e cookies opcionais de analytics/publicidade só com sua permissão.",
     "accept": "Aceitar todos",
     "decline": "Só essenciais",
     "policyLink": "Política de Cookies"
+  },
+  "bmCaptcha": {
+    "title": "Verificação humana",
+    "instructions": "Gire o cristal até ficar em pé, escolha a peça igual e confirme.",
+    "loading": "Carregando…",
+    "which_tile": "Qual peça é igual a esta?",
+    "cancel": "Cancelar",
+    "confirm": "Confirmar",
+    "validating": "Validando…",
+    "errors": {
+      "SOLUTION_WRONG": "Resposta incorreta. Gire o cristal e escolha a peça de novo.",
+      "INVALID_SOLUTION": "Resposta inválida. Escolha uma peça e confirme.",
+      "TOO_FAST": "Rápido demais. Aguarde um instante e tente de novo.",
+      "TOO_MANY_ATTEMPTS": "Muitas tentativas. Feche e abra a verificação de novo.",
+      "RATE_LIMITED": "Muitas verificações seguidas. Aguarde um pouco e tente de novo.",
+      "CHALLENGE_EXPIRED": "O desafio expirou. Feche e abra a verificação de novo.",
+      "CHALLENGE_NOT_FOUND": "Desafio não encontrado. Feche e abra a verificação de novo.",
+      "ALREADY_SOLVED": "Este desafio já foi resolvido. Abra a verificação de novo.",
+      "generic": "Não foi possível validar agora. Tente novamente."
+    }
+  },
+  "rootError": {
+    "unknown": "Erro desconhecido",
+    "title": "Algo deu errado",
+    "body": "Não foi possível carregar esta tela. Copie o erro, envie no Telegram oficial, limpe os dados do navegador e recarregue — se continuar, tente outro navegador.",
+    "copy": "Copiar erro",
+    "copied": "Copiado",
+    "telegram": "Telegram oficial",
+    "reload": "Recarregar",
+    "step1": "Limpe os dados do site / cache (Ctrl+Shift+Del no PC, ou Configurações → Dados de navegação no celular) e abra de novo.",
+    "step2": "Se ainda falhar, tente outro navegador (Chrome, Edge, Firefox) ou uma janela anônima.",
+    "step3": "Cole o erro copiado no Telegram oficial e avise um admin."
+  },
+  "imageUploader": {
+    "label": "Imagem",
+    "mode_upload": "Upload",
+    "uploading": "Enviando...",
+    "drop_hint": "Clique ou arraste uma imagem aqui",
+    "formats": "JPG, PNG, GIF, WEBP, SVG — máx 5 MB",
+    "remove": "Remover imagem",
+    "error_status": "Erro {{status}} ao enviar imagem.",
+    "error_no_response": "Erro ao enviar imagem (sem resposta).",
+    "error_generic": "Erro no upload."
+  },
+  "profilePhoto": {
+    "title": "Foto de perfil",
+    "subtitle": "Mostre sua própria foto no cabeçalho, no chat, nos rankings e nos torneios.",
+    "license_price": "Licença anual: {{price}}",
+    "license_hint": "Paga uma vez por ano com seu saldo em POL ou SHIB. A renovação é manual.",
+    "pay_with": "Pagar com",
+    "amount": "Valor",
+    "your_balance": "Seu saldo",
+    "price_unavailable": "Cotação indisponível agora",
+    "buy": "Comprar licença",
+    "renew": "Renovar por mais 1 ano",
+    "buying": "Processando...",
+    "active_until": "Licença ativa até {{date}}",
+    "expired_on": "Licença vencida em {{date}}. Sua foto fica oculta até você renovar.",
+    "expires_soon": "Sua licença vence em {{date}}. Renove agora para manter a foto.",
+    "upload": "Enviar foto",
+    "change": "Trocar foto",
+    "remove": "Remover foto",
+    "uploading": "Enviando...",
+    "upload_hint": "PNG, JPEG, WebP ou GIF de até 2 MB. A imagem é recortada em quadrado.",
+    "blocked": "O envio de foto de perfil foi desativado para esta conta pela moderação.",
+    "purchased": "Licença ativa! Agora envie sua foto.",
+    "uploaded": "Foto de perfil atualizada.",
+    "removed": "Foto de perfil removida.",
+    "confirm_buy": "Pagar {{amount}} {{currency}} por 1 ano de foto de perfil?",
+    "errors": {
+      "AVATAR_LICENSE_REQUIRED": "Você precisa de uma licença ativa para enviar foto.",
+      "AVATAR_CURRENCY_NOT_ALLOWED": "Esta moeda não pode ser usada.",
+      "AVATAR_PRICE_UNAVAILABLE": "Cotação indisponível no momento. Tente de novo em um minuto.",
+      "AVATAR_QUOTE_CHANGED": "A cotação mudou. Confira o novo valor e tente de novo.",
+      "AVATAR_INSUFFICIENT_BALANCE": "Saldo insuficiente nesta moeda.",
+      "AVATAR_LICENSE_ALREADY_ACTIVE": "Sua licença ainda está ativa. Você pode renovar nos últimos 30 dias.",
+      "AVATAR_UPLOAD_INVALID": "Envie uma imagem PNG, JPEG, WebP ou GIF.",
+      "AVATAR_UPLOAD_TOO_LARGE": "Imagem grande demais (máx. 2 MB).",
+      "AVATAR_UPLOAD_BLOCKED": "O envio de foto está bloqueado para esta conta.",
+      "AVATAR_RATE_LIMITED": "Muitos envios. Tente mais tarde.",
+      "generic": "Algo deu errado. Tente de novo.",
+      "AVATAR_CERT_NAME_INVALID": "Use de 2 a 24 letras, números, espaços ou . ' _ -",
+      "AVATAR_CERT_LIMIT_REACHED": "Você já usou as gerações desta licença.",
+      "AVATAR_CERT_BUSY": "O certificado já está sendo gerado. Aguarde um pouco.",
+      "AVATAR_CERT_PROVIDER_FAILED": "Não deu para gerar o certificado. Tente de novo.",
+      "AVATAR_CERT_NOT_CONFIGURED": "A geração de certificados não está disponível agora."
+    },
+    "cheaper_in_offers": "Mais barato em Ofertas: {{price}} por ano. Compre lá →",
+    "offer_title": "Licença de foto de perfil",
+    "offer_description": "Mostre sua própria foto no cabeçalho, no chat, nos rankings e nos torneios por um ano.",
+    "per_year": "/ ano",
+    "go_to_settings": "Enviar sua foto nas Configurações",
+    "certificate_title": "Certificado de Licença",
+    "certificate_body": "Direito de usar foto de perfil própria no BlockMiner.",
+    "certificate_validity": "Válido por 1 ano",
+    "certificate_until": "Válido até {{date}}",
+    "certificate_your_name": "Seu nome aqui",
+    "certificate_name_label": "Nome no certificado",
+    "certificate_generate": "Gerar certificado ({{count}} restantes)",
+    "certificate_generating": "Gerando seu certificado... leva menos de 1 minuto.",
+    "certificate_download": "Baixar certificado",
+    "certificate_redo_hint": "Saiu errado? Você ainda pode gerar de novo ({{count}}).",
+    "modal_title": "Confirmar compra",
+    "modal_done_title": "Seu certificado",
+    "modal_intro": "Digite o nome que vai no seu certificado. Depois de pagar, ele é gerado na hora.",
+    "modal_item": "Item",
+    "modal_validity": "Validade",
+    "modal_confirm": "Confirmar e pagar {{amount}} {{currency}}",
+    "modal_done_text": "Licença ativa! Agora envie sua foto de perfil nas Configurações.",
+    "modal_generate_later": "Não deu para gerar o certificado agora. Você pode gerar em Ofertas, no card da licença."
+  },
+  "contract": {
+    "eyebrow": "BlockMiner • Termos de Uso",
+    "title": "Contrato do Minerador",
+    "subtitle": "Leia e carimbe cada cláusula. Depois segure o selo para assinar.",
+    "progress": "{{count}}/{{total}} cláusulas carimbadas",
+    "full_terms": "Ler os Termos de Uso completos",
+    "hold_to_sign": "Segure o selo para assinar",
+    "stamp_all_first": "Carimbe as cláusulas que faltam ({{left}})",
+    "sign_failed": "Não deu para assinar agora. Tente de novo.",
+    "later": "Ler depois",
+    "signed_title": "Contrato assinado!",
+    "signed_text": "Certificado {{certificate}}. Bem-vindo à mina, minerador.",
+    "lets_mine": "Bora minerar",
+    "clauses": {
+      "age": {
+        "title": "Sou maior de idade e dono da conta",
+        "text": "Tenho a maioridade na minha jurisdição e sou eu quem controla a senha e o e-mail desta conta."
+      },
+      "game": {
+        "title": "Isto é um jogo, não um investimento",
+        "text": "O BlockMiner é um jogo de simulação. Recompensas, estimativas e calculadoras são ilustrativas e não garantem ganhos."
+      },
+      "bots": {
+        "title": "Nada de bots",
+        "text": "Não uso scripts, bots ou automação para jogar."
+      },
+      "rules": {
+        "title": "As regras podem mudar",
+        "text": "Regras, recompensas, multiplicadores e parâmetros do jogo podem ser ajustados a qualquer momento."
+      },
+      "onchain": {
+        "title": "Blockchain não tem volta",
+        "text": "Transações on-chain são irreversíveis: rede, token ou endereço errado pode fazer os fundos se perderem."
+      },
+      "withdrawals": {
+        "title": "Saques são revisados",
+        "text": "Saques passam por revisão antifraude e podem demorar; saldos podem ser congelados durante uma investigação."
+      },
+      "conduct": {
+        "title": "Respeito no chat",
+        "text": "Sem assédio, discurso de ódio, spam ou golpes no chat e em qualquer conteúdo que eu publicar."
+      },
+      "security": {
+        "title": "A segurança da conta é minha",
+        "text": "Protejo minha senha e meu e-mail. A equipe nunca pede minha senha."
+      }
+    }
   }
 }

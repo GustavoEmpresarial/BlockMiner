@@ -3,6 +3,7 @@ import { Trophy } from 'lucide-react';
 import type { CheckinPeriodInfo, CheckinStatusPayload } from '../lib/checkin.types';
 import { formatCheckinNextReset } from '../lib/checkinHelpers';
 import Card from '../../../shared/components/Card';
+import { formatUtcDateTime } from '../../../shared/utils/utcTime';
 
 type Props = {
   streak: number;
@@ -34,7 +35,7 @@ export function CheckinStreakCard({ streak, totalConfirmed, graceEndsAt, period,
               <p className="text-[11px] text-amber-300 mt-1 font-medium">
                 {t('checkin.grace_until', {
                   defaultValue: 'Grace period until {{time}}',
-                  time: new Date(graceEndsAt).toLocaleString(),
+                  time: formatUtcDateTime(graceEndsAt),
                 })}
               </p>
             ) : null}
@@ -44,7 +45,7 @@ export function CheckinStreakCard({ streak, totalConfirmed, graceEndsAt, period,
               <p className="text-[11px] text-slate-400 mt-1 font-medium">
                 {t('checkin.next_reset', {
                   defaultValue: 'Next reset: {{time}}',
-                  time: new Date(nextResetAt).toLocaleString(),
+                  time: formatUtcDateTime(nextResetAt),
                 })}
               </p>
             ) : null}

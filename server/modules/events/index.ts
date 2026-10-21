@@ -35,7 +35,7 @@ export {
   buildEarningsPolCreditedEvent,
 } from "./events.envelope.js";
 export { startEventOutboxPublisherCron, publishOutboxBatchOnce } from "./events.outbox-publisher.js";
-export { applyEarningsEvent } from "./events.stats-materialize.js";
+export { applyEarningsEvent, applyEarningsEventsBatch } from "./events.stats-materialize.js";
 export {
   createConnectedConsumer,
   getConnectedProducer,

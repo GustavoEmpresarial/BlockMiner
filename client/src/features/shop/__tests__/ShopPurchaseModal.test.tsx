@@ -62,8 +62,8 @@ describe('ShopPurchaseModal', () => {
 
     expect(screen.getByText('WhatsMiner M30S')).toBeInTheDocument();
     expect(screen.getByText(/Confirmar compra/i)).toBeInTheDocument();
-    // 200 * 2 = 400.00
-    expect(screen.getByText(/400\.00/)).toBeInTheDocument();
+    // 200 * 2 = 400 (formatPrice drops trailing zeros)
+    expect(screen.getByText(/^400$/)).toBeInTheDocument();
     expect(screen.getByText('2')).toBeInTheDocument();
   });
 
@@ -170,5 +170,37 @@ describe('ShopPurchaseModal', () => {
       />,
     );
     expect(screen.queryByRole('note')).not.toBeInTheDocument();
+  });
+
+  it('total de peça barata não vira 0.00 (0.002 x 3 = 0.006)', () => {
+    renderWithI18n(
+      <ShopPurchaseModal
+        modal={{ kind: 'part', item: { slug: 'asic_chip', rarity: 'common', nameKey: 'parts.items.asic_chip', price: 0.002, currency: 'BLK' } }}
+        shopCurrency="BLK"
+        buying={false}
+        quantity={3}
+        maxQty={100}
+        onClose={vi.fn()}
+        onSetQuantity={vi.fn()}
+        onConfirm={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/^0\.006$/)).toBeInTheDocument();
+    expect(screen.getByText(`${ptBR.parts.items.asic_chip} · ${ptBR.parts.rarity.common}`)).toBeInTheDocument();
+  });
+
+  it('máquina de 0.025 não é arredondada para 0.03', () => {
+    renderWithI18n(
+      <ShopPurchaseModal
+        modal={{ kind: 'miner', item: { id: 9, name: 'HashTitan X1', baseHashRate: 25, price: 0.025, currency: 'BLK' } }}
+        shopCurrency="BLK"
+        buying={false}
+        quantity={1}
+        onClose={vi.fn()}
+        onSetQuantity={vi.fn()}
+        onConfirm={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/^0\.025$/)).toBeInTheDocument();
   });
 });

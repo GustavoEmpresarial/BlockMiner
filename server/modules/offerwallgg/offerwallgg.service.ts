@@ -6,7 +6,14 @@
  */
 import { logger } from "../../core/logger/index.js";
 import { OFFERWALL_BLK_PER_CLICK, blkForOfferwallClicks } from "../../shared/offerwallBlkPayout.js";
-import { recordTournamentAction, TOURNAMENT_ACTION_PROVIDER } from "../tournaments/index.js";
+import {
+  OFFERWALL_CALLBACK_STATUS,
+  isPrismaUniqueViolation,
+  type OfferwallReversalOutcome,
+} from "../../shared/offerwallCallbackStatus.js";
+import { parseOfferwallSubId, signOfferwallSubId } from "../../shared/security/offerwallSubId.js";
+import { recordTournamentAction, reverseTournamentAction, TOURNAMENT_ACTION_PROVIDER } from "../tournaments/index.js";
+import { utcWeekStart } from "../tournaments/tournament-window.js";
 import * as offerwallGgRepo from "./offerwallgg.repository.js";
 import {
   buildOfferwallGgEmbedUrl,
@@ -63,11 +70,12 @@ export async function processPostback(input: OfferwallGgPostbackInput, clientIp:
     return { kind: "forbidden", message: "ERROR: Signature doesn't match" };
   }
 
-  const userId = parseInt(userRaw, 10);
-  if (!Number.isFinite(userId) || userId <= 0) {
-    log.warn("postback.invalid_user_id", { userRaw });
+  const parsed = parseOfferwallSubId("offerwallgg", userRaw);
+  if (!parsed.ok) {
+    log.warn("postback.invalid_user_id", { userRaw, reason: parsed.reason });
     return { kind: "bad_request", message: "ERROR: Invalid user" };
   }
+  const userId = parsed.userId;
 
   const rawPayoutUsd = Math.abs(parseFloat(payoutRaw) || 0);
   const payoutUsd = Math.min(rawPayoutUsd, MAX_PAYOUT_USD_PER_CALLBACK);
@@ -87,6 +95,17 @@ export async function processPostback(input: OfferwallGgPostbackInput, clientIp:
     log.warn("postback.user_not_found", { userId });
     return { kind: "not_found", message: "ERROR: User not found" };
   }
+  const offerType = offerId || null;
+  if (ledgerStatus === OFFERWALL_CALLBACK_STATUS.CHARGEBACK) {
+    return processChargeback({
+      userId,
+      transactionId,
+      offerName: offerName || null,
+      offerType,
+      payoutUsd,
+      clientIp,
+    });
+  }
   if (user.isBanned) {
     log.warn("postback.user_banned", { userId });
     return { kind: "ok" };
@@ -95,42 +114,26 @@ export async function processPostback(input: OfferwallGgPostbackInput, clientIp:
   const blkToCredit = blkForOfferwallClicks(1);
   const blkAmount = Number(blkToCredit);
   let creditedAt = new Date();
-  const offerType = offerId || null;
 
   try {
-    if (ledgerStatus === 2) {
-      await offerwallGgRepo.createChargebackCallback({
-        userId,
-        transId: transactionId,
-        offerName: offerName || null,
-        offerType,
-        payoutUsd,
-        polPrice: 1,
-        status: ledgerStatus,
-        clientIp,
-        polDebited: -blkAmount,
-        polDebit: blkToCredit,
-      });
-    } else {
-      const row = await offerwallGgRepo.createCreditCallback({
-        userId,
-        transId: transactionId,
-        offerName: offerName || null,
-        offerType,
-        payoutUsd,
-        polPrice: 1,
-        status: ledgerStatus,
-        clientIp,
-        polDecimal: blkToCredit,
-      });
-      creditedAt = row.createdAt;
-    }
+    const row = await offerwallGgRepo.createCreditCallback({
+      userId,
+      transId: transactionId,
+      offerName: offerName || null,
+      offerType,
+      payoutUsd,
+      polPrice: 1,
+      status: ledgerStatus,
+      clientIp,
+      polDecimal: blkToCredit,
+    });
+    creditedAt = row.createdAt;
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    if (msg.includes("Unique constraint") && msg.includes("trans_id")) {
+    if (isPrismaUniqueViolation(err)) {
       log.warn("postback.duplicate_ignored", { transactionId, userId });
       return { kind: "ok" };
     }
+    const msg = err instanceof Error ? err.message : String(err);
     log.error("postback.transaction_failed", { transactionId, userId, error: msg });
     return { kind: "internal", message: "ERROR: Internal" };
   }
@@ -143,7 +146,7 @@ export async function processPostback(input: OfferwallGgPostbackInput, clientIp:
     status: ledgerStatus,
   });
 
-  if (ledgerStatus === 1) {
+  if (ledgerStatus === OFFERWALL_CALLBACK_STATUS.CREDIT) {
     void recordTournamentAction({
       userId,
       provider: TOURNAMENT_ACTION_PROVIDER.OFFERWALLGG,
@@ -155,6 +158,57 @@ export async function processPostback(input: OfferwallGgPostbackInput, clientIp:
   }
 
   return { kind: "ok" };
+}
+
+async function processChargeback(args: {
+  userId: number;
+  transactionId: string;
+  offerName: string | null;
+  offerType: string | null;
+  payoutUsd: number;
+  clientIp: string;
+}): Promise<PostbackResult> {
+  const { userId, transactionId } = args;
+  let outcome: OfferwallReversalOutcome;
+  try {
+    outcome = await offerwallGgRepo.reverseCreditCallback({
+      userId,
+      transId: transactionId,
+      offerName: args.offerName,
+      offerType: args.offerType,
+      payoutUsd: args.payoutUsd,
+      polPrice: 1,
+      clientIp: args.clientIp,
+    });
+  } catch (err: unknown) {
+    // A credit for the same trans_id raced in; the partner retries and the next attempt reverses it.
+    const msg = err instanceof Error ? err.message : String(err);
+    log.error("postback.chargeback_failed", { transactionId, userId, error: msg });
+    return { kind: "internal", message: "ERROR: Internal" };
+  }
+
+  switch (outcome.kind) {
+    case "user_mismatch":
+      log.warn("postback.chargeback_user_mismatch", { transactionId, userId, ownerUserId: outcome.ownerUserId });
+      return { kind: "bad_request", message: "ERROR: Transaction belongs to another user" };
+    case "already_reversed":
+      log.info("postback.chargeback_duplicate", { transactionId, userId });
+      return { kind: "ok" };
+    case "recorded_without_credit":
+      log.warn("postback.chargeback_without_credit", { transactionId, userId });
+      return { kind: "ok" };
+    case "reversed":
+      log.info("postback.chargeback_applied", {
+        transactionId,
+        userId,
+        creditedAt: outcome.creditedAt.toISOString(),
+      });
+      void reverseTournamentAction({
+        provider: TOURNAMENT_ACTION_PROVIDER.OFFERWALLGG,
+        providerEventId: transactionId,
+      }).catch((err) => log.warn("tournament.action.reverse_failed", { transactionId, error: String(err) }));
+      return { kind: "ok" };
+  }
 }
 
 export async function getHistoryForUser(userId: number, page: number) {
@@ -173,8 +227,7 @@ export async function getHistoryForUser(userId: number, page: number) {
 export async function getStatsForUser(userId: number) {
   const startOfDay = new Date();
   startOfDay.setUTCHours(0, 0, 0, 0);
-  const startOfWeek = new Date(startOfDay);
-  startOfWeek.setUTCDate(startOfWeek.getUTCDate() - startOfWeek.getUTCDay());
+  const startOfWeek = utcWeekStart(startOfDay);
   const startOfMonth = new Date(Date.UTC(startOfDay.getUTCFullYear(), startOfDay.getUTCMonth(), 1));
 
   const { agg, offersToday, offersWeek, offersMonth } = await offerwallGgRepo.getStatsAggregates(
@@ -199,7 +252,7 @@ export async function getStatsForUser(userId: number) {
 export function buildEmbedUrl(userId: number): string | null {
   return buildOfferwallGgEmbedUrl({
     publicKey: OFFERWALLGG_PUBLIC_KEY,
-    userId,
+    userId: signOfferwallSubId("offerwallgg", userId),
     baseUrl: process.env.OFFERWALLGG_WALL_BASE_URL,
   });
 }

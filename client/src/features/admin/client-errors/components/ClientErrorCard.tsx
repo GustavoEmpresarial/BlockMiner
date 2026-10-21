@@ -2,6 +2,7 @@ import { Copy, CheckCircle2 } from 'lucide-react';
 import type { DecoratedRow } from '../adminClientErrors.types';
 import { formatTime } from '../adminClientErrors.logic';
 import { CriticalityBadge, CategoryBadge } from './CriticalityBadge';
+import { formatUtcTime } from '../../../../shared/utils/utcTime';
 
 function Meta({ label, value }: { label: string; value: string }) {
   return (
@@ -98,7 +99,7 @@ export function ClientErrorCard({
               {meta.breadcrumbs.map((b, idx) => (
                 <div key={idx} className="flex items-start gap-2 text-slate-300">
                   <span className="shrink-0 text-[10px] text-slate-500">
-                    {new Date(b.ts).toLocaleTimeString()}
+                    {formatUtcTime(b.ts, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                   </span>
                   <span className="shrink-0 rounded bg-slate-800 px-1 py-0.5 text-[9px] font-bold uppercase text-slate-400">
                     {b.type}

@@ -17,7 +17,10 @@ export type TournamentMetric =
   | "SHORTLINK"
   | "AUTO_MINING"
   | "ALL_ACTIVITIES"
-  | "YOUTUBE";
+  | "YOUTUBE"
+  | "REFERRALS"
+  | "MERGES"
+  | "BURNS";
 
 export type TournamentRecord = {
   id: number;

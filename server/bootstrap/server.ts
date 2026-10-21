@@ -9,6 +9,7 @@
  * Fase 1 process entrypoint — Express app wiring auth/session/users/admin
  * routes only. No mining engine, sockets, cron or workers yet (Fase 2+).
  */
+import { backgroundJobsEnabled, startJob } from "./background-jobs.js";
 import "dotenv/config";
 import http from "node:http";
 import express from "express";
@@ -18,7 +19,8 @@ import { attachSocketIO } from "../core/socket/index.js";
 import { mediaAdminRouter, mediaRootDir, MEDIA_PUBLIC_PREFIX, seedBundledMedia, projectRoot, createMediaStaticHeadersMiddleware } from "../modules/media/index.js";
 import { resolveClientDistPaths, createSpaIndexProbe, attachClientDistStatic, attachSpaFallback, renderSpaIndex, sendSpaReadiness, } from "../shared/http/spaStatic.js";
 import { logger } from "../core/logger/index.js";
-import prisma from "../core/database/prisma.js";
+import prisma, { pgPoolBusyCount } from "../core/database/prisma.js";
+import { drainAndClose, trackInFlightRequests } from "./shutdown.js";
 import { shutdownRedis } from "../core/redis/index.js";
 import { authRouter, authAdminRouter } from "../modules/auth/index.js";
 import { sessionRouter } from "../modules/session/index.js";
@@ -34,6 +36,9 @@ import { boostsRouter } from "../modules/boosts/index.js";
 import { autoMiningRouter, autoMiningAdminRouter } from "../modules/auto-mining/index.js";
 import { inventoryRouter } from "../modules/inventory/index.js";
 import { shopRouter } from "../modules/shop/index.js";
+import { avatarRouter, avatarAdminRouter, startAvatarExpiryReminderCron } from "../modules/avatar/index.js";
+import { termsRouter } from "../modules/terms/index.js";
+import { partsRouter } from "../modules/parts/index.js";
 import { gamesRouter } from "../modules/games/index.js";
 import { checkinRouter, checkinAdminRouter } from "../modules/checkin/index.js";
 import { tasksRouter, tasksAdminRouter } from "../modules/tasks/index.js";
@@ -85,6 +90,8 @@ import { startShortlinksPasteadExpireCron } from "../cron/shortlinks-pastead-exp
 import { startShortlinksAdlinkflyExpireCron } from "../cron/shortlinks-adlinkfly-expire.cron.js";
 import { startSecurityArtifactCleanupCron } from "../cron/security-artifact-cleanup.cron.js";
 import { startNotificationsRetentionCron } from "../cron/notifications-retention.cron.js";
+import { startIndexMaintenanceCron } from "../cron/index-maintenance.cron.js";
+import { startEventOutboxRetentionCron } from "../cron/event-outbox-retention.cron.js";
 import { startSupportRetentionCron } from "../cron/support-retention.cron.js";
 import { startExpiredPowersCleanupCron } from "../cron/expired-powers-cleanup.cron.js";
 import { startUserCountSnapshotCron } from "../cron/user-count-snapshot.cron.js";
@@ -144,6 +151,10 @@ export function createApp() {
     // calls next("router") for non-digit ids.
     app.use("/api/inventory", inventoryRouter);
     app.use("/api/shop", shopRouter);
+    app.use("/api/avatar", avatarRouter);
+    app.use("/api/terms", termsRouter);
+    app.use("/api/admin", avatarAdminRouter);
+    app.use("/api/parts", partsRouter);
     app.use("/api/games", gamesRouter);
     app.use("/api/checkin", checkinRouter);
     app.use("/api/admin", checkinAdminRouter);
@@ -295,44 +306,58 @@ async function main() {
     // Copy versioned storage/media-seed → storage/uploads/media when files are missing.
     // Must run before the HTTP server accepts traffic so /media/* does not 404 on first paint.
     seedBundledMedia();
-    await ensureMinercoreMcx9Offer().catch((err) => log.error("MinerCore MCX9 offer seed failed", { error: String(err) }));
-    await bootstrapAdminUsers().catch((err) => log.error("Admin bootstrap failed", { error: String(err) }));
+    const jobsEnabled = backgroundJobsEnabled();
+    if (jobsEnabled) {
+        await ensureMinercoreMcx9Offer().catch((err) => log.error("MinerCore MCX9 offer seed failed", { error: String(err) }));
+        await bootstrapAdminUsers().catch((err) => log.error("Admin bootstrap failed", { error: String(err) }));
+    }
+    else {
+        log.warn("BLOCKMINER_BACKGROUND_JOBS=off: web-only instance — no crons, no boot-time data writes");
+    }
     await bootstrapEngine().catch((err) => log.error("Mining engine bootstrap failed", { error: String(err) }));
-    await applyInternalOfferwallStandardBlkReward().catch((err) => log.warn("Internal offerwall BLK reward sync failed", { error: String(err) }));
-    await runShowcase3dPurgeAndRefundMigration({ execute: true }).catch((err) => log.error("Showcase 3D purge and refund failed", { error: String(err) }));
+    if (jobsEnabled) {
+        await applyInternalOfferwallStandardBlkReward().catch((err) => log.warn("Internal offerwall BLK reward sync failed", { error: String(err) }));
+        await runShowcase3dPurgeAndRefundMigration({ execute: true }).catch((err) => log.error("Showcase 3D purge and refund failed", { error: String(err) }));
+    }
     const app = createApp();
     const httpServer = http.createServer(app);
+    const inFlight = trackInFlightRequests(httpServer);
     // Socket.IO core + miner/support/tournament/games realtime handlers (12c, 12i, 12j —
     // games.socket.ts covers memory/match-3/block-stack/sky-runner/cart-rush, all wired).
-    attachSocketIO(httpServer);
+    const io = attachSocketIO(httpServer);
     const port = Number(process.env.PORT || 3000);
     const server = httpServer.listen(port, () => {
         log.info(`Server listening on port ${port}`);
     });
-    const miningCron = startMiningCron();
-    const blkRewardCron = startBlkRewardCron();
-    const energyTaxCron = startEnergyTaxCron();
-    const autoMiningCleanupCron = startAutoMiningSessionCleanupCron();
-    const checkinCron = startCheckinCron();
-    const tournamentsCron = startTournamentsCron();
-    const depositVerifierCron = startDepositVerifierCron();
-    const polygonHdScanCron = startPolygonHdDepositScannerCron();
-    const walletSnapshotCron = startWalletSnapshotCron();
-    const withdrawalAutoSendCron = startWithdrawalAutoSendCron();
-    const telegramOutboxCron = startTelegramOutboxCron();
-    const telegramSubscriptionBotsCron = startTelegramSubscriptionBotsCron();
-    const offerEventsExpireCron = startOfferEventsExpireCron();
-    const shortlinksPasteadExpireCron = startShortlinksPasteadExpireCron();
-    const shortlinksAdlinkflyExpireCron = startShortlinksAdlinkflyExpireCron();
-    const securityArtifactCleanupCron = startSecurityArtifactCleanupCron();
-    const notificationsRetentionCron = startNotificationsRetentionCron();
-    const supportRetentionCron = startSupportRetentionCron();
-    const expiredPowersCleanupCron = startExpiredPowersCleanupCron();
-    const userCountSnapshotCron = startUserCountSnapshotCron();
-    const eventOutboxPublisherCron = startEventOutboxPublisherCronFromBootstrap();
-    const backupCron = startBackupCron();
-    async function shutdown(signal) {
-        log.info(`Received ${signal}, shutting down`);
+    const miningCron = startJob(jobsEnabled, startMiningCron);
+    const blkRewardCron = startJob(jobsEnabled, startBlkRewardCron);
+    const energyTaxCron = startJob(jobsEnabled, startEnergyTaxCron);
+    const autoMiningCleanupCron = startJob(jobsEnabled, startAutoMiningSessionCleanupCron);
+    const checkinCron = startJob(jobsEnabled, startCheckinCron);
+    const tournamentsCron = startJob(jobsEnabled, startTournamentsCron);
+    const depositVerifierCron = startJob(jobsEnabled, startDepositVerifierCron);
+    const polygonHdScanCron = startJob(jobsEnabled, startPolygonHdDepositScannerCron);
+    const walletSnapshotCron = startJob(jobsEnabled, startWalletSnapshotCron);
+    const withdrawalAutoSendCron = startJob(jobsEnabled, startWithdrawalAutoSendCron);
+    const telegramOutboxCron = startJob(jobsEnabled, startTelegramOutboxCron);
+    const telegramSubscriptionBotsCron = startJob(jobsEnabled, startTelegramSubscriptionBotsCron);
+    const offerEventsExpireCron = startJob(jobsEnabled, startOfferEventsExpireCron);
+    const shortlinksPasteadExpireCron = startJob(jobsEnabled, startShortlinksPasteadExpireCron);
+    const shortlinksAdlinkflyExpireCron = startJob(jobsEnabled, startShortlinksAdlinkflyExpireCron);
+    const securityArtifactCleanupCron = startJob(jobsEnabled, startSecurityArtifactCleanupCron);
+    const notificationsRetentionCron = startJob(jobsEnabled, startNotificationsRetentionCron);
+    const indexMaintenanceCron = startJob(jobsEnabled, startIndexMaintenanceCron);
+    const eventOutboxRetentionCron = startJob(jobsEnabled, startEventOutboxRetentionCron);
+    const supportRetentionCron = startJob(jobsEnabled, startSupportRetentionCron);
+    const expiredPowersCleanupCron = startJob(jobsEnabled, startExpiredPowersCleanupCron);
+    const userCountSnapshotCron = startJob(jobsEnabled, startUserCountSnapshotCron);
+    const eventOutboxPublisherCron = startJob(jobsEnabled, startEventOutboxPublisherCronFromBootstrap);
+    const backupCron = startJob(jobsEnabled, startBackupCron);
+    const avatarReminderCron = startJob(jobsEnabled, startAvatarExpiryReminderCron);
+    // Under the compose stop_grace_period (180s) with room to spare; env-tunable.
+    const shutdownDrainMs = Number(process.env.SHUTDOWN_DRAIN_MS || 25_000);
+    let shuttingDown = false;
+    function stopJobs() {
         miningCron.stop();
         blkRewardCron.stop();
         energyTaxCron.stop();
@@ -350,13 +375,31 @@ async function main() {
         shortlinksAdlinkflyExpireCron.stop();
         securityArtifactCleanupCron.stop();
         notificationsRetentionCron.stop();
+        indexMaintenanceCron.stop();
+        eventOutboxRetentionCron.stop();
         supportRetentionCron.stop();
         expiredPowersCleanupCron.stop();
+        avatarReminderCron.stop();
         userCountSnapshotCron.stop();
         eventOutboxPublisherCron.stop();
         backupCron.stop();
-        server.close(() => log.info("HTTP server closed"));
-        await prisma.$disconnect().catch(() => undefined);
+    }
+    async function shutdown(signal) {
+        if (shuttingDown)
+            return;
+        shuttingDown = true;
+        log.info(`Received ${signal}, shutting down`);
+        // Clients reconnect on their own; socket handlers still writing are covered by dbBusy.
+        io.disconnectSockets(true);
+        await drainAndClose({
+            server,
+            tracker: inFlight,
+            stopJobs,
+            dbBusy: pgPoolBusyCount,
+            disconnect: () => prisma.$disconnect(),
+            log,
+            timeoutMs: shutdownDrainMs,
+        });
         await shutdownRedis().catch(() => undefined);
         process.exit(0);
     }

@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Plus, Loader2, RefreshCw, Pencil } from "lucide-react";
 import { api } from '../../../shared/auth/auth.store';
 import type { AdminMiniPassSeasonListRow } from '../lib/admin.types';
+import { formatUtcDateTime } from '../../../shared/utils/utcTime';
 
 type MiniPassSeasonsResponse = {
   ok?: boolean;
@@ -87,10 +88,10 @@ export default function AdminMiniPass() {
                     <td className="px-4 py-3 text-slate-300">{r.id}</td>
                     <td className="px-4 py-3 font-mono text-xs text-amber-500/90">{r.slug}</td>
                     <td className="px-4 py-3 text-slate-400 text-xs">
-                      {r.startsAt ? new Date(r.startsAt).toISOString().slice(0, 16) : "—"}
+                      {r.startsAt ? formatUtcDateTime(r.startsAt, { locale: "pt-BR" }) : "—"}
                     </td>
                     <td className="px-4 py-3 text-slate-400 text-xs">
-                      {r.endsAt ? new Date(r.endsAt).toISOString().slice(0, 16) : "—"}
+                      {r.endsAt ? formatUtcDateTime(r.endsAt, { locale: "pt-BR" }) : "—"}
                     </td>
                     <td className="px-4 py-3 text-slate-300 text-xs">
                       {t("adminMiniPass.list.levels_fmt", { max: r.maxLevel, xp: r.xpPerLevel })}

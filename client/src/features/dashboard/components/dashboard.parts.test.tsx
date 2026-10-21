@@ -67,6 +67,16 @@ describe('DashboardCards', () => {
     expect(screen.getAllByText(/7\.0000/).length).toBeGreaterThan(0);
   });
 
+  it('shows BLK with 8 decimals so a single cycle reward is visible on both BLK cards', () => {
+    render(
+      withProviders(
+        <DashboardCards {...baseCardsProps} balanceCurrency="BLK" blkBalance={0.00004237} />,
+      ),
+    );
+    expect(screen.getAllByText('0.00004237')).toHaveLength(2);
+    expect(screen.queryByText('0.0000')).not.toBeInTheDocument();
+  });
+
   it('falls back to cycle.blockCountdownSeconds when no smoothed countdownSeconds prop is given', () => {
     render(withProviders(<DashboardCards {...baseCardsProps} cycle={{ blockCountdownSeconds: 42 }} />));
     expect(screen.getByText('42')).toBeInTheDocument();
@@ -168,6 +178,22 @@ describe('DashboardHistory', () => {
     );
     expect(screen.getAllByText(/50\.00/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/100\.00 SHIB/).length).toBeGreaterThan(0);
+  });
+
+  it('shows the BLK share and hides a zero POL line when the block paid only BLK', () => {
+    render(
+      withProviders(
+        <DashboardHistory
+          blockHistory={[
+            { blockNumber: 11, userReward: 0, userRewardBlk: 0.0002453, totalReward: 0.3, totalRewardBlk: 0.00347222 },
+          ]}
+          tokenSymbol="POL"
+        />,
+      ),
+    );
+    expect(screen.getAllByText(/0\.00024530/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/0\.00347222 BLK/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/\+0\.00000000/)).not.toBeInTheDocument();
   });
 
   it('does not throw on a malformed block row missing every optional field', () => {

@@ -28,8 +28,13 @@ export const MEDIA_CATEGORIES = [
   "sala",
   "racks",
   "fans",
+  "parts",
   "icons",
   "brand",
+  /** AI-generated license certificates (server-named WebP). */
+  "certificates",
+  /** User profile photos (256x256 WebP, server-named). */
+  "avatars",
   /** 3D / binary scene assets (e.g. Antminer GLB for transparency hardware). */
   "models",
 ] as const;

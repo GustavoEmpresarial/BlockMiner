@@ -119,7 +119,7 @@ function BannerDetailModal({
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-2xl overflow-hidden rounded-3xl border-2 border-slate-800 bg-slate-900/60 shadow-[4px_4px_0px_#000000] max-h-[90vh] overflow-y-auto"
+        className="relative w-full max-w-2xl overflow-hidden rounded-3xl border-2 border-slate-700 bg-slate-900 shadow-[4px_4px_0px_#000000] max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <button

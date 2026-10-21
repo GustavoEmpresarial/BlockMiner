@@ -5,8 +5,9 @@
 import "dotenv/config";
 import { logger } from "../core/logger/index.js";
 import prisma from "../core/database/prisma.js";
+import { reportError } from "../core/errors/index.js";
 import {
-  applyEarningsEvent,
+  applyEarningsEventsBatch,
   createConnectedConsumer,
   isKafkaEnabled,
   readKafkaStatsConsumerGroup,
@@ -14,6 +15,9 @@ import {
 } from "../modules/events/index.js";
 
 const log = logger.child("StatsMaterializer");
+
+/** Events per DB transaction — big enough to amortize the cross-VM round trips, small enough to keep each commit short. */
+const BATCH_CHUNK = 500;
 
 async function main(): Promise<void> {
   if (!isKafkaEnabled()) {
@@ -33,21 +37,51 @@ async function main(): Promise<void> {
   log.info("Stats materializer subscribed", { topic, groupId });
 
   await consumer.run({
-    eachMessage: async ({ message }) => {
-      const raw = message.value?.toString("utf8");
-      if (!raw) return;
-      let parsed: unknown;
-      try {
-        parsed = JSON.parse(raw);
-      } catch {
-        log.warn("Invalid JSON message skipped");
-        return;
-      }
-      const result = await applyEarningsEvent(parsed);
-      if (result.applied) {
-        log.info("Earnings event applied", {
-          eventId: (parsed as { eventId?: string }).eventId,
-        });
+    eachBatchAutoResolve: false,
+    eachBatch: async ({ batch, resolveOffset, heartbeat, commitOffsetsIfNecessary, isRunning, isStale }) => {
+      for (let i = 0; i < batch.messages.length; i += BATCH_CHUNK) {
+        if (!isRunning() || isStale()) return;
+        const chunk = batch.messages.slice(i, i + BATCH_CHUNK);
+        const parsed: unknown[] = [];
+        let invalidJson = 0;
+        for (const message of chunk) {
+          const raw = message.value?.toString("utf8");
+          if (!raw) continue;
+          try {
+            parsed.push(JSON.parse(raw));
+          } catch {
+            invalidJson += 1;
+          }
+        }
+        const started = Date.now();
+        try {
+          const result = await applyEarningsEventsBatch(parsed);
+          log.info("Earnings batch applied", {
+            partition: batch.partition,
+            lastOffset: chunk[chunk.length - 1].offset,
+            applied: result.applied,
+            skipped: result.skipped,
+            invalidJson,
+            durationMs: Date.now() - started,
+          });
+        } catch (err) {
+          // Throwing makes kafkajs retry from the last resolved offset; the dedupe table keeps
+          // the replay idempotent, so a partially failed batch is never counted twice.
+          reportError({
+            code: "STATS_MATERIALIZE_BATCH_FAILED",
+            category: "DATABASE",
+            severity: "ERROR",
+            impact: "MEDIUM",
+            module: "events.stats-materializer",
+            operation: "eachBatch",
+            error: err,
+            context: { partition: batch.partition, firstOffset: chunk[0].offset, size: chunk.length },
+          });
+          throw err;
+        }
+        resolveOffset(chunk[chunk.length - 1].offset);
+        await heartbeat();
+        await commitOffsetsIfNecessary();
       }
     },
   });

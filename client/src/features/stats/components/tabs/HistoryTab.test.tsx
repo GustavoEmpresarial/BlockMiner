@@ -2,89 +2,102 @@ import '@testing-library/jest-dom/vitest';
 import { describe, expect, it, vi, afterEach } from 'vitest';
 import { render, screen, cleanup, act, fireEvent } from '@testing-library/react';
 import HistoryTab from './HistoryTab';
-import { withProviders, baseContext, basePower } from './testHelpers';
+import { withProviders, baseContext } from './testHelpers';
+import * as historyApi from '../../lib/stats.history.api';
 
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
 
 describe('HistoryTab', () => {
-  it('renders without throwing when analytics fields are missing', async () => {
-    await act(async () => {
-      render(withProviders(<HistoryTab {...baseContext({ power: basePower({ analytics: undefined }) })} />));
+  it('renders search input and period filters', async () => {
+    vi.spyOn(historyApi, 'fetchUserActivityHistory').mockResolvedValue({
+      ok: true,
+      logs: [],
+      total: 0,
+      page: 1,
+      pageSize: 15,
+      totalPages: 1,
+      hasMore: false,
+      categories: [],
+      categoryCounts: {},
+      windowDays: 30,
     });
-    expect(await screen.findAllByText('—')).not.toHaveLength(0);
+
+    await act(async () => {
+      render(withProviders(<HistoryTab {...baseContext()} />));
+    });
+
+    expect(screen.getByPlaceholderText(/pesquisar por ação/i)).toBeInTheDocument();
+    expect(screen.getByText('24h')).toBeInTheDocument();
+    expect(screen.getByText('7 dias')).toBeInTheDocument();
+    expect(screen.getByText('30 dias')).toBeInTheDocument();
   });
 
-  it('renders analytics values when present', async () => {
-    const power = basePower({ analytics: { miningLogPeakShare: 0.5, miningLogAvgShare: 0.25, miningLogSamples: 10 } });
-    await act(async () => {
-      render(withProviders(<HistoryTab {...baseContext({ power })} />));
+  it('renders empty state when no activities exist', async () => {
+    vi.spyOn(historyApi, 'fetchUserActivityHistory').mockResolvedValue({
+      ok: true,
+      logs: [],
+      total: 0,
+      page: 1,
+      pageSize: 15,
+      totalPages: 1,
+      hasMore: false,
+      categories: [],
+      categoryCounts: {},
+      windowDays: 30,
     });
-    expect(await screen.findByText('0.5000')).toBeInTheDocument();
+
+    await act(async () => {
+      render(withProviders(<HistoryTab {...baseContext()} />));
+    });
+
+    expect(await screen.findByText(/nenhuma atividade encontrada/i)).toBeInTheDocument();
   });
 
-  it('triggers the power CSV export when the export button is clicked', async () => {
-    const originalCreateObjectURL = URL.createObjectURL;
-    const originalRevoke = URL.revokeObjectURL;
-    URL.createObjectURL = vi.fn(() => 'blob:mock');
-    URL.revokeObjectURL = vi.fn();
+  it('renders activity logs when returned by API and triggers CSV export', async () => {
+    const mockLog: historyApi.UserActivityLogItem = {
+      id: 1,
+      action: 'WATCH_CLAIM',
+      category: 'youtube',
+      categoryLabel: 'YouTube',
+      title: 'Vídeo assistido',
+      description: 'Ganho de +10 H/s',
+      details: { hashRate: 10 },
+      ip: '127.0.0.1',
+      createdAt: new Date().toISOString(),
+    };
+
+    vi.spyOn(historyApi, 'fetchUserActivityHistory').mockResolvedValue({
+      ok: true,
+      logs: [mockLog],
+      total: 1,
+      page: 1,
+      pageSize: 15,
+      totalPages: 1,
+      hasMore: false,
+      categories: [{ id: 'youtube', label: 'YouTube', count: 1 }],
+      categoryCounts: { youtube: 1 },
+      windowDays: 30,
+    });
+
     const clickSpy = vi.fn();
     vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(clickSpy);
-    try {
-      await act(async () => {
-        render(withProviders(<HistoryTab {...baseContext()} />));
-      });
-      const exportBtn = await screen.findByText(/exportar csv/i);
-      fireEvent.click(exportBtn);
-      expect(clickSpy).toHaveBeenCalled();
-    } finally {
-      URL.createObjectURL = originalCreateObjectURL;
-      URL.revokeObjectURL = originalRevoke;
-      vi.restoreAllMocks();
-    }
-  });
-
-  it('only shows the earnings export button when earnings data is present', async () => {
-    await act(async () => {
-      render(withProviders(<HistoryTab {...baseContext({ earnings: undefined })} />));
-    });
-    await screen.findByText(/exportar csv/i);
-    expect(screen.queryByText(/exportar ganhos/i)).not.toBeInTheDocument();
-  });
-
-  it('shows and triggers the earnings export button when earnings data is present', async () => {
     URL.createObjectURL = vi.fn(() => 'blob:mock');
     URL.revokeObjectURL = vi.fn();
-    const clickSpy = vi.fn();
-    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(clickSpy);
-    try {
-      await act(async () => {
-        render(
-          withProviders(
-            <HistoryTab
-              {...baseContext({
-                earnings: {
-                  total: 1,
-                  mining: 1,
-                  offerwall: 0,
-                  faucet: 0,
-                  shortlinks: 0,
-                  autoMining: 0,
-                  games: 0,
-                  youtube: 0,
-                  checkin: 0,
-                  referrals: 0,
-                  history: [],
-                } as never,
-              })}
-            />,
-          ),
-        );
-      });
-      const btn = await screen.findByText(/exportar ganhos/i);
-      fireEvent.click(btn);
-      expect(clickSpy).toHaveBeenCalled();
-    } finally {
-      vi.restoreAllMocks();
-    }
+
+    await act(async () => {
+      render(withProviders(<HistoryTab {...baseContext()} />));
+    });
+
+    expect(await screen.findByText('Vídeo assistido')).toBeInTheDocument();
+    expect(screen.getByText('Ganho de +10 H/s')).toBeInTheDocument();
+    expect(screen.getByText('+10 H/s')).toBeInTheDocument();
+
+    const csvBtn = screen.getByTitle(/exportar log em csv/i);
+    expect(csvBtn).toBeInTheDocument();
+    fireEvent.click(csvBtn);
+    expect(clickSpy).toHaveBeenCalled();
   });
 });

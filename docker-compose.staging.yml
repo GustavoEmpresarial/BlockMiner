@@ -186,8 +186,9 @@ services:
     # by the compose SERVICE name ("app", via $bm_app map var), not a hardcoded container
     # name, and each compose project gets its own isolated network, so "app" here resolves
     # to blockminer-staging-app, never production's.
+    # Loopback only — same reason as docker-compose.yml (no direct origin access past Cloudflare).
     ports:
-      - "${NGINX_HTTP_PUBLISH:-5001:5100}"
+      - "${NGINX_HTTP_PUBLISH:-127.0.0.1:5001:5100}"
       - "${NGINX_HTTPS_PUBLISH:-127.0.0.1:5444:5443}"
     volumes:
       - ${NGINX_CONF_FILE:-./nginx/nginx.vm5000.conf}:/etc/nginx/nginx.conf:ro

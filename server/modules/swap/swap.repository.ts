@@ -70,6 +70,7 @@ export async function createSwapTransactionTx(
       userId,
       type: "swap",
       amount: amountNum,
+      rawTx: JSON.stringify({ fromAsset: fromAsset.toLowerCase(), toAsset: "blk", output }),
       status: "completed",
       completedAt: new Date(),
       usdRateAtConfirmation: rate,

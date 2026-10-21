@@ -155,7 +155,6 @@ export default function CalculatorPage() {
         <IconBadge icon={Calculator} variant="sky" size="lg" />
         <div>
           <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">{t('calculator.title')}</h1>
-          <p className="text-slate-400 text-xs sm:text-sm font-medium">{t('calculator.subtitle')}</p>
         </div>
       </div>
 

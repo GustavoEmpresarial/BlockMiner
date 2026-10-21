@@ -2,6 +2,7 @@
  * Line coverage for tournament submodules not fully hit elsewhere.
  */
 import test, { mock } from "node:test";
+import { withOfferwallFindMany } from "./_offerwall-mock-adapter.mjs";
 import assert from "node:assert/strict";
 import { pathToFileURL } from "node:url";
 import path from "node:path";
@@ -19,6 +20,8 @@ process.env.TOURNAMENT_OFFERWALL_AUTOCORRECT = "1";
 
 /** @type {Record<string, unknown>} */
 const prismaMock = {
+  userVisualFanPlacement: { findMany: async () => [] },
+  userRack: { findMany: async () => [] },
   tournament: {
     findUnique: async () => null,
     findMany: async () => [],
@@ -62,7 +65,9 @@ const prismaMock = {
   internalOfferwallAttempt: { groupBy: async () => [{ userId: 6, _count: { id: 2 } }] },
   offerwallMeCallback: { groupBy: async () => [{ userId: 7, _count: { id: 1 } }] },
   moneyRainCallback: { groupBy: async () => [{ userId: 8, _count: { id: 3 } }] },
-  zeradsCallback: { findMany: async () => [{ userId: 9, points: 40 }] },
+  multiwallCallback: { groupBy: async () => [] },
+  offerwallGgCallback: { groupBy: async () => [] },
+  zeradsCallback: { findMany: async () => [{ userId: 9, callbackAt: new Date("2026-06-01T12:00:00Z"), clicks: 40 }] },
   transaction: { findMany: async () => [], groupBy: async () => [] },
   tournamentDomainOutbox: { create: async () => ({}), updateMany: async () => ({ count: 0 }) },
   $transaction: async (fn) => (typeof fn === "function" ? fn(prismaMock) : []),
@@ -70,7 +75,7 @@ const prismaMock = {
   $queryRaw: async () => [],
 };
 
-mock.module(prismaSpec, { defaultExport: prismaMock });
+mock.module(prismaSpec, { defaultExport: withOfferwallFindMany(prismaMock) });
 mock.module(miningSpec, {
   namedExports: {
     miningEngine: { drainSettlements: async () => {} },

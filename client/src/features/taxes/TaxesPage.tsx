@@ -181,7 +181,6 @@ export default function TaxesPage() {
           <IconBadge icon={Receipt} variant="amber" size="lg" />
           <div>
             <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">{t('taxes.title')}</h1>
-            <p className="text-slate-400 text-xs sm:text-sm font-medium">{t('taxes.page_subtitle')}</p>
           </div>
         </div>
       </div>

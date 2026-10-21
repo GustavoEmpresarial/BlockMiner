@@ -7,6 +7,7 @@ import {
   Loader2,
   Minus,
   Plus,
+  Puzzle,
   ShoppingCart,
   Wind,
   X,
@@ -14,6 +15,7 @@ import {
 import { formatHashrate } from '../../machines/lib/machines.shared';
 import { ShowcaseRoomOnlyNotice } from '../../machines/components/ShowcaseRoomOnlyNotice';
 import type { PurchaseModalState } from '../lib/shop.types';
+import { formatPrice } from '../../../shared/utils/formatPrice';
 
 interface ShopPurchaseModalProps {
   modal: PurchaseModalState | null;
@@ -64,6 +66,9 @@ export function ShopPurchaseModal({
     if (!modal) return '';
     if (modal.kind === 'miner') return modal.item.name || '';
     if (modal.kind === 'fan') return t(modal.item.nameKey);
+    if (modal.kind === 'part') {
+      return `${t(modal.item.nameKey, { defaultValue: modal.item.slug })} · ${t(`parts.rarity.${modal.item.rarity}`, { defaultValue: modal.item.rarity })}`;
+    }
     return t(modal.item.nameKey || 'racks.mining_rack_name', { defaultValue: 'Rack' });
   }, [modal, t]);
 
@@ -99,6 +104,8 @@ export function ShopPurchaseModal({
                 <Wind className="h-8 w-8 text-cyan-400" />
               ) : modal.kind === 'rack' ? (
                 <Boxes className="h-8 w-8 text-amber-400" />
+              ) : modal.kind === 'part' ? (
+                <Puzzle className="h-8 w-8 text-sky-400" />
               ) : (
                 <ShoppingCart className="h-8 w-8 text-primary" />
               )}
@@ -155,7 +162,8 @@ export function ShopPurchaseModal({
               {t('shop.total_to_pay')}
             </span>
             <span className="text-xl font-black text-white font-mono">
-              {(unitPrice * quantity).toFixed(2)}{' '}
+              {/* toFixed(2) showed 0.002 BLK parts as 0.00 and a 0.025 miner as 0.03 */}
+              {formatPrice(unitPrice * quantity)}{' '}
               <span className="text-xs font-bold uppercase text-slate-400">{currency}</span>
             </span>
           </div>

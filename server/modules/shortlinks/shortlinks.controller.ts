@@ -213,6 +213,7 @@ export async function claimPasteadShortlink(req: Request, res: Response): Promis
     res.json({
       ok: true,
       reward: { message: outcome.rewardMessage, hashRate: outcome.hashRate },
+      part: outcome.part,
     });
   } catch (error) {
     log.error("claimPasteadShortlink failed", { error: String(error) });
@@ -367,6 +368,7 @@ export async function claimAdlinkflyShortlink(req: Request, res: Response): Prom
     res.json({
       ok: true,
       reward: { message: outcome.rewardMessage, hashRate: outcome.hashRate },
+      part: outcome.part,
     });
   } catch (error) {
     log.error("claimAdlinkflyShortlink failed", { error: String(error) });
@@ -412,9 +414,10 @@ export async function completeShortlinkStep(req: Request, res: Response): Promis
         });
         return;
       }
+      const incidents = outcome.reason === "detected" ? outcome.incidents : [];
       res.status(403).json({
         ok: false,
-        message: "Detection: " + outcome.incidents.join(", "),
+        message: "Detection: " + incidents.join(", "),
         code: SHORTLINK_ERROR.DETECTED,
         kick: true,
       });
@@ -433,6 +436,7 @@ export async function completeShortlinkStep(req: Request, res: Response): Promis
       runCompleted: outcome.runCompleted,
       sessionToken: outcome.sessionToken,
       reward: outcome.rewardMessage ? { message: outcome.rewardMessage } : null,
+      part: outcome.part,
     });
   } catch (error) {
     const msg = error instanceof Error ? error.message : "Process failed";

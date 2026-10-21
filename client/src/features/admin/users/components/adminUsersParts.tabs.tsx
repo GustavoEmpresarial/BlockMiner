@@ -40,6 +40,36 @@ import {
   SORTS,
   TxHashLink,
 } from './adminUsersParts.controls';
+import { formatUtcDateTime } from '../../../../shared/utils/utcTime';
+
+function swapFromAsset(tx: unknown): string {
+  const row = tx as Record<string, unknown>;
+  if (typeof row.fromAsset === 'string' && row.fromAsset) return row.fromAsset.toUpperCase();
+  return Number(row.usdRateAtConfirmation || 0) < 0.001 ? 'SHIB' : 'POL';
+}
+
+function fanPurchaseQty(tx: unknown): number {
+  try {
+    const raw = (tx as Record<string, unknown>).rawTx;
+    const parsed = typeof raw === 'string' ? JSON.parse(raw) : null;
+    const q = Number(parsed?.quantity);
+    return Number.isFinite(q) && q > 0 ? q : 1;
+  } catch {
+    return 1;
+  }
+}
+
+function mergeFeeAsset(tx: unknown): string {
+  const row = tx as Record<string, unknown>;
+  if (typeof row.fromAsset === 'string' && row.fromAsset) return row.fromAsset.toUpperCase();
+  try {
+    const parsed = typeof row.rawTx === 'string' ? JSON.parse(row.rawTx) : null;
+    if (parsed && typeof parsed.asset === 'string') return parsed.asset.toUpperCase();
+  } catch {
+    /* ignore invalid json */
+  }
+  return 'BLK';
+}
 
 export function TabToolbar({
   state,
@@ -154,8 +184,22 @@ export function TransactionsTab({
                     #{tx.id}
                     <CopyButton value={tx.id} />
                   </td>
-                  <td className="p-3">{tx.type}</td>
-                  <td className="p-3 text-amber-300">{Number(tx.amount || 0).toFixed(6)}</td>
+                  <td className="p-3">
+                    {tx.type === 'merge_fee' ? (
+                      <span className="font-semibold text-amber-400">taxa de merge ({mergeFeeAsset(tx)})</span>
+                    ) : tx.type === 'fan_purchase' ? (
+                      <span className="font-semibold text-sky-400">compra de refrigeração ({fanPurchaseQty(tx)}x)</span>
+                    ) : tx.type === 'swap' ? (
+                      <span className="font-semibold text-violet-400">
+                        swap ({swapFromAsset(tx)} → BLK)
+                      </span>
+                    ) : (
+                      tx.type
+                    )}
+                  </td>
+                  <td className="p-3 text-amber-300 font-mono">
+                    {Number(tx.amount || 0).toLocaleString()} {tx.type === 'merge_fee' || tx.type === 'fan_purchase' ? mergeFeeAsset(tx) : tx.type === 'swap' ? swapFromAsset(tx) : 'POL'}
+                  </td>
                   <td className="p-3">{tx.status}</td>
                   <td className="p-3">
                     <TxHashLink hash={tx.txHash} />
@@ -170,7 +214,7 @@ export function TransactionsTab({
                       <CopyButton value={tx.toAddress} />
                     </p>
                   </td>
-                  <td className="p-3">{tx.createdAt ? new Date(tx.createdAt).toLocaleString('pt-BR') : '—'}</td>
+                  <td className="p-3">{tx.createdAt ? formatUtcDateTime(tx.createdAt, { locale: 'pt-BR', seconds: true }) : '—'}</td>
                   <td className="p-3">
                     <MetaBlock value={tx.metadata} />
                   </td>
@@ -223,7 +267,7 @@ export function LogsTab({ state = {}, onLoad }: { state?: AdminUsersTabSlice; on
                 </div>
               </div>
               <div className="mt-2 flex flex-wrap gap-4 text-[10px] text-slate-500">
-                <span>{log.createdAt ? new Date(log.createdAt).toLocaleString('pt-BR') : ''}</span>
+                <span>{log.createdAt ? formatUtcDateTime(log.createdAt, { locale: 'pt-BR', seconds: true }) : ''}</span>
                 {log.ip ? (
                   <span className="font-mono">
                     IP {log.ip}
@@ -263,7 +307,7 @@ export function TicketsTab({ state = {}, onLoad }: { state?: AdminUsersTabSlice;
           </p>
           <p className="mt-1 text-xs text-slate-500">{t.message}</p>
           <p className="mt-2 text-[10px] text-slate-600">
-            {t.isReplied ? 'Respondido' : 'Pendente'} · {t.createdAt ? new Date(t.createdAt).toLocaleString('pt-BR') : ''}
+            {t.isReplied ? 'Respondido' : 'Pendente'} · {t.createdAt ? formatUtcDateTime(t.createdAt, { locale: 'pt-BR', seconds: true }) : ''}
           </p>
         </div>
       )}
@@ -324,7 +368,7 @@ export function RelatedTab({ state = {}, onLoad }: { state?: AdminUsersTabSlice;
           <p className="mb-2 text-xs font-black uppercase text-slate-500">Referrals</p>
           {(data.referrals || []).map((r) => (
             <div key={r.id} className="rounded-xl border border-slate-800 p-3 text-xs text-slate-300">
-              #{r.referrerId} indicou #{r.referredId} · {new Date(r.createdAt).toLocaleString('pt-BR')}
+              #{r.referrerId} indicou #{r.referredId} · {formatUtcDateTime(r.createdAt, { locale: 'pt-BR', seconds: true })}
             </div>
           ))}
         </div>

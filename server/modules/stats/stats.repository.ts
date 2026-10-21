@@ -48,6 +48,13 @@ export async function listActiveYoutubePowers(userId: number, now: Date) {
   });
 }
 
+export async function listActiveShortlinkPowers(userId: number, now: Date) {
+  return prisma.shortlinkPower.findMany({
+    where: { userId, expiresAt: { gt: now } },
+    select: { hashRate: true, expiresAt: true },
+  });
+}
+
 export async function listActiveGpuPowers(userId: number, now: Date) {
   return prisma.autoMiningGpu.findMany({
     where: { userId, isClaimed: true, expiresAt: { gt: now } },

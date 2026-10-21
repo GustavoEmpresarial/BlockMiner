@@ -1,5 +1,6 @@
 import { useState, type ElementType, type ReactNode } from 'react';
 import type { DashboardBlockRow } from './dashboard.types';
+import { formatUtcTime } from '../../../shared/utils/utcTime';
 
 export function safeDashboardNumber(value: unknown, decimals?: number): string {
   const n = typeof value === 'number' ? value : Number(value);
@@ -35,7 +36,7 @@ export function formatDashboardBlockTime(block: DashboardBlockRow): string {
         d = new Date(String(raw));
       }
     }
-    return Number.isNaN(d.getTime()) ? '—' : d.toLocaleTimeString();
+    return Number.isNaN(d.getTime()) ? '—' : formatUtcTime(d, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   } catch {
     return '—';
   }

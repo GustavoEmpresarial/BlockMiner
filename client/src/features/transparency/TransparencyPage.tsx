@@ -51,6 +51,7 @@ import { walletTreasuryUsd } from './components/transparency.base';
 import { WithdrawalsSection } from './components/transparency.withdrawals';
 import { MethodologyModal } from './components/transparency.methodology';
 import { useTranslation } from 'react-i18next';
+import { formatUtcDate, formatUtcDateTime } from '../../shared/utils/utcTime';
 
 export type TransparencyTab = 'all' | 'overview' | 'expenses' | 'treasury' | 'infrastructure' | 'withdrawals';
 
@@ -144,11 +145,11 @@ export default function Transparency() {
   const lastUpdatedMs = Math.max(entryUpdatedMs, snapshotUpdatedMs);
   const lastUpdated =
     lastUpdatedMs > 0
-      ? new Date(lastUpdatedMs).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' })
+      ? formatUtcDate(lastUpdatedMs, { locale: 'en-US', day: '2-digit', month: 'short', year: 'numeric' })
       : null;
   const lastOnChainSync =
     snapshotUpdatedMs > 0
-      ? new Date(snapshotUpdatedMs).toLocaleString(undefined, {
+      ? formatUtcDateTime(snapshotUpdatedMs, {
           day: '2-digit',
           month: 'short',
           year: 'numeric',
@@ -232,7 +233,7 @@ export default function Transparency() {
               </div>
 
               {/* Accessible textual breakdown alongside chart */}
-              <ul aria-label="Valores da Distribuição Mensal" className="flex flex-col gap-2 text-xs flex-1 list-none p-0 m-0">
+              <ul aria-label={t('transparency.aria.monthly_distribution')} className="flex flex-col gap-2 text-xs flex-1 list-none p-0 m-0">
                 {pieData.map((d, i) => (
                   <li key={i} className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full shrink-0 shadow-[1px_1px_0px_#000000]" style={{ background: d.color }} aria-hidden="true" />
@@ -413,7 +414,6 @@ export default function Transparency() {
                 <h1 id="transparency-hero-title" className="text-2xl sm:text-3xl font-black text-white uppercase tracking-tight leading-none">
                   {t('transparency.page_title')}
                 </h1>
-                <p className="text-xs text-primary/80 font-bold uppercase tracking-wider mt-1">{t('transparency.page_subtitle')}</p>
               </div>
             </div>
             <p className="text-xs sm:text-sm text-slate-300 max-w-xl leading-relaxed">{t('transparency.page_description')}</p>
@@ -458,7 +458,7 @@ export default function Transparency() {
         <>
           {/* ── Primary KPI Summary: Balanced responsive grid (P3 fixed) ──── */}
           <section aria-label="Indicadores Financeiros Principais">
-            <h2 className="sr-only">Resumo de Indicadores Financeiros</h2>
+            <h2 className="sr-only">{t('transparency.aria.kpi_summary')}</h2>
             <div
               className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4"
               data-testid="kpi-grid"
@@ -516,13 +516,13 @@ export default function Transparency() {
 
           {/* ── P2: Intuitive Sub-Navigation Hub (Sticky Tab Bar) ─────────── */}
           <nav
-            aria-label="Navegação de Transparência"
+            aria-label={t('transparency.aria.nav')}
             className="sticky top-14 md:top-20 z-20 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 py-3 bg-slate-950/90 backdrop-blur-md border-y border-slate-800 shadow-md"
           >
             <div
               ref={tabListRef}
               role="tablist"
-              aria-label="Seções do Portal de Transparência"
+              aria-label={t('transparency.aria.sections')}
               className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar scroll-smooth"
             >
               {tabsList.map((tab, idx) => {

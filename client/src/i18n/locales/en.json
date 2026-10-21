@@ -223,7 +223,8 @@
       "skipToContent": "Skip to legal content",
       "backToHome": "Home",
       "scrollToTop": "Back to top",
-      "readCookiePolicy": "Read Cookie Policy"
+      "readCookiePolicy": "Read Cookie Policy",
+      "translationNotice": ""
     },
     "footer": {
       "description": "Public legal information for BlockMiner users and visitors.",
@@ -692,7 +693,10 @@
       "shortlink_message": "You left the shortlink step, so the timer stopped. It will continue from where it left off.",
       "youtube_message": "You left the YouTube page, so the timer stopped. It will continue from where it left off.",
       "autoMining_message": "You left Auto Mining, so the timer stopped. It will continue from where it left off."
-    }
+    },
+    "load_more": "Load more",
+    "all": "All",
+    "clear": "Clear"
   },
   "feature_gate": {
     "unavailable": "This page is not available."
@@ -769,7 +773,9 @@
       "forgot": "Forgot?",
       "create_account": "Register Now",
       "or": "or",
-      "email_placeholder": "your@email.com"
+      "email_placeholder": "your@email.com",
+      "two_factor_label": "2FA code",
+      "two_factor_email_label": "Email code"
     },
     "register": {
       "title": "Create your free account",
@@ -833,7 +839,9 @@
       "reset_submit": "Reset password",
       "email_placeholder": "you@email.com",
       "new_password_placeholder": "At least 8 characters",
-      "confirm_password_placeholder": "Repeat the new password"
+      "confirm_password_placeholder": "Repeat the new password",
+      "new_password": "New password",
+      "confirm_password": "Confirm new password"
     },
     "verifyEmail": {
       "title": "Confirm email",
@@ -845,11 +853,22 @@
       "banner_body": "Confirm your email to unlock withdrawals and chat.",
       "banner_resend": "Resend email",
       "banner_sent": "Email resent! Check your inbox."
+    },
+    "client_errors": {
+      "gateway_busy": "The server is temporarily unavailable. This is not a problem with your password — try signing in again in a few seconds.",
+      "network": "Could not connect to the server. Check your internet connection and try again.",
+      "timeout": "The server took too long to respond. Wait a few seconds and try signing in again.",
+      "login_failed": "Could not sign in. Check your details and try again.",
+      "session_check_failed": "We could not verify your session right now. Please try again.",
+      "register_failed": "Sign-up failed. Please try again."
     }
   },
   "sidebar": {
     "dashboard": "Dashboard",
     "machines": "My Machines",
+    "parts": "Parts",
+    "parts_merge": "Parts & Merge",
+    "merge": "Merge",
     "vault": "Vault",
     "shop": "Shop",
     "offers": "Popular Offers",
@@ -907,7 +926,6 @@
   "taxes": {
     "title": "Taxes & Fees",
     "coming_soon_desc": "A transparent tax and fee system is coming to BlockMiner. Here you will be able to track energy costs, upcoming charges, and your full fee history.",
-    "page_subtitle": "Track the Energy Tax on your mining — pay daily at 5% or wait until Monday for 15%.",
     "planned_features": "Planned features",
     "feature_energy_tax": "Energy Tax",
     "feature_energy_tax_desc": "5% if you pay every day (15% if you leave it for Monday) on your last 7 days of rewards.",
@@ -920,7 +938,7 @@
       "header_title": "Energy Tax",
       "header_subtitle": "15% on your POL mining rewards from the last 7 days — or just 5% if you pay manually every day. Pay early and save 10%.",
       "starts_in_title": "Starts on {{date}}",
-      "starts_in_body": "The Energy Tax goes live on <strong>{{datetime}}</strong> (Brasília time, Jun 29 at 9 PM).",
+      "starts_in_body": "The Energy Tax goes live on <strong>{{datetime}}</strong> (UTC).",
       "starts_in_countdown": "Starts in <strong>{{remaining}}</strong> — no charges until then. You can preview the simulation below.",
       "bill_header": "Savings simulation",
       "bill_daily_label": "Paying every day (5% total for the week)",
@@ -938,8 +956,8 @@
       "pay_button_pay": "Pay {{amount}} now",
       "pay_button_formula": "Base: {{rewards}} POL mined yesterday × 0.7143% = {{charge}} POL",
       "pay_already_settled": "Energy tax for mined day {{day}} is already settled.",
-      "pay_tomorrow_hint": "Current period mining ({{rewards}} POL) can be paid after {{hour}}:00 BRT (~{{charge}} POL).",
-      "server_clock": "Server (BRT): {{datetime}}",
+      "pay_tomorrow_hint": "Current period mining ({{rewards}} POL) can be paid after {{hour}}:00 UTC (~{{charge}} POL).",
+      "server_clock": "Server (UTC): {{datetime}}",
       "week_status_header": "Last 7 days status",
       "week_status_order_hint": "← older · today →",
       "week_status_paid_count": "{{paid}}/7 days paid",
@@ -985,11 +1003,11 @@
       "loading": "Loading energy tax…",
       "how_title": "How it works",
       "how_step1_title": "Base calculation",
-      "how_step1_desc": "We count all your POL mining rewards from the last 7 days (Monday to Sunday, Brasília time). The tax is applied to that total.",
+      "how_step1_desc": "We count all your POL mining rewards from the last 7 days (Monday to Sunday, UTC). The tax is applied to that total.",
       "how_step2_title": "Choose your rate",
       "how_step2_desc": "If you pay manually all 7 days of the week, your total weekly tax is just 5%. That's about 0.71% per day (5% ÷ 7). Pay early, pay less — those who let it pile up pay 3× more.",
       "how_step3_title": "Automatic charge (the penalty)",
-      "how_step3_desc": "Every Monday at 9 PM BRT, any day without manual payment is auto-charged at 2.14% of that day's mining (15% weekly total). Waiting until Monday costs 3× more than paying daily.",
+      "how_step3_desc": "Every Monday from 00:00 UTC, any day without manual payment is auto-charged at 2.14% of that day's mining (15% weekly total). Waiting until Monday costs 3× more than paying daily.",
       "bill_rate_note": "{{rate}}% of total rewards — {{label}}"
     },
     "recovery": {
@@ -1414,11 +1432,13 @@
     "edit_valid_from": "Valid from",
     "edit_valid_until": "Valid until",
     "edit_is_active": "Task active",
-    "edit_sort_order": "Display order"
+    "edit_sort_order": "Display order",
+    "create_desc": "Set goals, reset cadence and rewards for players.",
+    "presets": "Quick templates (auto-fill)",
+    "btn_create": "Create task"
   },
   "miniPass": {
     "title": "Mini Pass",
-    "subtitle": "Seasonal missions, XP tiers, and exclusive rewards",
     "no_seasons": "No visible season right now.",
     "back": "All seasons",
     "level_label": "Level",
@@ -1482,7 +1502,6 @@
     "empty": "No tasks are configured right now.",
     "load_error_body": "We could not load tasks from the server. Check your connection, refresh the page, or sign in again if your session expired.",
     "retry": "Try again",
-    "subtitle": "Complete objectives on a daily, weekly, or monthly schedule and claim rewards. Every task stays visible below; shortcut buttons only scroll to each group.",
     "period_label": "Today",
     "period": "Period",
     "earliest_reset": "Earliest next reset",
@@ -1500,7 +1519,7 @@
       "MONTHLY": "Monthly"
     },
     "progress": "{{current}} / {{target}}",
-    "claim": "Claim reward",
+    "claim": "Collect",
     "claiming": "Claiming…",
     "status": {
       "available": "Available",
@@ -1511,7 +1530,8 @@
     "reward": {
       "blk": "+{{amount}} BLK",
       "pol": "+{{amount}} POL",
-      "hashrate": "+{{hashRate}} H/s for {{days}}d"
+      "hashrate_one": "+{{hashRate}} H/s for {{count}} day",
+      "hashrate_other": "+{{hashRate}} H/s for {{count}} days"
     },
     "claim_ok": "Reward claimed",
     "errors": {
@@ -1525,16 +1545,35 @@
     },
     "tasks": {
       "login": "Check in for this period (confirm your check-in)",
-      "mine_blk": "Earn {{target}} BLK from the BLK time pool this period",
-      "play_games": "Win {{target}} mini-games this period",
-      "watch_youtube": "Claim {{target}} YouTube watch reward this period",
-      "internal_offerwall": "Complete {{target}} internal offerwall task(s) this period",
-      "custom": "Custom objective"
-    }
+      "mine_blk": "Earn {{target}} BLK mining this period",
+      "play_games_one": "Win {{count}} mini-game this period",
+      "play_games_other": "Win {{count}} mini-games this period",
+      "watch_youtube_one": "Claim {{count}} YouTube reward this period",
+      "watch_youtube_other": "Claim {{count}} YouTube rewards this period",
+      "internal_offerwall_one": "Complete {{count}} internal offerwall task this period",
+      "internal_offerwall_other": "Complete {{count}} internal offerwall tasks this period",
+      "custom": "Custom objective",
+      "checkin_one": "Check in {{count}} time this period",
+      "checkin_other": "Check in {{count}} times this period",
+      "faucet_one": "Claim the Faucet {{count}} time this period",
+      "faucet_other": "Claim the Faucet {{count}} times this period",
+      "shortlinks_one": "Complete {{count}} shortlink this period",
+      "shortlinks_other": "Complete {{count}} shortlinks this period",
+      "offers_one": "Complete {{count}} offerwall offer this period",
+      "offers_other": "Complete {{count}} offerwall offers this period",
+      "auto_mining_one": "Claim {{count}} Auto Mining reward this period",
+      "auto_mining_other": "Claim {{count}} Auto Mining rewards this period",
+      "merge_one": "Complete {{count}} merge this period",
+      "merge_other": "Complete {{count}} merges this period",
+      "burn_one": "Claim {{count}} burn this period",
+      "burn_other": "Claim {{count}} burns this period",
+      "referrals_one": "Get {{count}} qualified referral this period",
+      "referrals_other": "Get {{count}} qualified referrals this period"
+    },
+    "preview_notice": "Tasks in test on the development environment: you can collect and the tournament counts it, but no reward is paid."
   },
   "readEarn": {
     "title": "Read & Earn",
-    "subtitle": "Open partner articles, find the secret code, and claim rewards once per campaign.",
     "load_error": "Could not load campaigns.",
     "empty": "No active partner campaigns right now. Check back soon.",
     "read_article": "Read article",
@@ -1609,7 +1648,6 @@
   },
   "internalOfferwallPage": {
     "title": "internal offerwall",
-    "subtitle": "Complete BlockMiner-managed partner tasks. Rewards are credited in BLK.",
     "disabled": "This section is temporarily unavailable.",
     "load_error": "Could not load offers.",
     "empty": "No partner tasks are available right now. Check back later.",
@@ -1640,7 +1678,7 @@
     "daily_limit": "You reached today's limit for this offer.",
     "usage_progress": "{{completed}} / {{max}} completed",
     "daily_reset_title": "Daily reset · {{date}} (UTC)",
-    "daily_reset_body": "Daily-limited offers reset at midnight Brasília time — not at 00:00 UTC like PTC.",
+    "daily_reset_body": "Daily-limited offers reset at midnight UTC (00:00 UTC), same as PTC.",
     "daily_reset_next": "Next reset in",
     "available_in": "Available in {{time}}",
     "errors": {
@@ -1694,7 +1732,7 @@
     "form_min_view": "Minimum seconds on page",
     "form_max_executions": "Max executions per period (per user)",
     "form_reset_type": "Limit reset type",
-    "form_reset_daily": "Daily (Brazil calendar day)",
+    "form_reset_daily": "Daily (UTC calendar day)",
     "form_reset_cooldown": "Rolling cooldown window",
     "form_cooldown_seconds": "Cooldown window (seconds)",
     "form_reward_kind": "Reward kind",
@@ -1729,7 +1767,16 @@
     "validation_reward_hr_positive": "Hashrate reward must be a positive number.",
     "validation_reward_days_range": "Hashrate days must be between 1 and 365.",
     "validation_action_line_too_long": "Each required action line must be at most 500 characters.",
-    "validation_country_iso2": "Country codes must be ISO 3166-1 alpha-2 (two letters), comma or space separated."
+    "validation_country_iso2": "Country codes must be ISO 3166-1 alpha-2 (two letters), comma or space separated.",
+    "host_deactivated": "Host deactivated",
+    "saved": "Offer updated",
+    "created": "Offer created",
+    "toggled": "Status updated",
+    "approve_ok": "Approved",
+    "reject_ok": "Rejected",
+    "offers_section": "Offers",
+    "review_section": "Review queue",
+    "frame_hosts_section": "Allowed iframe hosts (CSP frame-src)"
   },
   "dashboard_crypto_stream": {
     "title": "BlockMiner — Crypto dashboard",
@@ -1745,7 +1792,6 @@
   },
   "support_tickets": {
     "title": "Support",
-    "subtitle": "Open a ticket and chat with our team in real time.",
     "refresh": "Refresh",
     "new_ticket": "New ticket",
     "list_heading": "Your tickets",
@@ -1932,7 +1978,6 @@
   },
   "dashboard": {
     "welcome": "Welcome, {{name}}",
-    "subtitle": "Your mining operation is active. Track next block rewards in real-time.",
     "balance": "Your Balance",
     "speed": "Your Speed",
     "network_power": "Network Power",
@@ -1959,27 +2004,28 @@
     "activity_cta": "Earn more today",
     "real_time_earnings": "Real-time Earnings",
     "mining_allocation_title": "Mining allocation",
-    "mining_allocation_description": "Split your hashrate between POL and SHIB. BLK is coming soon. Changes apply from the next block.",
+    "mining_allocation_description": "Split your hashrate between POL and SHIB, or mine BLK (0.5 BLK/day). Changes apply from the next block.",
     "mining_allocation_pol_label": "POL",
     "mining_allocation_shib_label": "SHIB",
     "mining_allocation_blk_label": "BLK",
-    "mining_allocation_blk_soon": "Coming soon",
-    "mining_allocation_blk_soon_hint": "BLK mining is not active yet — for now the split is only between POL and SHIB.",
+    "mining_allocation_blk_soon": "Active",
+    "mining_allocation_blk_soon_hint": "Daily pool of 0.5 BLK (~0.0035 BLK per block, 144 blocks/day).",
     "mining_allocation_applies_next_block": "Applied on next block",
     "mining_allocation_estimated_pol": "POL block",
     "mining_allocation_estimated_shib": "SHIB block",
+    "mining_allocation_estimated_blk": "BLK block",
     "mining_allocation_saving": "Saving…",
     "mining_allocation_saved": "Allocation updated",
     "mining_allocation_save_failed": "Failed to save allocation",
     "mining_allocation_edit_split": "Edit split",
     "mining_allocation_modal_title": "Split mining power",
-    "mining_allocation_modal_description": "Set the hashrate percentage for each coin. POL + SHIB must total 100%.",
+    "mining_allocation_modal_description": "Set the hashrate destination for your rigs: mine the BLK token or split between POL and SHIB.",
     "mining_allocation_modal_hint": "Values are rounded to the nearest 5% on save.",
     "mining_allocation_modal_cancel": "Cancel",
     "mining_allocation_modal_save": "Save split",
     "mining_allocation_modal_error_invalid": "Enter valid numbers.",
     "mining_allocation_modal_error_range": "Each value must be between 0 and 100.",
-    "mining_allocation_modal_error_sum": "POL + SHIB must equal exactly 100%.",
+    "mining_allocation_modal_error_sum": "POL + SHIB must equal exactly 100% (or 100% BLK).",
     "balance_shib_label": "SHIB Balance",
     "affiliate_description": "Invite friends and earn lifetime mining bonuses on every block they mine.",
     "affiliate_active_referrals": "Active Referrals",
@@ -2044,7 +2090,6 @@
   },
   "shop": {
     "title": "Expand your Operation",
-    "subtitle": "Purchase state-of-the-art equipment and increase your HashRate to mine blocks more efficiently.",
     "power": "Power",
     "investment": "Investment",
     "est_return": "Est. Return",
@@ -2085,11 +2130,14 @@
     "rack_badge": "Rack",
     "miners_section_title": "Miners",
     "fan_badge": "Cooling",
-    "sales_opens_at": "Sales open on"
+    "sales_opens_at": "Sales open on",
+    "loading_error": "No equipment available.",
+    "invalid_miner": "This equipment is not available for purchase.",
+    "invalid_quantity": "Invalid quantity."
   },
   "fans": {
     "cooling_system_name": "Cooling system",
-    "cooling_system_desc": "Fan tray — install under a rack in inventory.",
+    "cooling_system_desc": "Cooling system — install under a rack in inventory to grant +1% bonus to all mining power on that rack.",
     "purchase_success": "Purchase successful!",
     "purchase_success_detail": "{{count}} cooling system(s) added to your inventory!",
     "errors": {
@@ -2121,7 +2169,6 @@
   },
   "inventory": {
     "title": "Mining Room",
-    "subtitle": "Manage your equipment and maximize your HashRate.",
     "active_machines": "ACTIVE MACHINES",
     "in_inventory": "IN INVENTORY",
     "expires": "Expires",
@@ -2266,6 +2313,9 @@
     "fan_no_credits": "You have no fans available. Buy them in the shop or offers.",
     "rack_no_credits": "You have no racks available. Buy them in the shop or offers.",
     "fan_need_rack": "Place a rack before the fan.",
+    "fan_bonus_tooltip": "Active cooling system: +1% bonus on machines in this rack (+{{bonus}}).",
+    "fan_bonus_total_tooltip": "Total active cooling bonus: +{{bonus}} added to room hashrate.",
+    "fan_active_status": "Cooling active (+1%)",
     "drag_fan_aria": "Drag fan",
     "rack_picker_title": "Choose a rack",
     "rack_picker_hint": "Select a stored rack to place on this spot.",
@@ -2288,7 +2338,6 @@
     "maintenance_btn_reload": "Refresh Page",
     "hero_wallet": "Wallet",
     "hero_terminal": "Terminal",
-    "hero_subtitle": "Secure Web3 financial operations",
     "network_status": "Network status",
     "network_polygon": "Polygon",
     "ledger_title": "Ledger analytics",
@@ -2475,7 +2524,14 @@
       "link_failed": "Failed to link wallet.",
       "unlink_failed": "Unable to unlink wallet.",
       "wallet_linked_success": "Wallet linked successfully!",
-      "wallet_unlinked": "Wallet unlinked."
+      "wallet_unlinked": "Wallet unlinked.",
+      "loading_wallet": "Loading wallet…",
+      "wallet_linked": "Linked",
+      "change_wallet": "Change wallet",
+      "unlink_wallet": "Unlink",
+      "linking_wallet": "Linking…",
+      "save_link_wallet": "Save / link wallet",
+      "connect_browser_wallet": "Connect wallet"
     },
     "express_mode_note": "EXPRESS: Link your wallet to sign transfers on Polygon. Balance updates after {{n}} block confirmations.",
     "shib": {
@@ -2547,11 +2603,14 @@
       "you_receive": "You receive",
       "network_protocol_fee": "Network protocol fee",
       "gas_covered": "Gas Covered by Pool"
-    }
+    },
+    "connect_required": "Please connect your wallet first.",
+    "switch_network": "Please switch to the Polygon network.",
+    "tx_avatar_license": "Profile photo license ({{unit}})",
+    "tx_fan_purchase": "Cooling purchase ({{unit}})"
   },
   "faucet": {
     "title": "Power Faucet",
-    "subtitle": "Earn temporary mining power every 60 minutes. Complete the partner step to unlock your bonus.",
     "loading": "Loading faucet…",
     "reward_permanent": "Never expires",
     "reward_temporary": "Temporary power · {{duration}}",
@@ -2582,7 +2641,6 @@
   },
   "shortlinks": {
     "title": "Shortlinks",
-    "subtitle": "Complete shortened links to earn extra mining power.",
     "verified_links": "Verified Links",
     "reward": "Reward",
     "status_label": "Status",
@@ -2602,7 +2660,6 @@
     "what_is_shortlink": "What are Shortlinks?",
     "shortlink_msg": "Shortlinks are third-party links that generate revenue for the pool, allowing us to distribute free miners. You must pass through some verification pages (captchas) to complete the link. Upon completion, mining power is added instantly to your inventory.",
     "step_title": "Verification step {{step}} of {{total}}",
-    "step_subtitle": "Unique URL validation active",
     "step_syncing": "Synchronizing connection...",
     "step_verified": "Protocol verified",
     "step_continue": "Continue to next page",
@@ -2653,7 +2710,6 @@
     "title": "Check-in",
     "offchain_without_wallet_hint": "Wallet is optional. You can check in with in-game POL, or link a wallet for on-chain payment.",
     "subtitle": "One daily check-in: pay 0.03 POL from your in-game balance (instant, no gas). No external wallet.",
-    "subtitle_balance_only": "One daily check-in: pay 0.03 POL from your in-game balance (instant, no gas). Simple, no external wallet needed.",
     "claim_button": "Claim Daily Reward",
     "claimed": "Already Claimed",
     "claimed_period": "Already claimed for this period",
@@ -2747,6 +2803,10 @@
         "unknown": {
           "title": "Day {{day}} reward",
           "description": "Special check-in reward."
+        },
+        "blk": {
+          "title": "{{amount}} BLK — day {{day}}",
+          "description": "BLK bonus credited from your check-in streak."
         }
       }
     },
@@ -2770,7 +2830,7 @@
       "daily": "Daily",
       "daily_hint": "One check-in per calendar day (America/São Paulo). Builds your streak.",
       "weekly": "Weekly",
-      "weekly_hint": "One check-in per ISO week (Monday–Sunday, Brazil calendar date).",
+      "weekly_hint": "One check-in per ISO week (Monday–Sunday, UTC calendar date).",
       "monthly": "Monthly",
       "monthly_hint": "One check-in per calendar month (America/São Paulo)."
     },
@@ -2828,7 +2888,10 @@
       "current_streak": "Current streak: {{days}} days",
       "longest_streak": "Longest streak: {{days}} days",
       "streak_reset_warning": "Missing a day will reset your streak to 0"
-    }
+    },
+    "sending_tx": "Sending transaction...",
+    "confirming_tx": "Confirming transaction on the blockchain...",
+    "milestone_reward_blk": "{{value}} BLK"
   },
   "powerBoost": {
     "title": "Power Boost — 7-Day Rewards",
@@ -2870,7 +2933,6 @@
     "docs": {
       "title": "Power Boost — Documentation",
       "back": "Back to Taxes & Fees",
-      "intro": "Everything you need to know about the 7-day premium reward benefit.",
       "duration_title": "Duration by system",
       "examples_title": "Examples",
       "example_today": "Today → paid → everything earned today lasts 7 days.",
@@ -2887,7 +2949,6 @@
   },
   "powerStats": {
     "title": "Statistics & Power",
-    "subtitle": "Professional account dashboard: quick summary, earnings, power, and details organized by tabs.",
     "refresh": "Refresh",
     "export_csv": "Export CSV",
     "load_error": "Could not load power statistics. Try again.",
@@ -2904,6 +2965,40 @@
       "overview": "Overview",
       "temporary": "Temporary",
       "calculator": "Calculator"
+    },
+    "history_log": {
+      "title": "Account Activity Log",
+      "subtitle": "Check all actions performed on your account in real time with search and filters.",
+      "search_placeholder": "Search by action, machine, video, amount or details...",
+      "cat_all": "All",
+      "cat_machines": "Machines & Racks",
+      "cat_finance": "Wallet & Fees",
+      "cat_games": "Games",
+      "cat_account": "Account",
+      "col_datetime": "Date / Time",
+      "col_category": "Category",
+      "col_activity": "Action & Details",
+      "col_ip": "Origin",
+      "empty_title": "No activities found",
+      "empty_desc": "There are no recent activity logs for the selected category.",
+      "empty_search": "No results matched your search. Try different keywords or clear the filter.",
+      "showing": "Showing",
+      "per_page": "Per page:",
+      "export_csv": "Export log as CSV",
+      "cat_purchases": "Purchases",
+      "cat_youtube": "YouTube",
+      "cat_faucet": "Faucet",
+      "cat_shortlinks": "Shortlinks",
+      "cat_ptc": "PTC",
+      "cat_offerwall": "Offerwall",
+      "cat_auto_mining": "Auto Mining",
+      "cat_checkin": "Check-in",
+      "cat_boosts": "Boosts & Rewards",
+      "cat_general": "Other",
+      "period_label": "Period",
+      "period_1d": "24h",
+      "period_7d": "7 days",
+      "period_30d": "30 days"
     },
     "dashboard": {
       "financial_summary": "Financial summary",
@@ -3107,13 +3202,14 @@
       "games": "Minigames",
       "checkin_bonus": "Check-in bonus",
       "youtube": "YouTube",
-      "auto_mining": "Auto Mining"
+      "auto_mining": "Auto Mining",
+      "cooling": "Cooling",
+      "shortlinks": "Shortlinks"
     },
     "charts_loading": "Loading charts"
   },
   "youtube": {
     "title": "YouTube Rewards",
-    "subtitle": "Watch videos from our community and earn HashRate or POL.",
     "watch_button": "Watch and Earn",
     "watching": "Watching...",
     "claim": "Claim Reward",
@@ -3174,7 +3270,6 @@
   },
   "offers": {
     "title": "Offers and Events",
-    "subtitle": "Limited offers and events for miners and equipment.",
     "empty": "No active offers right now. Check back soon.",
     "live": "Live",
     "coming_soon": "Coming soon",
@@ -3217,7 +3312,6 @@
   },
   "calculator": {
     "title": "Earnings Calculator",
-    "subtitle": "Estimate your earnings based on hash rate and current network",
     "auto_banner_title": "Your inventory data detected",
     "auto_banner_desc": "Current hash rate: {{hashRate}} · Network: {{networkRate}}",
     "auto_fill_btn": "Fill automatically",
@@ -3477,7 +3571,6 @@
   "autoMiningGpuPage": {
     "loading": "Syncing session…",
     "title": "Auto Mining GPU",
-    "subtitle": "Earn temporary hashrate every minute. The server validates timing — keep this page open for best results.",
     "secure_badge": "Server-validated session",
     "mode_title": "Mining mode",
     "mode_hint": "Choose once per session. Stop the session to change mode.",
@@ -3550,7 +3643,6 @@
   },
   "transparency": {
     "page_title": "Transparency Portal",
-    "page_subtitle": "BlockMiner — Operational costs and investments",
     "page_description": "All site expenses open to the community: infrastructure, tooling, marketing and where money is invested.",
     "badge_title": "100% Transparent",
     "badge_updated": "Updated: {{date}}",
@@ -3815,9 +3907,61 @@
       "deprecated_badge": "Deactivated — No longer in use",
       "deprecated_description": "This wallet has been retired. Deposits to this address are no longer processed. Please use only the current active deposit address shown on the platform.",
       "off_chain_badge": "Off-chain",
-      "manual_value_label": "Declared value"
+      "manual_value_label": "Declared value",
+      "liquid_balance": "Liquid balance",
+      "active_lps": "Active LPs",
+      "wallet_label": "Wallet"
     },
-    "wallet_link": "Wallet"
+    "wallet_link": "Wallet",
+    "ai_models": {
+      "title": "3D AI models & infrastructure",
+      "badge_interactive": "Interactive .GLB",
+      "active_subscription": "Active subscription",
+      "monthly_subscription": "Monthly subscription",
+      "per_month": "/month",
+      "audited": "Audited in the balance sheet",
+      "loading_3d": "Loading 3D...",
+      "controls_hint": "Drag to rotate in 3D · scroll to zoom",
+      "download_glb": "Download .glb",
+      "items": {
+        "claude": {
+          "name": "Claude Code (Clawd)",
+          "category": "AI tools",
+          "description": "Clawd — the official Claude Code mascot by Anthropic, in 3D. AI used for BlockMiner development, security testing and architecture.",
+          "tags": [
+            "Clawd 3D mascot",
+            "Claude 3.7 Sonnet",
+            "Anthropic PBC"
+          ]
+        },
+        "gemini": {
+          "name": "Gemini Pro",
+          "category": "AI tools",
+          "description": "Google's multimodal AI, used for reasoning support, prototyping, automation and designing the platform's assets.",
+          "tags": [
+            "Gemini 1.5 Pro",
+            "Google LLC",
+            "Multimodal AI"
+          ]
+        },
+        "contabo": {
+          "name": "Cloud VPS server",
+          "category": "Infrastructure",
+          "description": "High-capacity cloud server instance dedicated to running the Node.js backend, Docker containers, the PostgreSQL database and Redis.",
+          "tags": [
+            "Cloud VPS hosting",
+            "Contabo datacenter",
+            "99.9% uptime"
+          ]
+        }
+      }
+    },
+    "aria": {
+      "monthly_distribution": "Monthly distribution values",
+      "nav": "Transparency navigation",
+      "sections": "Transparency portal sections",
+      "kpi_summary": "Financial indicators summary"
+    }
   },
   "adminCheckinMilestones": {
     "title": "Check-in — Streak milestones",
@@ -3868,7 +4012,6 @@
   },
   "vault": {
     "title": "Miner Vault",
-    "subtitle": "Securely store your miners away from the main interface.",
     "nav_back_mining_room": "Back to Mining Room",
     "empty_cta": "Go to Mining Room",
     "machine_status_vault": "In vault",
@@ -4096,12 +4239,19 @@
       "complete_pass_pol": "Complete Pass Price (POL)",
       "complete_pass_hint": "Cost in POL to purchase all remaining levels at once.",
       "is_active": "Season Active",
-      "is_active_hint": "Enables visibility and participation for players."
+      "is_active_hint": "Enables visibility and participation for players.",
+      "starts_at": "Start",
+      "starts_hint": "When the season opens to players.",
+      "ends_at": "End",
+      "ends_hint": "When the season closes; progress stops counting."
     },
     "placeholders": {
       "slug": "e.g. season-1-cyber",
       "season_title": "Season title...",
-      "subtitle": "Informative subtitle..."
+      "subtitle": "Informative subtitle...",
+      "reward_title_locale": "Title in this language",
+      "mission_title": "E.g.: Play 5 Arcade games",
+      "mission_description": "Clear instructions for the player..."
     },
     "locale": {
       "en": "English (EN)",
@@ -4163,7 +4313,28 @@
       "col_title": "Title",
       "col_sort": "Order",
       "col_actions": "Actions",
-      "empty": "No rewards configured for this season."
+      "empty": "No rewards configured for this season.",
+      "add_title": "Add level reward",
+      "form_help": "Pick the level and the reward type; the fields below change with the type.",
+      "payload_heading": "Reward content",
+      "shop_miner_id": "Shop miner ID",
+      "shop_miner_hint": "ID of the miner in the Shop catalog.",
+      "event_miner_id": "Event miner ID",
+      "event_miner_hint": "ID of the event-exclusive miner.",
+      "hash_rate": "Hashrate (H/s)",
+      "hash_rate_hint": "Temporary power added to the player profile.",
+      "hash_days": "Duration (days)",
+      "hash_days_hint": "How many days the hashrate stays active.",
+      "blk_amount": "BLK amount",
+      "pol_amount": "POL amount",
+      "token_amount_hint": "Amount credited to the player balance.",
+      "optional_titles": "Titles (optional)",
+      "optional_titles_hint": "Displayed reward name per language; empty uses the default name.",
+      "add_button": "Save reward",
+      "table_level": "Level",
+      "table_kind": "Type",
+      "table_amount": "Reward",
+      "table_actions": "Actions"
     },
     "reward_kinds": {
       "NONE": "No Reward",
@@ -4211,7 +4382,20 @@
       "col_title": "Title",
       "col_sort": "Order",
       "col_actions": "Actions",
-      "empty": "No missions configured for this season."
+      "empty": "No missions configured for this season.",
+      "form_title": "Add mission",
+      "form_help": "Set the rule, goal and XP; then write the title the player will see.",
+      "group_rules": "Rule",
+      "group_numbers": "Numbers",
+      "xp_hint": "XP granted when the goal is completed.",
+      "sort_hint": "Order in the mission list (lowest first).",
+      "group_copy": "Copy",
+      "titles_required": "Titles (required)",
+      "titles_field_hint": "Fill in at least one language.",
+      "descriptions_optional": "Descriptions (optional)",
+      "descriptions_field_hint": "Extra instructions shown below the title.",
+      "add_button": "Save mission",
+      "line_meta": "Goal {{target}} · {{xp}} XP"
     },
     "cadences": {
       "EVENT": "Entire Season (Once)",
@@ -4257,7 +4441,12 @@
       "mission_game_slug_format": "Invalid game slug.",
       "mission_xp_range": "Mission XP must be between 1 and 1,000,000.",
       "mission_description_en_required": "English description is required when description is provided."
-    }
+    },
+    "warnings": {
+      "missing_reward_levels_one": "{{count}} level still has no reward.",
+      "missing_reward_levels_other": "{{count}} levels still have no reward."
+    },
+    "delete": "Delete"
   },
   "inventario": {
     "title": "Inventory",
@@ -4269,7 +4458,6 @@
     "install_cta": "Install in Rack",
     "load_error": "Failed to load inventory.",
     "inbox_title": "Reward Inbox",
-    "inbox_subtitle": "Collect here; machines go to My Machines (Mining Room)",
     "pending_count": "{{count}} pending reward(s)",
     "collect_all": "Collect All",
     "collect": "Collect",
@@ -4293,7 +4481,6 @@
   },
   "zerads": {
     "title": "Zerads PTC",
-    "subtitle": "Click ads and earn BLK",
     "how_it_works_title": "How it works",
     "how_it_works_body": "Open the Zerads PTC page, click ads, and BLK rewards are automatically credited to your account within ~5 minutes.",
     "exchange_rate": "{{rate}} BLK per click — rewards credited automatically every ~5 minutes.",
@@ -4323,7 +4510,6 @@
   },
   "moneyrain": {
     "title": "MoneyRain",
-    "subtitle": "Watch ads and complete offers to earn BLK",
     "how_it_works_body": "Open the MoneyRain ads page, watch/complete offers, and rewards are automatically credited in BLK (0.0005 BLK per click) after confirmation.",
     "start_earning": "Open MoneyRain & Earn",
     "credits_delay_note": "Credit is processed automatically right after the offer is confirmed.",
@@ -4349,7 +4535,6 @@
     "back": "Back to Offerwall"
   },
   "offerwall": {
-    "subtitle": "Earn BLK with ads and external offers",
     "panel": {
       "back": "Back to Offerwall",
       "tab_stats": "Statistics",
@@ -4396,7 +4581,6 @@
       "history_recent_one": "Last {{count}}",
       "history_recent_other": "Last {{count}}",
       "back": "Back to Offerwall",
-      "tagline": "Complete offers and earn BLK — 0.0005 BLK per offer",
       "new_tab": "New tab",
       "stat_total_usd": "Total USD",
       "stat_total_pol": "Total BLK",
@@ -4446,7 +4630,6 @@
     "multiwall": {
       "back": "Back to Offerwall",
       "loading": "Opening Multiwall Ads…",
-      "tagline": "Offerwall PRO offers",
       "maintenance_badge": "Maintenance",
       "maintenance_msg": "Multiwall Ads is temporarily under maintenance. Back soon.",
       "tab_stats": "Statistics",
@@ -4473,8 +4656,7 @@
     },
     "offerwallgg": {
       "back": "Back to Offerwall",
-      "loading": "Opening Offerwall.GG…",
-      "tagline": "Offerwall.GG offers"
+      "loading": "Opening Offerwall.GG…"
     },
     "access": "Open"
   },
@@ -4482,7 +4664,6 @@
     "header": {
       "title": "Tournaments",
       "titleWithCategory": "Tournaments · {{category}}",
-      "subtitle": "Compete, climb the ranks, and earn rewards",
       "back": "Back",
       "refresh": "Refresh",
       "loading": "Loading tournaments..."
@@ -4492,9 +4673,14 @@
       "deposit": "Deposit",
       "mining": "Mining",
       "activity": "Activity",
+      "youtube": "YouTube",
+      "referral": "Referrals",
       "engagement": "Engagement",
       "games": "Minigames",
-      "other": "Other"
+      "other": "Other",
+      "forge": "Forge",
+      "burn": "Burn",
+      "tasks": "Tasks"
     },
     "types": {
       "DAILY": "Daily",
@@ -4518,7 +4704,10 @@
       "SHORTLINK": "Shortlinks completed",
       "AUTO_MINING": "Auto-Mining sessions",
       "ALL_ACTIVITIES": "All Activities (General)",
-      "YOUTUBE": "YouTube Rewards"
+      "YOUTUBE": "YouTube Rewards",
+      "REFERRALS": "Qualified Referrals",
+      "MERGES": "Forge points",
+      "BURNS": "Hashrate burned"
     },
     "scores_live_hint": "Auditable totals · only events inside the UTC period below",
     "period_utc": "UTC period: {{start}} → {{end}}",
@@ -4530,10 +4719,20 @@
     "activity_auto_mining": "Auto-Mining",
     "activity_minigames": "Minigames",
     "activity_youtube": "YouTube",
+    "activity_youtube_points": "+1 pt / claim (no cap)",
     "activity_checkin": "Daily Check-in",
     "activity_tasks": "Daily Tasks",
     "activity_offers_ptc": "Offers & PTC",
     "offerwall_scoring_hint": "Every number is real and auditable: internal offer = 1, credited OfferwallMe = 1, Zerads PTC click = 1 (max {{max}}/UTC day).",
+    "youtube_scoring_title": "How the YouTube tournament scores",
+    "youtube_scoring_hint": "Each video claim is +1 point, including after the daily 1,000 H/s cap. The cap only limits mining power until midnight UTC; points keep counting here and in the General Tournament.",
+    "youtube_scoring_hint_short": "1 claim = 1 point, even after the 1,000 H/s cap. The cap never stops tournament points.",
+    "referral_scoring_title": "How the Referral Tournament scores",
+    "referral_scoring_hint": "Each referred friend who verifies their email and completes at least 10 real activities across the platform qualifies as an active referral and awards exactly +1 point in the tournament.",
+    "referral_scoring_hint_short": "1 qualified referral = 1 point · email verified + 10 activities · UTC window",
+    "referral_anti_fraud_note": "Anti-fraud protection active: self-referrals, shared network/devices, botnets, and VPN signups are disqualified automatically.",
+    "referrals_total": "Qualified referrals",
+    "referrals_column": "Valid referrals",
     "minigame_scoring_title": "How scoring works",
     "minigame_scoring_hint": "Only successfully completed minigames inside the UTC window count: you must finish the mission and receive the hashrate boost. Each valid win = 1 point. Losses, abandoned runs, and anti-cheat rejections are not ranked.",
     "minigame_scoring_hint_short": "Valid wins with reward only · 1 win = 1 point · UTC window",
@@ -4655,11 +4854,75 @@
       "place_1": "🥇 1st place",
       "place_2": "🥈 2nd place",
       "place_3": "🥉 3rd place"
-    }
+    },
+    "offerwall_scoring": {
+      "title": "How to score in the Offerwall Tournament",
+      "each_point": "1 completion = 1 point",
+      "rule_per_completion": "+1 pt per completed offer",
+      "rule_per_credit": "+1 pt per credited offer",
+      "rule_per_view": "+1 pt per credited ad",
+      "rule_per_click_daily_cap": "+1 pt per click · max {{cap}}/UTC day",
+      "counts_from": "counts from {{date}}",
+      "your_points_from": "Your points from {{source}}",
+      "your_total": "Your points this period",
+      "zerads_over_cap": "{{count}} Zerads click(s) went past the {{cap}}/day limit and do not count.",
+      "reached_at": "You reached this score at {{date}}.",
+      "rule_tie": "Ties: whoever reached the score first ranks higher.",
+      "rule_credit_only": "Only credited offers count. Chargebacks do not score, and banned accounts are left out of the ranking.",
+      "rule_window": "The UTC time of the credit decides: a credit exactly at the end of the period counts in the next one. Prizes are computed from the same sources shown here."
+    },
+    "series_name": {
+      "OFFERS_ALL": "Offerwall Tournament",
+      "OFFERS_EXTERNAL": "Offerwall Tournament",
+      "OFFERS_INTERNAL": "Internal Offerwall Tournament",
+      "DEPOSITS_USD": "Deposit Tournament",
+      "DEPOSITS_POL": "Deposit Tournament",
+      "MINIGAME_WINS": "Minigame Tournament",
+      "ALL_ACTIVITIES": "General Tournament - All Activities",
+      "YOUTUBE": "YouTube Tournament",
+      "REFERRALS": "Referral Tournament",
+      "FAUCET": "Faucet Tournament",
+      "SHORTLINK": "Shortlink Tournament",
+      "AUTO_MINING": "Auto Mining Tournament",
+      "HASHRATE": "Hashrate Tournament",
+      "BLOCKS_MINED": "Blocks Tournament",
+      "CHECKINS": "Check-in Tournament",
+      "TASKS_COMPLETED": "Tasks Tournament",
+      "MERGES": "Forge Tournament",
+      "BURNS": "Burn Tournament"
+    },
+    "series_description": {
+      "OFFERS_ALL": "Ranking by offers completed on the internal Offerwall and the external ones (Zerads, MoneyRain, Multiwall, Offerwall.me, Offerwall.GG).",
+      "OFFERS_EXTERNAL": "Ranking by offers completed on the external offerwalls (Zerads, MoneyRain, Multiwall, Offerwall.me, Offerwall.GG).",
+      "OFFERS_INTERNAL": "Ranking by offers completed on the internal Offerwall.",
+      "DEPOSITS_USD": "Ranking by amount deposited in USD.",
+      "DEPOSITS_POL": "Ranking by POL deposited.",
+      "MINIGAME_WINS": "Ranking by minigame wins.",
+      "ALL_ACTIVITIES": "Adds up every activity on the site: Faucet, Shortlinks, Auto Mining, Minigames, Offers and PTC, YouTube, Check-in and Missions.",
+      "YOUTUBE": "Ranking by YouTube videos watched (claims). Each claim is 1 point, even after the 1,000 H/s cap.",
+      "REFERRALS": "Ranking by referred friends who qualified (verified email + confirmed game activity).",
+      "MERGES": "Ranking by merges made in the Forge. Higher rarities are worth more points.",
+      "BURNS": "Ranking by hashrate burned in Burn events.",
+      "TASKS_COMPLETED": "Ranking by daily tasks collected in the period."
+    },
+    "merge_scoring_title": "How to score in the Forge Tournament",
+    "merge_scoring_hint": "Each merge scores points by the rarity of the resulting machine: Uncommon +1, Rare +3, Epic +8, Legendary +20. Only merges completed within the period (UTC) count.",
+    "merge_scoring_hint_short": "Uncommon +1 · Rare +3 · Epic +8 · Legendary +20 · UTC period",
+    "merge_cta": "Go to Merge",
+    "burn_scoring_title": "How to score in the Burn Tournament",
+    "burn_scoring_hint": "Each claimed burn adds the total hashrate of the machines you burned. E.g. burning 3 machines of 100 H/s = 300 points. Counts when claimed, within the period (UTC).",
+    "burn_scoring_hint_short": "1 H/s burned = 1 point · counts on claim · UTC period",
+    "burn_cta": "Go to Burn",
+    "tasks_scoring_title": "How to score in the Tasks Tournament",
+    "tasks_scoring_hint": "Each daily task you complete and collect on the Tasks page adds +1 point. Completed but uncollected tasks do not count. Come back every day: in the weekly and monthly ranking the most consistent player wins.",
+    "tasks_scoring_hint_short": "1 collected task = 1 point · only counts when collected · UTC period",
+    "tasks_cta": "Go to Tasks",
+    "preview_notice": "Test tournament on the development environment: the ranking is real, but no prize is paid.",
+    "activity_pt_per_task": "+1 pt / task",
+    "activity_pt_per_action": "+1 pt / action"
   },
   "referrals": {
     "title": "Referrals",
-    "subtitle": "Invite friends and earn {{rate}}% of their mining rewards.",
     "stats_since": "Statistics tracked since {{date}} (UTC).",
     "your_link": "Your referral link",
     "copy_link": "Copy link",
@@ -4812,7 +5075,6 @@
     "password_changed": "Password changed successfully!",
     "saved": "Settings saved.",
     "title": "Settings",
-    "subtitle": "Manage your account and security",
     "profile_title": "User Profile",
     "username_label": "Username",
     "email_label": "Email",
@@ -4868,7 +5130,6 @@
     "status_completed": "Completed",
     "disabled": "PTC system temporarily disabled",
     "campaigns_title": "My PTC Campaigns",
-    "campaigns_subtitle": "Manage your paid-to-click ads",
     "new_campaign": "New Campaign",
     "field_title": "Title",
     "field_title_placeholder": "Campaign name",
@@ -4896,8 +5157,6 @@
     "add": "Add",
     "extra_cost": "Extra cost:",
     "view_title": "PTC — Earn SHIB",
-    "view_subtitle_before": "Watch ads and earn",
-    "view_subtitle_after": "for each completed view",
     "my_campaigns_link": "My Campaigns",
     "badge_viewed_today": "Viewed today",
     "badge_completed": "Completed",
@@ -4962,7 +5221,6 @@
     "active_machines": "{{count}} active machine(s) · {{hashrate}}",
     "open_room": "Open Room",
     "title": "Hall of Fame",
-    "subtitle": "The most powerful miners on the global network.",
     "place_2": "2ND PLACE",
     "place_3": "3RD PLACE",
     "king": "BLOCK KING",
@@ -4977,13 +5235,11 @@
     "sort_total": "Total power",
     "sort_room": "Room only",
     "social": {
-      "feed_subtitle": "Videos from accredited BlockMiner creators",
       "video_count_one": "{{count}} video",
       "video_count_other": "{{count}} videos",
       "no_videos": "No videos published yet.",
       "login_required": "Log in to request accreditation.",
       "creator_area": "Creator Area",
-      "creator_area_sub": "Request accreditation and submit videos",
       "miner_static_title": "Locked camera",
       "miner_static_body": "The fans spin. The camera stays still.",
       "miner_orbit_title": "Rotate the card",
@@ -5046,7 +5302,6 @@
   "roadmap": {
     "title_road": "ROAD",
     "title_map": "MAP",
-    "subtitle": "BlockMiner platform evolution",
     "total_progress": "Total progress",
     "launched_count": "{{count}} launched",
     "planned_count": "{{count}} planned",
@@ -5142,7 +5397,8 @@
       "renda": "Income Sources",
       "torneios": "Tournaments",
       "carteira": "Wallet",
-      "ranking": "Ranking"
+      "ranking": "Ranking",
+      "pecas": "Parts & Merge"
     },
     "cover_title": "Operator Manual",
     "cover_body": "Technical, economic, and operational reference for the BlockMiner protocol. Everything you need to maximize your mining operation.",
@@ -5352,7 +5608,7 @@
         "missions": {
           "title": "6. Daily Missions",
           "body_html": "Each day a set of <strong class=\"text-white\">missions</strong> is generated. Complete them for rewards (POL, BLK, miners, or hashrate boost).",
-          "reset": "Missions reset at midnight every day",
+          "reset": "Missions reset at midnight UTC every day",
           "credit": "Each completed mission is credited automatically to inventory",
           "tournaments_html": "Count toward <strong class=\"text-white\">Task Tournaments</strong> metrics"
         },
@@ -5493,6 +5749,15 @@
         "locked_rooms_value": "Shown with a lock in the public room"
       },
       "tip_html": "To compete specifically for <strong class=\"text-white\">hashrate prizes</strong>, join <strong class=\"text-white\">Tournaments</strong> — they measure hashrate over fixed periods with automatic reward distribution."
+    },
+    "parts": {
+      "title": "Parts & Merge",
+      "subtitle": "Where parts come from and how to use them to upgrade machines",
+      "step_drop": "Parts drop for free while you use Faucet, PTC, Auto Mining, YouTube, Shortlinks and Offerwalls (chances below).",
+      "step_fuse": "Every part drops as common. On the Merge page, fuse 5 identical parts into 1 of the next rarity: Common → Uncommon → Rare → Epic → Legendary.",
+      "step_merge": "In Merge, combine 2 identical machines with the required parts and a fee to create 1 higher-level machine with more hashrate.",
+      "step_buy": "Missing a part? You can buy it at a discount in Offers.",
+      "offerwall_tiers": "Offerwalls: under US$ 0.01 → 40% chance; US$ 0.01–0.10 → 75%; US$ 0.10–0.50 → 1 guaranteed part; US$ 0.50–1 → 1 guaranteed + 50% chance of a 2nd; above US$ 1 → 2 to 5 parts."
     }
   },
   "shell": {
@@ -5511,7 +5776,9 @@
     "chat_view_room": "View room",
     "chat_today": "Today",
     "chat_yesterday": "Yesterday",
-    "chat_too_long": "Message too long (max {{max}} characters)."
+    "chat_too_long": "Message too long (max {{max}} characters).",
+    "new_version_message": "A new version of BlockMiner is available.",
+    "new_version_reload": "Reload"
   },
   "admin": {
     "metrics_title": "Server metrics",
@@ -5705,7 +5972,8 @@
     "active": "Active",
     "inactive": "Inactive",
     "empty": "No records found.",
-    "confirm_delete": "Delete this record?"
+    "confirm_delete": "Delete this record?",
+    "close": "Close"
   },
   "adminFinance": {
     "title": "Finance",
@@ -5848,7 +6116,6 @@
   },
   "burnEvents": {
     "title": "Burn",
-    "subtitle": "Burn machines to earn a better one.",
     "empty": "No active burn events.",
     "empty_hint": "Check back later — new events show up here.",
     "load_error": "Could not load events.",
@@ -5898,7 +6165,7 @@
     "your_claims": "Your burns",
     "opens_at": "Opens {{date}} UTC",
     "fee_title": "Burn Fee (Choose currency)",
-    "fee_description": "Fixed fee per burn: 20 SHIB, 0.01 POL or 0.001 BLK.",
+    "fee_description": "Fixed fee per burn: 1300 SHIB, 0.07 POL or 0.007 BLK.",
     "fee_available": "Available",
     "fee_insufficient": "Insufficient",
     "fee_required_label": "Fee",
@@ -5927,7 +6194,8 @@
       "INSUFFICIENT_FEE_BALANCE": "Insufficient balance for the burn fee.",
       "VALIDATION_ERROR": "Invalid request.",
       "RATE_LIMIT_EXCEEDED": "Too many attempts. Wait a moment and try again."
-    }
+    },
+    "enter_event": "Enter event"
   },
   "adminCheckin": {
     "title": "Check-in milestones",
@@ -6470,6 +6738,14 @@
     "preset_daily_youtube_hint": "Daily · YOUTUBE",
     "preset_weekly_youtube": "Weekly YouTube Tournament",
     "preset_weekly_youtube_hint": "Weekly · YOUTUBE",
+    "preset_monthly_youtube": "Monthly YouTube Tournament",
+    "preset_monthly_youtube_hint": "Monthly · YOUTUBE",
+    "preset_daily_referrals": "Daily Referral Tournament",
+    "preset_daily_referrals_hint": "Daily · REFERRALS",
+    "preset_weekly_referrals": "Weekly Referral Tournament",
+    "preset_weekly_referrals_hint": "Weekly · REFERRALS",
+    "preset_monthly_referrals": "Monthly Referral Tournament",
+    "preset_monthly_referrals_hint": "Monthly · REFERRALS",
     "preset_weekly_offerwall": "Weekly Offerwall",
     "preset_weekly_offerwall_hint": "Weekly · OFFERS_ALL",
     "preset_weekly_deposit": "Weekly Deposit",
@@ -6528,7 +6804,23 @@
     "finalized_short": "Tournament finalized.",
     "cancelled": "Tournament cancelled.",
     "move_up": "Move up",
-    "move_down": "Move down"
+    "move_down": "Move down",
+    "preset_daily_merges": "Forge Tournament — Daily",
+    "preset_daily_merges_hint": "Daily · MERGES",
+    "preset_weekly_merges": "Forge Tournament — Weekly",
+    "preset_weekly_merges_hint": "Weekly · MERGES",
+    "preset_monthly_merges": "Forge Tournament — Monthly",
+    "preset_monthly_merges_hint": "Monthly · MERGES",
+    "preset_daily_burns": "Burn Tournament — Daily",
+    "preset_daily_burns_hint": "Daily · BURNS",
+    "preset_weekly_burns": "Burn Tournament — Weekly",
+    "preset_weekly_burns_hint": "Weekly · BURNS",
+    "preset_monthly_burns": "Burn Tournament — Monthly",
+    "preset_monthly_burns_hint": "Monthly · BURNS",
+    "preset_weekly_tasks": "Tasks Tournament — Weekly",
+    "preset_weekly_tasks_hint": "Weekly · TASKS_COMPLETED",
+    "preset_monthly_tasks": "Tasks Tournament — Monthly",
+    "preset_monthly_tasks_hint": "Monthly · TASKS_COMPLETED"
   },
   "adminBanners": {
     "title": "Banners",
@@ -6642,7 +6934,10 @@
     "hash_rate": "Base hash rate",
     "image_url": "Image URL",
     "cooldown_ms": "Cooldown (ms)",
-    "save": "Save configuration"
+    "save": "Save configuration",
+    "preview": "Player preview",
+    "preview_hint": "How the faucet reward looks on the public page",
+    "inactive": "Inactive"
   },
   "adminSala": {
     "title": "Room (RollerCoin)",
@@ -6669,6 +6964,242 @@
     "actions": "Actions",
     "toggle": "On/Off"
   },
+  "parts": {
+    "title": "Parts & Merge",
+    "subtitle": "Join 2 plates of the same rarity and forge machines with +30% hashrate!",
+    "open_merge": "Open Merge",
+    "unified_title": "The Fusion Forge",
+    "unified_subtitle": "Combine 2 plates of the same rarity and forge exclusive miners with +30% boosted Hashrate!",
+    "filter_ready_only": "Ready to Merge",
+    "filter_all_machines": "All Machines",
+    "search_machines_placeholder": "Search machine...",
+    "ready_count_badge": "{{count}} ready to merge",
+    "no_ready_machines": "No machines ready to merge right now.",
+    "no_ready_machines_hint": "You need 2 plates of the same rarity and sufficient BLK balance to pay the forge fee.",
+    "go_to_offerwall": "Go to Offerwall",
+    "forge_station": "Forge Station",
+    "your_plates_title": "Your Plates & Components",
+    "select_to_forge": "Select a machine",
+    "ready_badge": "READY",
+    "need_plates_badge": "Need plates",
+    "need_blk_badge": "Need BLK",
+    "power_boost_label": "+30% Hashrate",
+    "cost_fee_label": "Forge Fee (10%)",
+    "inventory_title": "Your inventory",
+    "prices_title": "Machine prices",
+    "prices_hint": "Merge spends 2 plates of the same rarity, charges {{feePercent}}% of the base price in BLK, and delivers the machine with a {{boostPercent}}% hashrate boost.",
+    "empty_machines": "No shop machines to price right now.",
+    "load_error": "Could not load parts.",
+    "loading": "Loading parts...",
+    "quantity": "Quantity",
+    "rarity": {
+      "common": "Common",
+      "uncommon": "Uncommon",
+      "rare": "Rare",
+      "epic": "Epic",
+      "legendary": "Legendary"
+    },
+    "cost_count": "{{owned}} / {{required}}",
+    "base_price": "Base {{price}} BLK",
+    "blk_balance": "Balance {{balance}} BLK",
+    "merge": "Merge",
+    "merging": "Merging...",
+    "merge_fee": "Fee {{fee}} BLK",
+    "merge_result": "{{hash}} with the {{boostPercent}}% boost",
+    "merge_need_parts": "Not enough parts.",
+    "merge_need_blk": "Not enough BLK.",
+    "merge_need_machines": "You need 2 identical machines of this level to merge.",
+    "merge_max_level": "This machine has already reached the maximum level (Legendary).",
+    "my_miners_title": "Your Machines for Fusion",
+    "my_miners_desc": "Select a miner you own. 2 identical machines of the same level + parts + BLK fee are required.",
+    "no_owned_miners": "You do not own any miners to merge yet.",
+    "no_owned_miners_hint": "Buy miners in the Shop or win them in tournaments and events to start merging!",
+    "merge_slot_machine": "Machine {{n}} (Identical)",
+    "merge_level_upgrade": "Evolution: {{from}} ➔ {{to}}",
+    "rarity_tree_title": "Rarity Tiers & Bonuses",
+    "merge_rarity": "Both plates have to be the same rarity.",
+    "merge_title": "Merge",
+    "merge_subtitle": "Join 2 plates of the same rarity. The fee is {{feePercent}}% of the base price and the machine comes out with +{{boostPercent}}% hash.",
+    "merge_cost_chip": "Cost {{feePercent}}%",
+    "merge_bonus_chip": "Bonus +{{boostPercent}}%",
+    "merge_bench": "Your plates",
+    "merge_empty_bench": "No plates yet. They drop from the faucet, shortlinks, auto-mining, YouTube, PTC, and the offerwall.",
+    "drop_toast": "Part: +{{quantity}} {{name}}",
+    "bag_subtitle": "Parts from the faucet, shortlinks, auto-mining, YouTube, PTC, and the offerwall. Fuse 5 matching parts into 1 of the next rarity (5:1).",
+    "bag_empty_hint": "Claim the faucet, shortlinks, auto-mining, YouTube, PTC, or offerwall tasks to earn common forge parts.",
+    "merge_slot": "Plate {{n}}",
+    "merge_slot_empty": "Empty",
+    "merge_clear": "Remove",
+    "merge_machines": "Machine",
+    "merge_offer": "Offer",
+    "merge_pick": "Pick 2 plates of the same rarity.",
+    "merge_success": "{{name}} merged.",
+    "merge_error": "Could not merge this machine.",
+    "merge_unavailable": "This machine is not available.",
+    "merge_limit": "You already own the maximum for this machine.",
+    "merge_stock": "This machine is out of stock.",
+    "band": {
+      "starter": "Starter",
+      "mid": "Mid",
+      "high": "Advanced",
+      "elite": "Elite"
+    },
+    "items": {
+      "power_cable": "Power cable",
+      "asic_chip": "Chip",
+      "cooling_fan": "Cooling fan",
+      "hashboard": "Hashboard",
+      "power_supply": "Power supply",
+      "thermal_pad": "Thermal paste"
+    },
+    "offers": {
+      "title": "Forge Parts",
+      "desc": "Parts and discounted bundles.",
+      "free_hint": "You can also earn parts for free with Faucet, PTC, Auto Mining, YouTube, Shortlinks and Offerwalls.",
+      "free_link": "See how"
+    },
+    "packs": {
+      "title": "Featured Kits",
+      "badge": "Special Bundle",
+      "starter_badge": "35% OFF",
+      "advanced_badge": "33% OFF",
+      "starter_name": "Common Forge Kit",
+      "starter_desc": "30 sorted common parts (5 of each type).",
+      "advanced_name": "Uncommon Forge Kit",
+      "advanced_desc": "15 sorted uncommon parts for tier 3 forge.",
+      "included_items": "Included items:",
+      "purchase_success": "Bundle purchased successfully!"
+    },
+    "shop_section_title": "Mining Parts",
+    "shop_section_desc": "Components for machine merging and progression.",
+    "purchase_success": "Part purchased successfully!",
+    "singles_title": "Single Parts",
+    "merge_need_balance": "Not enough balance in the selected coin to pay the forge fee.",
+    "merge_price_unavailable": "Crypto price unavailable right now. Try paying in BLK.",
+    "free_guide": {
+      "title": "How to get free parts",
+      "subtitle": "Every time you use one of these areas, a part may drop into your bag.",
+      "per_claim": "{{pct}}% chance per claim",
+      "per_offer": "from {{pct}}% up to guaranteed, by offer value",
+      "how_it_works": "Every part drops as common, of a random type. Collect 5 of the same to fuse 1 of the next rarity (5:1) and use parts to merge machines.",
+      "buy_hint": "In a hurry? You can also buy parts at a discount.",
+      "buy_link": "See Offers",
+      "sources": {
+        "faucet": "Faucet",
+        "ptc": "PTC",
+        "automining": "Auto Mining",
+        "youtube": "YouTube",
+        "shortlinks": "Shortlinks",
+        "internal_offerwall": "Internal offerwall",
+        "offerwall": "Offerwalls"
+      }
+    },
+    "page": {
+      "craft_success": "Fused: {{consumed}}x {{part}} ({{fromRarity}}) → {{crafted}}x {{toRarity}}!",
+      "craft_failed": "Could not fuse parts.",
+      "forge_badge": "Fusion Workshop",
+      "kpi_blk": "BLK balance",
+      "kpi_parts": "Your parts",
+      "parts_count_one": "{{count}} part",
+      "parts_count_other": "{{count}} parts",
+      "kpi_ready": "Ready to merge",
+      "models_count_one": "{{count}} model",
+      "models_count_other": "{{count}} models",
+      "fee_rules_title": "Forge fee",
+      "fee_rule_blk": "of the base value in BLK",
+      "fee_rule_crypto": "in POL/SHIB",
+      "crypto_discount": "-{{pct}}% paying in crypto",
+      "bench_title": "Merge bench",
+      "boost_range": "+30% to +200%",
+      "fee_chip": "Fee: {{blk}}% in BLK · {{crypto}}% in POL/SHIB",
+      "step1": "1. Two identical machines ({{tier}})",
+      "owned_label": "Owned:",
+      "level_tier": "Level {{level}} · {{tier}}",
+      "missing_one_machine": "1 machine missing",
+      "get_another_copy": "Buy or earn another copy",
+      "required_parts": "Parts required to merge:",
+      "step2": "2. Merge result ({{tier}})",
+      "combined_power": "Combined power of the 2 machines",
+      "bonus_pct": "+{{pct}}% bonus",
+      "pay_fee_with": "Pay fee with",
+      "insufficient_asset": "Insufficient {{asset}} balance",
+      "merge_paying": "Merge paying {{amount}} {{asset}}",
+      "select_below": "Select a miner below",
+      "select_below_hint": "Choose a miner you own to place it on the forge bench.",
+      "catalog_title": "Merge catalog",
+      "owned_title": "Your miners for merging",
+      "ready_badge_one": "{{count}} ready to merge",
+      "ready_badge_other": "{{count}} ready to merge",
+      "catalog_desc": "All {{count}} models that can be merged (Shop + Offers). Combine 2 identical ones to upgrade.",
+      "owned_desc": "Machines you own, grouped by model and rarity level.",
+      "filter_ready": "Ready to merge ({{count}})",
+      "filter_owned": "All yours ({{count}})",
+      "filter_catalog": "Merge catalog ({{count}})",
+      "src_all": "All ({{count}})",
+      "src_shop": "Shop ({{count}})",
+      "src_offers": "Offers ({{count}})",
+      "evolution": "Upgrade:",
+      "ready_to_merge": "READY TO MERGE",
+      "not_owned_offers": "You don't own it · see Offers",
+      "not_owned_shop": "You don't own it · see Shop",
+      "missing_machines": "{{missing}} machine missing ({{owned}}/2)",
+      "missing_parts_short": "Parts missing",
+      "missing_fee_balance": "Not enough balance for the fee",
+      "empty_ready": "No machine is ready to merge right now.",
+      "empty_catalog": "No machines found.",
+      "empty_owned": "You don't own any miners to merge.",
+      "empty_ready_hint": "To merge you need at least 2 identical machines of the same level, the recipe parts and BLK balance.",
+      "empty_owned_hint": "Get miners in the Shop or earn them in missions and events to start merging!",
+      "view_catalog": "View merge catalog ({{count}})",
+      "view_owned": "View all your machines ({{count}})",
+      "bag_title": "Your Parts Bag & Fusion Workshop",
+      "all_count": "All ({{count}})",
+      "craft_one_title": "Fuse 5 parts into 1 of the next rarity",
+      "craft_all_title": "Fuse all ({{from}}x → {{to}}x)",
+      "to_fuse": "{{qty}}/5 to fuse",
+      "bag_empty": "Your parts bag is empty right now.",
+      "col_level": "Level",
+      "col_rarity": "Rarity",
+      "col_color": "Color",
+      "col_requirement": "Merge requirement",
+      "col_multiplier": "Power multiplier",
+      "col_fee": "Forge fee",
+      "level_n": "Level {{level}}",
+      "tier_fee": "{{blk}}% in BLK · {{crypto}}% in POL/SHIB",
+      "tier": {
+        "1": {
+          "name": "Common",
+          "color": "White / Grey",
+          "req": "Factory base level",
+          "bonus": "1.0x (standard power)"
+        },
+        "2": {
+          "name": "Uncommon",
+          "color": "Green",
+          "req": "2x identical Common machines + common parts",
+          "bonus": "+30% Hashrate"
+        },
+        "3": {
+          "name": "Rare",
+          "color": "Blue",
+          "req": "2x identical Uncommon machines + uncommon parts",
+          "bonus": "+75% Hashrate"
+        },
+        "4": {
+          "name": "Epic",
+          "color": "Purple",
+          "req": "2x identical Rare machines + rare parts",
+          "bonus": "+130% Hashrate"
+        },
+        "5": {
+          "name": "Legendary",
+          "color": "Gold / Orange",
+          "req": "2x identical Epic machines + epic parts",
+          "bonus": "+200% Hashrate (top of the game)"
+        }
+      }
+    }
+  },
   "cookieConsent": {
     "message": "We use essential cookies to keep your session secure, and optional analytics/advertising cookies only with your permission.",
     "accept": "Accept all",
@@ -6678,5 +7209,163 @@
   "adminTransparencyInvestments": {
     "title": "Investments on other sites",
     "subtitle": "Manage the external investments shown in the \"Other Investments\" tab of the Transparency Portal."
+  },
+  "bmCaptcha": {
+    "title": "Human verification",
+    "instructions": "Rotate the crystal until it stands upright, pick the matching tile and confirm.",
+    "loading": "Loading…",
+    "which_tile": "Which tile matches this one?",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "validating": "Checking…",
+    "errors": {
+      "SOLUTION_WRONG": "Wrong answer. Rotate the crystal and pick the tile again.",
+      "INVALID_SOLUTION": "Invalid answer. Pick a tile and confirm.",
+      "TOO_FAST": "Too fast. Wait a moment and try again.",
+      "TOO_MANY_ATTEMPTS": "Too many attempts. Close and reopen the verification.",
+      "RATE_LIMITED": "Too many verifications in a row. Wait a little and try again.",
+      "CHALLENGE_EXPIRED": "The challenge expired. Close and reopen the verification.",
+      "CHALLENGE_NOT_FOUND": "Challenge not found. Close and reopen the verification.",
+      "ALREADY_SOLVED": "This challenge was already solved. Open the verification again.",
+      "generic": "Could not verify right now. Please try again."
+    }
+  },
+  "rootError": {
+    "unknown": "Unknown error",
+    "title": "Something went wrong",
+    "body": "This screen could not be loaded. Copy the error, send it on the official Telegram, clear your browser data and reload — if it keeps happening, try another browser.",
+    "copy": "Copy error",
+    "copied": "Copied",
+    "telegram": "Official Telegram",
+    "reload": "Reload",
+    "step1": "Clear the site data / cache (Ctrl+Shift+Del on PC, or Settings → Browsing data on mobile) and open it again.",
+    "step2": "If it still fails, try another browser (Chrome, Edge, Firefox) or a private window.",
+    "step3": "Paste the copied error on the official Telegram and let an admin know."
+  },
+  "imageUploader": {
+    "label": "Image",
+    "mode_upload": "Upload",
+    "uploading": "Uploading...",
+    "drop_hint": "Click or drag an image here",
+    "formats": "JPG, PNG, GIF, WEBP, SVG — max 5 MB",
+    "remove": "Remove image",
+    "error_status": "Error {{status}} while uploading the image.",
+    "error_no_response": "Image upload failed (no response).",
+    "error_generic": "Upload failed."
+  },
+  "profilePhoto": {
+    "title": "Profile photo",
+    "subtitle": "Show your own photo in the header, chat, rankings and tournaments.",
+    "license_price": "Annual license: {{price}}",
+    "license_hint": "Paid once a year from your POL or SHIB balance. Renewal is manual.",
+    "pay_with": "Pay with",
+    "amount": "Amount",
+    "your_balance": "Your balance",
+    "price_unavailable": "Price unavailable right now",
+    "buy": "Buy license",
+    "renew": "Renew for 1 more year",
+    "buying": "Processing...",
+    "active_until": "License active until {{date}}",
+    "expired_on": "License expired on {{date}}. Your photo is hidden until you renew.",
+    "expires_soon": "Your license expires on {{date}}. Renew now to keep your photo.",
+    "upload": "Upload photo",
+    "change": "Change photo",
+    "remove": "Remove photo",
+    "uploading": "Uploading...",
+    "upload_hint": "PNG, JPEG, WebP or GIF up to 2 MB. It will be cropped to a square.",
+    "blocked": "Profile photo uploads were disabled for this account by moderation.",
+    "purchased": "License active! Now upload your photo.",
+    "uploaded": "Profile photo updated.",
+    "removed": "Profile photo removed.",
+    "confirm_buy": "Pay {{amount}} {{currency}} for 1 year of profile photo?",
+    "errors": {
+      "AVATAR_LICENSE_REQUIRED": "You need an active license to upload a photo.",
+      "AVATAR_CURRENCY_NOT_ALLOWED": "This currency cannot be used.",
+      "AVATAR_PRICE_UNAVAILABLE": "Price is temporarily unavailable. Try again in a minute.",
+      "AVATAR_QUOTE_CHANGED": "The price changed. Check the new amount and try again.",
+      "AVATAR_INSUFFICIENT_BALANCE": "Insufficient balance in this currency.",
+      "AVATAR_LICENSE_ALREADY_ACTIVE": "Your license is still active. You can renew in the last 30 days.",
+      "AVATAR_UPLOAD_INVALID": "Send a PNG, JPEG, WebP or GIF image.",
+      "AVATAR_UPLOAD_TOO_LARGE": "Image too large (max 2 MB).",
+      "AVATAR_UPLOAD_BLOCKED": "Photo uploads are blocked for this account.",
+      "AVATAR_RATE_LIMITED": "Too many uploads. Try again later.",
+      "generic": "Something went wrong. Try again.",
+      "AVATAR_CERT_NAME_INVALID": "Use 2 to 24 letters, numbers, spaces or . ' _ -",
+      "AVATAR_CERT_LIMIT_REACHED": "You have used this license's generations.",
+      "AVATAR_CERT_BUSY": "The certificate is already being generated. Please wait.",
+      "AVATAR_CERT_PROVIDER_FAILED": "Could not generate the certificate. Try again.",
+      "AVATAR_CERT_NOT_CONFIGURED": "Certificate generation is not available right now."
+    },
+    "cheaper_in_offers": "Cheaper on the Offers page: {{price}} per year. Buy it there →",
+    "offer_title": "Profile photo license",
+    "offer_description": "Show your own photo in the header, chat, rankings and tournaments for one year.",
+    "per_year": "/ year",
+    "go_to_settings": "Upload your photo in Settings",
+    "certificate_title": "License Certificate",
+    "certificate_body": "Right to use your own profile photo on BlockMiner.",
+    "certificate_validity": "Valid for 1 year",
+    "certificate_until": "Valid until {{date}}",
+    "certificate_your_name": "Your name here",
+    "certificate_name_label": "Name on the certificate",
+    "certificate_generate": "Generate certificate ({{count}} left)",
+    "certificate_generating": "Generating your certificate... takes less than a minute.",
+    "certificate_download": "Download certificate",
+    "certificate_redo_hint": "Came out wrong? You can still generate it again ({{count}}).",
+    "modal_title": "Confirm purchase",
+    "modal_done_title": "Your certificate",
+    "modal_intro": "Type the name for your certificate. After paying, it is generated right away.",
+    "modal_item": "Item",
+    "modal_validity": "Validity",
+    "modal_confirm": "Confirm and pay {{amount}} {{currency}}",
+    "modal_done_text": "License active! Now upload your profile photo in Settings.",
+    "modal_generate_later": "Could not generate the certificate now. You can generate it on the Offers page, in the license card."
+  },
+  "contract": {
+    "eyebrow": "BlockMiner • Terms of Use",
+    "title": "Miner's Contract",
+    "subtitle": "Read and stamp each clause. Then hold the seal to sign.",
+    "progress": "{{count}}/{{total}} clauses stamped",
+    "full_terms": "Read the full Terms of Use",
+    "hold_to_sign": "Hold the seal to sign",
+    "stamp_all_first": "Stamp the remaining clauses ({{left}})",
+    "sign_failed": "Could not sign right now. Try again.",
+    "later": "Read later",
+    "signed_title": "Contract signed!",
+    "signed_text": "Certificate {{certificate}}. Welcome to the mine, miner.",
+    "lets_mine": "Let's mine",
+    "clauses": {
+      "age": {
+        "title": "I am an adult and I own this account",
+        "text": "I am of legal age in my jurisdiction and I control this account's password and email."
+      },
+      "game": {
+        "title": "This is a game, not an investment",
+        "text": "BlockMiner is a simulation game. Rewards, estimates and calculators are illustrative and do not guarantee earnings."
+      },
+      "bots": {
+        "title": "No bots",
+        "text": "I do not use scripts, bots or automation to play."
+      },
+      "rules": {
+        "title": "Rules may change",
+        "text": "Rules, rewards, multipliers and game parameters can be adjusted at any time."
+      },
+      "onchain": {
+        "title": "Blockchain has no undo",
+        "text": "On-chain transactions are irreversible: the wrong network, token or address can lose the funds."
+      },
+      "withdrawals": {
+        "title": "Withdrawals are reviewed",
+        "text": "Withdrawals go through anti-fraud review and may take time; balances can be frozen during an investigation."
+      },
+      "conduct": {
+        "title": "Respect in chat",
+        "text": "No harassment, hate speech, spam or scams in chat or in anything I post."
+      },
+      "security": {
+        "title": "Account security is on me",
+        "text": "I protect my password and email. The team never asks for my password."
+      }
+    }
   }
 }

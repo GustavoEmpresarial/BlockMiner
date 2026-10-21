@@ -12,7 +12,7 @@ export const DASHBOARD_BALANCE_CURRENCY_META: Record<
 > = {
   POL: { nameKey: 'dashboard.currency_pol', symbol: 'POL', logoUrl: DASHBOARD_COIN_LOGO.POL, decimals: 8 },
   SHIB: { nameKey: 'dashboard.currency_shib', symbol: 'SHIB', logoUrl: DASHBOARD_COIN_LOGO.SHIB, decimals: 4 },
-  BLK: { nameKey: 'dashboard.currency_blk', symbol: 'BLK', logoUrl: DASHBOARD_COIN_LOGO.BLK, decimals: 4 },
+  BLK: { nameKey: 'dashboard.currency_blk', symbol: 'BLK', logoUrl: DASHBOARD_COIN_LOGO.BLK, decimals: 8 },
 };
 
 const STORAGE_KEY_PREFIX = 'bm.dashboard.balanceCurrency';

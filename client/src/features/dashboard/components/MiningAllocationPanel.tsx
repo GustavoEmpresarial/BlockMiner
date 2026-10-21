@@ -3,22 +3,28 @@ import { createPortal } from 'react-dom';
 import Card from '../../../shared/components/Card';
 import SectionHeader from '../../../shared/components/SectionHeader';
 import { useTranslation } from 'react-i18next';
-import { Clock3, Lock, Sliders, X } from 'lucide-react';
+import { CheckCircle2, Coins, Sliders, Sparkles, X, Zap } from 'lucide-react';
 import { DASHBOARD_COIN_LOGO } from '../lib/dashboardCoinLogos';
+
 type Props = {
   effectivePolPercent: number;
   effectiveShibPercent: number;
+  effectiveBlkPercent?: number;
   blockRewardPol: number;
   blockRewardShib: number;
+  blockRewardBlk?: number;
+  payoutMode?: 'pol' | 'blk';
   savingAlloc: boolean;
   allocModalOpen: boolean;
   draftPol: string;
   draftShib: string;
+  draftPayoutMode?: 'pol' | 'blk';
   draftError: string | null;
   onOpenModal: () => void;
   onCloseModal: () => void;
   onDraftPolChange: (raw: string) => void;
   onDraftShibChange: (raw: string) => void;
+  onDraftPayoutModeChange?: (mode: 'pol' | 'blk') => void;
   onPreset: (pol: number) => void;
   onSave: () => void;
 };
@@ -37,14 +43,14 @@ function CoinMark({
       ? 'bg-indigo-500/20 border-indigo-500/40'
       : tone === 'shib'
         ? 'bg-amber-500/20 border-amber-500/40'
-        : 'bg-cyan-500/15 border-cyan-500/30';
+        : 'bg-emerald-500/20 border-emerald-500/40';
 
   return (
     <span
       className={`inline-flex h-8 w-8 items-center justify-center rounded-full border shrink-0 ${toneClass}`}
     >
       {logoUrl ? (
-        <img src={logoUrl} alt="" className="h-5 w-5 rounded-full object-contain" />
+        <img src={logoUrl} alt="" className="h-6 w-6 rounded-full object-contain drop-shadow" />
       ) : (
         <span className="text-[11px] font-black text-cyan-300">{symbol.slice(0, 1)}</span>
       )}
@@ -55,26 +61,40 @@ function CoinMark({
 export function MiningAllocationPanel({
   effectivePolPercent,
   effectiveShibPercent,
+  effectiveBlkPercent,
   blockRewardPol,
   blockRewardShib,
+  blockRewardBlk,
+  payoutMode = 'pol',
   savingAlloc,
   allocModalOpen,
   draftPol,
   draftShib,
+  draftPayoutMode = 'pol',
   draftError,
   onOpenModal,
   onCloseModal,
   onDraftPolChange,
   onDraftShibChange,
+  onDraftPayoutModeChange,
   onPreset,
   onSave,
 }: Props): ReactElement {
   const { t } = useTranslation();
-  const blkSoon = 0;
+
+  const isBlkActive = payoutMode === 'blk';
+  const effPol = isBlkActive ? 0 : effectivePolPercent;
+  const effShib = isBlkActive ? 0 : effectiveShibPercent;
+  const effBlk = isBlkActive ? 100 : (effectiveBlkPercent ?? 0);
+
+  const rewardBlk = blockRewardBlk ?? 0.0035;
+
+  const isDraftBlk = draftPayoutMode === 'blk';
   const draftPolN = Number(draftPol);
   const draftShibN = Number(draftShib);
-  const draftPolSafe = Number.isFinite(draftPolN) ? draftPolN : 0;
-  const draftShibSafe = Number.isFinite(draftShibN) ? draftShibN : 0;
+  const draftPolSafe = isDraftBlk ? 0 : Number.isFinite(draftPolN) ? draftPolN : 0;
+  const draftShibSafe = isDraftBlk ? 0 : Number.isFinite(draftShibN) ? draftShibN : 0;
+  const draftBlkSafe = isDraftBlk ? 100 : 0;
 
   useEffect(() => {
     if (!allocModalOpen) return;
@@ -112,52 +132,78 @@ export function MiningAllocationPanel({
             <div className="h-3 rounded-full overflow-hidden flex bg-slate-900 border border-slate-800">
               <div
                 className="h-full bg-gradient-to-r from-indigo-600 to-indigo-400 transition-all duration-500"
-                style={{ width: `${effectivePolPercent}%` }}
+                style={{ width: `${effPol}%` }}
               />
               <div
                 className="h-full bg-gradient-to-r from-amber-500 to-orange-400 transition-all duration-500"
-                style={{ width: `${effectiveShibPercent}%` }}
+                style={{ width: `${effShib}%` }}
               />
               <div
-                className="h-full bg-cyan-500/20 border-l border-dashed border-cyan-500/30"
-                style={{ width: `${Math.max(blkSoon, 0)}%`, minWidth: blkSoon === 0 ? 0 : undefined }}
+                className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-500"
+                style={{ width: `${effBlk}%` }}
               />
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-widest bg-indigo-600/15 border border-indigo-500/35 text-indigo-200">
+              <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-widest border transition-all ${
+                effPol > 0
+                  ? 'bg-indigo-600/15 border-indigo-500/35 text-indigo-200'
+                  : 'bg-slate-900/60 border-slate-800 text-slate-500'
+              }`}>
                 <CoinMark symbol="POL" logoUrl={DASHBOARD_COIN_LOGO.POL} tone="pol" />
-                {effectivePolPercent}% {t('dashboard.mining_allocation_pol_label')}
+                {effPol}% {t('dashboard.mining_allocation_pol_label')}
               </span>
-              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-widest bg-amber-600/15 border border-amber-500/35 text-amber-200">
+              <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-widest border transition-all ${
+                effShib > 0
+                  ? 'bg-amber-600/15 border-amber-500/35 text-amber-200'
+                  : 'bg-slate-900/60 border-slate-800 text-slate-500'
+              }`}>
                 <CoinMark symbol="SHIB" logoUrl={DASHBOARD_COIN_LOGO.SHIB} tone="shib" />
-                {effectiveShibPercent}% {t('dashboard.mining_allocation_shib_label')}
+                {effShib}% {t('dashboard.mining_allocation_shib_label')}
               </span>
-              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-widest bg-cyan-500/10 border border-cyan-500/25 text-cyan-200/80 opacity-80">
+              <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-widest border transition-all ${
+                effBlk > 0
+                  ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-200 shadow-[0_0_12px_rgba(16,185,129,0.2)]'
+                  : 'bg-slate-900/60 border-slate-800 text-slate-500'
+              }`}>
                 <CoinMark symbol="BLK" logoUrl={DASHBOARD_COIN_LOGO.BLK} tone="blk" />
-                0% {t('dashboard.mining_allocation_blk_label')}
-                <span className="ml-0.5 rounded-md bg-cyan-500/20 px-1.5 py-0.5 text-[9px] font-black tracking-wider text-cyan-300">
-                  {t('dashboard.mining_allocation_blk_soon')}
-                </span>
+                {effBlk}% {t('dashboard.mining_allocation_blk_label')}
+                {effBlk > 0 ? (
+                  <span className="ml-0.5 rounded-md bg-emerald-500/20 px-1.5 py-0.5 text-[9px] font-black tracking-wider text-emerald-300">
+                    {t('dashboard.mining_allocation_blk_soon', { defaultValue: 'Ativo' })}
+                  </span>
+                ) : null}
               </span>
             </div>
           </div>
 
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 flex-1 text-[11px] font-medium">
-              <div className="flex items-center justify-between bg-indigo-500/5 border border-indigo-500/15 rounded-xl px-4 py-2.5">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 flex-1 text-[11px] font-medium">
+              <div className="flex items-center justify-between bg-indigo-500/5 border border-indigo-500/15 rounded-xl px-3.5 py-2.5">
                 <span className="text-slate-400 uppercase tracking-widest text-[9px] font-black">
                   {t('dashboard.mining_allocation_estimated_pol')}
                 </span>
-                <span className="text-indigo-300 font-black tabular-nums">
-                  {(blockRewardPol * (effectivePolPercent / 100)).toFixed(4)} POL
+                <span className="text-indigo-300 font-black tabular-nums font-mono">
+                  {(blockRewardPol * (effPol / 100)).toFixed(4)} POL
                 </span>
               </div>
-              <div className="flex items-center justify-between bg-amber-500/5 border border-amber-500/15 rounded-xl px-4 py-2.5">
+              <div className="flex items-center justify-between bg-amber-500/5 border border-amber-500/15 rounded-xl px-3.5 py-2.5">
                 <span className="text-slate-400 uppercase tracking-widest text-[9px] font-black">
                   {t('dashboard.mining_allocation_estimated_shib')}
                 </span>
-                <span className="text-amber-300 font-black tabular-nums">
-                  {(blockRewardShib * (effectiveShibPercent / 100)).toFixed(2)} SHIB
+                <span className="text-amber-300 font-black tabular-nums font-mono">
+                  {(blockRewardShib * (effShib / 100)).toFixed(2)} SHIB
+                </span>
+              </div>
+              <div className={`flex items-center justify-between border rounded-xl px-3.5 py-2.5 transition-all ${
+                effBlk > 0
+                  ? 'bg-emerald-500/10 border-emerald-500/30'
+                  : 'bg-slate-950/40 border-slate-800'
+              }`}>
+                <span className="text-slate-400 uppercase tracking-widest text-[9px] font-black">
+                  {t('dashboard.mining_allocation_estimated_blk', { defaultValue: 'Bloco BLK' })}
+                </span>
+                <span className="text-emerald-400 font-black tabular-nums font-mono">
+                  {(rewardBlk * (effBlk > 0 ? 1 : 0)).toFixed(8)} BLK
                 </span>
               </div>
             </div>
@@ -165,7 +211,7 @@ export function MiningAllocationPanel({
               type="button"
               onClick={onOpenModal}
               disabled={savingAlloc}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest bg-sky-500 hover:bg-sky-400 text-slate-950 border-2 border-slate-950 shadow-[2px_2px_0px_#000000] transition active:translate-x-0.5 active:translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+              className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-xs font-black uppercase tracking-wider bg-sky-500 hover:bg-sky-400 text-slate-950 border-2 border-slate-950 shadow-[2px_2px_0px_#000000] transition active:translate-x-0.5 active:translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
             >
               <Sliders className="w-3.5 h-3.5" />
               {t('dashboard.mining_allocation_edit_split')}
@@ -186,7 +232,7 @@ export function MiningAllocationPanel({
               }}
             >
           <div
-            className="rounded-3xl border-2 border-slate-800 bg-slate-900/60 shadow-[4px_4px_0px_#000000] w-full max-w-lg p-5 sm:p-6 relative overflow-hidden"
+            className="rounded-3xl border-2 border-slate-700 bg-slate-900 shadow-[4px_4px_0px_#000000] w-full max-w-lg p-5 sm:p-6 relative overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-indigo-500/10 to-transparent" />
@@ -217,18 +263,69 @@ export function MiningAllocationPanel({
             {/* Live draft bar */}
             <div className="mb-5 h-2.5 rounded-full overflow-hidden flex bg-slate-900 border border-slate-800">
               <div
-                className="h-full bg-indigo-500 transition-all"
+                className="h-full bg-indigo-500 transition-all duration-300"
                 style={{ width: `${draftPolSafe}%` }}
               />
               <div
-                className="h-full bg-amber-500 transition-all"
+                className="h-full bg-amber-500 transition-all duration-300"
                 style={{ width: `${draftShibSafe}%` }}
+              />
+              <div
+                className="h-full bg-emerald-500 transition-all duration-300"
+                style={{ width: `${draftBlkSafe}%` }}
               />
             </div>
 
             <div className="space-y-3 mb-5">
+              {/* Opção BLK (Mineração da Moeda Interna) */}
+              <div
+                onClick={() => {
+                  if (savingAlloc) return;
+                  onDraftPayoutModeChange?.('blk');
+                }}
+                className={`rounded-2xl border-2 p-4 transition-all cursor-pointer ${
+                  isDraftBlk
+                    ? 'border-emerald-500/60 bg-emerald-500/10 shadow-[2px_2px_0px_#000000]'
+                    : 'border-slate-800 bg-slate-950/40 hover:border-slate-700'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <CoinMark symbol="BLK" logoUrl={DASHBOARD_COIN_LOGO.BLK} tone="blk" />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-black text-emerald-300 uppercase tracking-widest">
+                          {t('dashboard.mining_allocation_blk_label')} (100%)
+                        </span>
+                        <span className="rounded-md bg-emerald-500/20 border border-emerald-500/40 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-emerald-300">
+                          Liberado
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-slate-400 mt-1 leading-snug">
+                        {t('dashboard.mining_allocation_blk_soon_hint')}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-base font-black text-emerald-400">
+                      {isDraftBlk ? '100%' : '0%'}
+                    </span>
+                    {isDraftBlk && <CheckCircle2 className="w-5 h-5 text-emerald-400" />}
+                  </div>
+                </div>
+              </div>
+
               {/* POL */}
-              <div className="rounded-2xl border border-indigo-500/25 bg-indigo-500/5 p-4">
+              <div
+                onClick={() => {
+                  if (isDraftBlk && !savingAlloc) onDraftPayoutModeChange?.('pol');
+                }}
+                className={`rounded-2xl border p-4 transition-all ${
+                  !isDraftBlk
+                    ? 'border-indigo-500/30 bg-indigo-500/5'
+                    : 'border-slate-800 bg-slate-950/30 opacity-60'
+                }`}
+              >
                 <div className="flex items-center justify-between gap-3 mb-3">
                   <div className="flex items-center gap-2.5">
                     <CoinMark symbol="POL" logoUrl={DASHBOARD_COIN_LOGO.POL} tone="pol" />
@@ -243,9 +340,12 @@ export function MiningAllocationPanel({
                       max={100}
                       step={5}
                       inputMode="numeric"
-                      value={draftPol}
-                      onChange={(e) => onDraftPolChange(e.target.value)}
-                      disabled={savingAlloc}
+                      value={isDraftBlk ? 0 : draftPol}
+                      onChange={(e) => {
+                        if (isDraftBlk) onDraftPayoutModeChange?.('pol');
+                        onDraftPolChange(e.target.value);
+                      }}
+                      disabled={savingAlloc || isDraftBlk}
                       className="w-full bg-gray-950/80 border border-indigo-500/35 rounded-xl px-3 py-2 pr-8 text-white font-black text-base tabular-nums focus:outline-none focus:border-indigo-400 disabled:opacity-50"
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-indigo-300 font-black text-xs">
@@ -259,14 +359,26 @@ export function MiningAllocationPanel({
                   max={100}
                   step={5}
                   value={draftPolSafe}
-                  disabled={savingAlloc}
-                  onChange={(e) => onDraftPolChange(e.target.value)}
+                  disabled={savingAlloc || isDraftBlk}
+                  onChange={(e) => {
+                    if (isDraftBlk) onDraftPayoutModeChange?.('pol');
+                    onDraftPolChange(e.target.value);
+                  }}
                   className="w-full accent-indigo-500"
                 />
               </div>
 
               {/* SHIB */}
-              <div className="rounded-2xl border border-amber-500/25 bg-amber-500/5 p-4">
+              <div
+                onClick={() => {
+                  if (isDraftBlk && !savingAlloc) onDraftPayoutModeChange?.('pol');
+                }}
+                className={`rounded-2xl border p-4 transition-all ${
+                  !isDraftBlk
+                    ? 'border-amber-500/30 bg-amber-500/5'
+                    : 'border-slate-800 bg-slate-950/30 opacity-60'
+                }`}
+              >
                 <div className="flex items-center justify-between gap-3 mb-3">
                   <div className="flex items-center gap-2.5">
                     <CoinMark symbol="SHIB" logoUrl={DASHBOARD_COIN_LOGO.SHIB} tone="shib" />
@@ -281,9 +393,12 @@ export function MiningAllocationPanel({
                       max={100}
                       step={5}
                       inputMode="numeric"
-                      value={draftShib}
-                      onChange={(e) => onDraftShibChange(e.target.value)}
-                      disabled={savingAlloc}
+                      value={isDraftBlk ? 0 : draftShib}
+                      onChange={(e) => {
+                        if (isDraftBlk) onDraftPayoutModeChange?.('pol');
+                        onDraftShibChange(e.target.value);
+                      }}
+                      disabled={savingAlloc || isDraftBlk}
                       className="w-full bg-gray-950/80 border border-amber-500/35 rounded-xl px-3 py-2 pr-8 text-white font-black text-base tabular-nums focus:outline-none focus:border-amber-400 disabled:opacity-50"
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-amber-300 font-black text-xs">
@@ -297,51 +412,30 @@ export function MiningAllocationPanel({
                   max={100}
                   step={5}
                   value={draftShibSafe}
-                  disabled={savingAlloc}
-                  onChange={(e) => onDraftShibChange(e.target.value)}
+                  disabled={savingAlloc || isDraftBlk}
+                  onChange={(e) => {
+                    if (isDraftBlk) onDraftPayoutModeChange?.('pol');
+                    onDraftShibChange(e.target.value);
+                  }}
                   className="w-full accent-amber-500"
                 />
-              </div>
-
-              {/* BLK — coming soon */}
-              <div className="rounded-2xl border border-dashed border-cyan-500/30 bg-cyan-500/[0.04] p-4 opacity-90">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <CoinMark symbol="BLK" logoUrl={DASHBOARD_COIN_LOGO.BLK} tone="blk" />
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-black text-cyan-200/90 uppercase tracking-widest">
-                          {t('dashboard.mining_allocation_blk_label')}
-                        </span>
-                        <span className="inline-flex items-center gap-1 rounded-md bg-cyan-500/15 border border-cyan-500/25 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-cyan-300">
-                          <Clock3 className="w-3 h-3" />
-                          {t('dashboard.mining_allocation_blk_soon')}
-                        </span>
-                      </div>
-                      <p className="text-[10px] text-slate-500 mt-1 leading-snug">
-                        {t('dashboard.mining_allocation_blk_soon_hint')}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="relative w-28 shrink-0">
-                    <input
-                      type="number"
-                      value={0}
-                      disabled
-                      readOnly
-                      aria-disabled
-                      className="w-full bg-slate-950/60 border border-cyan-500/20 rounded-xl px-3 py-2 pr-8 text-cyan-200/50 font-black text-base tabular-nums cursor-not-allowed"
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-cyan-400/40 font-black text-xs">
-                      %
-                    </span>
-                    <Lock className="absolute -left-1 -top-1 w-3.5 h-3.5 text-cyan-400/60" />
-                  </div>
-                </div>
               </div>
             </div>
 
             <div className="flex flex-wrap gap-2 mb-4">
+              <button
+                type="button"
+                disabled={savingAlloc}
+                onClick={() => onDraftPayoutModeChange?.('blk')}
+                className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border-2 transition disabled:opacity-50 flex items-center gap-1.5 ${
+                  isDraftBlk
+                    ? 'bg-emerald-500 border-slate-950 text-slate-950 shadow-[2px_2px_0px_#000000]'
+                    : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20'
+                }`}
+              >
+                <Sparkles className="w-3 h-3 text-emerald-400" />
+                100% BLK
+              </button>
               {[
                 { pol: 0, label: '0/100' },
                 { pol: 25, label: '25/75' },
@@ -349,13 +443,16 @@ export function MiningAllocationPanel({
                 { pol: 75, label: '75/25' },
                 { pol: 100, label: '100/0' },
               ].map((preset) => {
-                const active = draftPolSafe === preset.pol;
+                const active = !isDraftBlk && draftPolSafe === preset.pol;
                 return (
                   <button
                     key={preset.pol}
                     type="button"
                     disabled={savingAlloc}
-                    onClick={() => onPreset(preset.pol)}
+                    onClick={() => {
+                      if (isDraftBlk) onDraftPayoutModeChange?.('pol');
+                      onPreset(preset.pol);
+                    }}
                     className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border-2 transition disabled:opacity-50 ${
                       active
                         ? 'bg-sky-500 border-slate-950 text-slate-950 shadow-[2px_2px_0px_#000000]'
@@ -383,13 +480,11 @@ export function MiningAllocationPanel({
               </button>
               <button
                 type="button"
-                disabled={savingAlloc}
                 onClick={onSave}
-                className="px-5 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest bg-indigo-600 hover:bg-indigo-500 text-white transition disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={savingAlloc}
+                className="px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider bg-sky-500 hover:bg-sky-400 active:translate-x-0.5 active:translate-y-0.5 text-slate-950 border-2 border-slate-950 shadow-[2px_2px_0px_#000000] transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {savingAlloc
-                  ? t('dashboard.mining_allocation_saving')
-                  : t('dashboard.mining_allocation_modal_save')}
+                {t('dashboard.mining_allocation_modal_save')}
               </button>
             </div>
           </div>

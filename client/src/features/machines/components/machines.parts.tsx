@@ -1,8 +1,10 @@
 import type { TFunction } from "i18next";
-import { AlertCircle, Box, Calculator, ChevronDown, Lock, Warehouse, Zap } from "lucide-react";
+import { AlertCircle, Box, Calculator, ChevronDown, Lock, Warehouse, Wind, Zap } from "lucide-react";
 import { getMachineDisplayImageUrl } from '../lib/machineDisplayImage';
 import { markShowcase3dDrag } from '../lib/rackMinerModel';
 import { MachineImage } from './MachineImage';
+import { MachineRarityBadge } from './MachineRarityBadge';
+import { machineRarityStyle, stripRaritySuffix } from '../lib/machineRarity';
 import { inventoryStackKey } from '../../../shared/utils/inventoryStackKey';
 import type {
   BackpackItem,
@@ -17,6 +19,7 @@ import {
 export type MachinesHeaderProps = {
   t: TFunction;
   activeMachinesHashRate: number;
+  coolingBonusHashRate?: number;
   occupiedRacks: number;
   inventoryCount: number;
   onGoToVault: () => void;
@@ -26,6 +29,7 @@ export type MachinesHeaderProps = {
 export function MachinesHeader({
   t,
   activeMachinesHashRate,
+  coolingBonusHashRate,
   occupiedRacks,
   inventoryCount,
   onGoToVault,
@@ -35,7 +39,6 @@ export function MachinesHeader({
     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
       <div className="min-w-0 flex-1 space-y-1">
         <h1 className="text-3xl font-black text-white tracking-tight uppercase">{t("inventory.title")}</h1>
-        <p className="text-slate-400 font-medium text-sm">{t("inventory.subtitle")}</p>
       </div>
       <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-stretch sm:justify-end">
         <button
@@ -59,6 +62,15 @@ export function MachinesHeader({
             <Zap className="h-3.5 w-3.5 shrink-0" aria-hidden />
             {formatHashrate(activeMachinesHashRate)}
           </div>
+          {coolingBonusHashRate != null && coolingBonusHashRate > 0 && (
+            <div
+              title={t("inventory2.fan_bonus_total_tooltip", { bonus: formatHashrate(coolingBonusHashRate) })}
+              className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl border-2 border-cyan-500/40 bg-cyan-500/15 px-3 py-2 text-xs font-bold text-cyan-300 shadow-[2px_2px_0px_#000000] sm:flex-initial"
+            >
+              <Wind className="h-3.5 w-3.5 shrink-0 text-cyan-400" aria-hidden />
+              <span>+{formatHashrate(coolingBonusHashRate)}</span>
+            </div>
+          )}
           <div className="inline-flex min-h-11 flex-1 min-w-[8rem] items-center justify-center rounded-xl border-2 border-slate-800 bg-slate-900/60 px-4 py-2 text-xs font-bold text-slate-300 shadow-[2px_2px_0px_#000000] sm:flex-initial">
             {occupiedRacks} {t("inventory.active_machines")}
           </div>
@@ -173,7 +185,8 @@ export function InventorySidebar({
               imageUrl: group.imageUrl,
               imageSource: group.imageSource,
             });
-            const miniName = safeDisplayLabel(group.minerName);
+            const miniName = stripRaritySuffix(safeDisplayLabel(group.minerName));
+            const miniRarity = machineRarityStyle(group.level);
             const firstId = group.items[0]?.id;
             return (
               <div
@@ -185,9 +198,13 @@ export function InventorySidebar({
                   markShowcase3dDrag(e.dataTransfer, group);
                   e.dataTransfer.effectAllowed = "move";
                 }}
-                className="relative h-20 w-20 shrink-0 cursor-grab select-none rounded-xl border border-gray-800/50 bg-gray-900/50 p-2.5 transition-colors hover:border-gray-700 active:cursor-grabbing"
+                data-rarity={miniRarity.rarity}
+                className={`relative h-20 w-20 shrink-0 cursor-grab select-none rounded-xl border bg-gray-900/50 p-2.5 transition-colors hover:border-gray-700 active:cursor-grabbing ${miniRarity.level > 1 ? miniRarity.border : 'border-gray-800/50'}`}
               >
                 <MachineImage imageUrl={miniImageUrl} name={miniName} className="h-full w-full object-contain" />
+                {miniRarity.level > 1 && (
+                  <MachineRarityBadge level={group.level} size="xs" className="absolute -bottom-1.5 left-1/2 -translate-x-1/2" />
+                )}
                 {group.quantity > 1 && (
                   <div className="absolute -right-1.5 -top-1.5 z-[1] rounded-full border border-primary/20 bg-primary px-1.5 py-0.5 text-[10px] font-bold text-white shadow">
                     x{group.quantity}
@@ -237,7 +254,8 @@ export function InventorySidebar({
                 imageUrl: group.imageUrl,
                 imageSource: group.imageSource,
               });
-              const sideName = safeDisplayLabel(group.minerName);
+              const sideName = stripRaritySuffix(safeDisplayLabel(group.minerName));
+              const sideRarity = machineRarityStyle(group.level);
               const firstId = group.items[0]?.id;
               return (
                 <div
@@ -249,7 +267,8 @@ export function InventorySidebar({
                     markShowcase3dDrag(e.dataTransfer, group);
                     e.dataTransfer.effectAllowed = "move";
                   }}
-                  className="grid cursor-grab select-none grid-cols-1 grid-rows-[auto_auto] gap-3 rounded-2xl border-2 border-slate-800 bg-slate-900/60 p-4 shadow-[3px_3px_0px_#000000] transition-all hover:border-slate-700 active:cursor-grabbing"
+                  data-rarity={sideRarity.rarity}
+                  className={`grid cursor-grab select-none grid-cols-1 grid-rows-[auto_auto] gap-3 rounded-2xl border-2 bg-slate-900/60 p-4 shadow-[3px_3px_0px_#000000] transition-all hover:border-slate-700 active:cursor-grabbing ${sideRarity.level > 1 ? sideRarity.border : 'border-slate-800'}`}
                 >
                   <div className="grid min-w-0 grid-cols-[3.5rem_minmax(0,1fr)] items-start gap-3">
                     <div className="relative h-14 w-14 shrink-0 rounded-xl border border-slate-800 bg-slate-950/80 p-2 shadow-[2px_2px_0px_#000000]">
@@ -263,9 +282,7 @@ export function InventorySidebar({
                     <div className="min-w-0">
                       <h4 className="break-words text-sm font-bold leading-snug text-white">{sideName}</h4>
                       <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                        <span className="shrink-0 whitespace-nowrap">
-                          {t("inventory.modal.level")} {group.level}
-                        </span>
+                        <MachineRarityBadge level={group.level} size="xs" />
                         <span aria-hidden>·</span>
                         <span className="font-black text-primary">{formatHashrate(group.hashRate)}</span>
                       </div>

@@ -17,6 +17,7 @@ import {
   type TaxPayCurrency,
 } from "../../shared/taxPaymentCurrency.js";
 import { CHECKIN_PAYMENT_STREAK_RECOVERY, getCheckinRecoveryFeePol, getCheckinRecoveryMaxMissedDays } from "./checkin.config.js";
+import { notifyDailyTaskLoginDay } from "../tasks/index.js";
 
 const log = logger.child("checkin.recovery");
 
@@ -162,5 +163,14 @@ export async function payStreakRecoveryForUser(userId: number, currency: TaxPayC
     return { feePol, feePaid: debitAmount, currency, missedDays, restoredStreak: lastStreak };
   });
   log.info("streak_recovery_paid", { userId, lastStreak, missedDays, feePol, currency, feePaid: debitAmount });
+  for (const dateKey of missedDateKeys) {
+    await notifyDailyTaskLoginDay(userId, dateKey).catch((e: unknown) => {
+      log.warn("notifyDailyTaskLoginDay after streak recovery", {
+        userId,
+        dateKey,
+        error: e instanceof Error ? e.message : String(e),
+      });
+    });
+  }
   return result;
 }

@@ -20,6 +20,7 @@ export async function touchEngineStatsOnContribution(
   userId: number,
   actionCount: number,
   eventAt: Date,
+  versionIncrement = 0,
 ): Promise<void> {
   const [participantCount, leader, tournament] = await Promise.all([
     prisma.tournamentEntry.count({ where: { tournamentId, score: { gt: 0 } } }),
@@ -55,16 +56,77 @@ export async function touchEngineStatsOnContribution(
         ...((tournament?.metricConfig as object) ?? {}),
         engineStats,
       },
+      ...(versionIncrement > 0 ? { version: { increment: versionIncrement } } : {}),
     },
   });
 
-  log.info("tournament.engine_stats.updated", {
+  log.debug("tournament.engine_stats.updated", {
     tournamentId,
     userId,
     participants: engineStats.participants,
     totalActions: engineStats.totalActions,
     leaderScore: engineStats.leaderScore,
   });
+}
+
+/**
+ * Engine stats and the cache version are admin diagnostics only (GET /admin/tournaments/:id/
+ * engine-stats). Writing them on every contribution meant 2 UPDATEs of the same tournament row
+ * plus a COUNT(*) per point: every user action scores in 3 tournaments, ~46 contributions a
+ * minute, and those hot-row writes piled up behind the block settlement. Contributions now
+ * accumulate in memory and each tournament is written at most once per flush window.
+ * A crash loses at most one window of diagnostic counters; scores are not affected.
+ */
+export const ENGINE_STATS_FLUSH_MS = 10_000;
+
+type PendingEngineStats = { actions: number; contributions: number; userId: number; lastEventAt: Date };
+const pendingEngineStats = new Map<number, PendingEngineStats>();
+const engineStatsTimers = new Map<number, ReturnType<typeof setTimeout>>();
+
+export function queueContributionStats(
+  tournamentId: number,
+  userId: number,
+  actionCount: number,
+  eventAt: Date,
+  flushMs = ENGINE_STATS_FLUSH_MS,
+): void {
+  const prev = pendingEngineStats.get(tournamentId);
+  pendingEngineStats.set(tournamentId, {
+    actions: (prev?.actions ?? 0) + actionCount,
+    contributions: (prev?.contributions ?? 0) + 1,
+    userId,
+    lastEventAt: prev && prev.lastEventAt > eventAt ? prev.lastEventAt : eventAt,
+  });
+  if (engineStatsTimers.has(tournamentId)) return;
+  const timer = setTimeout(() => {
+    void flushContributionStats(tournamentId);
+  }, flushMs);
+  timer.unref?.();
+  engineStatsTimers.set(tournamentId, timer);
+}
+
+export async function flushContributionStats(tournamentId: number): Promise<void> {
+  const timer = engineStatsTimers.get(tournamentId);
+  if (timer) clearTimeout(timer);
+  engineStatsTimers.delete(tournamentId);
+  const pending = pendingEngineStats.get(tournamentId);
+  if (!pending) return;
+  pendingEngineStats.delete(tournamentId);
+  try {
+    await touchEngineStatsOnContribution(
+      tournamentId,
+      pending.userId,
+      pending.actions,
+      pending.lastEventAt,
+      pending.contributions,
+    );
+  } catch (err: unknown) {
+    log.warn("tournament.engine_stats.flush_failed", {
+      tournamentId,
+      contributions: pending.contributions,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
 }
 
 export async function getEngineStats(tournamentId: number): Promise<TournamentEngineStats | null> {

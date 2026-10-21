@@ -9,6 +9,7 @@ import type {
   DecoratedRow,
   UserGroup,
 } from './adminClientErrors.types';
+import { formatUtcDateTime, formatUtcTime } from '../../../shared/utils/utcTime';
 
 export const CRITICALITIES: Criticality[] = ['critical', 'high', 'warning', 'info'];
 export const CATEGORIES: ClientErrorCategory[] = ['crash', 'api_failure'];
@@ -219,7 +220,7 @@ export function computeStats(rows: DecoratedRow[]): ClientErrorStats {
 
 export function formatTime(iso: string): string {
   try {
-    return new Date(iso).toLocaleString('pt-BR', { hour12: false });
+    return formatUtcDateTime(iso, { locale: 'pt-BR', seconds: true });
   } catch {
     return iso;
   }
@@ -262,7 +263,7 @@ export function buildClipboardText(r: DecoratedRow): string {
       ? meta.breadcrumbs
           .map(
             (b) =>
-              `  [${new Date(b.ts).toLocaleTimeString()}] (${b.type}) ${b.message}${
+              `  [${formatUtcTime(b.ts, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}] (${b.type}) ${b.message}${
                 b.data ? ` -> ${JSON.stringify(b.data)}` : ''
               }`
           )

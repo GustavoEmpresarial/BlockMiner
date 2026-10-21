@@ -27,6 +27,7 @@ import {
 } from './adminSocial.shared';
 import type { Profile, RewardMiner, Submission } from './creators.types';
 import * as creatorsApi from './creators.api';
+import { formatUtcDate } from '../../../shared/utils/utcTime';
 
 export function RewardSettingsPanel() {
   const [miner, setMiner] = useState<RewardMiner | null>(null);
@@ -356,7 +357,7 @@ export function CredentialRequestsTab() {
                   {r.bio ? <p className="text-xs text-gray-400 mt-1 italic">&quot;{r.bio}&quot;</p> : null}
                 </div>
                 <p className="text-[9px] text-gray-700 shrink-0">
-                  {new Date(r.createdAt).toLocaleDateString('pt-BR')}
+                  {formatUtcDate(r.createdAt, { locale: 'pt-BR' })}
                 </p>
               </div>
               <div className="flex gap-2">
@@ -663,7 +664,7 @@ export function SubmissionsTab() {
                       {cfg.label}
                     </span>
                     <p className="text-[9px] text-gray-700">
-                      {new Date(s.submittedAt).toLocaleDateString('pt-BR')}
+                      {formatUtcDate(s.submittedAt, { locale: 'pt-BR' })}
                     </p>
                   </div>
                 </div>

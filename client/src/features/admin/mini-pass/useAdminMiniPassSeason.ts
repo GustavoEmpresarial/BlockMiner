@@ -27,6 +27,7 @@ import {
   type RewardDraftState,
   type SeasonFormState,
 } from './adminMiniPassSeason.parts';
+import { fromUtcInputValue } from '../../../shared/utils/utcTime';
 
 function emptyRewardDraft(): RewardDraftState {
   return {
@@ -246,8 +247,8 @@ export function useAdminMiniPassSeason() {
         slug: form.slug.trim().toLowerCase(),
         titleI18n,
         subtitleI18n,
-        startsAt: new Date(form.startsAt).toISOString(),
-        endsAt: new Date(form.endsAt).toISOString(),
+        startsAt: fromUtcInputValue(form.startsAt) ?? new Date(form.startsAt).toISOString(),
+        endsAt: fromUtcInputValue(form.endsAt) ?? new Date(form.endsAt).toISOString(),
         maxLevel: Number(form.maxLevel),
         xpPerLevel: Number(form.xpPerLevel),
         buyLevelPricePol: form.buyLevelPricePol,

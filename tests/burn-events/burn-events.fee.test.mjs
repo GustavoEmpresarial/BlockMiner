@@ -14,9 +14,9 @@ const {
 } = await import("../../server/modules/burn-events/burn-events.errors.ts");
 
 test("burn fee rates match exact business specification", () => {
-  assert.equal(BURN_FEE_RATES.SHIB, 20);
-  assert.equal(BURN_FEE_RATES.POL, 0.01);
-  assert.equal(BURN_FEE_RATES.BLK, 0.001);
+  assert.equal(BURN_FEE_RATES.SHIB, 1300);
+  assert.equal(BURN_FEE_RATES.POL, 0.07);
+  assert.equal(BURN_FEE_RATES.BLK, 0.007);
 });
 
 test("allowed burn fee currencies only include SHIB, POL, BLK", () => {
@@ -35,9 +35,9 @@ test("allowed burn fee currencies only include SHIB, POL, BLK", () => {
 });
 
 test("getBurnFeeAmount retrieves expected amount per currency", () => {
-  assert.equal(getBurnFeeAmount("SHIB"), 20);
-  assert.equal(getBurnFeeAmount("POL"), 0.01);
-  assert.equal(getBurnFeeAmount("BLK"), 0.001);
+  assert.equal(getBurnFeeAmount("SHIB"), 1300);
+  assert.equal(getBurnFeeAmount("POL"), 0.07);
+  assert.equal(getBurnFeeAmount("BLK"), 0.007);
 });
 
 test("burn fee errors map to HTTP 400; conflicts map to 409; missing maps to 404", () => {

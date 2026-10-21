@@ -241,6 +241,12 @@ async function setBan(req: Request, res: Response, isBanned: boolean): Promise<v
       userAgent: readUserAgent(req),
     });
 
+    if (isBanned) {
+      import("../referrals/index.js")
+        .then(({ revokeReferralQualification }) => revokeReferralQualification(userId))
+        .catch((err) => log.warn("[admin ban] revoke referral failed", { error: String(err) }));
+    }
+
     res.json({
       ok: true,
       message: isBanned ? "User banned" : "User unbanned",

@@ -13,6 +13,16 @@ import {
 } from './banners.api';
 import { BannerForm } from './components/BannerForm';
 import { BannerCard } from './components/BannerCard';
+import { fromUtcInputValue } from '../../../shared/utils/utcTime';
+
+/** datetime-local fields are UTC wall-clock — send explicit ISO UTC to the API. */
+function withUtcDates(form: BannerFormState): BannerFormState {
+  return {
+    ...form,
+    startsAt: fromUtcInputValue(form.startsAt) ?? form.startsAt,
+    endsAt: fromUtcInputValue(form.endsAt) ?? form.endsAt,
+  };
+}
 
 export default function AdminBanners() {
   const [banners, setBanners] = useState<AdminBannerRow[]>([]);
@@ -40,7 +50,7 @@ export default function AdminBanners() {
   const handleCreate = async (form: BannerFormState) => {
     setIsSaving(true);
     try {
-      const res = await createAdminBanner(form);
+      const res = await createAdminBanner(withUtcDates(form));
       if (res.ok) {
         toast.success('Banner criado com sucesso!');
         setShowCreate(false);
@@ -59,7 +69,7 @@ export default function AdminBanners() {
     if (editingId == null) return;
     setIsSaving(true);
     try {
-      const res = await updateAdminBanner(editingId, form);
+      const res = await updateAdminBanner(editingId, withUtcDates(form));
       if (res.ok) {
         toast.success('Banner atualizado com sucesso!');
         setEditingId(null);

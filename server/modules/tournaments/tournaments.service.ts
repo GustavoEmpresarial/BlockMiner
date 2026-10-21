@@ -1,6 +1,12 @@
 import prisma, { type TxClient } from "../../core/database/prisma.js";
 import { isDepositMetric } from "./tournaments.helpers.js";
-import { formatUtcWindowLabel } from "./tournaments.scoring-config.js";
+import {
+  computeOfferwallBreakdownForUser,
+  formatUtcWindowLabel,
+  offerwallScoringRules,
+  type OffersMetric,
+  type OfferwallScoreBreakdown,
+} from "./tournaments.scoring-config.js";
 import { getDepositScoreDetailForUser } from "./deposit-score.js";
 import { snapWindowForType, snapWindowForActiveTournament } from "./tournament-window.js";
 import { computeScoresForTournament } from "./tournaments.score-computation.js";
@@ -25,8 +31,10 @@ import { logger } from "../../core/logger/index.js";
 import { reportError } from "../../core/errors/index.js";
 import { TOURNAMENT_ERROR } from "./tournaments.errors.js";
 import { keyedSingleFlight } from "./tournaments.tick-guard.js";
+import { createOrReuseOpenCycle, isUniqueConstraintError } from "./tournaments.cycle.js";
 import {
   assignRanks,
+  LEADERBOARD_ORDER,
   findPrizeForRank,
   maxPrizeRank,
   resolvePrizeGrant,
@@ -34,6 +42,7 @@ import {
   type PrizeGrant,
   type PrizeRow,
 } from "./tournaments.prize-resolution.js";
+import { withLeaderboardAvatars } from "../avatar/avatar.lookup.js";
 
 const log = logger.child("tournaments.service");
 
@@ -43,6 +52,7 @@ type TournamentEntry = {
   userId: number;
   score: number;
   rank: number | null;
+  firstContributionAt: Date | null;
   rewardGranted: boolean;
   rewardGrantedAt: Date | null;
   createdAt: Date;
@@ -134,7 +144,11 @@ async function runFinalizeTournament(
   }
 
   // ── Phase A — scoring (no transaction) ──────────────────────────────────
-  if (isTournamentIncrementalScoringEnabled()) {
+  // Offerwall is always paid from the provider tables, the same computation the
+  // live leaderboard shows; its reconcile path only reports drift.
+  if ((OFFERS_INCREMENTAL_METRICS as readonly string[]).includes(tournament.metric)) {
+    await computeScoresForTournament(tournament);
+  } else if (isTournamentIncrementalScoringEnabled()) {
     registerTournamentMetricScorers();
     await reconcileTournament(tournamentId, { recomputeBlocks: true });
   } else {
@@ -146,7 +160,7 @@ async function runFinalizeTournament(
   // smallest possible chance of landing between the snapshot and the ranks.
   const entries = await prisma.tournamentEntry.findMany({
     where: { tournamentId },
-    orderBy: [{ score: "desc" }, { firstContributionAt: "asc" }],
+    orderBy: [...LEADERBOARD_ORDER],
   });
   const ranked = assignRanks(entries);
   await persistRanks(ranked);
@@ -160,6 +174,19 @@ async function runFinalizeTournament(
   const powerGrantUserIds = new Set<number>();
 
   for (const entry of ranked.slice(0, cutoff)) {
+    const user = await prisma.user.findUnique({
+      where: { id: entry.userId },
+      select: { isBanned: true },
+    });
+    if (user?.isBanned) {
+      log.warn("tournament.finalize.banned_user_skipped", {
+        tournamentId,
+        userId: entry.userId,
+        rank: entry.rank,
+      });
+      continue;
+    }
+
     const prize = findPrizeForRank(tournament.prizes, entry.rank);
     if (!prize) continue;
 
@@ -275,34 +302,56 @@ async function runFinalizeTournament(
     try {
       const duration = tournament.endsAt.getTime() - tournament.startsAt.getTime();
       const { newStart, newEnd } = nextCycleWindow(tournament.type, tournament.endsAt, duration);
-      const next = await prisma.tournament.create({
-        data: {
-          name: tournament.name,
-          description: tournament.description,
-          type: tournament.type,
-          metric: tournament.metric,
-          startsAt: newStart,
-          endsAt: newEnd,
-          recurring: true,
-          status: newStart <= new Date() ? "ACTIVE" : "SCHEDULED",
-          prizes: {
-            create: tournament.prizes.map((p) => ({
-              rankFrom: p.rankFrom,
-              rankTo: p.rankTo,
-              prizeType: p.prizeType,
-              polAmount: p.polAmount,
-              blkAmount: p.blkAmount,
-              boostHashRate: p.boostHashRate,
-              boostHours: p.boostHours,
-              minerId: p.minerId,
-              minerCount: p.minerCount ?? 1,
-            })),
-          },
+      const cycleKey = { metric: tournament.metric, type: tournament.type, startsAt: newStart };
+      const { row: next, created } = await createOrReuseOpenCycle(
+        {
+          findOpen: (lookup) =>
+            prisma.tournament.findFirst({
+              where: {
+                metric: lookup.metric as typeof tournament.metric,
+                type: lookup.type as typeof tournament.type,
+                startsAt: lookup.startsAt,
+                status: { in: ["ACTIVE", "SCHEDULED"] },
+              },
+              select: { id: true, status: true },
+            }),
         },
-      });
+        cycleKey,
+        () =>
+          prisma.tournament.create({
+            data: {
+              name: tournament.name,
+              description: tournament.description,
+              type: tournament.type,
+              metric: tournament.metric,
+              startsAt: newStart,
+              endsAt: newEnd,
+              recurring: true,
+              status: newStart <= new Date() ? "ACTIVE" : "SCHEDULED",
+              prizes: {
+                create: tournament.prizes.map((p) => ({
+                  rankFrom: p.rankFrom,
+                  rankTo: p.rankTo,
+                  prizeType: p.prizeType,
+                  polAmount: p.polAmount,
+                  blkAmount: p.blkAmount,
+                  boostHashRate: p.boostHashRate,
+                  boostHours: p.boostHours,
+                  minerId: p.minerId,
+                  minerCount: p.minerCount ?? 1,
+                })),
+              },
+            },
+            select: { id: true, status: true },
+          }),
+      );
       nextId = next.id;
-      log.info(`[tournaments] recurring: spawned next cycle #${next.id} for "${tournament.name}"`);
-      if (next.status === "ACTIVE" && next.metric === "MINIGAME_WINS") {
+      if (created) {
+        log.info(`[tournaments] recurring: spawned next cycle #${next.id} for "${tournament.name}"`);
+      } else {
+        log.info(`[tournaments] recurring: reused open cycle #${next.id} for "${tournament.name}"`);
+      }
+      if (created && next.status === "ACTIVE" && tournament.metric === "MINIGAME_WINS") {
         void backfillMinigameTournamentFromLogs(next.id).catch((err) => {
           reportError({
             code: TOURNAMENT_ERROR.MINIGAME_BACKFILL_FAILED,
@@ -312,7 +361,7 @@ async function runFinalizeTournament(
             module: "tournaments",
             operation: "finalizeTournament.backfillNextCycle",
             error: err,
-            context: { tournamentId: next.id, tournamentName: next.name },
+            context: { tournamentId: next.id, tournamentName: tournament.name },
           });
         });
       }
@@ -590,7 +639,7 @@ export async function getTournamentWithLeaderboard(tournamentId: number, userId?
   if (!top) {
     top = await prisma.tournamentEntry.findMany({
       where: { tournamentId },
-      orderBy: [{ score: "desc" }, { firstContributionAt: "asc" }],
+      orderBy: [...LEADERBOARD_ORDER],
       take: LEADERBOARD_LIMIT,
       include: {
         // Public payload: id + username only — never real name.
@@ -614,6 +663,8 @@ export async function getTournamentWithLeaderboard(tournamentId: number, userId?
   if (tournament.metric === "DEPOSITS_USD" && top && top.length > 0) {
     top = await enrichDepositLeaderboardWithPolTotals(top, tournament.startsAt, upperBound);
   }
+  // Photos are attached per request, not cached with the board: an expired license disappears at once.
+  if (top && top.length > 0) top = await withLeaderboardAvatars(top);
 
   let myEntry: TournamentEntry | null = null;
   let myRankLive: number | null = null;
@@ -626,9 +677,21 @@ export async function getTournamentWithLeaderboard(tournamentId: number, userId?
       where: { tournamentId_userId: { tournamentId, userId } },
     });
     if (myEntry) {
+      // Same order as the leaderboard and the payout: a tied player who reached
+      // the score earlier (or has a lower id on a full tie) is ahead.
+      const reached = myEntry.firstContributionAt;
+      const tiedAhead = reached
+        ? [
+            { score: myEntry.score, firstContributionAt: { lt: reached } },
+            { score: myEntry.score, firstContributionAt: reached, id: { lt: myEntry.id } },
+          ]
+        : [
+            { score: myEntry.score, firstContributionAt: { not: null } },
+            { score: myEntry.score, firstContributionAt: null, id: { lt: myEntry.id } },
+          ];
       myRankLive =
         (await prisma.tournamentEntry.count({
-          where: { tournamentId, score: { gt: myEntry.score } },
+          where: { tournamentId, OR: [{ score: { gt: myEntry.score } }, ...tiedAhead] },
         })) + 1;
       const rank = myEntry.rank ?? myRankLive;
       if (rank != null) {
@@ -662,7 +725,18 @@ export async function getTournamentWithLeaderboard(tournamentId: number, userId?
     }
   }
 
+  const offersMetric = (OFFERS_INCREMENTAL_METRICS as readonly string[]).includes(tournament.metric)
+    ? (tournament.metric as OffersMetric)
+    : null;
+  let myOfferwallBreakdown: (Omit<OfferwallScoreBreakdown, "reachedAt"> & { reachedAt: string | null }) | null = null;
+  if (offersMetric && userId) {
+    const b = await computeOfferwallBreakdownForUser(userId, offersMetric, tournament.startsAt, upperBound);
+    myOfferwallBreakdown = { ...b, reachedAt: b.reachedAt?.toISOString() ?? null };
+  }
+
   return {
+    offerwallRules: offersMetric ? offerwallScoringRules(offersMetric) : null,
+    myOfferwallBreakdown,
     tournament: {
       ...tournament,
       depositRankingUnit: isDepositTournamentMetric(tournament.metric)
@@ -750,32 +824,42 @@ export async function adminCreateTournament(data: {
   const status = resolveTournamentStatusForWindow(startsAt, endsAt, now);
 
   invalidateActiveTournamentsCache();
-  const tournament = await prisma.tournament.create({
-    data: {
-      name: data.name,
-      description: data.description,
-      type: data.type,
-      metric: data.metric,
-      startsAt,
-      endsAt,
-      status,
-      recurring: data.recurring ?? false,
-      prizes: {
-        create: data.prizes.map((p) => ({
-          rankFrom: p.rankFrom,
-          rankTo: p.rankTo,
-          prizeType: p.prizeType,
-          polAmount: p.polAmount ?? null,
-          blkAmount: p.blkAmount ?? null,
-          boostHashRate: p.boostHashRate ?? null,
-          boostHours: p.boostHours ?? null,
-          minerId: p.minerId ?? null,
-          minerCount: p.minerCount ?? 1,
-        })),
+  const tournament = await prisma.tournament
+    .create({
+      data: {
+        name: data.name,
+        description: data.description,
+        type: data.type,
+        metric: data.metric,
+        startsAt,
+        endsAt,
+        status,
+        recurring: data.recurring ?? false,
+        prizes: {
+          create: data.prizes.map((p) => ({
+            rankFrom: p.rankFrom,
+            rankTo: p.rankTo,
+            prizeType: p.prizeType,
+            polAmount: p.polAmount ?? null,
+            blkAmount: p.blkAmount ?? null,
+            boostHashRate: p.boostHashRate ?? null,
+            boostHours: p.boostHours ?? null,
+            minerId: p.minerId ?? null,
+            minerCount: p.minerCount ?? 1,
+          })),
+        },
       },
-    },
-    include: { prizes: true },
-  });
+      include: { prizes: true },
+    })
+    .catch((err: unknown) => {
+      if (isUniqueConstraintError(err)) {
+        throw Object.assign(
+          new Error("An open tournament already exists for this metric and window"),
+          { code: TOURNAMENT_ERROR.OPEN_WINDOW_EXISTS, status: 409 },
+        );
+      }
+      throw err;
+    });
 
   if (status === "ACTIVE" && data.metric === "MINIGAME_WINS") {
     void backfillMinigameTournamentFromLogs(tournament.id).catch((err) => {

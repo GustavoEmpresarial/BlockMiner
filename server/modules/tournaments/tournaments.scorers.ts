@@ -308,7 +308,15 @@ export class AllActivitiesMetricScorer implements MetricScorer {
         where: {
           tournamentEligible: true,
           executedAtUTC: { gte: window.startsAt, lte: endAt },
-          provider: { notIn: [TOURNAMENT_ACTION_PROVIDER.CHECKIN, TOURNAMENT_ACTION_PROVIDER.YOUTUBE] },
+          provider: {
+            notIn: [
+              TOURNAMENT_ACTION_PROVIDER.CHECKIN,
+              TOURNAMENT_ACTION_PROVIDER.YOUTUBE,
+              TOURNAMENT_ACTION_PROVIDER.REFERRAL,
+              TOURNAMENT_ACTION_PROVIDER.MERGE,
+              TOURNAMENT_ACTION_PROVIDER.BURN,
+            ],
+          },
           ...userFilter,
         },
         _sum: { actionCount: true },
@@ -327,11 +335,13 @@ export class AllActivitiesMetricScorer implements MetricScorer {
       prisma.userDailyTaskProgress.groupBy({
         by: ["userId"],
         where: {
-          completedAt: { gte: window.startsAt, lte: endAt },
+          rewardClaimedAt: { gte: window.startsAt, lte: endAt },
           ...userFilter,
         },
         _count: { id: true },
       }),
+      // Every granted claim scores, including those past the daily hashrate cap
+      // (hashRate 0): the cap limits mining power, never tournament points.
       prisma.youtubeWatchHistory.groupBy({
         by: ["userId"],
         where: {
@@ -376,6 +386,105 @@ export class AllActivitiesMetricScorer implements MetricScorer {
   }
 }
 
+export class ReferralsMetricScorer implements MetricScorer {
+  metric = "REFERRALS" as const;
+
+  onTournamentAction(event: TournamentActionPayload, tournament: TournamentRecord): ContributionDelta | null {
+    if (!event.tournamentEligible || event.actionCount <= 0) return null;
+    if (tournament.metric !== this.metric) return null;
+    if (!providerAllowedForMetric(event.provider, this.metric)) return null;
+    const eventAt = new Date(event.executedAtUTC);
+    if (!windowContains(tournament, eventAt, upperBound(tournament))) return null;
+    return {
+      userId: event.userId,
+      sourceType: "action",
+      sourceId: contributionSourceId(event.provider, event.sourceId),
+      metricValue: event.actionCount,
+      eventAt,
+      metadata: { provider: event.provider, actionId: event.actionId },
+    };
+  }
+
+  async reconcile(
+    tournament: TournamentRecord,
+    window: { startsAt: Date; endsAt: Date },
+    opts?: { userId?: number },
+  ): Promise<Map<number, MetricScoreBreakdown>> {
+    const upper = upperBound(tournament);
+    const endAt = window.endsAt < upper ? window.endsAt : upper;
+    const userFilter = opts?.userId != null ? { userId: opts.userId } : {};
+    const rows = await prisma.tournamentAction.groupBy({
+      by: ["userId"],
+      where: {
+        provider: TOURNAMENT_ACTION_PROVIDER.REFERRAL,
+        tournamentEligible: true,
+        executedAtUTC: { gte: window.startsAt, lte: endAt },
+        ...userFilter,
+      },
+      _sum: { actionCount: true },
+    });
+    const map = new Map<number, MetricScoreBreakdown>();
+    for (const r of rows) {
+      const total = Number(r._sum.actionCount ?? 0);
+      if (total <= 0) continue;
+      map.set(r.userId, { total, txCount: total });
+    }
+    return map;
+  }
+}
+
+/** Sums the points a single provider wrote to tournament_actions (merge points, burned H/s). */
+export class ActionPointsMetricScorer implements MetricScorer {
+  constructor(
+    public readonly metric: "MERGES" | "BURNS",
+    private readonly provider: string,
+  ) {}
+
+  onTournamentAction(event: TournamentActionPayload, tournament: TournamentRecord): ContributionDelta | null {
+    if (!event.tournamentEligible || event.actionCount <= 0) return null;
+    if (tournament.metric !== this.metric) return null;
+    if (!providerAllowedForMetric(event.provider, this.metric)) return null;
+    const eventAt = new Date(event.executedAtUTC);
+    if (!windowContains(tournament, eventAt, upperBound(tournament))) return null;
+    return {
+      userId: event.userId,
+      sourceType: "action",
+      sourceId: contributionSourceId(event.provider, event.sourceId),
+      metricValue: event.actionCount,
+      eventAt,
+      metadata: { provider: event.provider, actionId: event.actionId },
+    };
+  }
+
+  async reconcile(
+    tournament: TournamentRecord,
+    window: { startsAt: Date; endsAt: Date },
+    opts?: { userId?: number },
+  ): Promise<Map<number, MetricScoreBreakdown>> {
+    const upper = upperBound(tournament);
+    const endAt = window.endsAt < upper ? window.endsAt : upper;
+    const userFilter = opts?.userId != null ? { userId: opts.userId } : {};
+    const rows = await prisma.tournamentAction.groupBy({
+      by: ["userId"],
+      where: {
+        provider: this.provider,
+        tournamentEligible: true,
+        executedAtUTC: { gte: window.startsAt, lte: endAt },
+        ...userFilter,
+      },
+      _sum: { actionCount: true },
+      _count: { id: true },
+    });
+    const map = new Map<number, MetricScoreBreakdown>();
+    for (const r of rows) {
+      const total = Number(r._sum.actionCount ?? 0);
+      if (total <= 0) continue;
+      map.set(r.userId, { total, txCount: Number(r._count.id ?? 0) });
+    }
+    return map;
+  }
+}
+
 let registered = false;
 
 export function registerTournamentMetricScorers(): void {
@@ -383,6 +492,9 @@ export function registerTournamentMetricScorers(): void {
   registerMetricScorer(new DepositUsdScorer());
   registerMetricScorer(new DepositPolScorer());
   registerMetricScorer(new AllActivitiesMetricScorer());
+  registerMetricScorer(new ReferralsMetricScorer());
+  registerMetricScorer(new ActionPointsMetricScorer("MERGES", TOURNAMENT_ACTION_PROVIDER.MERGE));
+  registerMetricScorer(new ActionPointsMetricScorer("BURNS", TOURNAMENT_ACTION_PROVIDER.BURN));
   for (const scorer of createOffersScorers()) registerMetricScorer(scorer);
   for (const scorer of createMinigameScorers()) registerMetricScorer(scorer);
   for (const scorer of createClaimCountScorers()) registerMetricScorer(scorer);

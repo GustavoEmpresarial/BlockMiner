@@ -108,7 +108,6 @@ export default function Shortlinks() {
                 <IconBadge icon={LinkIcon} variant="sky" size="lg" />
                 <div>
                     <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">{t('shortlinks.title')}</h1>
-                    <p className="text-slate-400 text-xs sm:text-sm font-medium">{t('shortlinks.subtitle')}</p>
                 </div>
             </div>
             <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-900/60 border-2 border-slate-800 rounded-xl shadow-[2px_2px_0px_#000000]">

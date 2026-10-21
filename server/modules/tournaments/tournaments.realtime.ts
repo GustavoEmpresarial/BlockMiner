@@ -11,6 +11,8 @@ import type { Server } from "socket.io";
 import prisma from "../../core/database/prisma.js";
 import { logger as rootLogger } from "../../core/logger/index.js";
 import { getRedis, getRedisUrl } from "../../core/redis/index.js";
+import { LEADERBOARD_ORDER } from "./tournaments.prize-resolution.js";
+import { withLeaderboardAvatars } from "../avatar/avatar.lookup.js";
 
 const logger = rootLogger.child("TournamentRealtime");
 
@@ -103,13 +105,14 @@ export async function buildLeaderboardSlice(
   const [top, participantCount] = await Promise.all([
     prisma.tournamentEntry.findMany({
       where: { tournamentId },
-      orderBy: [{ score: "desc" }, { firstContributionAt: "asc" }],
+      orderBy: [...LEADERBOARD_ORDER],
       take: LEADERBOARD_LIMIT,
-      include: { user: { select: { id: true, username: true, name: true } } },
+      // Public room payload: id + username only — never the real name.
+      include: { user: { select: { id: true, username: true } } },
     }),
     prisma.tournamentEntry.count({ where: { tournamentId } }),
   ]);
-  return { top, participantCount };
+  return { top: await withLeaderboardAvatars(top), participantCount };
 }
 
 /** Emit a `tournament:update` immediately (bypasses the dirty coalescing). */
@@ -120,7 +123,7 @@ export async function emitTournamentUpdateNow(tournamentId: number): Promise<voi
     const { top, participantCount } = await buildLeaderboardSlice(tournamentId);
     const payload = { tournamentId, top, participantCount, timestamp: Date.now() };
     ioRef.to(roomName(tournamentId)).emit("tournament:update", payload);
-    logger.info("tournament.realtime.emitted", {
+    logger.debug("tournament.realtime.emitted", {
       tournamentId,
       participants: participantCount,
       topCount: Array.isArray(top) ? top.length : 0,

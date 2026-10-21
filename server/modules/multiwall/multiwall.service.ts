@@ -10,7 +10,9 @@
  */
 import { logger } from "../../core/logger/index.js";
 import { OFFERWALL_BLK_PER_CLICK, blkForOfferwallClicks } from "../../shared/offerwallBlkPayout.js";
+import { parseOfferwallSubId, signOfferwallSubId } from "../../shared/security/offerwallSubId.js";
 import { recordTournamentAction, TOURNAMENT_ACTION_PROVIDER } from "../tournaments/index.js";
+import { utcWeekStart } from "../tournaments/tournament-window.js";
 import * as multiwallRepo from "./multiwall.repository.js";
 import {
   buildMultiwallEmbedUrl,
@@ -66,11 +68,12 @@ export async function processPostback(input: MultiwallPostbackInput, clientIp: s
     return { kind: "er" };
   }
 
-  const userId = parseInt(userIdRaw, 10);
-  if (!Number.isFinite(userId) || userId <= 0) {
-    log.warn("postback.invalid_user_id", { userIdRaw });
+  const parsed = parseOfferwallSubId("multiwall", userIdRaw);
+  if (!parsed.ok) {
+    log.warn("postback.invalid_user_id", { userIdRaw, reason: parsed.reason });
     return { kind: "er" };
   }
+  const userId = parsed.userId;
 
   const rawPayoutUsd = parseFloat(amount) || 0;
   const payoutUsd = Math.min(Math.max(0, rawPayoutUsd), MAX_PAYOUT_USD_PER_CALLBACK);
@@ -151,8 +154,7 @@ export async function getHistoryForUser(userId: number, page: number) {
 export async function getStatsForUser(userId: number) {
   const startOfDay = new Date();
   startOfDay.setUTCHours(0, 0, 0, 0);
-  const startOfWeek = new Date(startOfDay);
-  startOfWeek.setUTCDate(startOfWeek.getUTCDate() - startOfWeek.getUTCDay());
+  const startOfWeek = utcWeekStart(startOfDay);
   const startOfMonth = new Date(Date.UTC(startOfDay.getUTCFullYear(), startOfDay.getUTCMonth(), 1));
 
   const { agg, offersToday, offersWeek, offersMonth } = await multiwallRepo.getStatsAggregates(
@@ -175,9 +177,10 @@ export async function getStatsForUser(userId: number) {
 }
 
 export function buildEmbedUrl(userId: number): string | null {
+  if (!Number.isSafeInteger(userId) || userId <= 0) return null;
   return buildMultiwallEmbedUrl({
     apiKey: MULTIWALL_API_KEY,
-    userId,
+    userId: signOfferwallSubId("multiwall", userId),
     baseUrl: process.env.MULTIWALL_OFFERWALL_BASE_URL,
   });
 }

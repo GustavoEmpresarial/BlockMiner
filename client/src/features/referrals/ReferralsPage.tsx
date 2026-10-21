@@ -23,6 +23,7 @@ import {
   formatUsdAmount,
   type ReferralStatsPayload,
 } from './lib/referrals.api';
+import { formatUtcDate } from '../../shared/utils/utcTime';
 
 function StatCard({
   label,
@@ -86,7 +87,6 @@ export default function ReferralsPage() {
           <IconBadge icon={UserPlus} variant="violet" size="lg" />
           <div>
             <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">{t('referrals.title')}</h1>
-            <p className="text-slate-400 text-xs sm:text-sm font-medium max-w-2xl">{t('referrals.subtitle', { rate: commissionPct })}</p>
             {data?.statsSince ? (
               <p className="text-xs text-violet-300 font-bold">
                 {t('referrals.stats_since', { date: data.statsSince })}
@@ -232,7 +232,7 @@ export default function ReferralsPage() {
                       <tr key={row.userId} className="hover:bg-slate-800/40 transition-colors">
                         <td className="px-5 py-3.5 font-bold text-white">{row.username}</td>
                         <td className="px-5 py-3.5 text-slate-300 text-xs font-medium">
-                          {new Date(row.joinedAt).toLocaleDateString(locale)}
+                          {formatUtcDate(row.joinedAt, { locale })}
                         </td>
                         <td className="px-5 py-3.5 text-violet-300 font-mono tabular-nums">
                           <div>{formatPolAmount(row.depositedPol, locale)} POL</div>

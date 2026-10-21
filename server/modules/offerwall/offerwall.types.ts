@@ -11,7 +11,7 @@ export type SanitizeDateRangeResult =
 
 export type OfferwallDailyBucket = {
   day: string;
-  dayBrt: string;
+  dayUtc: string;
   internal: number;
   internalPol: number;
   offerwallMe: number;
@@ -41,7 +41,7 @@ export type OfferwallAnalyticsReport = {
   from: string;
   to: string;
   serverNow: string;
-  serverNowBrt: string;
+  serverNowUtc: string;
   userId: number | null;
   scoringConfig: Record<string, unknown>;
   totals: OfferwallTotals;

@@ -1,19 +1,17 @@
+import { fromUtcInputValue, toUtcInputValue } from '../../../shared/utils/utcTime';
 /**
  * Client-side helpers for Admin Mini Pass UI (mirrors server rules where noted).
  * Does not replace server validation.
  */
 
+/** datetime-local value in UTC wall-clock ("YYYY-MM-DDTHH:mm"). */
 export function toDatetimeLocalValue(d: string | number | Date): string {
-  const x = new Date(d);
-  if (Number.isNaN(x.getTime())) return '';
-  x.setMinutes(x.getMinutes() - x.getTimezoneOffset());
-  return x.toISOString().slice(0, 16);
+  return toUtcInputValue(d);
 }
 
 export function defaultSeasonDateRange(): { startsAt: string; endsAt: string } {
   const start = new Date();
-  const end = new Date(start);
-  end.setDate(end.getDate() + 14);
+  const end = new Date(start.getTime() + 14 * 86_400_000);
   return { startsAt: toDatetimeLocalValue(start), endsAt: toDatetimeLocalValue(end) };
 }
 
@@ -119,8 +117,8 @@ export function validateSeasonForm(form: SeasonFormInput): string[] {
   const titleEs = String(form.titleEs || '').trim();
   if (!titleEn && !titlePt && !titleEs) keys.push('title_required');
 
-  const start = form.startsAt ? new Date(form.startsAt) : null;
-  const end = form.endsAt ? new Date(form.endsAt) : null;
+  const start = form.startsAt ? new Date(fromUtcInputValue(form.startsAt) ?? NaN) : null;
+  const end = form.endsAt ? new Date(fromUtcInputValue(form.endsAt) ?? NaN) : null;
   if (!start || Number.isNaN(start.getTime())) keys.push('invalid_start');
   if (!end || Number.isNaN(end.getTime())) keys.push('invalid_end');
   if (start && end && !Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime()) && end <= start) {

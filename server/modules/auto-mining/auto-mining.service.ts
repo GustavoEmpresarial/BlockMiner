@@ -18,6 +18,8 @@ import { logger } from "../../core/logger/index.js";
 import { V1_DAILY_LIMIT, V1_CLAIM_COST_SECONDS } from "./auto-mining.config.js";
 import * as repo from "./auto-mining.repository.js";
 import { recordTournamentAction, TOURNAMENT_ACTION_PROVIDER } from "../tournaments/index.js";
+import { grantActivityPartInTx, partDropPayload, type PartDropPayload } from "../parts/parts.grant.js";
+import { PART_GRANT_SOURCE } from "../parts/parts.drop.js";
 
 const log = logger.child("AutoMiningService");
 
@@ -125,7 +127,7 @@ export async function getAvailableGPUs(userId: number) {
 export async function claimGPU(
   userId: number,
   gpuId: number
-): Promise<{ gpu: Awaited<ReturnType<typeof repo.claimGPUTx>>; expiresAt: Date }> {
+): Promise<{ gpu: Awaited<ReturnType<typeof repo.claimGPUTx>>; expiresAt: Date; part: PartDropPayload | null }> {
   const now = new Date();
   const gpu = await repo.findGPUForClaim(gpuId, userId);
   if (!gpu) {
@@ -151,6 +153,7 @@ export async function claimGPU(
 
   const gpuWithReward = await repo.findGPUWithReward(gpu.id);
   let grantExpiresAt = computeRewardExpiresAt(now, NORMAL_TTL_MS);
+  let part: PartDropPayload | null = null;
 
   const updatedGpu = await prisma.$transaction(async (tx) => {
     const { expiresAt } = await resolveRewardExpiresAtForGrant(tx, userId, now);
@@ -182,6 +185,11 @@ export async function claimGPU(
       claimedAt: now,
       expiresAt,
     });
+    part = partDropPayload(await grantActivityPartInTx(tx, {
+      userId,
+      source: PART_GRANT_SOURCE.automining,
+      sourceRef: `automining:v1:${gpu.id}`,
+    }));
 
     return u;
   });
@@ -195,7 +203,7 @@ export async function claimGPU(
     metadata: { gpuId: gpu.id, mode: "v1" },
   }).catch((err) => log.warn("tournament.action.failed", { userId, error: String(err) }));
 
-  return { gpu: updatedGpu, expiresAt: grantExpiresAt };
+  return { gpu: updatedGpu, expiresAt: grantExpiresAt, part };
 }
 
 export async function getGPUHistory(userId: number) {

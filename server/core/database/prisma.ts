@@ -106,4 +106,9 @@ export type TxClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 /** Full client type of the extended singleton — use instead of bare `PrismaClient`. */
 export type AppPrisma = typeof prisma;
 
+/** Pool clients checked out right now (running queries / open transactions). Used to drain on shutdown. */
+export function pgPoolBusyCount(): number {
+  return Math.max(0, pool.totalCount - pool.idleCount);
+}
+
 export default prisma;

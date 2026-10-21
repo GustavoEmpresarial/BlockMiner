@@ -8,6 +8,7 @@
  * belongs to auth alone.
  */
 import jwt, { type JwtPayload, type SignOptions } from "jsonwebtoken";
+import { createHmac, timingSafeEqual } from "node:crypto";
 
 export { hashPassword, comparePassword, compareDummyPassword } from "../../shared/security/password.js";
 export {
@@ -43,8 +44,43 @@ function requireJwtSecret(): string {
   return secret;
 }
 
-export function signPasswordResetToken(userId: number): string {
-  const payload: JwtPayload & { typ: string } = { sub: String(userId), typ: "pwd_reset" };
+/**
+ * Token TTL ("20m", "24h", "1d", or a number of seconds, as jsonwebtoken reads it) in whole
+ * minutes, for the "expires in" line of the emails. The email used to strip non-digits, so a
+ * "24h" token was announced as "24 minutes".
+ */
+export function ttlToMinutes(ttl: string | number, fallbackMinutes: number): number {
+  const text = String(ttl).trim().toLowerCase();
+  const m = /^(\d+(?:\.\d+)?)\s*(s|sec|secs|seconds?|m|min|mins|minutes?|h|hrs?|hours?|d|days?)?$/.exec(text);
+  if (!m) return fallbackMinutes;
+  const unit = (m[2] ?? "s")[0];
+  const secondsPer = unit === "d" ? 86_400 : unit === "h" ? 3_600 : unit === "m" ? 60 : 1;
+  const minutes = Math.round((Number(m[1]) * secondsPer) / 60);
+  return Number.isFinite(minutes) && minutes > 0 ? minutes : fallbackMinutes;
+}
+
+/**
+ * Binds a reset token to the password it is meant to replace: once the password changes, every
+ * token issued before stops working (single use, and a link left in a mailbox cannot be replayed
+ * for the rest of its TTL). Keyed with JWT_SECRET so the claim reveals nothing about the hash.
+ */
+export function passwordResetFingerprint(passwordHash: string): string {
+  return createHmac("sha256", requireJwtSecret()).update(`pwd_reset:${passwordHash}`).digest("base64url").slice(0, 22);
+}
+
+export function isPasswordResetTokenCurrent(payload: { pv?: unknown } | null, passwordHash: string): boolean {
+  if (!payload || typeof payload.pv !== "string") return false;
+  const a = Buffer.from(payload.pv);
+  const b = Buffer.from(passwordResetFingerprint(passwordHash));
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
+export function signPasswordResetToken(userId: number, passwordHash: string): string {
+  const payload: JwtPayload & { typ: string; pv: string } = {
+    sub: String(userId),
+    typ: "pwd_reset",
+    pv: passwordResetFingerprint(passwordHash),
+  };
   const signOptions: SignOptions = {
     expiresIn: PASSWORD_RESET_TOKEN_TTL as SignOptions["expiresIn"],
     issuer: JWT_ISSUER,
@@ -53,7 +89,7 @@ export function signPasswordResetToken(userId: number): string {
   return jwt.sign(payload, requireJwtSecret(), signOptions);
 }
 
-export function verifyPasswordResetToken(token: unknown): (JwtPayload & { typ?: string }) | null {
+export function verifyPasswordResetToken(token: unknown): (JwtPayload & { typ?: string; pv?: string }) | null {
   try {
     if (!process.env.JWT_SECRET) return null;
     const raw = jwt.verify(String(token), process.env.JWT_SECRET, { issuer: JWT_ISSUER, audience: JWT_AUDIENCE });
