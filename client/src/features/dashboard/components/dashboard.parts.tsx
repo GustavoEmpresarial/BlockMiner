@@ -271,7 +271,7 @@ export function DashboardCards({
       <Card
         icon={Banknote}
         label={t('dashboard.balance_blk_label')}
-        value={blkBalance != null ? safeDashboardNumber(blkBalance, 4) : '—'}
+        value={blkBalance != null ? safeDashboardNumber(blkBalance, 8) : '—'}
         unit="BLK"
         color="cyan"
       />

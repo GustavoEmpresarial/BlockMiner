@@ -67,6 +67,16 @@ describe('DashboardCards', () => {
     expect(screen.getAllByText(/7\.0000/).length).toBeGreaterThan(0);
   });
 
+  it('shows BLK with 8 decimals so a single cycle reward is visible on both BLK cards', () => {
+    render(
+      withProviders(
+        <DashboardCards {...baseCardsProps} balanceCurrency="BLK" blkBalance={0.00004237} />,
+      ),
+    );
+    expect(screen.getAllByText('0.00004237')).toHaveLength(2);
+    expect(screen.queryByText('0.0000')).not.toBeInTheDocument();
+  });
+
   it('falls back to cycle.blockCountdownSeconds when no smoothed countdownSeconds prop is given', () => {
     render(withProviders(<DashboardCards {...baseCardsProps} cycle={{ blockCountdownSeconds: 42 }} />));
     expect(screen.getByText('42')).toBeInTheDocument();

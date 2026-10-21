@@ -203,7 +203,7 @@ export function MiningAllocationPanel({
                   {t('dashboard.mining_allocation_estimated_blk', { defaultValue: 'Bloco BLK' })}
                 </span>
                 <span className="text-emerald-400 font-black tabular-nums font-mono">
-                  {(rewardBlk * (effBlk > 0 ? 1 : 0)).toFixed(4)} BLK
+                  {(rewardBlk * (effBlk > 0 ? 1 : 0)).toFixed(8)} BLK
                 </span>
               </div>
             </div>

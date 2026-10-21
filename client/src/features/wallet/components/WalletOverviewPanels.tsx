@@ -287,7 +287,7 @@ export function WalletLedgerPanel({
               usdSub = `≈ $${Number(tx.amount).toFixed(2)}`;
             } else if (isSwap) {
               const blkOut = tx.outputAmount ?? Number(tx.usdValueAtConfirmation ?? 0);
-              usdSub = blkOut > 0 ? `+${blkOut.toFixed(4)} BLK` : null;
+              usdSub = blkOut > 0 ? `+${blkOut.toFixed(8)} BLK` : null;
             } else if (polPrice > 0) {
               usdSub = `$${(Number(tx.amount) * polPrice).toFixed(2)}`;
             }
